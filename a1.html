@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Family of One: A Curatorial Crucible</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Courier New', monospace; background: #fff; color: #000; }
+
+    .entry { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff; z-index: 100; }
+    .entry-content { text-align: center; max-width: 600px; padding: 40px; }
+    .headline { font-size: 3.2rem; font-weight: 900; letter-spacing: -2px; margin-bottom: 12px; }
+    .subhead { font-size: 1.4rem; font-weight: 700; color: #666; margin-bottom: 24px; }
+    .entry-desc { font-size: 0.95rem; color: #333; margin-bottom: 32px; line-height: 1.6; }
+    .entry-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 10px 20px; border: 2px solid #000; background: #fff; color: #000; font-family: inherit; font-weight: bold; font-size: 0.95rem; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+    .btn:hover { background: #000; color: #fff; }
+    .btn.primary { background: #000; color: #fff; }
+    .btn.primary:hover { background: #333; }
+
+    #phase-indicator { position: fixed; top: 16px; left: 16px; padding: 8px 12px; border: 2px solid #000; background: #fff; font-weight: bold; font-size: 0.85rem; z-index: 50; display: none; }
+    #control-panel { position: fixed; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 50; display: none; }
+
+    #canvas { position: fixed; inset: 0; display: none; width: 100vw; height: 100vh; }
+    #canvas.active { display: block; }
+
+    #grid-container { position: fixed; inset: 0; display: none; overflow: hidden; }
+    #grid-container.active { display: block; }
+    #grid-scroll { width: 100%; height: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 16px 16px 220px; }
+
+    .grid-card { background: #fff; border: 3px solid #000; border-radius: 0; cursor: pointer; transition: all 0.2s; overflow: hidden; display: flex; flex-direction: column; }
+    .grid-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+    .grid-card.selected { box-shadow: inset 0 0 0 5px #c00; }
+
+    .grid-card-header { padding: 14px; font-weight: bold; font-size: 16px; line-height: 1.2; color: #fff; min-height: 60px; display: flex; align-items: center; }
+    .grid-card-body { padding: 12px 14px; flex: 1; font-size: 12px; line-height: 1.5; color: #333; }
+    .grid-card-meta { padding: 10px 14px; border-top: 2px solid #eee; font-size: 10px; font-weight: bold; color: #666; display: flex; justify-content: space-between; }
+
+    .grid-card-checkbox { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; cursor: pointer; accent-color: #c00; }
+
+    /* Dock */
+    #dock { position: fixed; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, rgba(255,255,255,0.99), rgba(255,255,255,0.95)); border-top: 3px solid #000; padding: 14px 16px 16px; z-index: 90; display: none; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); }
+    #dock-inner { max-width: 1600px; margin: 0 auto; }
+    #dock-header { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; font-weight: bold; font-size: 0.9rem; }
+    #dock-count { background: #000; color: #fff; padding: 4px 8px; border-radius: 3px; min-width: 40px; text-align: center; }
+    #dock-title-input { flex: 1; padding: 6px 10px; border: 2px solid #000; background: #fff; font-family: inherit; font-weight: bold; font-size: 0.9rem; max-width: 300px; }
+    #dock-controls { display: flex; gap: 8px; margin-left: auto; }
+    #dock-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-behavior: smooth; }
+
+    .dock-card { flex: 0 0 240px; height: 160px; background: #fff; border: 3px solid #000; border-radius: 0; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+    .dock-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+    .dock-card-header { padding: 10px; font-weight: bold; font-size: 13px; color: #fff; flex: 1; display: flex; align-items: center; line-height: 1.2; }
+    .dock-card-number { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; background: #c00; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+    .dock-card-remove { position: absolute; bottom: 8px; right: 8px; width: 24px; height: 24px; background: #c00; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 3px; font-size: 14px; transition: all 0.2s; }
+    .dock-card-remove:hover { background: #a00; }
+
+    /* Video Player */
+    #video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 200; }
+    #video-overlay.active { display: flex; }
+    #video-container { position: relative; width: 92%; max-width: 1100px; aspect-ratio: 16/9; }
+    #video-frame { width: 100%; height: 100%; border: 3px solid #fff; }
+    #video-close { position: absolute; top: -50px; right: 0; background: none; border: 2px solid #fff; color: #fff; font-size: 32px; cursor: pointer; width: 48px; height: 48px; border-radius: 4px; font-weight: bold; transition: all 0.2s; }
+    #video-close:hover { background: #fff; color: #000; }
+    #video-info { position: absolute; bottom: -50px; left: 0; color: #fff; font-weight: bold; font-size: 0.9rem; }
+
+    @media (max-width: 768px) {
+      #grid-scroll { grid-template-columns: 1fr; gap: 12px; padding: 12px 12px 200px; }
+      #dock-strip { gap: 8px; }
+      .dock-card { flex-basis: 180px; height: 120px; }
+      .headline { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="entry-phase" class="entry">
+    <div class="entry-content">
+      <h1 class="headline">The Family of One</h1>
+      <p class="subhead">A Curatorial Crucible</p>
+      <p class="entry-desc">Select concepts to build your narrative. Click cards to play clips, check boxes to select (up to 12). Drag items in the dock to reorder.</p>
+      <div class="entry-buttons">
+        <button id="start-grid" class="btn primary">▶ Enter Grid</button>
+        <button id="start-3d" class="btn">Enter 3D</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="phase-indicator"><span id="current-phase">entry</span></div>
+  <div id="control-panel">
+    <button id="toggle-mode" class="btn">⇄ Switch View</button>
+    <button id="reset-btn" class="btn">⏮ Home</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div id="grid-container">
+    <div id="grid-scroll"></div>
+  </div>
+
+  <div id="dock">
+    <div id="dock-inner">
+      <div id="dock-header">
+        <span>Story:</span>
+        <div id="dock-count">0/12</div>
+        <input id="dock-title-input" type="text" placeholder="Title your narrative (optional)..." />
+        <div id="dock-controls">
+          <button id="clear-all-btn" class="btn" style="font-size: 0.85rem;">Clear All</button>
+        </div>
+      </div>
+      <div id="dock-strip"></div>
+    </div>
+  </div>
+
+  <div id="video-overlay">
+    <div id="video-container">
+      <button id="video-close">✕</button>
+      <iframe id="video-frame" referrerpolicy="no-referrer-when-downgrade" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      <div id="video-info">—</div>
+    </div>
+  </div>
+
+  <script>
+    const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+    const MAX_CLIPS = 12;
+
+    const rawConcepts = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', color: '#C8E6C9', youtubeId: YOUTUBE_VIDEO_ID, start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', color: '#AED581', youtubeId: YOUTUBE_VIDEO_ID, start: 67, end: 78 },
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', color: '#9CCC65', youtubeId: YOUTUBE_VIDEO_ID, start: 91, end: 97 },
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', color: '#EF5350', youtubeId: YOUTUBE_VIDEO_ID, start: 183, end: 190 },
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', color: '#F44336', youtubeId: YOUTUBE_VIDEO_ID, start: 143, end: 148 },
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'One tiny change in equations could have massive catastrophic consequences which they could never have predicted.', color: '#42A5F5', youtubeId: YOUTUBE_VIDEO_ID, start: 664, end: 669 },
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could be used to see hidden underlying patterns and make the chaos manageable.', color: '#2196F3', youtubeId: YOUTUBE_VIDEO_ID, start: 738, end: 751 },
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks (AI)', category: 'Technological Apparatus', desc: 'AI learns from mass data, looks for connections/patterns, completely ignores all human stories and meaning.', color: '#00BCD4', youtubeId: YOUTUBE_VIDEO_ID, start: 3595, end: 3606 },
+      { id: 'google-mission-idealism', title: 'Google (Early Mission)', category: 'Organizational Idealism', desc: 'To make the world\'s information accessible and useful, providing instant access to any information anybody ever wants.', color: '#8BC34A', youtubeId: YOUTUBE_VIDEO_ID, start: 1739, end: 1770 },
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush (Surveillance)', category: 'Economic Apparatus', desc: 'Products set up to mine traces of human behavior everywhere.', color: '#FFD700', youtubeId: YOUTUBE_VIDEO_ID, start: 3691, end: 3698 },
+      { id: 'future-imagine-new', title: 'Future (Imagine New)', category: 'Future Scenario', desc: 'Regain confidence and imagine genuinely new kinds of futures.', color: '#66BB6A', youtubeId: YOUTUBE_VIDEO_ID, start: 6603, end: 6609 },
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The world is something we make and could just as easily make differently.', color: '#4CAF50', youtubeId: YOUTUBE_VIDEO_ID, start: 6678, end: 6690 }
+    ];
+
+    const $ = id => document.getElementById(id);
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2, '0'); return `${m}:${ss}`; };
+    const show = (el, display = 'block') => { if (el) el.style.display = display; };
+    const hide = el => { if (el) el.style.display = 'none'; };
+
+    let mode = 'entry';
+    let selected = [];
+    let scene, camera, renderer, controls, fragments3D = [];
+
+    function buildEmbed(c) {
+      const origin = encodeURIComponent(location.origin);
+      return `https://www.youtube-nocookie.com/embed/${c.youtubeId}?start=${c.start}&end=${c.end}&controls=1&modestbranding=1&fs=1&iv_load_policy=3&origin=${origin}`;
+    }
+
+    function openVideo(c) {
+      const overlay = $('video-overlay');
+      const frame = $('video-frame');
+      const info = $('video-info');
+      show(overlay, 'flex');
+      info.textContent = `${c.title} · ${fmt(c.start)} to ${fmt(c.end)}`;
+      const url = buildEmbed(c);
+      if (frame.src !== url) frame.src = url;
+    }
+
+    function renderGrid() {
+      const grid = $('grid-scroll');
+      grid.innerHTML = '';
+      rawConcepts.forEach(c => {
+        const isSel = selected.some(s => s.id === c.id);
+        const card = document.createElement('div');
+        card.className = 'grid-card' + (isSel ? ' selected' : '');
+        card.style.position = 'relative';
+        card.innerHTML = `
+          <div class="grid-card-header" style="background-color: ${c.color}; color: ${getTextColor(c.color)};">${c.title}</div>
+          <div class="grid-card-body">${c.desc}</div>
+          <div class="grid-card-meta">
+            <span>${fmt(c.start)}–${fmt(c.end)}</span>
+            <span>${c.category}</span>
+          </div>
+          <input type="checkbox" class="grid-card-checkbox" ${isSel ? 'checked' : ''} />
+        `;
+        const checkbox = card.querySelector('input');
+        checkbox.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleSelect(c);
+        });
+        card.addEventListener('click', () => openVideo(c));
+        grid.appendChild(card);
+      });
+    }
+
+    function renderDock() {
+      const strip = $('dock-strip');
+      strip.innerHTML = '';
+      $('dock-count').textContent = `${selected.length}/12`;
+      if (selected.length > 0) show($('dock')); else hide($('dock'));
+
+      selected.forEach((c, idx) => {
+        const card = document.createElement('div');
+        card.className = 'dock-card';
+        card.style.borderColor = c.color;
+        card.style.backgroundColor = c.color;
+        card.innerHTML = `
+          <div class="dock-card-header">${c.title}</div>
+          <div class="dock-card-number">${idx + 1}</div>
+          <button class="dock-card-remove">×</button>
+        `;
+        card.addEventListener('click', () => openVideo(c));
+        card.querySelector('.dock-card-remove').addEventListener('click', e => {
+          e.stopPropagation();
+          selected = selected.filter(s => s.id !== c.id);
+          renderDock();
+          renderGrid();
+          if (mode === '3d') render3D();
+        });
+        strip.appendChild(card);
+      });
+    }
+
+    function toggleSelect(c) {
+      const idx = selected.findIndex(s => s.id === c.id);
+      if (idx > -1) selected.splice(idx, 1);
+      else if (selected.length < MAX_CLIPS) selected.push({ ...c });
+      renderDock();
+      renderGrid();
+      if (mode === '3d') render3D();
+    }
+
+    function getTextColor(bg) {
+      const hex = bg.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 > 128 ? '#000' : '#fff';
+    }
+
+    function init3D() {
+      if (window.renderer) return;
+      const canvas = $('canvas');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 20000);
+      camera.position.set(0, 400, 1000);
+
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      dirLight.position.set(500, 800, 500);
+      scene.add(dirLight);
+
+      const grid = new THREE.GridHelper(5000, 50, 0xcccccc, 0xeeeeee);
+      scene.add(grid);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 300;
+      controls.maxDistance = 4000;
+      controls.autoRotate = false;
+
+      window.renderer = renderer;
+      window.scene = scene;
+      window.camera = camera;
+
+      create3DFragments();
+      animate3D();
+    }
+
+    function create3DFragments() {
+      fragments3D.forEach(f => scene.remove(f.group));
+      fragments3D = [];
+
+      const cols = 5;
+      const rows = Math.ceil(rawConcepts.length / cols);
+
+      rawConcepts.forEach((data, idx) => {
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        const x = (col - cols / 2) * 320;
+        const z = (row - rows / 2) * 320;
+
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+
+        const W = 240, H = 160;
+        const geometry = new THREE.PlaneGeometry(W, H);
+        const canvas = document.createElement('canvas');
+        canvas.width = 480;
+        canvas.height = 320;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = data.color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 18px Courier New';
+        ctx.fillText(data.title.substring(0, 30), 14, 35);
+
+        ctx.fillStyle = '#333';
+        ctx.font = '12px Courier New';
+        const words = data.desc.split(' ');
+        let line = '';
+        let y = 60;
+        for (let i = 0; i < words.length && y < 290; i++) {
+          const test = line + words[i] + ' ';
+          if (ctx.measureText(test).width > 440 && line) {
+            ctx.fillText(line, 14, y);
+            line = words[i] + ' ';
+            y += 18;
+          } else {
+            line = test;
+          }
+        }
+        if (line) ctx.fillText(line, 14, y);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.MeshBasicMaterial({ map: texture });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.conceptId = data.id;
+        group.add(mesh);
+
+        const edges = new THREE.EdgesGeometry(geometry);
+        const lineGeom = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 }));
+        group.add(lineGeom);
+
+        scene.add(group);
+        fragments3D.push({ data, group, mesh });
+      });
+
+      drawTrails();
+    }
+
+    function drawTrails() {
+      scene.children.forEach(obj => {
+        if (obj.userData && obj.userData.isTrail) scene.remove(obj);
+      });
+
+      if (selected.length < 2) return;
+
+      const points = [];
+      selected.forEach(c => {
+        const frag = fragments3D.find(f => f.data.id === c.id);
+        if (frag) {
+          const pos = frag.group.position;
+          points.push(new THREE.Vector3(pos.x, 50, pos.z));
+        }
+      });
+
+      if (points.length < 2) return;
+
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0xc00000, linewidth: 3 });
+      const lineObj = new THREE.Line(lineGeometry, lineMaterial);
+      lineObj.userData.isTrail = true;
+      scene.add(lineObj);
+
+      selected.forEach((c, idx) => {
+        const frag = fragments3D.find(f => f.data.id === c.id);
+        if (frag) {
+          const sphereGeometry = new THREE.SphereGeometry(22, 16, 16);
+          const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xc00000 });
+          const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+          const pos = frag.group.position;
+          sphere.position.set(pos.x, 50, pos.z);
+          sphere.userData.isTrail = true;
+          scene.add(sphere);
+
+          const labelCanvas = document.createElement('canvas');
+          labelCanvas.width = 128;
+          labelCanvas.height = 128;
+          const labelCtx = labelCanvas.getContext('2d');
+          labelCtx.fillStyle = '#000';
+          labelCtx.font = 'bold 80px Courier New';
+          labelCtx.textAlign = 'center';
+          labelCtx.textBaseline = 'middle';
+          labelCtx.fillText(String(idx + 1), 64, 64);
+          const labelTexture = new THREE.CanvasTexture(labelCanvas);
+          const labelMaterial = new THREE.MeshBasicMaterial({ map: labelTexture });
+          const labelGeometry = new THREE.PlaneGeometry(50, 50);
+          const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
+          labelMesh.position.z = 20;
+          sphere.add(labelMesh);
+        }
+      });
+    }
+
+    function render3D() {
+      drawTrails();
+      renderer.render(scene, camera);
+    }
+
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+      if (controls) controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function onCanvasClick(event) {
+      const canvas = $('canvas');
+      const rect = canvas.getBoundingClientRect();
+      const mouse = new THREE.Vector2();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+
+      const meshes = fragments3D.map(f => f.mesh);
+      const intersects = raycaster.intersectObjects(meshes);
+
+      if (intersects.length > 0) {
+        const conceptId = intersects[0].object.userData.conceptId;
+        const data = rawConcepts.find(c => c.id === conceptId);
+        if (event.shiftKey) toggleSelect(data);
+        else openVideo(data);
+      }
+    }
+
+    function setMode(m) {
+      mode = m;
+      $('current-phase').textContent = m;
+
+      if (m === 'grid') {
+        hide($('entry-phase'));
+        show($('phase-indicator'));
+        show($('control-panel'));
+        show($('grid-container'), 'grid');
+        hide($('canvas'));
+        $('toggle-mode').textContent = '⇄ 3D View';
+        renderGrid();
+      } else if (m === '3d') {
+        hide($('entry-phase'));
+        show($('phase-indicator'));
+        show($('control-panel'));
+        hide($('grid-container'));
+        show($('canvas'), 'block');
+        $('canvas').classList.add('active');
+        $('toggle-mode').textContent = '⇄ Grid View';
+        init3D();
+      }
+      if (selected.length) show($('dock'));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('start-grid').addEventListener('click', () => setMode('grid'));
+      $('start-3d').addEventListener('click', () => setMode('3d'));
+      $('toggle-mode').addEventListener('click', () => setMode(mode === 'grid' ? '3d' : 'grid'));
+      $('reset-btn').addEventListener('click', () => {
+        selected = [];
+        hide($('grid-container'));
+        hide($('canvas'));
+        hide($('control-panel'));
+        hide($('phase-indicator'));
+        hide($('dock'));
+        show($('entry-phase'), 'flex');
+        $('video-frame').src = 'about:blank';
+        hide($('video-overlay'));
+        if (window.renderer) window.renderer.dispose();
+        window.renderer = null;
+        window.scene = null;
+        window.camera = null;
+        mode = 'entry';
+      });
+      $('clear-all-btn').addEventListener('click', () => {
+        selected = [];
+        renderDock();
+        renderGrid();
+        if (mode === '3d') render3D();
+      });
+      $('video-close').addEventListener('click', () => {
+        hide($('video-overlay'));
+        $('video-frame').src = 'about:blank';
+      });
+
+      window.addEventListener('resize', () => {
+        if (window.renderer && mode === '3d') {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+      });
+
+      $('canvas').addEventListener('click', onCanvasClick);
+    });
+  </script>
+</body>
+</html>

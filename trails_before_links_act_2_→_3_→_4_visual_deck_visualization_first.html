@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>TRAILS BEFORE LINKS — Visualization‑First Deck (Act 2 → Act 3 → Act 4)</title>
+<meta name="color-scheme" content="dark only" />
+<style>
+  :root{
+    --bg:#0b0c0f; --ink:#f2efe7; --muted:#9aa2a8; --edge:#161a22;
+    --red:#E94F37; --amber:#F6C667; --teal:#31c4a3; --vio:#9a82ff;
+    --glass:rgba(255,255,255,.06); --glass2:rgba(255,255,255,.12); --shadow:0 16px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:radial-gradient(1200px 800px at 70% -10%,#131823 0%,#0b0c0f 50%,#090a0c 100%);color:var(--ink);font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto;overflow:hidden}
+
+  /* Layout */
+  #app{position:relative;display:grid;grid-template-columns:320px 1fr;grid-template-rows:56px 1fr;grid-template-areas:"toolbar toolbar" "left main";height:100vh}
+  #toolbar{grid-area:toolbar;display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border-bottom:1px solid var(--glass2);backdrop-filter:blur(8px)}
+  #left{grid-area:left;display:flex;flex-direction:column;gap:10px;padding:10px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border-right:1px solid var(--glass2);overflow:auto}
+  #main{grid-area:main;position:relative;overflow:auto}
+  .chip{background:var(--glass);border:1px solid var(--glass2);padding:.45rem .7rem;border-radius:999px;backdrop-filter:blur(6px);box-shadow:var(--shadow);font-size:.82rem}
+  button.btn{all:unset;display:inline-flex;gap:.5rem;align-items:center;background:var(--ink);color:#0a0a0a;border-radius:999px;padding:.5rem .85rem;font-weight:800;cursor:pointer}
+  button.btn.alt{background:transparent;color:var(--amber);border:1px solid var(--amber)}
+
+  /* Sidebar */
+  .group{border:1px solid var(--glass2);border-radius:14px;background:rgba(255,255,255,.03);box-shadow:var(--shadow)}
+  .group h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--glass2);font-size:.9rem;color:var(--amber);letter-spacing:.08em}
+  .group .items{padding:10px;display:grid;gap:8px}
+  .tile{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid transparent;cursor:pointer}
+  .tile:hover{border-color:var(--glass2)}
+  .k{font-weight:800;color:var(--teal)}
+  .title{font-weight:700}
+  .go{opacity:.8}
+
+  /* Canvas stage */
+  #stage{position:relative;min-height:100%;padding:18px 20px 120px;}
+  .panel{position:relative;border:1px solid var(--glass2);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));box-shadow:var(--shadow);padding:14px;margin-bottom:16px}
+  .panel h4{margin:0 0 8px 0;letter-spacing:.02em}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .pad{padding:10px;border:1px dashed var(--glass2);border-radius:12px}
+  textarea, input{width:100%;background:#0f1116;color:var(--ink);border:1px solid var(--glass2);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:.9rem}
+
+  /* Slide snapshot grid */
+  #storyboard{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .card{aspect-ratio:16/9;border:1px solid var(--glass2);border-radius:12px;background:#0f1218;position:relative;overflow:hidden}
+  .card h5{position:absolute;left:8px;top:6px;margin:0;font-size:.8rem;color:var(--amber)}
+  .card canvas,.card svg{position:absolute;inset:0;width:100%;height:100%}
+
+  /* Bass accents */
+  .bass{position:absolute;z-index:0;opacity:.25;mix-blend-mode:screen;filter:drop-shadow(0 6px 24px rgba(0,0,0,.5))}
+  .bass.rect{background:var(--red);width:180px;height:64px;left:-40px;top:30px;transform:rotate(-7deg)}
+  .bass.circle{background:var(--amber);border-radius:999px;width:120px;height:120px;right:-30px;top:120px}
+  .bass.bar{background:var(--teal);width:260px;height:28px;left:10%;bottom:60px;transform:rotate(8deg)}
+
+  /* Presenter overlay */
+  #lower{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px;background:linear-gradient(180deg,rgba(0,0,0,.0),rgba(0,0,0,.55));backdrop-filter:blur(10px);border-top:1px solid var(--glass2)}
+  #cue{flex:1} 
+
+  /* Mini legends */
+  .legend{display:flex;gap:10px;flex-wrap:wrap}
+  .dot{display:inline-flex;align-items:center;gap:6px}
+  .dot i{display:inline-block;width:12px;height:12px;border-radius:50%}
+  .muted{color:var(--muted)}
+
+  /* Print */
+  @media print{
+    body{overflow:visible}
+    #app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    #left,#lower{display:none}
+    #main{overflow:visible}
+    .panel{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <div class="chip">TRAILS BEFORE LINKS — <b>Visualization‑First</b></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn alt" id="btnPrint">🖨 Print/PDF</button>
+      <button class="btn" id="btnExport">⤓ Export PNG Board</button>
+    </div>
+  </div>
+
+  <!-- LEFT: Prompt palette (click to render a template panel in the stage) -->
+  <aside id="left">
+    <div class="group">
+      <h3>Trail → Feed → Rule</h3>
+      <div class="items">
+        <div class="tile" data-tpl="sankey"><span class="k">[TFR‑1]</span><span class="title">Three‑stage Sankey (trails → links → rules)</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="split"><span class="k">[TFR‑2]</span><span class="title">Split‑screen: Memex trail vs Algorithmic feed</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="ifthen"><span class="k">[TFR‑3]</span><span class="title">5‑panel: clicks → if–then ranking tree</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Hidden Curricula Maps</h3>
+      <div class="items">
+        <div class="tile" data-tpl="policy"><span class="k">[HCM‑1]</span><span class="title">Policy → Practice lanes</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="moderation"><span class="k">[HCM‑2]</span><span class="title">Moderation incident timeline</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="feedback"><span class="k">[HCM‑3]</span><span class="title">Adaptive feedback loop</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Attention Training Visuals</h3>
+      <div class="items">
+        <div class="tile" data-tpl="heatmap"><span class="k">[ATV‑1]</span><span class="title">Feed gaze heatmap</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="scroll"><span class="k">[ATV‑2]</span><span class="title">Scroll‑vs‑dwell micro‑timeline</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="cadence"><span class="k">[ATV‑3]</span><span class="title">Ritual cadence clock</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Extension‑of‑Mind Boards</h3>
+      <div class="items">
+        <div class="tile" data-tpl="cards"><span class="k">[EOM‑1]</span><span class="title">Assoc. cards ↔ bidirectional links</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="topology"><span class="k">[EOM‑2]</span><span class="title">Topology vs ranked feed</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="trailstory"><span class="k">[EOM‑3]</span><span class="title">Thought trail storyboard</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Procedural Rhetoric Scenes</h3>
+      <div class="items">
+        <div class="tile" data-tpl="rulecards"><span class="k">[PRS‑1]</span><span class="title">Five rule cards (micro‑world)</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="thresholds"><span class="k">[PRS‑2]</span><span class="title">Threshold crossing storyboard</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="toggles"><span class="k">[PRS‑3]</span><span class="title">Moral by configuration (toggles)</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Technogenesis Maps</h3>
+      <div class="items">
+        <div class="tile" data-tpl="matrix"><span class="k">[TGM‑1]</span><span class="title">Before/After cognition matrix</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="codefeedback"><span class="k">[TGM‑2]</span><span class="title">Code↔Rhythm feedback</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="timeline"><span class="k">[TGM‑3]</span><span class="title">Telegraph→Feeds timeline</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Embodied Rituals & Silence</h3>
+      <div class="items">
+        <div class="tile" data-tpl="gestures"><span class="k">[ERS‑1]</span><span class="title">Micro‑gesture inventory</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="silence"><span class="k">[ERS‑2]</span><span class="title">Silence ring</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="rite2rule"><span class="k">[ERS‑3]</span><span class="title">Rite → Rule compile</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Title‑Sequence Attention Drills</h3>
+      <div class="items">
+        <div class="tile" data-tpl="kinetic"><span class="k">[TAD‑1]</span><span class="title">Kinetic gaze path</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="cuts"><span class="k">[TAD‑2]</span><span class="title">Three teaching cuts</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="tiers"><span class="k">[TAD‑3]</span><span class="title">Tiered reveal montage</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Bridge Across Acts</h3>
+      <div class="items">
+        <div class="tile" data-tpl="theses"><span class="k">[BRG‑1]</span><span class="title">3× 15‑word theses</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="rulechange"><span class="k">[BRG‑2]</span><span class="title">What‑if rule change comic</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="counterritual"><span class="k">[BRG‑3]</span><span class="title">Ritual redesign → rule sets</span><span class="go">▶</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Quick Data→Visual Briefs</h3>
+      <div class="items">
+        <div class="tile" data-tpl="multiples"><span class="k">[QDV‑1]</span><span class="title">Small multiples: rank×dwell×share</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="funnel"><span class="k">[QDV‑2]</span><span class="title">Moderation funnel</span><span class="go">▶</span></div>
+        <div class="tile" data-tpl="hashtag"><span class="k">[QDV‑3]</span><span class="title">Hashtag ritualization curve</span><span class="go">▶</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN: Stage renders boards and diagrams -->
+  <main id="main">
+    <div id="stage">
+      <div class="bass rect"></div>
+      <div class="bass circle"></div>
+      <div class="bass bar"></div>
+
+      <section class="panel" id="intro">
+        <h4>Act 2 → Act 3 → Act 4, made <i>visible</i></h4>
+        <p class="muted">Click a template on the left to add an interactive panel. Each panel includes minimal controls and a presenter <b>cue</b> that finishes: “This visual argues that…”
+        </p>
+        <div id="storyboard" aria-label="Storyboard grid"></div>
+      </section>
+
+      <!-- Panels will be appended here -->
+    </div>
+  </main>
+
+  <!-- Presenter bar -->
+  <div id="lower">
+    <div class="chip">Cue:</div>
+    <input id="cue" placeholder="This visual argues that…" />
+    <div class="legend">
+      <span class="dot"><i style="background:var(--amber)"></i><span class="muted">Trail</span></span>
+      <span class="dot"><i style="background:var(--teal)"></i><span class="muted">Link/Feed</span></span>
+      <span class="dot"><i style="background:var(--red)"></i><span class="muted">Rule</span></span>
+      <span class="dot"><i style="background:var(--vio)"></i><span class="muted">Attention</span></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const sb = document.getElementById('storyboard');
+  const cue = document.getElementById('cue');
+
+  // Toolbar actions
+  document.getElementById('btnPrint').onclick = ()=> window.print();
+  document.getElementById('btnExport').onclick = async ()=>{
+    // Naive export: capture HTML as SVG data URL tiles
+    const blob = new Blob([document.documentElement.outerHTML],{type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    alert('Quick export prepared: save this page as PDF (Cmd/Ctrl+P) or copy HTML from a downloaded file.');
+    window.open(url,'_blank');
+  };
+
+  // Helper to add a storyboard card snapshot (placeholder SVG)
+  function addCard(label, draw){
+    const card = document.createElement('div');
+    card.className = 'card';
+    const h = document.createElement('h5'); h.textContent = label; card.appendChild(h);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox','0 0 160 90'); card.appendChild(svg);
+    draw(svg);
+    sb.appendChild(card);
+  }
+  function line(svg,x1,y1,x2,y2,stroke,width,opacity){
+    const p = document.createElementNS('http://www.w3.org/2000/svg','line');
+    p.setAttribute('x1',x1); p.setAttribute('y1',y1); p.setAttribute('x2',x2); p.setAttribute('y2',y2);
+    p.setAttribute('stroke',stroke); p.setAttribute('stroke-width',width||2); if(opacity) p.setAttribute('opacity',opacity);
+    svg.appendChild(p); return p;
+  }
+  function rect(svg,x,y,w,h,fill,rx){
+    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',w); r.setAttribute('height',h);
+    r.setAttribute('fill',fill); r.setAttribute('rx',rx||4); svg.appendChild(r); return r;
+  }
+  function text(svg,x,y,t,fill,anch,size){
+    const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',x); tx.setAttribute('y',y); tx.textContent = t; tx.setAttribute('fill',fill||'#f2efe7');
+    tx.setAttribute('font-size',size||6); tx.setAttribute('font-family','Inter, system-ui');
+    if(anch) tx.setAttribute('text-anchor',anch);
+    svg.appendChild(tx); return tx;
+  }
+  function arrow(svg,x1,y1,x2,y2,col){
+    line(svg,x1,y1,x2,y2,col,2.2);
+    const ang = Math.atan2(y2-y1,x2-x1);
+    const ax = x2 - Math.cos(ang)*4, ay = y2 - Math.sin(ang)*4;
+    const p = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    const pts = [
+      [x2,y2],
+      [ax + Math.cos(ang+Math.PI/2)*2, ay + Math.sin(ang+Math.PI/2)*2],
+      [ax + Math.cos(ang-Math.PI/2)*2, ay + Math.sin(ang-Math.PI/2)*2]
+    ].map(p=>p.join(',')).join(' ');
+    p.setAttribute('points',pts); p.setAttribute('fill',col); svg.appendChild(p);
+  }
+
+  // Template renderers (lightweight SVG/HTML sketches)
+  const templates = {
+    sankey(){
+      const panel = basePanel('Three‑stage Sankey: trails → links → rules', 'This visual argues that agency migrates from reader‑curated trails to platform rules.');
+      const svg = scaffoldSVG(panel);
+      // Columns
+      const cols = [15, 70, 125];
+      ['Trails (Bush)','Links (Nelson)','Rules (If–Then)'].forEach((t,i)=> text(svg,cols[i],10,t,['#F6C667','#31c4a3','#E94F37'][i],null,7));
+      // Blocks & flows (toy)
+      const blocks = [
+        {y:20,h:30,c:'var(--amber)'},
+        {y:55,h:18,c:'var(--amber)'}
+      ];
+      blocks.forEach(b=> rect(svg,cols[0]-12,b.y,24,b.h,'#F6C667',3));
+      rect(svg,cols[1]-12,25,24,40,'#31c4a3',3);
+      rect(svg,cols[2]-12,35,24,30,'#E94F37',3);
+      // Curved bands (approx)
+      const path = (x1,y1,x2,y2,curv,stroke)=>{
+        const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+        p.setAttribute('fill','none'); p.setAttribute('stroke',stroke); p.setAttribute('stroke-width','6'); p.setAttribute('opacity','.8');
+        const c1 = x1+curv, c2 = x2-curv;
+        p.setAttribute('d',`M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}`);
+        svg.appendChild(p);
+      };
+      path(cols[0]+12,35, cols[1]-12,45, 18, '#F6C667');
+      path(cols[0]+12,64, cols[1]-12,55, 18, '#F6C667');
+      path(cols[1]+12,45, cols[2]-12,50, 18, '#31c4a3');
+      addCard('[TFR‑1] Sankey', s=>{
+        rect(s,5,20,30,40,'#F6C667'); rect(s,65,25,30,40,'#31c4a3'); rect(s,125,35,30,30,'#E94F37');
+        arrow(s,35,40,65,45,'#F6C667'); arrow(s,95,45,125,50,'#31c4a3');
+      });
+    },
+    split(){
+      const panel = basePanel('Split‑screen: memex trail vs algorithmic feed','This visual argues that hand‑made trails teach synthesis while feeds teach ranking.');
+      const row = div(panel,'row');
+      const left = pad(row,'Memex Trail'); const right = pad(row,'Algorithmic Feed');
+      left.innerHTML = memexTrailSVG();
+      right.innerHTML = feedMockSVG(true);
+      addCard('[TFR‑2] Split', s=>{rect(s,8,10,64,70,'#0e1320');rect(s,88,10,64,70,'#0e1320');arrow(s,40,45,80,45,'#555')});
+    },
+    ifthen(){
+      const panel = basePanel('Clicks → If–Then ranking tree','This visual argues that repeated selection patterns compile into rules.');
+      const svg = scaffoldSVG(panel);
+      // Panels as small nodes
+      rect(svg,15,20,20,12,'#31c4a3'); text(svg,25,28,'A',null,'middle');
+      rect(svg,15,38,20,12,'#31c4a3'); text(svg,25,46,'B',null,'middle');
+      rect(svg,50,29,24,14,'#F6C667'); text(svg,62,38,'link→',null,'middle',6);
+      arrow(svg,35,26,50,36,'#31c4a3'); arrow(svg,35,44,50,36,'#31c4a3');
+      rect(svg,95,32,28,16,'#E94F37'); text(svg,109,42,'rank +1',null,'middle',6);
+      arrow(svg,74,36,95,40,'#F6C667');
+      addCard('[TFR‑3] If–Then', s=>{rect(s,12,20,26,14,'#31c4a3'); rect(s,50,32,26,14,'#F6C667'); rect(s,110,38,28,12,'#E94F37'); arrow(s,38,27,50,39,'#31c4a3'); arrow(s,76,39,110,44,'#F6C667');});
+    },
+    policy(){
+      const panel = basePanel('Policy → Practice lanes','This visual argues that hidden curricula emerge where lanes diverge.');
+      const svg = scaffoldSVG(panel);
+      text(svg,10,12,'Stated Rules',null); text(svg,10,36,'Enforcement Heuristics',null); text(svg,10,60,'User Folk‑Theories',null);
+      line(svg,8,16,150,16,'#666',1.2); line(svg,8,40,150,40,'#666',1.2); line(svg,8,64,150,64,'#666',1.2);
+      arrow(svg,40,16,100,16,'#F6C667'); arrow(svg,40,40,120,40,'#31c4a3'); arrow(svg,40,64,135,64,'#E94F37');
+      circle(svg,100,16,3,'#F6C667'); circle(svg,120,40,3,'#31c4a3'); circle(svg,135,64,3,'#E94F37');
+      text(svg,102,28,'Divergence → Hidden Curriculum', '#9aa2a8');
+      addCard('[HCM‑1] Lanes', s=>{line(s,10,20,150,20,'#777',1);line(s,10,45,150,45,'#777',1);line(s,10,70,150,70,'#777',1);arrow(s,40,20,110,20,'#F6C667');arrow(s,40,45,130,45,'#31c4a3');arrow(s,40,70,140,70,'#E94F37');});
+    },
+    moderation(){
+      const panel = basePanel('Moderation incident timeline','This visual argues that each step teaches a lesson to newcomers.');
+      const svg = scaffoldSVG(panel);
+      const steps = ['Report','Queue','Classifier','Action'];
+      steps.forEach((t,idx)=>{const x=20+idx*35; rect(svg,x,36,24,14,'#0f1522'); text(svg,x+12,28,t,null,'middle',6); arrow(svg,x+24,43,x+35,43,'#31c4a3');});
+      addCard('[HCM‑2] Timeline', s=>{steps.forEach((t,idx)=>{const x=12+idx*36; rect(s,x,36,26,12,'#0f1522'); text(s,x+13,24,t,null,'middle',6); if(idx<steps.length-1) arrow(s,x+26,42,x+36,42,'#31c4a3');});});
+    },
+    feedback(){
+      const panel = basePanel('Adaptive feedback loop','This visual argues that creator, audience, and platform co‑stabilize rituals.');
+      const svg = scaffoldSVG(panel);
+      rect(svg,20,24,28,16,'#F6C667'); text(svg,34,34,'Creator',null,'middle',6);
+      rect(svg,70,12,28,16,'#31c4a3'); text(svg,84,22,'Audience',null,'middle',6);
+      rect(svg,110,30,28,16,'#E94F37'); text(svg,124,40,'Platform',null,'middle',6);
+      arrow(svg,48,30,70,20,'#F6C667'); arrow(svg,98,20,124,38,'#31c4a3'); arrow(svg,124,46,34,40,'#E94F37');
+      addCard('[HCM‑3] Loop', s=>{rect(s,20,30,30,14,'#F6C667');rect(s,70,18,30,14,'#31c4a3');rect(s,120,34,30,14,'#E94F37');arrow(s,50,37,70,25,'#F6C667');arrow(s,100,25,120,41,'#31c4a3');arrow(s,135,45,35,45,'#E94F37');});
+    },
+    heatmap(){
+      const panel = basePanel('Feed gaze heatmap','This visual argues that UI signals ritualize looking.');
+      panel.appendChild(feedHeatmapCanvas());
+      addCard('[ATV‑1] Heatmap', s=>{for(let i=0;i<10;i++){rect(s,10,8+i*8,140,6,'#0f1522'); const w=10+Math.random()*120; rect(s,10,8+i*8,w,6,'#9a82ff');}});
+    },
+    scroll(){
+      const panel = basePanel('Scroll velocity vs dwell time','This visual argues that hooks modulate tempo.');
+      const svg = scaffoldSVG(panel);
+      // axes
+      line(svg,10,80,150,80,'#444',1); line(svg,10,10,10,80,'#444',1);
+      // series
+      for(let x=12;x<150;x+=6){const y = 60+Math.sin(x/9)*15 - Math.random()*6; rect(svg,x,y,2,80-y,'#9a82ff',1);}
+      addCard('[ATV‑2] Tempo', s=>{line(s,10,80,150,80,'#555',1);line(s,10,10,10,80,'#555',1);for(let x=12;x<150;x+=8){const y=60+Math.sin(x/10)*14; rect(s,x,y,2,80-y,'#9a82ff',1)}});
+    },
+    cadence(){
+      const panel = basePanel('Ritual cadence clock','This visual argues that repetition consolidates habit.');
+      const svg = scaffoldSVG(panel);
+      circle(svg,80,45,28,'#0f1522'); for(let k=0;k<12;k++){const a=(k/12)*Math.PI*2; const r=22; const x=80+Math.cos(a)*r; const y=45+Math.sin(a)*r; circle(svg,x,y,3,k%3? '#31c4a3':'#F6C667');}
+      addCard('[ATV‑3] Clock', s=>{circle(s,80,45,30,'#0f1522'); for(let k=0;k<12;k++){const a=(k/12)*Math.PI*2; rect(s,78+Math.cos(a)*26,43+Math.sin(a)*26,4,4,k%3?'#31c4a3':'#F6C667');}});
+    },
+    cards(){
+      const panel = basePanel('Assoc. cards ↔ bidirectional links','This visual argues that associative pairs scaffold memory; backlinks scaffold navigation.');
+      const row = div(panel,'row'); const a=pad(row,'Associative Cards'); const b=pad(row,'Bidirectional Links');
+      a.innerHTML = cardWall(); b.innerHTML = linkWall();
+      addCard('[EOM‑1] Cards', s=>{for(let i=0;i<6;i++){rect(s,8+(i%3)*50,10+Math.floor(i/3)*40,40,30,'#0f1522');}});
+    },
+    topology(){
+      const panel = basePanel('Topology vs ranked feed','This visual argues that structure favors exploration; rank favors optimization.');
+      const row = div(panel,'row');
+      const topo = pad(row,'Topology'); topo.innerHTML = topologySVG();
+      const feed = pad(row,'Ranked Feed'); feed.innerHTML = feedMockSVG(false);
+      addCard('[EOM‑2] Topology/Feed', s=>{circle(s,40,40,20,'#31c4a3');circle(s,80,50,16,'#31c4a3');circle(s,120,40,14,'#31c4a3');rect(s,95,10,50,70,'#0f1522');});
+    },
+    trailstory(){
+      const panel = basePanel('Thought trail storyboard','This visual argues that trails + tags + backlinks re‑route synthesis.');
+      const row = div(panel,'row3'); for(let k=0;k<3;k++){const p=pad(row,'Panel '+(k+1)); p.innerHTML = storyboardPanel();}
+      addCard('[EOM‑3] Story', s=>{for(let i=0;i<3;i++){rect(s,8+i*50,10,40,70,'#0f1522');}});
+    },
+    rulecards(){
+      const panel = basePanel('Five rule cards (micro‑world)','This visual argues that sequencing rules declares a worldview.');
+      const row = div(panel,'row3'); for(let i=0;i<5;i++){const p = document.createElement('div'); p.className='pad'; p.style.aspectRatio='5/3'; p.innerHTML = ruleCard(i+1); row.appendChild(p);}
+      addCard('[PRS‑1] Rules', s=>{for(let i=0;i<5;i++){rect(s,5+i*30,20,26,50,'#E94F37');}});
+    },
+    thresholds(){
+      const panel = basePanel('Threshold crossing storyboard','This visual argues that each gate speaks a rationale.');
+      const row = div(panel,'row3'); ['Freshness','Safety','Engagement'].forEach(t=>{const p=pad(row,t); p.innerHTML = gatePanel(t);});
+      addCard('[PRS‑2] Gates', s=>{rect(s,10,20,40,50,'#31c4a3');rect(s,60,20,40,50,'#F6C667');rect(s,110,20,40,50,'#E94F37');});
+    },
+    toggles(){
+      const panel = basePanel('Moral by configuration','This visual argues that UI values enact worlds.');
+      const p = pad(panel,'Config'); p.innerHTML = togglesPanel();
+      addCard('[PRS‑3] Toggles', s=>{rect(s,20,20,120,50,'#0f1522');});
+    },
+    matrix(){
+      const panel = basePanel('Before/After cognition matrix','This visual argues that technogenesis reassigns tasks.');
+      panel.appendChild(matrixTable());
+      addCard('[TGM‑1] Matrix', s=>{rect(s,10,15,140,60,'#0f1522'); line(s,10,35,150,35,'#333'); line(s,10,55,150,55,'#333');});
+    },
+    codefeedback(){
+      const panel = basePanel('Code↔Rhythm feedback','This visual argues that updates retrain attention which steers next updates.');
+      const svg = scaffoldSVG(panel);
+      circle(svg,40,30,14,'#31c4a3'); text(svg,40,30,'Code','white','middle',6);
+      circle(svg,80,50,14,'#9a82ff'); text(svg,80,50,'Rhythm','white','middle',6);
+      circle(svg,120,30,14,'#E94F37'); text(svg,120,30,'Metrics','white','middle',6);
+      arrow(svg,52,36,70,44,'#31c4a3'); arrow(svg,92,44,108,36,'#9a82ff'); arrow(svg,108,24,52,24,'#E94F37');
+      addCard('[TGM‑2] Code↔Rhythm', s=>{circle(s,40,30,14,'#31c4a3');circle(s,80,50,14,'#9a82ff');circle(s,120,30,14,'#E94F37');arrow(s,52,36,70,44,'#31c4a3');arrow(s,92,44,108,36,'#9a82ff');arrow(s,108,24,52,24,'#E94F37');});
+    },
+    timeline(){
+      const panel = basePanel('Telegraph→Feeds timeline','This visual argues that symbol handling & time scales shift.');
+      const svg = scaffoldSVG(panel);
+      const marks = [
+        {x:20,t:'Telegraph'}, {x:50,t:'Codebooks'}, {x:85,t:'Hypertext'}, {x:120,t:'Feeds'}
+      ];
+      line(svg,10,60,150,60,'#555',1.5);
+      marks.forEach(m=>{rect(svg,m.x-10,40,20,16,'#0f1522'); text(svg,m.x,52,m.t,null,'middle',5); line(svg,m.x,56,m.x,60,'#777',1)});
+      addCard('[TGM‑3] Timeline', s=>{line(s,10,70,150,70,'#666',1);[20,50,85,120].forEach(x=> rect(s,x-8,50,16,12,'#0f1522'));});
+    },
+    gestures(){
+      const panel = basePanel('Micro‑gesture inventory','This visual argues that tiny acts carry social meaning.');
+      panel.appendChild(tagList(['tap','hover','long‑press','pause','swipe','pinch']));
+      addCard('[ERS‑1] Gestures', s=>{for(let i=0;i<6;i++){rect(s,10+i*24,30,20,16,'#0f1522');}});
+    },
+    silence(){
+      const panel = basePanel('Silence ring','This visual argues that subtle sanctions shape speech.');
+      const svg = scaffoldSVG(panel);
+      ring(svg,80,45,26,16,'#9a82ff','#0f1522'); text(svg,80,46,'Silence','white','middle',6);
+      addCard('[ERS‑2] Silence', s=>{circle(s,80,45,30,'#0f1522'); circle(s,80,45,18,'#9a82ff');});
+    },
+    rite2rule(){
+      const panel = basePanel('Rite → Rule compile','This visual argues that rituals compile to decision logic.');
+      const row = div(panel,'row');
+      const left = pad(row,'Ritual Sequence'); left.innerHTML = numberedList(['post','wait','refresh','adjust']);
+      const right = pad(row,'Compiled Rules'); right.innerHTML = ruleList(['IF dwell>3s THEN boost','IF flags>n THEN review','IF saves>shares THEN resurface']);
+      addCard('[ERS‑3] Compile', s=>{rect(s,8,10,64,70,'#0f1522'); rect(s,88,10,64,70,'#0f1522');});
+    },
+    kinetic(){
+      const panel = basePanel('Kinetic gaze path','This visual argues that entry order teaches where to look.');
+      const svg = scaffoldSVG(panel);
+      // boxes enter numbered
+      for(let k=0;k<5;k++){rect(svg,20+k*22,20+((k%2)*18),18,12,'#0f1522'); text(svg,29+k*22,28,String(k+1),null,'middle',7); if(k>0) arrow(svg,20+(k-1)*22+18,26,20+k*22,26,'#9a82ff');}
+      addCard('[TAD‑1] Gaze', s=>{for(let k=0;k<4;k++){rect(s,15+k*30,20+(k%2)*16,24,14,'#0f1522'); if(k>0) arrow(s,15+(k-1)*30+24,27,15+k*30,27,'#9a82ff');}});
+    },
+    cuts(){
+      const panel = basePanel('Three teaching cuts','This visual argues that edits pre‑train anticipation.');
+      const row = div(panel,'row3'); for(let i=0;i<3;i++){const p=pad(row,'Cut '+(i+1)); p.innerHTML = frameGrid();}
+      addCard('[TAD‑2] Cuts', s=>{for(let i=0;i<3;i++){rect(s,8+i*50,10,40,70,'#0f1522');}});
+    },
+    tiers(){
+      const panel = basePanel('Tiered reveal montage','This visual argues that staged reveals condition expectation.');
+      const svg = scaffoldSVG(panel);
+      rect(svg,20,20,30,18,'#0f1522'); rect(svg,60,30,40,20,'#0f1522'); rect(svg,108,42,32,22,'#0f1522');
+      arrow(svg,50,29,60,40,'#F6C667'); arrow(svg,100,40,108,52,'#E94F37');
+      addCard('[TAD‑3] Tiers', s=>{rect(s,12,18,36,20,'#0f1522');rect(s,60,30,44,22,'#0f1522');rect(s,112,44,34,24,'#0f1522');});
+    },
+    theses(){
+      const panel = basePanel('3× 15‑word theses','This visual argues that belief→ritual→rule is a compact arc.');
+      const p = document.createElement('div'); p.className='pad';
+      p.innerHTML = `<ol style="margin:0;padding-left:20px;line-height:1.6">
+        <li>Belief organizes symbols; we learn where meaning lives by tracing associations and exclusions.</li>
+        <li>Ritual organizes attention; interfaces choreograph gaze, timing, and desire into repeatable acts.</li>
+        <li>Rules organize futures; compiled procedures govern who sees, speaks, and sustains tomorrow.</li>
+      </ol>`;
+      panel.appendChild(p);
+      addCard('[BRG‑1] Theses', s=>{rect(s,10,12,140,66,'#0f1522');});
+    },
+    rulechange(){
+      const panel = basePanel('What‑if rule change comic','This visual argues that small changes re‑route culture.');
+      const row = div(panel,'row3'); for(let i=0;i<3;i++){const p=pad(row,'Panel '+(i+1)); p.innerHTML = comicPanel();}
+      addCard('[BRG‑2] Comic', s=>{for(let i=0;i<3;i++){rect(s,8+i*50,10,40,70,'#0f1522');}});
+    },
+    counterritual(){
+      const panel = basePanel('Ritual redesign → rule sets','This visual argues that counter‑rituals compile into alternative governance.');
+      const row = div(panel,'row'); const a=pad(row,'Harmful ritual'); const b=pad(row,'Counter‑ritual'); const c=pad(row,'Rule diffs');
+      a.innerHTML = numberedList(['outrage bait','pile‑on','cooldown silence']);
+      b.innerHTML = numberedList(['context primer','pair‑response','guided de‑escalation']);
+      c.innerHTML = ruleList(['IF context added THEN boost civility','IF pile‑on THEN pace replies','IF de‑escalate THEN reward']);
+      addCard('[BRG‑3] Redesign', s=>{rect(s,8,10,47,70,'#0f1522');rect(s,58,10,47,70,'#0f1522');rect(s,108,10,47,70,'#0f1522');});
+    },
+    multiples(){
+      const panel = basePanel('Small multiples: rank×dwell×share','This visual argues that visibility is a teachable recipe.');
+      panel.appendChild(multiplesGrid());
+      addCard('[QDV‑1] Multiples', s=>{for(let r=0;r<2;r++){for(let c=0;c<3;c++){rect(s,10+c*48,10+r*35,44,30,'#0f1522');}}});
+    },
+    funnel(){
+      const panel = basePanel('Moderation funnel','This visual argues that drop‑offs teach lessons.');
+      const svg = scaffoldSVG(panel);
+      const widths = [120,90,60];
+      [0,1,2].forEach(i=> rect(svg,20+(120-widths[i])/2,15+i*20,widths[i],16,['#31c4a3','#F6C667','#E94F37'][i],4));
+      addCard('[QDV‑2] Funnel', s=>{rect(s,20,10,120,20,'#31c4a3');rect(s,35,40,90,20,'#F6C667');rect(s,50,70,60,20,'#E94F37');});
+    },
+    hashtag(){
+      const panel = basePanel('Hashtag ritualization curve','This visual argues that novelty→norming→policing→fatigue is cyclic.');
+      const svg = scaffoldSVG(panel);
+      let prev={x:10,y:70}; for(let x=10;x<=150;x+=5){const y = 70 - (50*Math.exp(-Math.pow((x-60)/22,2))) + (x>95? (x-95)/2 : 0); line(svg,prev.x,prev.y,x,y,'#9a82ff',1.8); prev={x,y}; }
+      addCard('[QDV‑3] Curve', s=>{line(s,10,70,150,70,'#333',1); for(let x=10;x<150;x+=5){const y=70-(40*Math.exp(-Math.pow((x-60)/20,2))); line(s,x,70,x,y,'#9a82ff',1)}});
+    }
+  };
+
+  // Sidebar interactions
+  document.querySelectorAll('.tile').forEach(t=>{
+    t.addEventListener('click',()=>{
+      const id = t.getAttribute('data-tpl');
+      templates[id] && templates[id]();
+      cue.value = t.querySelector('.title').textContent.replace(/^[A-Z\-\s:]+\s*/,'This visual argues that ');
+      stage.scrollTo({top:stage.scrollHeight, behavior:'smooth'});
+    });
+  });
+
+  /* ===== Helpers for panels ===== */
+  function basePanel(title, defaultCue){
+    const panel = document.createElement('section'); panel.className='panel';
+    const h = document.createElement('h4'); h.textContent = title; panel.appendChild(h);
+    const sub = document.createElement('div'); sub.className = 'muted'; sub.textContent = defaultCue; panel.appendChild(sub);
+    stage.appendChild(panel); return panel;
+  }
+  function scaffoldSVG(parent){ const w = document.createElementNS('http://www.w3.org/2000/svg','svg'); w.setAttribute('viewBox','0 0 160 90'); w.style.width='100%'; w.style.height='260px'; parent.appendChild(w); return w; }
+  function div(parent,cls){ const d=document.createElement('div'); d.className=cls; parent.appendChild(d); return d; }
+  function pad(parent,label){ const d=document.createElement('div'); d.className='pad'; const h=document.createElement('div'); h.className='muted'; h.textContent=label; d.appendChild(h); parent.appendChild(d); return d; }
+  function circle(svg,cx,cy,r,stroke,fill){
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r',r);
+    if(fill && !stroke){ c.setAttribute('fill',fill); }
+    else{ c.setAttribute('fill','none'); c.setAttribute('stroke',stroke); c.setAttribute('stroke-width','3'); }
+    svg.appendChild(c); return c;
+  }
+
+  // Mini content generators
+  function memexTrailSVG(){
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:200px">
+      <rect x="10" y="14" width="36" height="16" rx="4" fill="#0f1522"/>
+      <rect x="10" y="36" width="36" height="16" rx="4" fill="#0f1522"/>
+      <rect x="10" y="58" width="36" height="16" rx="4" fill="#0f1522"/>
+      <path d="M46 22 C 62 22, 78 30, 94 30" stroke="#F6C667" stroke-width="3" fill="none"/>
+      <path d="M46 44 C 70 44, 78 50, 94 50" stroke="#F6C667" stroke-width="3" fill="none"/>
+      <path d="M46 66 C 66 66, 78 60, 94 60" stroke="#F6C667" stroke-width="3" fill="none"/>
+      <rect x="94" y="26" width="48" height="40" rx="6" fill="#0f1522"/>
+      <text x="118" y="48" fill="#f2efe7" text-anchor="middle" font-size="8">Synthesis</text>
+    </svg>`;
+  }
+  function feedMockSVG(withIcons){
+    const lines = new Array(9).fill(0).map((_,i)=>`<rect x="10" y="${10+i*8}" width="${120 - Math.random()*40}" height="6" rx="3" fill="#18202c"/>`).join('');
+    const icons = withIcons? `<g>
+      <circle cx="136" cy="20" r="4" fill="#9a82ff"/>
+      <circle cx="136" cy="36" r="4" fill="#9a82ff"/>
+      <circle cx="136" cy="52" r="4" fill="#9a82ff"/>
+    </g>`: '';
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:200px">${lines}${icons}</svg>`;
+  }
+  function cardWall(){
+    let g=''; for(let i=0;i<8;i++){g+=`<rect x="${10+(i%4)*34}" y="${10+Math.floor(i/4)*26}" width="30" height="22" rx="3" fill="#16202b"/>`}
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:220px">${g}</svg>`;
+  }
+  function linkWall(){
+    let g=''; const pos=[[22,20],[56,20],[90,20],[124,20],[22,56],[56,56],[90,56],[124,56]];
+    pos.forEach(([x,y])=> g+=`<circle cx="${x}" cy="${y}" r="7" fill="#16202b"/>`);
+    // simple backlinks
+    g+=`<path d="M22 20 Q 56 38 90 20" stroke="#31c4a3" fill="none"/>`;
+    g+=`<path d="M56 56 Q 56 38 124 20" stroke="#31c4a3" fill="none"/>`;
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:220px">${g}</svg>`;
+  }
+  function topologySVG(){
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:220px">
+      <circle cx="50" cy="44" r="18" fill="#16202b"/>
+      <circle cx="94" cy="52" r="14" fill="#16202b"/>
+      <circle cx="120" cy="36" r="12" fill="#16202b"/>
+      <path d="M68 44 L 80 48 L 106 36" stroke="#31c4a3" fill="none"/>
+    </svg>`;
+  }
+  function storyboardPanel(){
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:150px">
+      <rect x="8" y="10" width="144" height="70" rx="8" fill="#0f1522"/>
+      <path d="M16 45 L 144 45" stroke="#222" />
+      <text x="80" y="30" fill="#9aa2a8" text-anchor="middle" font-size="7">scene</text>
+      <text x="80" y="62" fill="#9aa2a8" text-anchor="middle" font-size="6">caption</text>
+    </svg>`;
+  }
+  function ruleCard(n){
+    return `<svg viewBox="0 0 160 96" style="width:100%;height:100%">
+      <rect x="10" y="10" width="140" height="76" rx="8" fill="#1a1720" stroke="#E94F37"/>
+      <text x="80" y="30" fill="#E94F37" text-anchor="middle" font-weight="700">RULE ${n}</text>
+      <text x="80" y="54" fill="#f2efe7" text-anchor="middle" font-size="7">if (…) then (…) because (…)</text>
+    </svg>`;
+  }
+  function gatePanel(t){
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:150px">
+      <rect x="20" y="18" width="120" height="54" rx="10" fill="#0f1522"/>
+      <text x="80" y="42" fill="#f2efe7" text-anchor="middle">${t}</text>
+      <text x="80" y="62" fill="#9aa2a8" text-anchor="middle" font-size="6">rationale → …</text>
+    </svg>`;
+  }
+  function togglesPanel(){
+    return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      ${['freshness','safety','engagement'].map(k=>`<label class="chip" style="display:flex;align-items:center;gap:8px;justify-content:space-between">${k}
+        <input type="range" min="0" max="100" value="50" style="width:120px"/>
+      </label>`).join('')}
+    </div>`;
+  }
+  function matrixTable(){
+    const wrap = document.createElement('div'); wrap.className='pad';
+    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr><th class="muted" style="text-align:left;padding:6px">Task</th><th class="muted" style="text-align:left;padding:6px">Pre‑platform</th><th class="muted" style="text-align:left;padding:6px">Hybrid</th></tr></thead>
+      <tbody>
+        ${[['Note recall','human memory','memory + search'],['Navigation','index/table of contents','backlinks + tags'],['Summarization','manual outline','AI suggest + human edit']].map(r=>`<tr><td style="padding:6px;border-top:1px solid var(--glass2)">${r[0]}</td><td style="padding:6px;border-top:1px solid var(--glass2)">${r[1]}</td><td style="padding:6px;border-top:1px solid var(--glass2)">${r[2]}</td></tr>`).join('')}
+      </tbody></table>`;
+    return wrap;
+  }
+  function tagList(arr){
+    const wrap=document.createElement('div'); wrap.className='pad';
+    wrap.innerHTML = arr.map(x=>`<span class="chip" style="margin:4px;display:inline-block">${x}</span>`).join('');
+    return wrap;
+  }
+  function numberedList(arr){ return `<ol style="margin:0;padding-left:18px;line-height:1.6">${arr.map(x=>`<li>${x}</li>`).join('')}</ol>`; }
+  function ruleList(arr){ return `<ul style="margin:0;padding-left:18px;line-height:1.6">${arr.map(x=>`<li><b>${x.split(' THEN ')[0]}</b> THEN <i>${x.split(' THEN ')[1]||''}</i></li>`).join('')}</ul>`; }
+  function frameGrid(){
+    return `<svg viewBox="0 0 160 90" style="width:100%;height:150px">${Array.from({length:6},(_,i)=>`<rect x="${10+(i%3)*46}" y="${10+Math.floor(i/3)*36}" width="42" height="32" rx="6" fill="#0f1522"/>`).join('')}</svg>`;
+  }
+  function ring(svg,cx,cy,ro,ri,color,fill){
+    circle(svg,cx,cy,ro,color); circle(svg,cx,cy,ri,fill);
+  }
+  function feedHeatmapCanvas(){
+    const c = document.createElement('canvas'); c.width=800; c.height=420; c.style.width='100%'; c.style.height='260px';
+    const ctx=c.getContext('2d');
+    // background feed rows
+    for(let i=0;i<10;i++){
+      ctx.fillStyle = '#101623'; ctx.fillRect(20,20+i*36,760,24);
+      // heat bar
+      const w = 60 + Math.random()*600; ctx.fillStyle = '#9a82ff'; ctx.globalAlpha=.6; ctx.fillRect(20,20+i*36,w,24); ctx.globalAlpha=1;
+    }
+    // icons
+    ctx.fillStyle = '#9a82ff'; [70,180,290].forEach(y=>{ctx.beginPath(); ctx.arc(760,y,6,0,Math.PI*2); ctx.fill();});
+    return c;
+  }
+  function multiplesGrid(){
+    const w = document.createElement('div'); w.className='row';
+    for(let r=0;r<2;r++){
+      for(let c=0;c<3;c++){
+        const p = document.createElement('div'); p.className='pad'; p.style.aspectRatio='16/10';
+        const s = document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('viewBox','0 0 160 100'); s.style.width='100%'; s.style.height='100%';
+        // axes
+        line(s,10,90,150,90,'#333',1); line(s,10,10,10,90,'#333',1);
+        // 3 dots
+        for(let k=0;k<8;k++){
+          const x = 15 + Math.random()*130; const y = 20 + Math.random()*60; const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          dot.setAttribute('cx',x); dot.setAttribute('cy',y); dot.setAttribute('r',2.8); dot.setAttribute('fill','#31c4a3'); s.appendChild(dot);
+        }
+        p.appendChild(s); w.appendChild(p);
+      }
+    }
+    return w;
+  }
+
+})();
+</script>
+</body>
+</html>

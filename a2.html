@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Extended Field of Vision — Raw Concepts Player</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #fff;
+      color: #000;
+      overflow: hidden;
+    }
+
+    .app-layout {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .main-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .view-controls {
+      padding: 12px 16px;
+      border-bottom: 3px solid #000;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.98);
+      z-index: 50;
+    }
+
+    .view-btn {
+      padding: 8px 14px;
+      border: 2px solid #000;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .view-btn:hover {
+      background: #f0f0f0;
+    }
+
+    .view-btn.active {
+      background: #000;
+      color: #fff;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex: 1;
+    }
+
+    .filter-bar input {
+      flex: 1;
+      min-width: 150px;
+      padding: 6px 10px;
+      border: 2px solid #000;
+      font-family: inherit;
+      font-size: 12px;
+    }
+
+    .count-badge {
+      font-size: 11px;
+      font-weight: bold;
+      min-width: 60px;
+    }
+
+    /* Grid View */
+    .grid-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .cards-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: #f8f8f8;
+      border: 3px solid #000;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    .card.selected {
+      box-shadow: inset 0 0 0 5px #c00;
+      background: #fff;
+    }
+
+    .card-header {
+      padding: 12px;
+      font-weight: bold;
+      font-size: 18px;
+      line-height: 1.2;
+      color: #fff;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+    }
+
+    .card-body {
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .card-category {
+      font-weight: bold;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .card-quote {
+      font-style: italic;
+      font-size: 11px;
+      color: #555;
+      padding: 6px;
+      border-left: 2px solid #ccc;
+      margin-top: 6px;
+    }
+
+    .card-tags {
+      font-size: 10px;
+      color: #999;
+      margin-top: 6px;
+    }
+
+    /* List View */
+    .list-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .list-item {
+      background: #f8f8f8;
+      border: 2px solid #000;
+      padding: 16px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .list-item:hover {
+      background: #f0f0f0;
+    }
+
+    .list-item.selected {
+      background: #fff;
+      box-shadow: inset 0 0 0 4px #c00;
+    }
+
+    .list-item-color {
+      width: 50px;
+      height: 50px;
+      border: 2px solid #000;
+      flex-shrink: 0;
+    }
+
+    .list-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-item-title {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .list-item-meta {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .list-item-desc {
+      font-size: 12px;
+      color: #333;
+    }
+
+    /* 3D View */
+    #canvas {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    #canvas.active {
+      display: block;
+    }
+
+    /* Dock */
+    .dock {
+      width: 280px;
+      border-left: 3px solid #000;
+      background: rgba(255,255,255,0.98);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .dock-header {
+      padding: 12px;
+      border-bottom: 3px solid #000;
+      font-weight: bold;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: #f0f0f0;
+    }
+
+    .dock-content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .dock-item {
+      background: #f8f8f8;
+      border: 2px solid #000;
+      padding: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+      font-size: 12px;
+    }
+
+    .dock-item:hover {
+      background: #f0f0f0;
+    }
+
+    .dock-item-num {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      font-weight: bold;
+      color: #999;
+      font-size: 10px;
+    }
+
+    .dock-item-title {
+      font-weight: bold;
+      font-size: 11px;
+      margin-bottom: 4px;
+      margin-right: 20px;
+    }
+
+    .dock-item-category {
+      font-size: 9px;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .dock-item-remove {
+      position: absolute;
+      bottom: 2px;
+      right: 6px;
+      cursor: pointer;
+      color: #c00;
+      font-weight: bold;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .dock-item:hover .dock-item-remove {
+      opacity: 1;
+    }
+
+    .dock-footer {
+      padding: 12px;
+      border-top: 3px solid #000;
+      display: flex;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .dock-btn {
+      flex: 1;
+      padding: 6px;
+      border: 2px solid #000;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .dock-btn:hover {
+      background: #000;
+      color: #fff;
+    }
+
+    .empty-state {
+      padding: 20px;
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+    }
+
+    /* Video overlay */
+    .video-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.98);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .video-overlay.active {
+      display: flex;
+    }
+
+    .video-container {
+      position: relative;
+      width: 90%;
+      max-width: 1000px;
+      aspect-ratio: 16 / 9;
+    }
+
+    .video-container iframe {
+      width: 100%;
+      height: 100%;
+      border: 3px solid #fff;
+    }
+
+    .video-close {
+      position: absolute;
+      top: -50px;
+      right: 0;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 32px;
+      cursor: pointer;
+      width: 50px;
+      height: 50px;
+      font-family: monospace;
+    }
+
+    @media (max-width: 1024px) {
+      .dock {
+        width: 200px;
+      }
+      .dock-header, .dock-content {
+        font-size: 11px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .app-layout {
+        flex-direction: column;
+      }
+      .dock {
+        width: 100%;
+        border-left: none;
+        border-top: 3px solid #000;
+        max-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="main-view">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="grid">Grid</button>
+        <button class="view-btn" data-view="list">List</button>
+        <button class="view-btn" data-view="3d">3D</button>
+        <div class="filter-bar">
+          <input id="filterInput" placeholder="Search..." />
+          <div class="count-badge"><span id="visibleCount">0</span> / <span id="totalCount">0</span></div>
+        </div>
+      </div>
+
+      <div class="grid-view" id="gridView"></div>
+      <div class="list-view" id="listView" style="display: none;"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="dock">
+      <div class="dock-header">Your Story (0/12)</div>
+      <div class="dock-content" id="dockContent">
+        <div class="empty-state">Select up to 12 concepts to build your story</div>
+      </div>
+      <div class="dock-footer">
+        <button class="dock-btn" id="exportBtn">Export</button>
+        <button class="dock-btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-overlay" id="videoOverlay">
+    <div class="video-container">
+      <button class="video-close" id="closeVideo">✕</button>
+      <iframe id="videoFrame" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <script>
+    const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+    const rawConcepts = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', color: '#C8E6C9', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', youtubeId: YOUTUBE_VIDEO_ID, start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', color: '#AED581', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', youtubeId: YOUTUBE_VIDEO_ID, start: 67, end: 78 },
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', color: '#9CCC65', tags: ['Bayer', 'Idealism', 'Resistance'], quote: 'It was a utopian vision of the self selecting and arranging the fragments of images into their own story and so becoming strong enough to withstand tyranny.', youtubeId: YOUTUBE_VIDEO_ID, start: 91, end: 97 },
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', color: '#EF5350', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', youtubeId: YOUTUBE_VIDEO_ID, start: 183, end: 190 },
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland (Afeni)', category: 'Systemic Critique', desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power.', color: '#FFCDD2', tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control'], quote: "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.", youtubeId: YOUTUBE_VIDEO_ID, start: 197, end: 204 },
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', color: '#F44336', tags: ['Tupac', 'Revolution', 'Collective Action'], quote: 'He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.', youtubeId: YOUTUBE_VIDEO_ID, start: 143, end: 148 },
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'One tiny change in equations could have massive catastrophic consequences which they could never have predicted.', color: '#42A5F5', tags: ['Science', 'Complexity', 'Prediction', 'Limits of Control'], quote: 'One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.', youtubeId: YOUTUBE_VIDEO_ID, start: 664, end: 669 },
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).', color: '#2196F3', tags: ['Science', 'Patterns', 'Management', 'Control'], quote: 'But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.', youtubeId: YOUTUBE_VIDEO_ID, start: 738, end: 751 },
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks (AI)', category: 'Technological Apparatus', desc: 'AI learns from mass data, looks for connections/patterns, completely ignores all human stories and meaning.', color: '#00BCD4', tags: ['AI', 'Data', 'Pattern Recognition', 'Algorithms'], quote: "Hinton's neural networks were a kind of intelligence that completely ignored all stories.", youtubeId: YOUTUBE_VIDEO_ID, start: 3595, end: 3606 },
+      { id: 'hinton-vector-world-myth', title: 'Vector World (AI Mythology)', category: 'Core Concept', desc: 'The world is too complicated for us as human beings to understand, but nothing is too complicated for the machines and data.', color: '#0097A7', tags: ['AI', 'Mythology', 'Control', 'Dehumanization'], quote: 'He called it vector world. It expressed what was becoming one of the most powerful mythologies of our age...', youtubeId: YOUTUBE_VIDEO_ID, start: 3628, end: 3652 },
+      { id: 'google-mission-idealism', title: 'Google (Early Mission)', category: 'Organizational Idealism', desc: "To make the world's information accessible and useful.", color: '#8BC34A', tags: ['Google', 'Information', 'Idealism', 'Technology'], quote: "At Google, our mission is to make the world's information accessible and useful...", youtubeId: YOUTUBE_VIDEO_ID, start: 1739, end: 1770 },
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush (Surveillance)', category: 'Economic Apparatus', desc: 'Products set up to mine traces of human behavior everywhere.', color: '#FFD700', tags: ['Surveillance Capitalism', 'Privacy', 'Commercial'], quote: 'Products of more and more companies around the world were set up to mine all the traces of human behavior everywhere.', youtubeId: YOUTUBE_VIDEO_ID, start: 3691, end: 3698 },
+      { id: 'future-imagine-new', title: 'Future (Imagine New)', category: 'Future Scenario', desc: 'Regain confidence and imagine genuinely new kinds of futures.', color: '#66BB6A', tags: ['Hope', 'Agency', 'Transformation'], quote: 'If we can regain our confidence, we will find that we have the power to influence how that future turns out.', youtubeId: YOUTUBE_VIDEO_ID, start: 6603, end: 6609 },
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The world is something we make and could just as easily make differently.', color: '#4CAF50', tags: ['Graeber', 'Agency', 'Liberation', 'Potential'], quote: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', youtubeId: YOUTUBE_VIDEO_ID, start: 6678, end: 6690 }
+    ];
+
+    let selected = [];
+    let filter = '';
+    let currentView = 'grid';
+    let clickTimers = {};
+
+    const viewBtns = document.querySelectorAll('.view-btn');
+    viewBtns.forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    function switchView(view) {
+      currentView = view;
+      viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+      
+      document.getElementById('gridView').style.display = view === 'grid' ? '' : 'none';
+      document.getElementById('listView').style.display = view === 'list' ? '' : 'none';
+      document.getElementById('canvas').classList.toggle('active', view === '3d');
+      
+      if (view === '3d' && !window.scene) init3D();
+      if (view === '3d') window.renderer?.render(window.scene, window.camera);
+    }
+
+    function renderCards() {
+      const grid = document.getElementById('gridView');
+      grid.innerHTML = '';
+
+      rawConcepts.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = data.id;
+
+        const headerColor = data.color || '#e0e0e0';
+        const textColor = isLight(headerColor) ? '#000' : '#fff';
+
+        card.innerHTML = `
+          <div class="card-header" style="background-color: ${headerColor}; color: ${textColor};">
+            ${data.title}
+          </div>
+          <div class="card-body">
+            <div class="card-category">${data.category}</div>
+            <div class="card-desc">${data.desc}</div>
+            ${data.quote ? `<div class="card-quote">"${data.quote}"</div>` : ''}
+            <div class="card-tags">${(data.tags || []).join(' · ')}</div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => handleCardClick(data.id, card));
+        grid.appendChild(card);
+      });
+    }
+
+    function renderList() {
+      const list = document.getElementById('listView');
+      list.innerHTML = '';
+
+      rawConcepts.forEach(data => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.dataset.id = data.id;
+
+        item.innerHTML = `
+          <div class="list-item-color" style="background-color: ${data.color}"></div>
+          <div class="list-item-content">
+            <div class="list-item-title">${data.title}</div>
+            <div class="list-item-meta">${data.category}</div>
+            <div class="list-item-desc">${data.desc}</div>
+          </div>
+        `;
+
+        item.addEventListener('click', () => handleCardClick(data.id, item));
+        list.appendChild(item);
+      });
+    }
+
+    function handleCardClick(id, element) {
+      let clickCount = clickTimers[id]?.count || 0;
+      clickCount++;
+
+      if (clickTimers[id]) clearTimeout(clickTimers[id].timer);
+
+      if (clickCount === 2) {
+        const data = rawConcepts.find(c => c.id === id);
+        playVideo(data);
+        clickTimers[id] = { count: 0, timer: null };
+      } else {
+        clickTimers[id] = {
+          count: clickCount,
+          timer: setTimeout(() => {
+            toggleSelect(id, element);
+            clickTimers[id] = { count: 0, timer: null };
+          }, 300)
+        };
+      }
+    }
+
+    function toggleSelect(id, element) {
+      if (selected.includes(id)) {
+        selected = selected.filter(s => s !== id);
+        element.classList.remove('selected');
+      } else {
+        if (selected.length < 12) {
+          selected.push(id);
+          element.classList.add('selected');
+        }
+      }
+      updateDock();
+      updateCounts();
+    }
+
+    function updateDock() {
+      const dock = document.getElementById('dockContent');
+      const header = document.querySelector('.dock-header');
+
+      header.textContent = `Your Story (${selected.length}/12)`;
+
+      if (selected.length === 0) {
+        dock.innerHTML = '<div class="empty-state">Select up to 12 concepts to build your story</div>';
+        return;
+      }
+
+      dock.innerHTML = '';
+      selected.forEach((id, idx) => {
+        const data = rawConcepts.find(c => c.id === id);
+        const item = document.createElement('div');
+        item.className = 'dock-item';
+        item.style.borderColor = data.color;
+        item.innerHTML = `
+          <div class="dock-item-num">${idx + 1}</div>
+          <div class="dock-item-title">${data.title}</div>
+          <div class="dock-item-category">${data.category}</div>
+          <div class="dock-item-remove">×</div>
+        `;
+        item.querySelector('.dock-item-remove').addEventListener('click', (e) => {
+          e.stopPropagation();
+          selected = selected.filter(s => s !== id);
+          document.querySelector(`[data-id="${id}"]`)?.classList.remove('selected');
+          updateDock();
+          updateCounts();
+        });
+        item.addEventListener('click', () => playVideo(data));
+        dock.appendChild(item);
+      });
+    }
+
+    function playVideo(data) {
+      const start = data.start || 0;
+      const url = `https://www.youtube.com/embed/${data.youtubeId}?start=${start}&autoplay=1`;
+      document.getElementById('videoFrame').src = url;
+      document.getElementById('videoOverlay').classList.add('active');
+    }
+
+    function updateCounts() {
+      const visible = rawConcepts.filter(c => 
+        !filter || c.title.toLowerCase().includes(filter) || c.category.toLowerCase().includes(filter) || c.tags.some(t => t.toLowerCase().includes(filter))
+      ).length;
+      document.getElementById('visibleCount').textContent = visible;
+      document.getElementById('totalCount').textContent = rawConcepts.length;
+    }
+
+    function isLight(color) {
+      const hex = color.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+    }
+
+    document.getElementById('filterInput').addEventListener('input', (e) => {
+      filter = e.target.value.toLowerCase();
+      const query = filter.toLowerCase();
+      document.querySelectorAll('[data-id]').forEach(el => {
+        const data = rawConcepts.find(c => c.id === el.dataset.id);
+        const match = !query || data.title.toLowerCase().includes(query) || data.category.toLowerCase().includes(query) || data.tags.some(t => t.toLowerCase().includes(query));
+        el.style.display = match ? '' : 'none';
+      });
+      updateCounts();
+    });
+
+    document.getElementById('closeVideo').addEventListener('click', () => {
+      document.getElementById('videoOverlay').classList.remove('active');
+      document.getElementById('videoFrame').src = '';
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      selected = [];
+      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+      updateDock();
+      updateCounts();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const story = selected.map((id, idx) => {
+        const data = rawConcepts.find(c => c.id === id);
+        return `${idx + 1}. ${data.title}\n   ${data.desc}`;
+      }).join('\n\n');
+      
+      alert('Your Story:\n\n' + story);
+    });
+
+    function init3D() {
+      if (window.scene) return;
+      
+      const canvas = document.getElementById('canvas');
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      // Responsive camera setup
+      const isMobile = window.innerWidth < 768;
+      const aspect = canvas.clientWidth / canvas.clientHeight;
+      const camera = new THREE.PerspectiveCamera(isMobile ? 75 : 60, aspect, 0.1, 20000);
+      
+      // Adjust initial position based on screen size
+      const distance = isMobile ? 800 : 1200;
+      camera.position.set(0, 400, distance);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(500, 800, 500);
+      scene.add(dirLight);
+
+      // Grid helper
+      const gridSize = isMobile ? 3000 : 5000;
+      const grid = new THREE.GridHelper(gridSize, 40, 0xcccccc, 0xeeeeee);
+      scene.add(grid);
+
+      // OrbitControls with improved settings
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.rotateSpeed = 0.6;
+      controls.zoomSpeed = 1.2;
+      controls.panSpeed = 0.8;
+      controls.minDistance = isMobile ? 200 : 300;
+      controls.maxDistance = isMobile ? 2500 : 4000;
+      controls.maxPolarAngle = Math.PI / 2.1; // Prevent going below ground
+      controls.enablePan = true;
+      controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+      };
+
+      window.scene = scene;
+      window.camera = camera;
+      window.renderer = renderer;
+      window.controls = controls;
+      window.fragments3D = [];
+
+      create3DFragments();
+      animate3D();
+      setupCanvasInteraction();
+    }
+
+    function create3DFragments() {
+      const scene = window.scene;
+      const fragments = window.fragments3D;
+      
+      // Clear existing fragments
+      fragments.forEach(f => scene.remove(f.group));
+      fragments.length = 0;
+
+      const isMobile = window.innerWidth < 768;
+      const cols = isMobile ? 3 : 5;
+      const spacing = isMobile ? 280 : 320;
+      const rows = Math.ceil(rawConcepts.length / cols);
+
+      rawConcepts.forEach((data, idx) => {
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        const x = (col - (cols - 1) / 2) * spacing;
+        const z = (row - (rows - 1) / 2) * spacing;
+
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+
+        // Card dimensions - smaller on mobile
+        const W = isMobile ? 200 : 260;
+        const H = isMobile ? 140 : 180;
+        
+        // Create high-res canvas for better text legibility
+        const canvas = document.createElement('canvas');
+        const scale = 2; // Higher resolution
+        canvas.width = W * scale;
+        canvas.height = H * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        // Background
+        ctx.fillStyle = data.color;
+        ctx.fillRect(0, 0, W, H);
+
+        // Border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(0, 0, W, H);
+
+        // Title
+        const textColor = isLight(data.color) ? '#000' : '#fff';
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${isMobile ? 13 : 16}px 'Courier New', monospace`;
+        
+        // Word wrap title
+        const words = data.title.split(' ');
+        let line = '';
+        let y = isMobile ? 18 : 22;
+        const maxWidth = W - 16;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && line) {
+            ctx.fillText(line.trim(), 8, y);
+            line = words[i] + ' ';
+            y += isMobile ? 16 : 20;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line.trim(), 8, y);
+
+        // Category
+        y += isMobile ? 18 : 24;
+        ctx.font = `bold ${isMobile ? 9 : 10}px 'Courier New', monospace`;
+        ctx.fillStyle = textColor === '#000' ? '#333' : '#ddd';
+        ctx.fillText(data.category.toUpperCase(), 8, y);
+
+        // Description
+        y += isMobile ? 14 : 16;
+        ctx.font = `${isMobile ? 9 : 11}px 'Courier New', monospace`;
+        ctx.fillStyle = textColor === '#000' ? '#222' : '#eee';
+        
+        const descWords = data.desc.split(' ');
+        line = '';
+        const maxLines = isMobile ? 4 : 5;
+        let lineCount = 0;
+        
+        for (let i = 0; i < descWords.length && lineCount < maxLines; i++) {
+          const testLine = line + descWords[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && line) {
+            ctx.fillText(line.trim(), 8, y);
+            line = descWords[i] + ' ';
+            y += isMobile ? 12 : 14;
+            lineCount++;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line && lineCount < maxLines) {
+          ctx.fillText(line.trim(), 8, y);
+        }
+
+        // Create mesh
+        const geometry = new THREE.PlaneGeometry(W, H);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        const material = new THREE.MeshLambertMaterial({ map: texture });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.conceptId = data.id;
+        mesh.userData.conceptData = data;
+        group.add(mesh);
+
+        // Add subtle shadow plane
+        const shadowGeom = new THREE.PlaneGeometry(W, H);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.1, transparent: true });
+        const shadow = new THREE.Mesh(shadowGeom, shadowMat);
+        shadow.position.z = -2;
+        group.add(shadow);
+
+        scene.add(group);
+        fragments.push({ data, group, mesh });
+      });
+
+      drawConnectionLines();
+    }
+
+    function drawConnectionLines() {
+      const scene = window.scene;
+      const fragments = window.fragments3D;
+      
+      // Remove old lines
+      scene.children.forEach(obj => {
+        if (obj.userData && obj.userData.isConnectionLine) scene.remove(obj);
+      });
+
+      if (selected.length < 2) return;
+
+      const points = [];
+      selected.forEach(id => {
+        const frag = fragments.find(f => f.data.id === id);
+        if (frag) {
+          const pos = frag.group.position;
+          points.push(new THREE.Vector3(pos.x, 40, pos.z));
+        }
+      });
+
+      if (points.length < 2) return;
+
+      // Draw line
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0xc00000, linewidth: 2 });
+      const lineObj = new THREE.Line(lineGeometry, lineMaterial);
+      lineObj.userData.isConnectionLine = true;
+      scene.add(lineObj);
+
+      // Draw numbered spheres
+      selected.forEach((id, idx) => {
+        const frag = fragments.find(f => f.data.id === id);
+        if (frag) {
+          const sphereGeometry = new THREE.SphereGeometry(18, 16, 16);
+          const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xc00000 });
+          const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+          const pos = frag.group.position;
+          sphere.position.set(pos.x, 40, pos.z);
+          sphere.userData.isConnectionLine = true;
+          scene.add(sphere);
+
+          // Number label
+          const labelCanvas = document.createElement('canvas');
+          labelCanvas.width = 128;
+          labelCanvas.height = 128;
+          const labelCtx = labelCanvas.getContext('2d');
+          labelCtx.fillStyle = '#fff';
+          labelCtx.font = 'bold 80px Arial';
+          labelCtx.textAlign = 'center';
+          labelCtx.textBaseline = 'middle';
+          labelCtx.fillText(String(idx + 1), 64, 64);
+          const labelTexture = new THREE.CanvasTexture(labelCanvas);
+          const labelMaterial = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true });
+          const labelGeometry = new THREE.PlaneGeometry(40, 40);
+          const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
+          labelMesh.position.z = 20;
+          sphere.add(labelMesh);
+        }
+      });
+    }
+
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+      if (window.controls) window.controls.update();
+      if (window.renderer && window.scene && window.camera) {
+        window.renderer.render(window.scene, window.camera);
+      }
+    }
+
+    function setupCanvasInteraction() {
+      const canvas = document.getElementById('canvas');
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      canvas.addEventListener('click', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, window.camera);
+        const meshes = window.fragments3D.map(f => f.mesh);
+        const intersects = raycaster.intersectObjects(meshes);
+
+        if (intersects.length > 0) {
+          const conceptId = intersects[0].object.userData.conceptId;
+          const data = intersects[0].object.userData.conceptData;
+          
+          // Focus camera on clicked item
+          focusCameraOn(intersects[0].object.parent.position);
+          
+          // Toggle selection or play video based on modifier key
+          if (event.shiftKey) {
+            const element = document.querySelector(`[data-id="${conceptId}"]`);
+            toggleSelect(conceptId, element || { classList: { add: () => {}, remove: () => {} } });
+            drawConnectionLines();
+          } else {
+            playVideo(data);
+          }
+        }
+      });
+    }
+
+    function focusCameraOn(position) {
+      if (!window.controls) return;
+      
+      const controls = window.controls;
+      const camera = window.camera;
+      
+      // Smooth animation to target
+      const startTarget = controls.target.clone();
+      const endTarget = new THREE.Vector3(position.x, 0, position.z);
+      
+      const startPos = camera.position.clone();
+      const direction = new THREE.Vector3().subVectors(camera.position, startTarget).normalize();
+      const distance = 400; // Distance from target
+      const endPos = new THREE.Vector3(
+        endTarget.x + direction.x * distance,
+        300,
+        endTarget.z + direction.z * distance
+      );
+      
+      const duration = 800; // ms
+      const startTime = Date.now();
+      
+      function animateCamera() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeInOutCubic(progress);
+        
+        controls.target.lerpVectors(startTarget, endTarget, eased);
+        camera.position.lerpVectors(startPos, endPos, eased);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animateCamera);
+        }
+      }
+      
+      animateCamera();
+    }
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (window.renderer && window.camera && currentView === '3d') {
+        const canvas = document.getElementById('canvas');
+        window.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        window.camera.updateProjectionMatrix();
+        window.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        
+        // Recreate fragments with new sizing
+        create3DFragments();
+      }
+    });
+
+    renderCards();
+    renderList();
+    updateDock();
+    updateCounts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Can't Get You Out of My Head — Concept Explorer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Courier New', monospace; background: #fff; color: #000; }
+
+    /* Entry Screen */
+    .entry { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff; z-index: 100; }
+    .entry-content { text-align: center; max-width: 600px; padding: 40px; }
+    .headline { font-size: 3.2rem; font-weight: 900; letter-spacing: -2px; margin-bottom: 12px; }
+    .subhead { font-size: 1.4rem; font-weight: 700; color: #666; margin-bottom: 24px; }
+    .entry-desc { font-size: 0.95rem; color: #333; margin-bottom: 32px; line-height: 1.6; }
+    .entry-instructions { font-size: 0.85rem; color: #666; margin-bottom: 24px; padding: 16px; background: #f9f9f9; border-left: 4px solid #000; line-height: 1.5; text-align: left; }
+    .entry-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 10px 20px; border: 2px solid #000; background: #fff; color: #000; font-family: inherit; font-weight: bold; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { background: #000; color: #fff; }
+    .btn.primary { background: #000; color: #fff; }
+    .btn.primary:hover { background: #333; }
+
+    /* Main Layout */
+    .app-layout { display: flex; width: 100%; height: 100%; }
+    .main-view { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+    /* View Controls */
+    .view-controls { padding: 12px 16px; border-bottom: 3px solid #000; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: rgba(255,255,255,0.98); z-index: 50; }
+    .view-btn { padding: 8px 14px; border: 2px solid #000; background: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 12px; transition: all 0.2s; }
+    .view-btn:hover { background: #f0f0f0; }
+    .view-btn.active { background: #000; color: #fff; }
+    .filter-bar { display: flex; gap: 8px; align-items: center; flex: 1; }
+    .filter-bar input { flex: 1; min-width: 150px; padding: 6px 10px; border: 2px solid #000; font-family: inherit; font-size: 12px; }
+    .count-badge { font-size: 11px; font-weight: bold; min-width: 60px; }
+    .toggle-trail-btn { padding: 8px 14px; border: 2px solid #c00; background: #fff; color: #c00; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 12px; transition: all 0.2s; }
+    .toggle-trail-btn:hover { background: #c00; color: #fff; }
+    .toggle-trail-btn.active { background: #c00; color: #fff; }
+
+    /* Grid View */
+    .grid-view { flex: 1; overflow-y: auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); align-items: start; }
+    .card { background: #fff; border: 3px solid #000; transition: all 0.2s; display: block; user-select: none; position: relative; height: auto; cursor: pointer; }
+    .card.hidden { display: none; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+    .card.selected { box-shadow: inset 0 0 0 5px #c00; background: #fff; }
+    .card.selected::before { content: '✓'; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; background: #c00; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; z-index: 10; }
+    .card-header { padding: 16px; font-weight: bold; font-size: 15px; line-height: 1.3; color: #fff; min-height: 60px; display: block; position: relative; }
+    .card-sequence { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; background: #c00; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+    .card-body { padding: 14px 16px; display: block; font-size: 12px; line-height: 1.6; background: #fff; }
+    .card-category { font-weight: bold; font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 8px; display: block; }
+    .card-desc { color: #333; margin-bottom: 10px; line-height: 1.6; display: block; }
+    .card-quote { font-style: italic; font-size: 11px; color: #555; padding: 10px 12px; border-left: 3px solid #c00; margin: 10px 0; background: #f9f9f9; line-height: 1.5; display: block; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; line-height: 1.4; display: block; }
+    .card-meta { padding: 12px 16px; border-top: 2px solid #eee; font-size: 10px; font-weight: bold; color: #666; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+    .card-select-btn { padding: 6px 14px; background: #000; color: #fff; border: none; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 11px; transition: all 0.2s; }
+    .card-select-btn:hover { background: #333; }
+    .card-select-btn.selected { background: #c00; }
+    .card-play-btn { padding: 6px 14px; background: #fff; color: #000; border: 2px solid #000; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 11px; transition: all 0.2s; margin-left: 8px; }
+    .card-play-btn:hover { background: #000; color: #fff; }
+
+    /* List View */
+    .list-view { flex: 1; overflow-y: auto; padding: 16px; }
+    .list-item { background: #f8f8f8; border: 3px solid #000; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; gap: 12px; align-items: flex-start; position: relative; }
+    .list-item:hover { background: #f0f0f0; transform: translateX(4px); }
+    .list-item.selected { background: #fff; box-shadow: inset 0 0 0 4px #c00; border-color: #c00; }
+    .list-item-sequence { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; background: #c00; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
+    .list-item-color { width: 60px; height: 60px; border: 2px solid #000; flex-shrink: 0; }
+    .list-item-content { flex: 1; min-width: 0; padding-right: 40px; }
+    .list-item-title { font-weight: bold; font-size: 15px; margin-bottom: 6px; }
+    .list-item-meta { font-size: 11px; color: #666; margin-bottom: 6px; }
+    .list-item-desc { font-size: 12px; color: #333; margin-bottom: 6px; line-height: 1.5; }
+    .list-item-quote { font-style: italic; font-size: 11px; color: #555; padding: 6px; border-left: 3px solid #c00; margin-top: 6px; background: #f9f9f9; }
+    .list-item-tags { font-size: 10px; color: #999; margin-top: 6px; }
+
+    /* 3D View */
+    #canvas { display: none; width: 100%; height: 100%; }
+    #canvas.active { display: block; }
+
+    /* Dock */
+    .dock { width: 280px; border-left: 3px solid #000; background: rgba(255,255,255,0.98); display: flex; flex-direction: column; overflow: hidden; }
+    .dock-header { padding: 12px; border-bottom: 3px solid #000; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: #f0f0f0; }
+    .dock-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+    .dock-item { background: #f8f8f8; border: 2px solid #000; padding: 10px; cursor: pointer; position: relative; transition: all 0.2s; font-size: 12px; }
+    .dock-item:hover { background: #f0f0f0; }
+    .dock-item-num { position: absolute; top: 4px; right: 6px; font-weight: bold; color: #999; font-size: 10px; }
+    .dock-item-title { font-weight: bold; font-size: 11px; margin-bottom: 4px; margin-right: 20px; }
+    .dock-item-category { font-size: 9px; color: #666; text-transform: uppercase; }
+    .dock-item-remove { position: absolute; bottom: 2px; right: 6px; cursor: pointer; color: #c00; font-weight: bold; font-size: 12px; opacity: 0; transition: opacity 0.2s; }
+    .dock-item:hover .dock-item-remove { opacity: 1; }
+    .dock-footer { padding: 12px; border-top: 3px solid #000; display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+    .dock-footer-row { display: flex; gap: 6px; }
+    .dock-btn { flex: 1; padding: 8px; border: 2px solid #000; background: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 11px; transition: all 0.2s; }
+    .dock-btn:hover { background: #000; color: #fff; }
+    .dock-btn.primary { background: #000; color: #fff; }
+    .dock-btn.primary:hover { background: #333; }
+    .empty-state { padding: 20px; text-align: center; color: #999; font-size: 12px; }
+
+    /* Video Overlay */
+    .video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 200; }
+    .video-overlay.active { display: flex; }
+    .video-container { position: relative; width: 92%; max-width: 1100px; aspect-ratio: 16/9; }
+    .video-frame { width: 100%; height: 100%; border: 3px solid #fff; }
+    .video-close { position: absolute; top: -50px; right: 0; background: none; border: 2px solid #fff; color: #fff; font-size: 32px; cursor: pointer; width: 48px; height: 48px; font-weight: bold; transition: all 0.2s; }
+    .video-close:hover { background: #fff; color: #000; }
+    .video-info { position: absolute; bottom: -50px; left: 0; color: #fff; font-weight: bold; font-size: 0.9rem; }
+
+    /* Presentation Mode */
+    .presentation-overlay { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; z-index: 300; }
+    .presentation-overlay.active { display: flex; }
+    .presentation-header { padding: 20px; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; }
+    .presentation-title { color: #fff; font-size: 1.2rem; font-weight: bold; }
+    .presentation-progress { color: #999; font-size: 0.9rem; }
+    .presentation-close { background: none; border: 2px solid #fff; color: #fff; font-size: 24px; cursor: pointer; width: 40px; height: 40px; font-weight: bold; transition: all 0.2s; }
+    .presentation-close:hover { background: #fff; color: #000; }
+    .presentation-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; overflow-y: auto; }
+    .presentation-slide { max-width: 900px; width: 100%; }
+    .presentation-slide-header { padding: 24px; font-weight: bold; font-size: 2rem; line-height: 1.2; color: #fff; margin-bottom: 20px; border-radius: 8px; }
+    .presentation-slide-body { background: #fff; padding: 32px; border-radius: 8px; }
+    .presentation-category { font-weight: bold; font-size: 14px; text-transform: uppercase; color: #666; margin-bottom: 16px; }
+    .presentation-desc { color: #333; margin-bottom: 20px; font-size: 16px; line-height: 1.8; }
+    .presentation-quote { font-style: italic; font-size: 15px; color: #555; padding: 20px; border-left: 4px solid #c00; margin: 20px 0; background: #f9f9f9; line-height: 1.7; }
+    .presentation-tags { font-size: 13px; color: #999; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee; }
+    .presentation-meta { font-size: 12px; font-weight: bold; color: #666; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; }
+    .presentation-nav { padding: 20px; border-top: 2px solid #333; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .presentation-nav-btn { padding: 12px 24px; border: 2px solid #fff; background: #000; color: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+    .presentation-nav-btn:hover { background: #fff; color: #000; }
+    .presentation-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .presentation-nav-btn:disabled:hover { background: #000; color: #fff; }
+    .presentation-indicator { color: #999; font-size: 14px; }
+
+    @media (max-width: 1024px) { .dock { width: 200px; } }
+    @media (max-width: 768px) {
+      .headline { font-size: 2.2rem; }
+      .grid-view { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
+      .app-layout { flex-direction: column; }
+      .dock { width: 100%; border-left: none; border-top: 3px solid #000; max-height: 220px; }
+      .presentation-slide-header { font-size: 1.5rem; padding: 16px; }
+      .presentation-slide-body { padding: 20px; }
+      .presentation-desc { font-size: 14px; }
+      .presentation-quote { font-size: 13px; padding: 12px; }
+      .presentation-nav-btn { padding: 10px 16px; font-size: 12px; }
+      .card-header { font-size: 13px; padding: 12px; min-height: 50px; }
+      .card-body { font-size: 11px; padding: 12px; }
+      .card-desc { font-size: 11px; }
+      .card-quote { font-size: 10px; padding: 8px; }
+      .card-tags { font-size: 9px; }
+      .card-meta { padding: 10px 12px; flex-direction: column; gap: 6px; align-items: stretch; }
+      .card-meta > div { display: flex; gap: 6px; }
+      .card-select-btn, .card-play-btn { flex: 1; font-size: 10px; padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="entry-phase" class="entry">
+    <div class="entry-content">
+      <h1 class="headline">Can't Get You Out of My Head</h1>
+      <p class="subhead">An Emotional History of the Modern World</p>
+      <p class="entry-desc">Explore 68 interconnected concepts from Adam Curtis's documentary. Select up to 12 to build your narrative journey through the fragmented landscape of power, technology, and individualism.</p>
+      <div class="entry-instructions">
+        <strong>How to Use:</strong><br>
+        • <strong>Single Click</strong> card to play video<br>
+        • <strong>Double Click</strong> card to add to story (up to 12)<br>
+        • <strong>Show Trail</strong> button to hide unselected cards<br>
+        • <strong>Present Story</strong> to view as slideshow<br>
+        • <strong>Export</strong> as JSON to share with classmates<br>
+        • <strong>Load Story</strong> to import saved work<br>
+        • Auto-saves to browser storage
+      </div>
+      <div class="entry-buttons">
+        <button id="start-grid" class="btn primary">▶ Enter Grid</button>
+        <button id="start-list" class="btn">Enter List</button>
+        <button id="start-3d" class="btn">Enter 3D</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-layout" style="display: none;" id="main-app">
+    <div class="main-view">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="grid">Grid</button>
+        <button class="view-btn" data-view="list">List</button>
+        <button class="view-btn" data-view="3d">3D</button>
+        <button id="toggle-trail-btn" class="toggle-trail-btn">★ Show Trail</button>
+        <div class="filter-bar">
+          <input id="filterInput" placeholder="Search concepts, categories, tags..." />
+          <div class="count-badge"><span id="visibleCount">0</span> / <span id="totalCount">0</span></div>
+        </div>
+        <button id="reset-btn" class="btn">⏮ Home</button>
+      </div>
+
+      <div class="grid-view" id="gridView"></div>
+      <div class="list-view" id="listView" style="display: none;"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="dock">
+      <div class="dock-header">Your Story (0/12)</div>
+      <div class="dock-content" id="dockContent">
+        <div class="empty-state">Select up to 12 concepts to build your story</div>
+      </div>
+      <div class="dock-footer">
+        <div class="dock-footer-row">
+          <button class="dock-btn primary" id="presentBtn">▶ Present Story</button>
+        </div>
+        <div class="dock-footer-row">
+          <button class="dock-btn" id="exportBtn">Export</button>
+          <button class="dock-btn" id="clearBtn">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-overlay" id="videoOverlay">
+    <div class="video-container">
+      <button class="video-close" id="videoClose">✕</button>
+      <iframe class="video-frame" id="videoFrame" referrerpolicy="no-referrer-when-downgrade" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      <div class="video-info" id="videoInfo">—</div>
+    </div>
+  </div>
+
+  <div class="presentation-overlay" id="presentationOverlay">
+    <div class="presentation-header">
+      <div>
+        <div class="presentation-title">Your Story</div>
+        <div class="presentation-progress" id="presentProgress">—</div>
+      </div>
+      <button class="presentation-close" id="presentClose">✕</button>
+    </div>
+    <div class="presentation-main">
+      <div class="presentation-slide" id="presentSlide"></div>
+    </div>
+    <div class="presentation-nav">
+      <button class="presentation-nav-btn" id="presentPrev">← Previous</button>
+      <div class="presentation-indicator" id="presentIndicator">—</div>
+      <button class="presentation-nav-btn" id="presentNext">Next →</button>
+    </div>
+  </div>
+
+  <script>
+    const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+    const MAX_CLIPS = 12;
+    const STORAGE_KEY = 'cgoyomh-story';
+
+    const rawConcepts = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', color: '#C8E6C9', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', color: '#AED581', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', start: 67, end: 78 }, 
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', color: '#9CCC65', tags: ['Bayer', 'Idealism', 'Resistance'], quote: 'It was a utopian vision of the self selecting and arranging the fragments of images into their own story and so becoming strong enough to withstand tyranny.', start: 91, end: 97 }, 
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', color: '#EF5350', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', start: 183, end: 190 }, 
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland (Afeni)', category: 'Systemic Critique', desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power.', color: '#FFCDD2', tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control'], quote: "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.", start: 197, end: 204 }, 
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', color: '#F44336', tags: ['Tupac', 'Revolution', 'Collective Action'], quote: 'He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.', start: 143, end: 148 }, 
+      { id: 'civil-rights-promises-broken', title: 'Civil Rights Promises (Broken)', category: 'Systemic Event', desc: 'The idealism of black politics fell away and communities divided into gangs that then turned on each other.', color: '#BDBDBD', tags: ['History', 'Disillusionment', 'Social Decay'], quote: 'By the 1980s, it was clear that the promises of the civil rights movement had not been kept in America and the idealism of black politics fell away and the communities divided into gangs that then turned on each other.', start: 244, end: 251 }, 
+      { id: 'society-boom-q', title: 'Societal "Boom" (Repression)', category: 'Systemic Control', desc: 'Society will let you go as far as you want, but as soon as you start asking too many questions, "boom".', color: '#616161', tags: ['Repression', 'Control', 'Censorship'], quote: "Well, society is like that. They'll let you go as far as you want, but as soon as you start asking too many questions and you're ready to change, boom.", start: 230, end: 237 }, 
+      { id: 'crack-epidemic-afeni-fall', title: "Crack Epidemic (Afeni's Fall)", category: 'Systemic Event', desc: 'Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.', color: '#424242', tags: ['Social Crisis', 'Vulnerability', 'Systemic Impact'], quote: 'Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.', start: 291, end: 300 }, 
+      { id: 'tupac-thug-life-authenticity', title: 'Thug Life (Authenticity)', category: 'Culture/Identity', desc: 'Tupac tried to become more and more part of that world to prove his authenticity, accused of intensifying violence.', color: '#FF7043', tags: ['Tupac', 'Identity', 'Violence', 'Critique'], quote: 'In response, Tupac tried to become more and more part of that world to prove his authenticity. But then the black radicals accused him of getting lost in the character he had created.', start: 971, end: 992 }, 
+      { id: 'mass-incarceration-clinton', title: 'Mass Incarceration (Clinton)', category: 'Systemic Control', desc: 'President Clinton brought in tough new crime rules, imprisoning hundreds of thousands of young black men.', color: '#78909C', tags: ['Clinton', 'Injustice', 'Control', 'Politics'], quote: 'Hundreds of thousands of young black men were now imprisoned with no hope of parole, even for minor offenses.', start: 1070, end: 1078 }, 
+      { id: 'cultural-fairy-tale-tupac', title: 'Culture as Fairy Tale (Tupac)', category: 'Systemic Critique', desc: 'By moving radical politics into culture, Tupac helped keep anger and dissent sealed off from real politics and power.', color: '#90CAF9', tags: ['Media', 'Illusion', 'Politics', 'Dissent'], quote: 'By moving radical politics into the world of culture, Tupac Shakur had also become part of the fairy tale world because he helped keep the anger and the dissent sealed off from the real world of politics and power.', start: 1099, end: 1113 }, 
+      { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society (Corrupt)', category: 'Systemic Critique', desc: 'Billions of dollars from the West created a dreamlike society run by an elite, but also deeply corrupt.', color: '#FFD54F', tags: ['Saudi', 'Wealth', 'Corruption', 'Illusion'], quote: 'This vast wave of money had created a dreamlike society run by an elite where no one paid any tax.', start: 379, end: 384 }, 
+      { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary (Fragments)", category: 'Personal Apparatus', desc: 'A vast collage of memories and feelings, written after shrapnel pierced his skull, leaving his world in fragments.', color: '#BCAAA4', tags: ['Trauma', 'Memory', 'Fragmentation', 'Identity'], quote: 'Then his memories from the past began to come back but in a mass of fragments. Nothing linked them. They made no sense.', start: 1166, end: 1172 }, 
+      { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', category: 'Systemic Event', desc: 'The whole organization of Jihad was disintegrating into rival factions; all ideas of solidarity and collective action had gone.', color: '#90A4AE', tags: ['Disillusionment', 'Conflict', 'Revolution'], start: 1237, end: 1248 }, 
+      { id: 'zubaydah-perpetual-now', title: 'Perpetual Now (Zubaydah)', category: 'Emotional State', desc: 'His identity had disintegrated into random memories, trapped in a perpetual now, no way of moving forward.', color: '#424242', tags: ['Existential', 'Fragmentation', 'Nihilism'], quote: 'He wrote how it was as though time had stopped. He was trapped in a perpetual now, haunted by fragments of memory, with no way of moving forward into the future.', start: 1313, end: 1320 }, 
+      { id: 'cia-enhanced-interrogation', title: 'CIA Enhanced Interrogation', category: 'Systemic Control', desc: 'Used waterboarding 83 times, smashing, and freezing to reduce Abu Zubaydah to a state of "learned helplessness".', color: '#B71C1C', tags: ['Torture', 'Power', 'Control', 'Psychology', 'Systemic'], quote: 'They would use it to reduce Abu Zubeda back to a state of learned helplessness. They called it enhanced interrogation.', start: 2604, end: 2616 }, 
+      { id: 'cia-godzilla-fear', title: 'CIA & Godzilla (Fear Wave)', category: 'Systemic Impact', desc: "Disconnected memories from Zubaydah's brain, including from films like Godzilla, spread fear across America.", color: '#795548', tags: ['Media', 'Propaganda', 'Fear', 'Systemic'], quote: 'Desperate for the torture to stop, Zuba just spewed out all the disconnected memories inside his brain... many of them drawn from the films he had watched, including Godzilla.', start: 2664, end: 2675 }, 
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'One tiny change in equations could have massive catastrophic consequences which they could never have predicted.', color: '#42A5F5', tags: ['Science', 'Complexity', 'Prediction', 'Limits of Control'], quote: 'One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.', start: 664, end: 669 }, 
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).', color: '#2196F3', tags: ['Science', 'Patterns', 'Management', 'Control'], quote: 'But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.', start: 738, end: 751 }, 
+      { id: 'gell-mann-underlying-patterns', title: 'Gell-Mann: Underlying Patterns', category: 'Core Concept', desc: 'Believed there were underlying patterns at every level of the universe: particles, thought, societies, languages.', color: '#1976D2', tags: ['Gell-Mann', 'Universal', 'Structure', 'Order'], quote: 'He believed that there were underlying patterns at every level of the universe. Not just in the particles, but in the way people think, in the structure of human societies, and even in the languages they spoke.', start: 766, end: 779 }, 
+      { id: 'gazzaniga-multiple-selves', title: 'Gazzaniga: Multiple Selves', category: 'Psychological Theory', desc: 'Inside brains, human beings have all kinds of different selves; conscious mind makes up stories for illusion of control.', color: '#FFB74D', tags: ['Neuroscience', 'Psychology', 'Identity', 'Illusion'], quote: 'Gazanaga argued that really there were multiple selves inside the human brain. Each one taking control at different moments. Normally that is hidden because the one self that is conscious constantly makes up stories to explain what all the other selves are doing.', start: 1450, end: 1478 }, 
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks (AI)', category: 'Technological Apparatus', desc: 'AI learns from mass data, looks for connections/patterns, completely ignores all human stories and meaning.', color: '#00BCD4', tags: ['AI', 'Data', 'Pattern Recognition', 'Algorithms'], quote: "Hinton's neural networks were a kind of intelligence that completely ignored all stories.", start: 3595, end: 3606 }, 
+      { id: 'hinton-vector-world-myth', title: 'Vector World (AI Mythology)', category: 'Core Concept', desc: 'The world is too complicated for us as human beings to understand, but nothing is too complicated for the machines and data.', color: '#0097A7', tags: ['AI', 'Mythology', 'Control', 'Dehumanization'], quote: 'He called it vector world. It expressed what was becoming one of the most powerful mythologies of our age... that the world is too complicated for us as human beings to understand. But nothing is too complicated for the machines and the data.', start: 3628, end: 3652 }, 
+      { id: 'google-mission-idealism', title: 'Google (Early Mission)', category: 'Organizational Idealism', desc: "To make the world's information accessible and useful, providing instant access to any information anybody ever wants.", color: '#8BC34A', tags: ['Google', 'Information', 'Idealism', 'Technology'], quote: 'At Google, our mission is to make the world\'s information accessible and useful... My hope is to provide instant access to any information anybody ever wants in the future.', start: 1739, end: 1770 }, 
+      { id: 'dot-com-burst-money-power', title: 'Dot-Com Bust (Money Power)', category: 'Economic Event', desc: 'The crash meant Google met the power of money, which was going to reshape their aims completely by venture capitalists.', color: '#BCAAA4', tags: ['Economy', 'Crisis', 'Corporate Control'], quote: 'Google managed to survive, but the crash meant that they met the power of money, which was going to reshape their aims completely.', start: 2210, end: 2215 }, 
+      { id: 'google-data-trails-predict', title: 'Google (Data Trails & Predict)', category: 'Technological Apparatus', desc: 'Engineers realized they could build a picture of how every individual behaved to predict what advertisements they would click.', color: '#689F38', tags: ['Google', 'Data', 'Prediction', 'Surveillance'], quote: 'Every time someone searched the web, they left trails behind them... they could build up a picture of how every individual behaved and how they were likely to behave in the future. It meant they could predict what advertisement an individual would click on', start: 2254, end: 2269 }, 
+      { id: '911-patriot-act-privacy-lost', title: '9/11 & Patriot Act (Privacy Lost)', category: 'Systemic Event', desc: "Everyone's personal data must be open to examination to stop further attacks; privacy became irrelevant.", color: '#D32F2F', tags: ['Security', 'Privacy', 'State Control', 'Systemic'], quote: 'Privacy of the individual now became irrelevant in the face of a much higher need, security.', start: 2347, end: 2353 }, 
+      { id: 'google-sidelining-consciousness', title: 'Google (Sidelining Consciousness)', category: 'Systemic Impact', desc: 'Taking people\'s data to predict what they would do, what they thought or felt as individuals was completely eradicated.', color: '#AFB42B', tags: ['Google', 'Dehumanization', 'Control', 'Data'], quote: "What Google were now doing was taking people's data and using it to predict what those individuals would do... What they thought or felt as individuals and the stories they told themselves was completely iraded. Consciousness was being sidelined even more.", start: 2402, end: 2425 }, 
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush (Surveillance)', category: 'Economic Apparatus', desc: 'Products (Roomba, We Vibe, Kayla doll, Pokémon Go) set up to mine traces of human behavior everywhere.', color: '#FFD700', tags: ['Surveillance Capitalism', 'Privacy', 'Commercial'], quote: 'Products of more and more companies around the world were set up to mine all the traces of human behavior everywhere.', start: 3691, end: 3698 }, 
+      { id: 'pokemon-go-persuasive', title: 'Pokémon Go (Persuasive Gaming)', category: 'Technological Apparatus', desc: 'An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.', color: '#FFEB3B', tags: ['Gaming', 'Behavioral Control', 'Monetization'], quote: 'Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.', start: 3789, end: 3795 }, 
+      { id: 'algorithmic-mortgages-broken', title: 'Algorithmic Mortgages (Broken)', category: 'Systemic Apparatus', desc: 'Computers cut up dangerous high-risk loans and recombined them; the connection of debts to human reality was broken.', color: '#90A4AE', tags: ['Finance', 'Abstraction', 'Crisis', 'Systemic'], quote: 'The computers cut up the dangerous high-risk loans and recombined them with other safer loans... the connection of the debts to human reality was broken.', start: 4049, end: 4062 }, 
+      { id: 'china-algorithmic-governance', title: 'China (Algorithmic Governance)', category: 'Systemic Control', desc: 'Adjusting behavior with "social credits" for rewards/penalties, forcibly reprogram if unresponsive (Xinjiang).', color: '#4169E1', tags: ['China', 'Surveillance State', 'Social Control', 'BF Skinner'], quote: 'And if the data from all the different sources showed a person behaving well... then they would be given what were called social credits.', start: 5315, end: 5329 }, 
+      { id: 'skinner-operant-conditioning', title: 'Skinner (Operant Conditioning)', category: 'Psychological Theory', desc: 'Easily alter behavior of animals using simple rewards, leading to a "beyond freedom and dignity" utopia (Walden Two).', color: '#1E88E5', tags: ['Behaviorism', 'Control', 'Utopia', 'China'], quote: 'Skinner had shown how he could easily alter the behavior of animals like pigeons by using a simple system of rewards. He called it operant conditioning.', start: 5356, end: 5369 }, 
+      { id: 'skinner-walden2', title: 'Walden 2 Utopia', category: 'Concept', desc: 'Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.', color: '#87CEEB', tags: ['Utopia', 'Control', 'Prediction', 'BF Skinner'], quote: 'Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.', start: 5410, end: 5422 }, 
+      { id: 'russia-oligarchs-putin-rise', title: "Russia (Oligarchic Control)", category: 'Systemic Event', desc: 'Oligarchs looted the country and selected Vladimir Putin, a man who believed in nothing, to protect their power.', color: '#607D8B', tags: ['Russia', 'Corruption', 'Power Elite'], quote: 'In 1999, the oligarchs decided to select Russia\'s next president... And they selected Vladimir Putin... a man who believed in nothing.', start: 1905, end: 1926 }, 
+      { id: 'kursk-disaster-anger-power', title: "Kursk Disaster (Putin's Power)", category: 'Systemic Event', desc: 'Putin turned public anger away from himself and towards the corrupt elites in Moscow, the oligarchs, discovering a new source of power.', color: '#455A64', tags: ['Putin', 'Populism', 'Crisis Management'], quote: 'What Putin then did to save himself was turn that anger away from himself and towards the very people who had put him in power.', start: 2053, end: 2062 }, 
+      { id: 'putin-no-logic-strategy', title: 'Putin (No Logic/Strategy)', category: 'Leadership Critique', desc: 'Everything is a tactical step, a real-time response to external stimuli devoid of any ultimate objective (Mikhail Zygar).', color: '#37474F', tags: ['Putin', 'Nihilism', 'Post-Truth'], quote: 'The Russian journalist Mikuel Zygar wrote, "There is no logic in the age of Putin. There is no plan or strategy. Everything that happens... is a tactical step... devoid of any ultimate objective."', start: 2126, end: 2147 }, 
+      { id: 'putin-eurasia-defense', title: 'Putin (Eurasia as Defense)', category: 'Political Ideology', desc: 'Summoned a dark, frightening vision of Russia (Eurasia) as the last defense against a corrupt West, promoting Russian exceptionalism.', color: '#D32F2F', tags: ['Putin', 'Nationalism', 'Geopolitics', 'Propaganda'], quote: 'He summoned up a dark, frightening vision from Russia\'s past. It said that Russia as a whole, what was called Eurasia, was the last defense against a corrupt West that was trying to take over the whole world.', start: 4809, end: 4827 }, 
+      { id: 'nightwolves-conspiracy-propaganda', title: 'Nightwolves (Conspiracy Drama)', category: 'Culture/Propaganda', desc: 'Extreme nationalist motorcycle club dramatized a paranoid conspiracy that America/Illuminati were planning to undermine Putin and destroy Russia.', color: '#E53935', tags: ['Russia', 'Conspiracy', 'Nationalism'], quote: 'The Nightwolves put on mass shows that dramatized the paranoid conspiracy theory that America... were planning to undermine Vladimir Putin and destroy Russia.', start: 4893, end: 4907 }, 
+      { id: 'russia-dream-consumption', title: 'Russia (Dream World of Consumption)', category: 'Systemic Critique', desc: 'The country rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', color: '#BBDEFB', tags: ['Social Decay', 'Illusion', 'Economy'], quote: 'The country, he said, rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', start: 3611, end: 3618 }, 
+      { id: 'london-second-empire-discretion', title: 'London (Second Empire of Secrecy)', category: 'Systemic Apparatus', desc: "City's 'discretion in the market' turned into a force shield, hiding hundreds of billions of illegal fortunes, making the world seem bewilderingly complicated.", color: '#757575', tags: ['Finance', 'Corruption', 'Offshore', 'Globalization'], quote: 'Now, the discretion that the city was still so proud of had in reality turned into a force shield. It stopped any proper investigation of what was really going on.', start: 5013, end: 5019 }, 
+      { id: 'china-princelings-void', title: "China (Princelings' Ideological Void)", category: 'Systemic Event', desc: 'Children of the Cultural Revolution in power; money filled the void of any guiding ideology, dissolving social bonds.', color: '#FF5722', tags: ['China', 'Elite', 'Corruption', 'Ideological Vacuum'], quote: 'What had been buried and forgotten was any guiding ideology, any confident story about what this was all for. Instead, money had filled the void...', start: 3011, end: 3023 }, 
+      { id: 'china-land-grab-corruption', title: 'China (Massive Land Grab)', category: 'Systemic Event', desc: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', color: '#F4511E', tags: ['Corruption', 'Injustice', 'Economy', 'Systemic'], quote: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', start: 3043, end: 3050 }, 
+      { id: 'bo-chongqing-experiment', title: 'Bo Xilai (Chongqing Experiment)', category: 'Political Project', desc: 'Used the city as a laboratory to reawaken past idealism with Mao songs and tackle inequality, later exposed as a corruption smokescreen.', color: '#A1887F', tags: ['Bo Xilai', 'Populism', 'Hypocrisy'], quote: 'Bor soon became famous and he was seen as a future leader.', start: 3261, end: 3267 }, 
+      { id: 'xi-jinping-giant-control', title: 'Xi Jinping (Giant Control System)', category: 'Political Project', desc: 'Decided to turn China into a giant system in which everyone\'s behavior could be predicted, managed, and controlled.', color: '#1A237E', tags: ['China', 'Totalitarian', 'Surveillance', 'Control'], start: 5296, end: 5301 }, 
+      { id: 'conspiracy-theories-human-ai', title: 'Conspiracy Theories (Human AI)', category: 'Social Phenomenon', desc: 'Humans spent vast amounts of time searching online data for patterns like AI, turning them into fantastic, elaborate stories.', color: '#7E57C2', tags: ['Social', 'Fragmentation', 'Narrative', 'Post-Truth'], quote: 'But then it got more complicated because human beings were also exposed to the avalanche of data online and they started to behave in very much the same way as Jeffrey Hinton\'s artificial intelligence machines.', start: 4129, end: 4161 }, 
+      { id: 'illuminati-mind-control', title: 'Illuminati (Mind Control Theory)', category: 'Conspiracy Theory', desc: 'Millions convinced major stars were manipulated by Illuminati via MK Ultra/Disney, with hidden messages and triangles in videos.', color: '#5E35B1', tags: ['Conspiracy', 'Media', 'Control', 'Paranoia'], quote: 'Millions of people became convinced that all the major stars, from Britney Spears to Beyonce, were being manipulated and controlled by the Illuminati. The theory said that the Illuminati had worked with the CIA and their MK Ultra project and with Walt Disney to create a new system of mind control.', start: 4216, end: 4221 }, 
+      { id: 'thornley-op-mindfuck', title: 'Operation Mindfuck (Thornley)', category: 'Theory/Action', desc: 'Spread Illuminati theory to parody/ridicule conspiracy theories, believing they undermined individual confidence.', color: '#9575CD', tags: ['Parody', 'Manipulation', 'Subversion'], quote: 'They had spread the conspiracy theory that the Illuminati were really the secret rulers of the world. They had done it to parody and ridicule all conspiracy theories because they thought that they undermined the confidence of individuals and made them easier to control.', start: 4182, end: 4196 }, 
+      { id: '2008-global-economic-crash', title: '2008 Global Economic Crash', category: 'Systemic Event', desc: 'Mortgage systems failed completely, leading to global crash; governments transferred private debt to public, leading to austerity.', color: '#E57373', tags: ['Economy', 'Crisis', 'Inequality', 'Systemic'], quote: 'In 2008, the systems in the banks that had structured the mortgage loans failed completely. It led to a global economic crash.', start: 4329, end: 4336 }, 
+      { id: 'banks-rigging-money-laundering', title: 'Banks (Rigging/Laundering)', category: 'Systemic Corruption', desc: 'Major banks rigged interest rates and laundered money for organized crime, but "nothing seemed to change".', color: '#E53935', tags: ['Corruption', 'Finance', 'Impunity'], quote: 'That all the major banks had been rigging interest rates and many of them had been laundering money for organized crime, including the drug cartels in Mexico. But again, nothing seemed to change.', start: 4370, end: 4378 }, 
+      { id: 'populist-anger-elite-bailout', title: 'Populist Anger (Elite Bailout)', category: 'Political Phenomenon', desc: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out. (Populist critique).', color: '#F44336', tags: ['Politics', 'Resistance', 'Inequality'], quote: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out.', start: 4415, end: 4422 }, 
+      { id: 'brexit-take-back-control', title: 'Brexit (Take Back Control)', category: 'Political Project', desc: 'For Dominic Cummings, a way to get rid of failed elites and old political systems, transforming a decaying society.', color: '#EF5350', tags: ['Populism', 'Nationalism', 'Disenchantment'], quote: 'For Dominic Cummings, Brexit was not an end in itself. For him, it was a way of getting rid of the failed elites and the old political systems that ran Britain.', start: 4476, end: 4488 }, 
+      { id: 'trump-qanon-pedophile-cabal', title: 'Trump & QAnon', category: 'Political Phenomenon', desc: 'Paranoia allowed Trump to hide corruption; QAnon explained nothing happening via a "secret cabal of pedophiles in Washington".', color: '#B71C1C', tags: ['Politics', 'Conspiracy', 'Post-Truth'], quote: 'His supporters, though, had their own conspiracy theory, QAnon, that explained why nothing was happening. Trump was being stopped by a secret cabal of pedophiles in Washington.', start: 6093, end: 6105 }, 
+      { id: 'liberal-avoidance-despair', title: 'Liberal Avoidance (Despair)', category: 'Critique', desc: 'Liberals avoided facing genuine grievances and real anger, having no idea how to solve problems of desolation/despair.', color: '#BBDEFB', tags: ['Politics', 'Elite Disconnect', 'Failure'], quote: 'But the liberal opposition, it was a way of avoiding facing up to the genuine grievances and the very real anger in America that Trump\'s election had revealed.', start: 6143, end: 6152 }, 
+      { id: 'fragile-structure-discon-frag', title: 'Fragile Structure (Disconnected Fragments)', category: 'Systemic Vulnerability', desc: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', color: '#9E9E9E', tags: ['Illusion', 'Vulnerability', 'Post-Truth'], quote: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', start: 6164, end: 6183 }, 
+      { id: 'ai-dogs-everywhere-meaningless', title: 'AI (Dogs Everywhere)', category: 'Technological Impact', desc: 'Google engineers demonstrated AI altering reality, seeing dogs everywhere; a world where anything could be anything, because there was no real meaning any longer.', color: '#4FC3F7', tags: ['AI', 'Perception', 'Illusion', 'Meaninglessness'], quote: 'Google engineers demonstrated how easily reality in this fragmented world could become strange and frightening. They created an AI program to learn how to see dogs. But they then showed how if they ran the algorithm backwards, the machines would alter the images of reality they were being fed, so they would see dogs everywhere.', start: 6193, end: 6210 }, 
+      { id: 'covid-deep-inequalities', title: 'COVID-19 (Deep Inequalities)', category: 'Global Crisis', desc: 'The virus, a force completely outside systems of power, brought into focus how deep inequalities in modern Western societies have gone.', color: '#7E57C2', tags: ['Crisis', 'Social', 'Systemic', 'Vulnerability'], quote: 'The virus was a force that came from completely outside the systems of power. But it has come at a moment when many of the old certainties of this age are already cracking.', start: 6364, end: 6371 }, 
+      { id: 'future-indiv-disappear', title: 'Future (Individualism Disappears)', category: 'Future Scenario', desc: 'Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.', color: '#5C6BC0', tags: ['Dystopia', 'Control', 'BF Skinner'], quote: 'Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.', start: 6421, end: 6432 }, 
+      { id: 'future-old-stability', title: 'Future (Return to Old Stability)', category: 'Future Scenario', desc: 'Hope for return to an old stability where individualism can continue to be managed by a benign elite, but enormous pressures will not go away.', color: '#9FA8DA', tags: ['Nostalgia', 'Illusion', 'Unresolved Conflict'], quote: 'Many people are hoping that with the election of Joe Biden in America, it will be possible to return to an old stability where individualism can continue to be managed by a benign elite. But although Donald Trump is gone and the Brexit deal done, what they both revealed was that underneath Western societies, there are enormous pressures building up that will not go away.', start: 6490, end: 6509 }, 
+      { id: 'future-imagine-new', title: 'Future (Imagine New)', category: 'Future Scenario', desc: 'Regain confidence, imagine genuinely new kinds of futures (David Graeber: "the world is something we make and could just as easily make differently").', color: '#66BB6A', tags: ['Hope', 'Agency', 'Transformation'], quote: 'If we can regain our confidence, we will find that we have the power to influence how that future turns out. And as a first step, we have to start imagining what kind of future it is we want to build.', start: 6603, end: 6609 }, 
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', color: '#4CAF50', tags: ['Graeber', 'Agency', 'Liberation', 'Potential'], quote: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', start: 6678, end: 6690 }
+    ];
+
+    const $ = id => document.getElementById(id);
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2, '0'); return `${m}:${ss}`; };
+    const show = (el, display = 'block') => { if (el) el.style.display = display; };
+    const hide = el => { if (el) el.style.display = 'none'; };
+
+    let mode = 'entry';
+    let selected = [];
+    let filter = '';
+    let clickTimers = {};
+    let showTrailOnly = false;
+
+    function getTextColor(bg) {
+      const hex = bg.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 > 128 ? '#000' : '#fff';
+    }
+
+    function buildEmbed(c) {
+      const origin = encodeURIComponent(location.origin);
+      return `https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${c.start}&end=${c.end}&controls=1&modestbranding=1&fs=1&iv_load_policy=3&origin=${origin}`;
+    }
+
+    function openVideo(c) {
+      const overlay = $('videoOverlay');
+      const frame = $('videoFrame');
+      const info = $('videoInfo');
+      show(overlay, 'flex');
+      info.textContent = `${c.title} · ${fmt(c.start)} to ${fmt(c.end)}`;
+      const url = buildEmbed(c);
+      if (frame.src !== url) frame.src = url;
+    }
+
+    function renderGrid() {
+      const grid = $('gridView');
+      grid.innerHTML = '';
+      rawConcepts.forEach(c => {
+        const selIdx = selected.findIndex(s => s.id === c.id);
+        const isSel = selIdx > -1;
+        
+        // Hide card if trail mode is on and card is not selected
+        if (showTrailOnly && !isSel) return;
+        
+        const card = document.createElement('div');
+        card.className = 'card' + (isSel ? ' selected' : '');
+        card.dataset.id = c.id;
+        card.innerHTML = `
+          <div class="card-header" style="background-color: ${c.color}; color: ${getTextColor(c.color)};">
+            ${c.title}
+            ${isSel ? `<div class="card-sequence">${selIdx + 1}</div>` : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-category">${c.category}</div>
+            <div class="card-desc">${c.desc}</div>
+            ${c.quote ? `<div class="card-quote">"${c.quote}"</div>` : ''}
+            ${c.tags ? `<div class="card-tags">${c.tags.join(' · ')}</div>` : ''}
+          </div>
+          <div class="card-meta">
+            <span>${fmt(c.start)}–${fmt(c.end)}</span>
+            <span style="font-size: 9px; color: #999;">Click=Play | DblClick=Add</span>
+          </div>
+        `;
+        
+        // Single click = play video, Double click = add to story
+        let clickCount = 0;
+        let clickTimer = null;
+        
+        card.addEventListener('click', (e) => {
+          clickCount++;
+          
+          if (clickCount === 1) {
+            clickTimer = setTimeout(() => {
+              // Single click - play video
+              openVideo(c);
+              clickCount = 0;
+            }, 300);
+          } else if (clickCount === 2) {
+            // Double click - add to story
+            clearTimeout(clickTimer);
+            toggleSelect(c.id);
+            clickCount = 0;
+          }
+        });
+        
+        grid.appendChild(card);
+      });
+    }
+
+    function renderList() {
+      const list = $('listView');
+      list.innerHTML = '';
+      rawConcepts.forEach(c => {
+        const selIdx = selected.findIndex(s => s.id === c.id);
+        const isSel = selIdx > -1;
+        
+        // Hide item if trail mode is on and item is not selected
+        if (showTrailOnly && !isSel) return;
+        
+        const item = document.createElement('div');
+        item.className = 'list-item' + (isSel ? ' selected' : '');
+        item.dataset.id = c.id;
+        item.innerHTML = `
+          <div class="list-item-color" style="background-color: ${c.color}"></div>
+          <div class="list-item-content">
+            <div class="list-item-title">${c.title}</div>
+            <div class="list-item-meta">${c.category} · ${fmt(c.start)}–${fmt(c.end)}</div>
+            <div class="list-item-desc">${c.desc}</div>
+            ${c.quote ? `<div class="list-item-quote">"${c.quote}"</div>` : ''}
+            ${c.tags ? `<div class="list-item-tags">${c.tags.join(' · ')}</div>` : ''}
+          </div>
+          ${isSel ? `<div class="list-item-sequence">${selIdx + 1}</div>` : ''}
+        `;
+        
+        // Single click = play, Double click = add
+        let clickCount = 0;
+        let clickTimer = null;
+        
+        item.addEventListener('click', () => {
+          clickCount++;
+          
+          if (clickCount === 1) {
+            clickTimer = setTimeout(() => {
+              openVideo(c);
+              clickCount = 0;
+            }, 300);
+          } else if (clickCount === 2) {
+            clearTimeout(clickTimer);
+            toggleSelect(c.id);
+            clickCount = 0;
+          }
+        });
+        
+        list.appendChild(item);
+      });
+    }
+
+    function toggleTrailView() {
+      showTrailOnly = !showTrailOnly;
+      const btn = $('toggle-trail-btn');
+      
+      if (showTrailOnly) {
+        btn.classList.add('active');
+        btn.textContent = '★ Show All';
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = '★ Show Trail';
+      }
+      
+      renderGrid();
+      renderList();
+      updateCounts();
+    }
+
+    function toggleSelect(id) {
+      const idx = selected.findIndex(s => s.id === id);
+      if (idx > -1) {
+        selected.splice(idx, 1);
+      } else if (selected.length < MAX_CLIPS) {
+        const data = rawConcepts.find(c => c.id === id);
+        selected.push(data);
+      }
+      // Re-render to update sequence numbers
+      renderGrid();
+      renderList();
+      updateDock();
+      updateCounts();
+      saveStory();
+      if (mode === '3d') drawConnectionLines();
+    }
+
+    function updateDock() {
+      const dock = $('dockContent');
+      const header = document.querySelector('.dock-header');
+      header.textContent = `Your Story (${selected.length}/12)`;
+
+      if (selected.length === 0) {
+        dock.innerHTML = '<div class="empty-state">Select up to 12 concepts to build your story</div>';
+        return;
+      }
+
+      dock.innerHTML = '';
+      selected.forEach((c, idx) => {
+        const item = document.createElement('div');
+        item.className = 'dock-item';
+        item.style.borderColor = c.color;
+        item.innerHTML = `
+          <div class="dock-item-num">${idx + 1}</div>
+          <div class="dock-item-title">${c.title}</div>
+          <div class="dock-item-category">${c.category}</div>
+          <div class="dock-item-remove">×</div>
+        `;
+        item.querySelector('.dock-item-remove').addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSelect(c.id);
+        });
+        item.addEventListener('click', () => openVideo(c));
+        dock.appendChild(item);
+      });
+    }
+
+    function updateCounts() {
+      let visible = rawConcepts;
+      
+      // Apply trail filter
+      if (showTrailOnly) {
+        visible = visible.filter(c => selected.some(s => s.id === c.id));
+      }
+      
+      // Apply search filter
+      if (filter) {
+        visible = visible.filter(c => 
+          c.title.toLowerCase().includes(filter) || 
+          c.category.toLowerCase().includes(filter) || 
+          (c.tags && c.tags.some(t => t.toLowerCase().includes(filter)))
+        );
+      }
+      
+      $('visibleCount').textContent = visible.length;
+      $('totalCount').textContent = rawConcepts.length;
+    }
+
+    function switchView(view) {
+      mode = view;
+      document.querySelectorAll('.view-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+      
+      $('gridView').style.display = view === 'grid' ? 'grid' : 'none';
+      $('listView').style.display = view === 'list' ? 'block' : 'none';
+      $('canvas').classList.toggle('active', view === '3d');
+      
+      if (view === '3d' && !window.scene) init3D();
+      if (view === '3d') window.renderer?.render(window.scene, window.camera);
+    }
+
+    function init3D() {
+      if (window.scene) return;
+      
+      const canvas = $('canvas');
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      const isMobile = window.innerWidth < 768;
+      const aspect = canvas.clientWidth / canvas.clientHeight;
+      const camera = new THREE.PerspectiveCamera(isMobile ? 75 : 60, aspect, 0.1, 20000);
+      const distance = isMobile ? 800 : 1200;
+      camera.position.set(0, 400, distance);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(500, 800, 500);
+      scene.add(dirLight);
+
+      const gridSize = isMobile ? 3000 : 5000;
+      const grid = new THREE.GridHelper(gridSize, 40, 0xcccccc, 0xeeeeee);
+      scene.add(grid);
+
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.rotateSpeed = 0.6;
+      controls.zoomSpeed = 1.2;
+      controls.panSpeed = 0.8;
+      controls.minDistance = isMobile ? 200 : 300;
+      controls.maxDistance = isMobile ? 2500 : 4000;
+      controls.maxPolarAngle = Math.PI / 2.1;
+      controls.enablePan = true;
+      controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+      window.scene = scene;
+      window.camera = camera;
+      window.renderer = renderer;
+      window.controls = controls;
+      window.fragments3D = [];
+
+      create3DFragments();
+      animate3D();
+      setupCanvasInteraction();
+    }
+
+    function create3DFragments() {
+      const scene = window.scene;
+      const fragments = window.fragments3D;
+      
+      fragments.forEach(f => scene.remove(f.group));
+      fragments.length = 0;
+
+      const isMobile = window.innerWidth < 768;
+      const cols = isMobile ? 3 : 6;
+      const spacing = isMobile ? 280 : 320;
+      const rows = Math.ceil(rawConcepts.length / cols);
+
+      rawConcepts.forEach((data, idx) => {
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        const x = (col - (cols - 1) / 2) * spacing;
+        const z = (row - (rows - 1) / 2) * spacing;
+
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+
+        const W = isMobile ? 200 : 260;
+        const H = isMobile ? 140 : 180;
+        
+        const canvas = document.createElement('canvas');
+        const scale = 2;
+        canvas.width = W * scale;
+        canvas.height = H * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        ctx.fillStyle = data.color;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(0, 0, W, H);
+
+        const textColor = getTextColor(data.color);
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${isMobile ? 13 : 16}px 'Courier New', monospace`;
+        
+        const words = data.title.split(' ');
+        let line = '';
+        let y = isMobile ? 18 : 22;
+        const maxWidth = W - 16;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && line) {
+            ctx.fillText(line.trim(), 8, y);
+            line = words[i] + ' ';
+            y += isMobile ? 16 : 20;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line.trim(), 8, y);
+
+        y += isMobile ? 18 : 24;
+        ctx.font = `bold ${isMobile ? 9 : 10}px 'Courier New', monospace`;
+        ctx.fillStyle = textColor === '#000' ? '#333' : '#ddd';
+        ctx.fillText(data.category.toUpperCase(), 8, y);
+
+        y += isMobile ? 14 : 16;
+        ctx.font = `${isMobile ? 9 : 11}px 'Courier New', monospace`;
+        ctx.fillStyle = textColor === '#000' ? '#222' : '#eee';
+        
+        const descWords = data.desc.split(' ');
+        line = '';
+        const maxLines = isMobile ? 4 : 5;
+        let lineCount = 0;
+        
+        for (let i = 0; i < descWords.length && lineCount < maxLines; i++) {
+          const testLine = line + descWords[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && line) {
+            ctx.fillText(line.trim(), 8, y);
+            line = descWords[i] + ' ';
+            y += isMobile ? 12 : 14;
+            lineCount++;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line && lineCount < maxLines) {
+          ctx.fillText(line.trim(), 8, y);
+        }
+
+        const geometry = new THREE.PlaneGeometry(W, H);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        const material = new THREE.MeshLambertMaterial({ map: texture });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.conceptId = data.id;
+        mesh.userData.conceptData = data;
+        group.add(mesh);
+
+        const shadowGeom = new THREE.PlaneGeometry(W, H);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.1, transparent: true });
+        const shadow = new THREE.Mesh(shadowGeom, shadowMat);
+        shadow.position.z = -2;
+        group.add(shadow);
+
+        scene.add(group);
+        fragments.push({ data, group, mesh });
+      });
+
+      drawConnectionLines();
+    }
+
+    function drawConnectionLines() {
+      const scene = window.scene;
+      const fragments = window.fragments3D;
+      
+      scene.children.forEach(obj => {
+        if (obj.userData && obj.userData.isConnectionLine) scene.remove(obj);
+      });
+
+      if (selected.length < 2) return;
+
+      const points = [];
+      selected.forEach(c => {
+        const frag = fragments.find(f => f.data.id === c.id);
+        if (frag) {
+          const pos = frag.group.position;
+          points.push(new THREE.Vector3(pos.x, 40, pos.z));
+        }
+      });
+
+      if (points.length < 2) return;
+
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0xc00000, linewidth: 2 });
+      const lineObj = new THREE.Line(lineGeometry, lineMaterial);
+      lineObj.userData.isConnectionLine = true;
+      scene.add(lineObj);
+
+      selected.forEach((c, idx) => {
+        const frag = fragments.find(f => f.data.id === c.id);
+        if (frag) {
+          const sphereGeometry = new THREE.SphereGeometry(18, 16, 16);
+          const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xc00000 });
+          const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+          const pos = frag.group.position;
+          sphere.position.set(pos.x, 40, pos.z);
+          sphere.userData.isConnectionLine = true;
+          scene.add(sphere);
+
+          const labelCanvas = document.createElement('canvas');
+          labelCanvas.width = 128;
+          labelCanvas.height = 128;
+          const labelCtx = labelCanvas.getContext('2d');
+          labelCtx.fillStyle = '#fff';
+          labelCtx.font = 'bold 80px Arial';
+          labelCtx.textAlign = 'center';
+          labelCtx.textBaseline = 'middle';
+          labelCtx.fillText(String(idx + 1), 64, 64);
+          const labelTexture = new THREE.CanvasTexture(labelCanvas);
+          const labelMaterial = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true });
+          const labelGeometry = new THREE.PlaneGeometry(40, 40);
+          const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
+          labelMesh.position.z = 20;
+          sphere.add(labelMesh);
+        }
+      });
+    }
+
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+      if (window.controls) window.controls.update();
+      if (window.renderer && window.scene && window.camera) {
+        window.renderer.render(window.scene, window.camera);
+      }
+    }
+
+    function setupCanvasInteraction() {
+      const canvas = $('canvas');
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      canvas.addEventListener('click', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, window.camera);
+        const meshes = window.fragments3D.map(f => f.mesh);
+        const intersects = raycaster.intersectObjects(meshes);
+
+        if (intersects.length > 0) {
+          const conceptId = intersects[0].object.userData.conceptId;
+          const data = intersects[0].object.userData.conceptData;
+          
+          focusCameraOn(intersects[0].object.parent.position);
+          
+          // 3D view: single click = add to story, shift+click = play video
+          if (event.shiftKey) {
+            openVideo(data);
+          } else {
+            toggleSelect(conceptId);
+          }
+        }
+      });
+    }
+    function focusCameraOn(position) {
+      if (!window.controls) return;
+      
+      const controls = window.controls;
+      const camera = window.camera;
+      
+      const startTarget = controls.target.clone();
+      const endTarget = new THREE.Vector3(position.x, 0, position.z);
+      
+      const startPos = camera.position.clone();
+      const direction = new THREE.Vector3().subVectors(camera.position, startTarget).normalize();
+      const distance = 400;
+      const endPos = new THREE.Vector3(
+        endTarget.x + direction.x * distance,
+        300,
+        endTarget.z + direction.z * distance
+      );
+      
+      const duration = 800;
+      const startTime = Date.now();
+      
+      function animateCamera() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        controls.target.lerpVectors(startTarget, endTarget, eased);
+        camera.position.lerpVectors(startPos, endPos, eased);
+        
+        if (progress < 1) requestAnimationFrame(animateCamera);
+      }
+      
+      animateCamera();
+    }
+
+    // Presentation Mode
+    let presentationIndex = 0;
+
+    function openPresentation() {
+      if (selected.length === 0) {
+        alert('Please select at least one concept to present.');
+        return;
+      }
+      presentationIndex = 0;
+      show($('presentationOverlay'), 'flex');
+      renderPresentationSlide();
+    }
+
+    function renderPresentationSlide() {
+      if (selected.length === 0) return;
+      
+      const concept = selected[presentationIndex];
+      const slide = $('presentSlide');
+      
+      slide.innerHTML = `
+        <div class="presentation-slide-header" style="background-color: ${concept.color}; color: ${getTextColor(concept.color)};">
+          ${concept.title}
+        </div>
+        <div class="presentation-slide-body">
+          <div class="presentation-category">${concept.category}</div>
+          <div class="presentation-desc">${concept.desc}</div>
+          ${concept.quote ? `<div class="presentation-quote">"${concept.quote}"</div>` : ''}
+          ${concept.tags ? `<div class="presentation-tags"><strong>Tags:</strong> ${concept.tags.join(' · ')}</div>` : ''}
+          <div class="presentation-meta">
+            <strong>Timestamp:</strong> ${fmt(concept.start)} – ${fmt(concept.end)}
+          </div>
+        </div>
+      `;
+      
+      $('presentProgress').textContent = `Concept ${presentationIndex + 1} of ${selected.length}`;
+      $('presentIndicator').textContent = `${presentationIndex + 1} / ${selected.length}`;
+      $('presentPrev').disabled = presentationIndex === 0;
+      $('presentNext').disabled = presentationIndex === selected.length - 1;
+    }
+
+    function closePresentation() {
+      hide($('presentationOverlay'));
+    }
+
+    // Save/Load Story Functions
+    function saveStory() {
+      const storyData = {
+        selected: selected.map(c => c.id),
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storyData));
+    }
+
+    function loadStory() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const storyData = JSON.parse(saved);
+          selected = storyData.selected.map(id => rawConcepts.find(c => c.id === id)).filter(Boolean);
+          renderGrid();
+          renderList();
+          updateDock();
+          updateCounts();
+          if (mode === '3d') drawConnectionLines();
+        }
+      } catch (e) {
+        console.error('Error loading story:', e);
+      }
+    }
+
+    function exportStoryJSON() {
+      const storyData = {
+        title: $('dock-title-input')?.value || 'My Story',
+        selected: selected.map(c => ({
+          id: c.id,
+          title: c.title,
+          category: c.category,
+          desc: c.desc,
+          quote: c.quote,
+          tags: c.tags,
+          start: c.start,
+          end: c.end,
+          color: c.color
+        })),
+        timestamp: new Date().toISOString(),
+        author: 'Student',
+        version: '1.0'
+      };
+      
+      const blob = new Blob([JSON.stringify(storyData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `story-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importStoryJSON() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const storyData = JSON.parse(event.target.result);
+              if (storyData.selected && Array.isArray(storyData.selected)) {
+                selected = storyData.selected.map(item => {
+                  const concept = rawConcepts.find(c => c.id === item.id);
+                  return concept || item;
+                }).filter(Boolean).slice(0, MAX_CLIPS);
+                renderGrid();
+                renderList();
+                updateDock();
+                updateCounts();
+                saveStory();
+                if (mode === '3d') drawConnectionLines();
+                alert(`Story loaded: ${storyData.title || 'Untitled'}\n${selected.length} concepts`);
+              }
+            } catch (err) {
+              alert('Error loading story file: ' + err.message);
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+      input.click();
+    }
+
+    function prevSlide() {
+      if (presentationIndex > 0) {
+        presentationIndex--;
+        renderPresentationSlide();
+      }
+    }
+
+    function nextSlide() {
+      if (presentationIndex < selected.length - 1) {
+        presentationIndex++;
+        renderPresentationSlide();
+      }
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      $('start-grid').addEventListener('click', () => {
+        hide($('entry-phase'));
+        show($('main-app'), 'flex');
+        switchView('grid');
+        loadStory();
+        renderGrid();
+        renderList();
+        updateCounts();
+      });
+
+      $('start-list').addEventListener('click', () => {
+        hide($('entry-phase'));
+        show($('main-app'), 'flex');
+        switchView('list');
+        renderGrid();
+        renderList();
+        updateCounts();
+      });
+
+      $('start-3d').addEventListener('click', () => {
+        hide($('entry-phase'));
+        show($('main-app'), 'flex');
+        switchView('3d');
+        renderGrid();
+        renderList();
+        updateCounts();
+      });
+
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+      });
+
+      $('reset-btn').addEventListener('click', () => {
+        selected = [];
+        hide($('main-app'));
+        show($('entry-phase'), 'flex');
+        $('videoFrame').src = 'about:blank';
+        hide($('videoOverlay'));
+        if (window.renderer) {
+          window.renderer.dispose();
+          window.renderer = null;
+          window.scene = null;
+          window.camera = null;
+          window.controls = null;
+        }
+        mode = 'entry';
+      });
+
+      $('clearBtn').addEventListener('click', () => {
+        if (selected.length > 0 && !confirm('Clear all selected concepts?')) return;
+        selected = [];
+        renderGrid();
+        renderList();
+        updateDock();
+        updateCounts();
+        saveStory();
+        if (mode === '3d') drawConnectionLines();
+      });
+
+      $('presentBtn').addEventListener('click', openPresentation);
+      $('presentClose').addEventListener('click', closePresentation);
+      $('presentPrev').addEventListener('click', prevSlide);
+      $('presentNext').addEventListener('click', nextSlide);
+      
+      $('toggle-trail-btn').addEventListener('click', toggleTrailView);
+
+      // Add import button to dock
+      const importBtn = document.createElement('button');
+      importBtn.className = 'dock-btn';
+      importBtn.textContent = 'Load Story';
+      importBtn.addEventListener('click', importStoryJSON);
+      const exportRow = document.querySelector('.dock-footer-row:last-child');
+      if (exportRow) {
+        const newRow = document.createElement('div');
+        newRow.className = 'dock-footer-row';
+        newRow.appendChild(importBtn);
+        exportRow.parentElement.insertBefore(newRow, exportRow);
+      }
+
+      // Keyboard navigation for presentation
+      document.addEventListener('keydown', (e) => {
+        if ($('presentationOverlay').classList.contains('active')) {
+          if (e.key === 'ArrowLeft') prevSlide();
+          if (e.key === 'ArrowRight') nextSlide();
+          if (e.key === 'Escape') closePresentation();
+        }
+      });
+
+      $('exportBtn').addEventListener('click', () => {
+        if (selected.length === 0) {
+          alert('Please select concepts first.');
+          return;
+        }
+        
+        // Show export options
+        const choice = confirm('Export as JSON (for sharing/loading)?\n\nOK = JSON\nCancel = Text');
+        
+        if (choice) {
+          exportStoryJSON();
+        } else {
+          const story = selected.map((c, idx) => {
+            return `${idx + 1}. ${c.title} (${fmt(c.start)}–${fmt(c.end)})\n   ${c.desc}${c.quote ? `\n   "${c.quote}"` : ''}`;
+          }).join('\n\n');
+          
+          const blob = new Blob([`YOUR STORY\n\n${story}`], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `story-${Date.now()}.txt`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      });
+
+      $('videoClose').addEventListener('click', () => {
+        hide($('videoOverlay'));
+        $('videoFrame').src = 'about:blank';
+      });
+
+      $('filterInput').addEventListener('input', (e) => {
+        filter = e.target.value.toLowerCase();
+        document.querySelectorAll('[data-id]').forEach(el => {
+          const data = rawConcepts.find(c => c.id === el.dataset.id);
+          const match = !filter || 
+            data.title.toLowerCase().includes(filter) || 
+            data.category.toLowerCase().includes(filter) || 
+            (data.tags && data.tags.some(t => t.toLowerCase().includes(filter))) ||
+            data.desc.toLowerCase().includes(filter);
+          el.style.display = match ? '' : 'none';
+        });
+        updateCounts();
+      });
+
+      window.addEventListener('resize', () => {
+        if (window.renderer && window.camera && mode === '3d') {
+          const canvas = $('canvas');
+          window.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+          window.camera.updateProjectionMatrix();
+          window.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+          create3DFragments();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

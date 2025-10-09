@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sense Ritual — Concept Explorer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #fff; 
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 800px;
+      padding: 40px;
+    }
+
+    .headline {
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: -2px;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+
+    .subhead {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #666;
+      margin-bottom: 48px;
+    }
+
+    .nav-grid {
+      display: grid;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .nav-card {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 32px;
+      text-decoration: none;
+      color: #000;
+      transition: all 0.2s;
+      display: block;
+      text-align: left;
+      position: relative;
+    }
+
+    .nav-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      background: #000;
+      color: #fff;
+    }
+
+    .nav-card-number {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      background: #000;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      transition: all 0.2s;
+    }
+
+    .nav-card:hover .nav-card-number {
+      background: #fff;
+      color: #000;
+    }
+
+    .nav-card-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 12px;
+      padding-right: 60px;
+      line-height: 1.3;
+    }
+
+    .nav-card-desc {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #666;
+    }
+
+    .nav-card:hover .nav-card-desc {
+      color: #ccc;
+    }
+
+    .footer {
+      font-size: 0.85rem;
+      color: #999;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 2px solid #eee;
+    }
+
+    @media (max-width: 768px) {
+      .headline { font-size: 2.5rem; }
+      .subhead { font-size: 1rem; margin-bottom: 32px; }
+      .container { padding: 24px; }
+      .nav-card { padding: 24px; }
+      .nav-card-title { font-size: 1.2rem; }
+      .nav-card-number { width: 32px; height: 32px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="headline">Sense Ritual</h1>
+    <p class="subhead">Exploring Concepts Through Interactive Media</p>
+
+    <div class="nav-grid">
+      <a href="trails_before_links_saul_bass_film_html (2).html" class="nav-card">
+        <div class="nav-card-number">1</div>
+        <div class="nav-card-title">Trails Before Links</div>
+        <div class="nav-card-desc">Saul Bass–inspired cinematic deck exploring the concept of trails as primary navigation patterns before hyperlinks.</div>
+      </a>
+
+      <a href="trails_before_links_saul_bass_film_html.html" class="nav-card">
+        <div class="nav-card-number">2</div>
+        <div class="nav-card-title">Trails Before Links (Alt)</div>
+        <div class="nav-card-desc">Alternative presentation of the trails concept with refined visual storytelling and interaction design.</div>
+      </a>
+
+      <a href="a3.html" class="nav-card">
+        <div class="nav-card-number">3</div>
+        <div class="nav-card-title">Can't Get You Out of My Head</div>
+        <div class="nav-card-desc">Interactive concept explorer for Adam Curtis's documentary. Build narrative journeys through 68 interconnected concepts with Grid, List, and 3D views.</div>
+      </a>
+
+      <a href="trails_before_links_act_2_→_3_→_4_visual_deck_visualization_first.html" class="nav-card">
+        <div class="nav-card-number">★</div>
+        <div class="nav-card-title">Visual Deck — Acts 2→3→4</div>
+        <div class="nav-card-desc">Bonus: Visualization-first deck exploring the progression through acts with dynamic visual storytelling.</div>
+      </a>
+    </div>
+
+    <div class="footer">
+      Select an experience to begin exploring
+    </div>
+  </div>
+</body>
+</html>

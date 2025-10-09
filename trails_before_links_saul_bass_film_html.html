@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>TRAILS BEFORE LINKS — Saul Bass Film Deck</title>
+<style>
+  /* ===============================
+     SAUL BASS–STYLE SINGLE-FILE DECK
+     Watson Hartsoe · Tue 10/07
+     =============================== */
+  :root{
+    --bg:#0d0d0d;            /* cinematic black */
+    --ink:#f1efe8;           /* warm paper white */
+    --red:#E94F37;           /* Bass red */
+    --amber:#F6C667;         /* amber */
+    --teal:#3EB489;          /* accent */
+    --muted:#9aa2a8;         /* annotations */
+    --glass:rgba(255,255,255,.06);
+    --glass-strong:rgba(255,255,255,.12);
+    --shadow:0 12px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family: "Futura","Franklin Gothic Medium","Arial Narrow",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    overflow:hidden; touch-action:manipulation;
+  }
+  
+  /* Stage */
+  #stage{position:relative; width:100vw; height:100vh; overflow:hidden}
+  
+  /* Minimal edge controls (never occlude center) */
+  .ui-edge{position:absolute; z-index:30; display:flex; gap:.5rem; align-items:center}
+  #edge-top{top:.5rem; left:.6rem; right:.6rem; justify-content:space-between}
+  #edge-bottom{bottom:.6rem; left:.6rem; right:.6rem; justify-content:space-between}
+  .chip{background:var(--glass); border:1px solid var(--glass-strong); padding:.45rem .7rem; border-radius:999px; backdrop-filter:blur(6px); box-shadow:var(--shadow); font-size:.82rem}
+  .chip b{letter-spacing:.04em}
+  .btn{cursor:pointer; user-select:none}
+  .btn:active{transform:translateY(1px)}
+  .ghost{opacity:.7}
+  
+  /* Progress bar */
+  .progress{position:relative; width:34vw; max-width:420px; height:6px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden}
+  .progress>i{position:absolute; inset:0; background:linear-gradient(90deg,var(--amber),var(--red)); width:0%; transition:width .45s cubic-bezier(.2,.7,0,1)}
+  
+  /* Slides */
+  .slides{position:absolute; inset:0; display:grid; place-items:center}
+  .slide{position:absolute; inset:0; padding:8vh clamp(16px,6vw,72px); display:grid; grid-template-rows:auto 1fr auto; gap:4vh; opacity:0; transform:translateY(40px) scale(.98); transition:opacity .5s ease, transform .8s cubic-bezier(.2,.7,0,1)}
+  .slide.current{opacity:1; transform:translateY(0) scale(1)}
+  .slide h1, .slide h2, .slide h3{margin:0; line-height:.94}
+  .eyebrow{font-size:.8rem; letter-spacing:.18em; color:var(--amber)}
+  .big{font-weight:900; font-size:clamp(36px,9vw,108px); letter-spacing:.01em}
+  .mid{font-weight:800; font-size:clamp(22px,4.6vw,48px)}
+  .sub{font-weight:600; font-size:clamp(16px,2.6vw,20px); color:var(--muted)}
+  .lead{font-size:clamp(18px,2.8vw,26px); line-height:1.25; max-width:28ch}
+  .stack{display:flex; flex-wrap:wrap; gap:14px}
+  .tag{padding:.5rem .7rem; border:1px solid var(--ink); color:var(--bg); background:var(--ink); border-radius:6px; font-weight:800; letter-spacing:.02em}
+  .tag.alt{background:transparent; color:var(--amber); border-color:var(--amber)}
+  
+  /* Saul Bass shapes */
+  .shape{position:absolute; z-index:0; opacity:.3; mix-blend-mode:screen}
+  .rect{background:var(--red)}
+  .circle{background:var(--amber); border-radius:999px}
+  .bar{background:var(--teal)}
+  
+  /* Reading table */
+  .table{width:min(880px,100%); border:1px solid var(--glass-strong); background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)); border-radius:14px; padding:10px; box-shadow:var(--shadow)}
+  .row{display:grid; grid-template-columns:90px 1fr 60px; gap:10px; align-items:center; padding:12px 10px; border-radius:10px}
+  .row:nth-child(odd){background:rgba(255,255,255,.02)}
+  .row .id{font-weight:800; color:var(--amber)}
+  .row .title{font-weight:700}
+  .row .open{justify-self:end; font-weight:900; letter-spacing:.1em}
+  .row a{color:var(--ink); text-decoration:none}
+  .row a:hover{text-decoration:underline}
+  
+  /* Drawer for FORAGE notes & prompt */
+  #drawer{position:absolute; right:.6rem; top:56px; bottom:.6rem; width:min(520px,94vw); background:rgba(13,13,13,.7); backdrop-filter:blur(8px); border:1px solid var(--glass-strong); border-radius:16px; box-shadow:var(--shadow); padding:16px; overflow:auto; transform:translateX(120%); transition:transform .4s ease; z-index:40}
+  #drawer.open{transform:translateX(0)}
+  #drawer h3{margin:.2rem 0 .6rem 0}
+  .note{border-left:4px solid var(--amber); padding:.6rem .8rem; margin:.4rem 0; background:rgba(255,255,255,.04); border-radius:8px}
+  .small{font-size:.9rem; color:var(--muted)}
+  .button{display:inline-flex; gap:.5rem; align-items:center; background:var(--ink); color:var(--bg); border:none; border-radius:999px; padding:.5rem .8rem; font-weight:800; cursor:pointer}
+  .button.alt{background:transparent; color:var(--amber); border:1px solid var(--amber)}
+  textarea#prompt{width:100%; min-height:220px; background:#0f0f0f; color:var(--ink); border:1px solid var(--glass-strong); border-radius:10px; padding:10px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9rem}
+  
+  /* Tap zones for mobile */
+  .tap-zone{position:absolute; top:0; bottom:0; width:26%; z-index:20}
+  .tap-left{left:0}
+  .tap-right{right:0}
+  
+  /* Title SVG overlay */
+  #titleFX{position:absolute; inset:0; z-index:1; pointer-events:none}
+  svg{display:block; width:100%; height:100%}
+  
+  @media (max-width:720px){
+    .lead{max-width:100%}
+    .row{grid-template-columns:76px 1fr 46px}
+  }
+</style>
+</head>
+<body>
+  <div id="stage" aria-label="Trails Before Links film deck" role="application">
+
+    <!-- Edge UI (never covers center) -->
+    <div id="edge-top" class="ui-edge">
+      <div class="chip ghost">Tue <b>10/07</b></div>
+      <div class="chip ghost">Press <b>→</b> / tap edges</div>
+    </div>
+
+    <div id="edge-bottom" class="ui-edge">
+      <div class="chip btn" id="btnPrev" aria-label="Previous">◀︎ Prev</div>
+      <div class="progress" aria-label="progress"><i id="bar"></i></div>
+      <div style="display:flex; gap:.5rem; align-items:center">
+        <div class="chip btn" id="btnDrawer" title="Notes & Prompt (G)">Notes ▣</div>
+        <div class="chip btn" id="btnFS" title="Fullscreen (F)">⤢ Full</div>
+        <div class="chip btn" id="btnNext" aria-label="Next">Next ▶︎</div>
+      </div>
+    </div>
+
+    <!-- Tap zones for mobile nav -->
+    <div class="tap-zone tap-left" id="tapLeft" aria-hidden="true"></div>
+    <div class="tap-zone tap-right" id="tapRight" aria-hidden="true"></div>
+
+    <!-- Slides -->
+    <div class="slides" id="slides">
+      <!-- Slide 0: Title sequence -->
+      <section class="slide current" data-title>
+        <div>
+          <div class="eyebrow">FILM · LECTURE</div>
+          <h1 class="big" style="color:var(--red)">TRAILS BEFORE LINKS</h1>
+          <h2 class="mid">Bush, Hypertext, and the Technotext</h2>
+          <p class="sub">Georgia Tech · Tue 10/07 · Werner-ish deadpan, Bass-ish geometry</p>
+        </div>
+        <div>
+          <p class="lead">Black screen → white lines → orange letters. Typewriter clacks becoming modem tones. Trails congeal into title.</p>
+          <div class="stack" aria-label="title tags">
+            <span class="tag">ASSOCIATION</span><span class="tag">TRAIL</span><span class="tag alt">LINK</span><span class="tag">MEMORY</span>
+          </div>
+        </div>
+        <div class="sub">Controls: ←/→ · Tap edges · F Fullscreen · G Notes & Prompt</div>
+      </section>
+
+      <!-- Slide 1: Core -->
+      <section class="slide">
+        <div class="eyebrow">CORE</div>
+        <h2 class="big">The memex was about <span style="color:var(--amber)">ASSOCIATION</span> as interface.</h2>
+        <p class="lead">From drawers and microfilm to trails and recall: thinking by linking before the Web existed.</p>
+      </section>
+
+      <!-- Slide 2: Key Question -->
+      <section class="slide">
+        <div class="eyebrow">QUESTION</div>
+        <h2 class="big">How do Bush’s <span style="color:var(--amber)">memex</span> and Nelson’s <span style="color:var(--amber)">hypertext</span> reshape human intelligence?</h2>
+        <p class="lead">From mechanical association → networked cognition → collective memory architectures.</p>
+      </section>
+
+      <!-- Slide 3: Prompt -->
+      <section class="slide">
+        <div class="eyebrow">PROMPT</div>
+        <h3 class="mid">Analyze a platform as an <em>extension of mind</em>.</h3>
+        <ul class="lead" style="max-width:44ch">
+          <li>Choose: Wikipedia or Notion (or similar).</li>
+          <li>Use Bush + Nelson to assess how design shapes thought/memory.</li>
+          <li>Deliver 3 claims, each grounded by a passage.</li>
+          <li>Sketch a <strong>trail-first</strong> redesign (wireframe ok).</li>
+        </ul>
+      </section>
+
+      <!-- Slide 4: Reading Stack -->
+      <section class="slide">
+        <div class="eyebrow">READING STACK</div>
+        <div class="table" role="table" aria-label="Readings">
+          <div class="row" role="row">
+            <div class="id" role="cell">S15.A.1A</div>
+            <div class="title" role="cell"><em>Bush</em>, “As We May Think”</div>
+            <div class="open" role="cell"><a href="#" data-doc="bush">⧉</a></div>
+          </div>
+          <div class="row" role="row">
+            <div class="id" role="cell">S15.A.2A</div>
+            <div class="title" role="cell"><em>Nelson</em>, <em>Literary Machines</em> (Ch. 2)</div>
+            <div class="open" role="cell"><a href="#" data-doc="nelson">⧉</a></div>
+          </div>
+          <div class="row" role="row">
+            <div class="id" role="cell">S15.B.1B</div>
+            <div class="title" role="cell"><em>Herzog</em>, <em>Lo and Behold</em></div>
+            <div class="open" role="cell"><a href="#" data-doc="herzog">⧉</a></div>
+          </div>
+        </div>
+        <p class="sub">Three visions of intelligence-as-architecture: mechanical · textual · cinematic.</p>
+      </section>
+
+      <!-- Slide 5: Associative Montage -->
+      <section class="slide">
+        <div class="eyebrow">MONTAGE</div>
+        <h2 class="big" style="max-width:12ch">Before the link was the <span style="color:var(--red)">TRAIL</span>.</h2>
+        <p class="lead">Each click is a trail. Each trail is a thought. Who owns the map?</p>
+      </section>
+
+      <!-- Slide 6: Closing -->
+      <section class="slide">
+        <div class="eyebrow">END OF REEL</div>
+        <h2 class="big">ASSOCIATION IS THE NEW ATOM.</h2>
+        <p class="sub">Freeze frame · Cut to black.</p>
+      </section>
+    </div>
+
+    <!-- Title FX (animated lines) -->
+    <div id="titleFX" aria-hidden="true">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#F6C667"/>
+            <stop offset="100%" stop-color="#E94F37"/>
+          </linearGradient>
+        </defs>
+        <g id="trails"></g>
+      </svg>
+    </div>
+
+    <!-- Floating Bass Shapes -->
+    <div class="shape rect" style="width:34vmin;height:12vmin; left:6vw; top:12vh; transform:rotate(-6deg)"></div>
+    <div class="shape circle" style="width:18vmin;height:18vmin; right:10vw; top:22vh"></div>
+    <div class="shape bar" style="width:50vmin;height:6vmin; left:8vw; bottom:18vh; transform:rotate(8deg)"></div>
+  </div>
+
+  <!-- Drawer: Notes & Forage Prompt -->
+  <aside id="drawer" aria-label="Notes drawer">
+    <h3 class="mid" style="color:var(--amber)">Foraged Notes & Snippets</h3>
+    <p class="small">Short quotes (≤ 25 words) and paraphrases for classroom use. Use the <em>Copy Prompt</em> to generate deeper packets.</p>
+
+    <div class="note" id="note-bush">
+      <strong>Bush — associative indexing</strong>
+      <div>“Associative indexing… any item may be caused to select another. This is the essential feature of the memex.” <a href="https://www.theatlantic.com/magazine/archive/1945/07/as-we-may-think/303881/" target="_blank" rel="noopener">Source</a></div>
+    </div>
+    <div class="note" id="note-bush2">
+      <strong>Bush — trails as shareable memory</strong>
+      <div>“Wholly new forms of encyclopedias… with a mesh of associative trails…” <a href="https://web.mit.edu/sts.035/www/PDFs/think.pdf" target="_blank" rel="noopener">Source</a></div>
+    </div>
+
+    <div class="note" id="note-nelson">
+      <strong>Nelson — define hypertext</strong>
+      <div>“Permits fully non‑sequential writing, or hypertext.” <a href="https://cs.brown.edu/people/nmeyrowi/LiteraryMachinesChapter2.pdf" target="_blank" rel="noopener">Source (LM Ch.2)</a></div>
+    </div>
+
+    <div class="note" id="note-herzog">
+      <strong>Herzog — existential prompt</strong>
+      <div>Herzog asks: “Can the Internet dream of itself?” <a href="https://en.wikipedia.org/wiki/Lo_and_Behold,_Reveries_of_the_Connected_World" target="_blank" rel="noopener">Source</a></div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid var(--glass-strong); margin:12px 0 8px">
+    <div style="display:flex; gap:.5rem; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:.4rem">
+      <h3 class="mid" style="margin:0">Meta‑Prompt: Trail‑First Foraging Engine</h3>
+      <div style="display:flex; gap:.5rem">
+        <button class="button" id="copyPrompt">Copy Prompt</button>
+        <button class="button alt" id="closeDrawer">Close</button>
+      </div>
+    </div>
+    <textarea id="prompt" spellcheck="false"></textarea>
+  </aside>
+
+<script>
+(function(){
+  /* ==========================
+     Data & Deck Controller
+     ========================== */
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let i = 0; // current index
+  const bar = document.getElementById('bar');
+  const update = ()=>{
+    slides.forEach((s,idx)=>s.classList.toggle('current', idx===i));
+    bar.style.width = ((i+1)/slides.length*100).toFixed(2)+'%';
+    // Title FX only on slide 0
+    document.getElementById('titleFX').style.opacity = (i===0?1:0);
+  };
+  const next = ()=>{ i = Math.min(slides.length-1, i+1); update(); };
+  const prev = ()=>{ i = Math.max(0, i-1); update(); };
+  update();
+
+  // Controls
+  document.getElementById('btnNext').onclick = next;
+  document.getElementById('btnPrev').onclick = prev;
+  document.getElementById('tapRight').onclick = next;
+  document.getElementById('tapLeft').onclick = prev;
+
+  // Keys
+  addEventListener('keydown', (e)=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+    if(['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); prev(); }
+    if(e.key.toLowerCase()==='f') toggleFull();
+    if(e.key.toLowerCase()==='g') toggleDrawer();
+  }, {passive:false});
+
+  // Fullscreen
+  const btnFS = document.getElementById('btnFS');
+  function toggleFull(){
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }
+  btnFS.onclick = toggleFull;
+
+  /* ==========================
+     Title FX — animated trails
+     ========================== */
+  const trailsG = document.getElementById('trails');
+  for(let t=0;t<22;t++){
+    const y = Math.random()*100;
+    const amp = 3+Math.random()*10;
+    const phase = Math.random()*Math.PI*2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const d = Array.from({length:12}, (_,k)=>{
+      const x = (k/11)*100;
+      const yy = y + Math.sin((x/14)+phase)*amp;
+      return `${k?'L':'M'} ${x.toFixed(2)} ${yy.toFixed(2)}`;
+    }).join(' ');
+    path.setAttribute('d', d);
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke','url(#g)');
+    path.setAttribute('stroke-width', Math.random()*0.9+0.2);
+    path.setAttribute('stroke-linecap','round');
+    const len = 400+Math.random()*300;
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = len;
+    path.style.animation = `draw ${3+Math.random()*3}s ${Math.random()}s ease forwards`;
+    trailsG.appendChild(path);
+  }
+  const style = document.createElement('style');
+  style.textContent = `@keyframes draw{to{stroke-dashoffset:0}}`;
+  document.head.appendChild(style);
+
+  /* ==========================
+     Drawer (Notes + Prompt)
+     ========================== */
+  const drawer = document.getElementById('drawer');
+  const btnDrawer = document.getElementById('btnDrawer');
+  const closeDrawerBtn = document.getElementById('closeDrawer');
+  function toggleDrawer(){drawer.classList.toggle('open')}
+  btnDrawer.onclick = toggleDrawer; closeDrawerBtn.onclick = toggleDrawer;
+
+  // Reading shortcuts open drawer pre-filtered
+  document.querySelectorAll('[data-doc]').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      if(!drawer.classList.contains('open')) toggleDrawer();
+      const target = e.currentTarget.getAttribute('data-doc');
+      ['bush','nelson','herzog'].forEach(k=>{
+        const n1 = document.getElementById(`note-${k}`);
+        if(n1) n1.style.outline = 'none';
+      });
+      const hit = document.getElementById(`note-${target}`) || document.getElementById(`note-${target}1`);
+      if(hit){
+        hit.scrollIntoView({behavior:'smooth', block:'center'});
+        hit.style.outline = '2px solid var(--teal)';
+        setTimeout(()=> hit.style.outline = 'none', 1400);
+      }
+    });
+  });
+
+  // Seed meta‑prompt
+  const prompt = document.getElementById('prompt');
+  prompt.value = (
+`<poml version="1.2" xmlns="http://prompt-orchestration.org/schema">
+  <context>
+    <domain>Trails Before Links — Bush (1945), Nelson (LM Ch.2), Herzog (2016)</domain>
+    <goal>Generate a trail‑first analysis kit for a chosen platform (Wikipedia or Notion) grounded in exact citations and micro‑experiments.</goal>
+    <constraints>
+      <rule>Quote ≤ 25 words; include source + page/section when possible.</rule>
+      <rule>Only use primary sources plus basic film synopsis for Herzog.</rule>
+      <rule>Emit findings as portable cards with claim → evidence → implication.</rule>
+    </constraints>
+  </context>
+  <forage>
+    <targets>
+      <doc id="bush1945" title="As We May Think" anchors="Section 7; memex; associative indexing"/>
+      <doc id="nelsonLM2" title="Literary Machines, Ch.2" anchors="HYPERTEXT; non‑sequential writing; link semantics; prismatic storage"/>
+      <film id="herzog2016" title="Lo and Behold" anchors="existential questions; networked life; closing question"/>
+    </targets>
+    <prompts>
+      <q id="Q1">Extract 6 short quotes (≤25 words) that define: memex, associative indexing, trail, hypertext, non‑sequential writing, transclusion (if present in Ch.2).</q>
+      <q id="Q2">Paraphrase each quote in 1 sentence and state its design implication for UI.</q>
+      <q id="Q3">Propose 3 trail‑first UI experiments for the chosen platform (e.g., trail recorder, trail export, trail comparison).</q>
+      <q id="Q4">Write 3 critique questions in Herzog’s tone that stress test techno‑utopian assumptions.</q>
+    </prompts>
+  </forage>
+  <outputs>
+    <cards format="jsonl">{
+      "id":"C{n}",
+      "claim":"…",
+      "evidence":"\"…\" (source, anchor)",
+      "implication":"…",
+      "sketch":"ASCII wireframe or bullet steps"
+    }</cards>
+    <deck format="markdown">Title · Core · Key Question · Prompt · Readings · 6 Claim‑Evidence cards · 3 Experiments · 3 Herzog Questions</deck>
+  </outputs>
+</poml>`);
+
+  // Copy prompt
+  document.getElementById('copyPrompt').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(prompt.value); copyToast('Prompt copied'); }
+    catch(err){ prompt.select(); document.execCommand('copy'); copyToast('Prompt copied'); }
+  };
+  function copyToast(msg){
+    const el = document.createElement('div');
+    el.textContent = msg; el.style.cssText = 'position:fixed; left:50%; bottom:14vh; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:.5rem .8rem; border-radius:999px; z-index:99; font-weight:900';
+    document.body.appendChild(el); setTimeout(()=> el.remove(), 1200);
+  }
+})();
+</script>
+</body>
+</html>
