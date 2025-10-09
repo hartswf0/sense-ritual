@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Class Story Analysis — Transclusion Patterns</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Courier New', monospace; background: #1a1a1a; color: #fff; }
+
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    .header { padding: 20px; border-bottom: 3px solid #000; background: #0a0a0a; }
+    .headline { font-size: 2rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; color: #fff; }
+    .subhead { font-size: 0.9rem; color: #999; }
+    
+    .controls { padding: 16px; background: #0a0a0a; border-bottom: 2px solid #333; display: flex; gap: 12px; align-items: center; }
+    .control-label { font-size: 11px; text-transform: uppercase; color: #666; font-weight: bold; }
+    .control-btn { padding: 6px 12px; border: 2px solid #444; background: #1a1a1a; color: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 10px; transition: all 0.2s; }
+    .control-btn:hover { background: #333; border-color: #666; }
+    .control-btn.active { background: #c00; border-color: #c00; }
+
+    .lanes-container { flex: 1; overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #1a1a1a; }
+    .lanes { display: flex; gap: 2px; padding: 20px; min-width: max-content; min-height: 100%; }
+    
+    .lane { width: 120px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+    .lane-header { background: #0a0a0a; border: 2px solid #333; padding: 12px 8px; text-align: center; font-weight: bold; font-size: 11px; color: #fff; position: sticky; top: 0; z-index: 10; }
+    .lane-content { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    
+    .block { min-height: 60px; border: 2px solid #000; padding: 8px; font-size: 9px; line-height: 1.3; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; touch-action: manipulation; }
+    .block:hover { transform: scale(1.05); z-index: 5; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .block:active { transform: scale(0.98); }
+    .block.empty { background: #2a2a2a; border-color: #333; min-height: 40px; opacity: 0.3; }
+    .block.shared { border-color: #fff; border-width: 3px; }
+    .block.highlighted { border-color: #FFD700; border-width: 4px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); z-index: 10; }
+    .block.trail { opacity: 1; }
+    .block.trail-dim { opacity: 0.2; }
+    
+    .block-title { font-weight: bold; font-size: 10px; margin-bottom: 4px; }
+    .block-category { font-size: 8px; opacity: 0.7; text-transform: uppercase; }
+    .block-count { position: absolute; top: 4px; right: 4px; width: 16px; height: 16px; background: rgba(0,0,0,0.7); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; }
+
+    .legend { position: fixed; bottom: 20px; right: 20px; background: #0a0a0a; border: 2px solid #333; padding: 16px; font-size: 10px; z-index: 100; }
+    .legend-title { font-weight: bold; margin-bottom: 8px; text-transform: uppercase; color: #fff; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .legend-color { width: 20px; height: 20px; border: 2px solid #000; }
+
+    .tooltip { position: fixed; background: #0a0a0a; border: 2px solid #fff; padding: 12px; font-size: 11px; pointer-events: none; z-index: 1000; display: none; max-width: 300px; }
+    .tooltip.active { display: block; }
+    .tooltip-title { font-weight: bold; margin-bottom: 6px; font-size: 12px; }
+    .tooltip-category { color: #999; font-size: 9px; text-transform: uppercase; margin-bottom: 6px; }
+    .tooltip-stories { color: #c00; font-size: 10px; margin-top: 6px; }
+    .tooltip-actions { margin-top: 8px; padding-top: 8px; border-top: 1px solid #333; }
+    .tooltip-btn { display: inline-block; padding: 4px 8px; background: #c00; color: #fff; font-size: 9px; font-weight: bold; margin-right: 4px; margin-top: 4px; cursor: pointer; border: none; }
+    .tooltip-btn:hover { background: #e00; }
+
+    .match-cut-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-top: 3px solid #c00; padding: 16px; transform: translateY(100%); transition: transform 0.3s; z-index: 200; max-height: 40vh; overflow-y: auto; }
+    .match-cut-panel.active { transform: translateY(0); }
+    .match-cut-header { font-weight: bold; font-size: 14px; margin-bottom: 12px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+    .match-cut-close { cursor: pointer; font-size: 20px; }
+    .match-cut-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .match-cut-option { background: #1a1a1a; border: 2px solid #444; padding: 12px; cursor: pointer; transition: all 0.2s; }
+    .match-cut-option:hover { border-color: #c00; background: #2a2a2a; }
+    .match-cut-story { font-weight: bold; font-size: 11px; margin-bottom: 6px; color: #c00; }
+    .match-cut-next { font-size: 10px; color: #999; margin-top: 6px; }
+    .match-cut-prediction { background: #2a2a2a; border: 2px solid #FFD700; }
+    .match-cut-prediction .match-cut-story { color: #FFD700; }
+
+    @media (max-width: 768px) {
+      .header { padding: 16px; }
+      .headline { font-size: 1.5rem; }
+      .subhead { font-size: 0.8rem; }
+      .controls { padding: 12px; flex-wrap: wrap; }
+      .control-btn { font-size: 9px; padding: 6px 10px; }
+      .lane { width: 90px; }
+      .lane-header { font-size: 10px; padding: 10px 6px; }
+      .block { font-size: 8px; min-height: 50px; padding: 6px; }
+      .block-title { font-size: 9px; }
+      .block-category { font-size: 7px; }
+      .legend { bottom: 10px; right: 10px; padding: 12px; font-size: 9px; }
+      .legend-color { width: 16px; height: 16px; }
+      .tooltip { font-size: 10px; max-width: 250px; }
+      .match-cut-panel { padding: 12px; }
+      .match-cut-grid { grid-template-columns: 1fr; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1 class="headline">Class Story Analysis</h1>
+      <p class="subhead">Transclusion Patterns & Narrative Flows Across 10 Student Stories</p>
+    </div>
+
+    <div class="controls">
+      <span class="control-label">View:</span>
+      <button class="control-btn active" data-filter="all">All</button>
+      <button class="control-btn" data-filter="shared">Shared</button>
+      <button class="control-btn" data-filter="unique">Unique</button>
+      <span class="control-label" style="margin-left: 20px;">Mode:</span>
+      <button class="control-btn" data-mode="explore">Explore</button>
+      <button class="control-btn" data-mode="trail">Trail</button>
+    </div>
+
+    <div class="lanes-container">
+      <div class="lanes" id="lanes"></div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Legend</div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #E74C3C;"></div>
+        <span>Systemic Control/Critique</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #F39C12;"></div>
+        <span>Economic/Political</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #3498DB;"></div>
+        <span>Theory/Science</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #2ECC71;"></div>
+        <span>Future/Agency</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #9B59B6;"></div>
+        <span>Culture/Identity</span>
+      </div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-title" id="tooltipTitle"></div>
+      <div class="tooltip-category" id="tooltipCategory"></div>
+      <div class="tooltip-stories" id="tooltipStories"></div>
+      <div class="tooltip-actions" id="tooltipActions"></div>
+    </div>
+
+    <div class="match-cut-panel" id="matchCutPanel">
+      <div class="match-cut-header">
+        <span>Match Cuts & Next Fragments</span>
+        <span class="match-cut-close" id="matchCutClose">✕</span>
+      </div>
+      <div class="match-cut-grid" id="matchCutGrid"></div>
+    </div>
+  </div>
+
+  <script src="class-analysis-data.js"></script>
+  <script>
+    let currentMode = 'explore';
+    let trailPath = [];
+    
+    // Color mapping by category
+    function getCategoryColor(category) {
+      const colorMap = {
+        'Systemic Control': '#E74C3C', 'Systemic Critique': '#E74C3C', 'Systemic Event': '#E74C3C',
+        'Systemic Impact': '#E74C3C', 'Systemic Apparatus': '#E74C3C', 'Systemic Vulnerability': '#E74C3C',
+        'Economic Event': '#F39C12', 'Economic Apparatus': '#F39C12', 'Political Ideology': '#F39C12', 'Political Project': '#F39C12',
+        'Scientific Theory': '#3498DB', 'Psychological Theory': '#3498DB', 'Concept': '#3498DB', 'Theory/Action': '#3498DB',
+        'Future Scenario': '#2ECC71', 'Core Concept': '#2ECC71',
+        'Culture/Identity': '#9B59B6', 'Culture/Propaganda': '#9B59B6', 'Conspiracy Theory': '#9B59B6', 'Social Phenomenon': '#9B59B6',
+        'Personal Apparatus': '#95A5A6', 'Technological Apparatus': '#95A5A6', 'Critique': '#95A5A6'
+      };
+      return colorMap[category] || '#7F8C8D';
+    }
+
+    function analyzeFrequency() {
+      const freq = {};
+      stories.forEach((story, idx) => {
+        story.selected.forEach(concept => {
+          if (!freq[concept.id]) {
+            freq[concept.id] = { ...concept, count: 0, stories: [], positions: [] };
+          }
+          freq[concept.id].count++;
+          freq[concept.id].stories.push(idx);
+          freq[concept.id].positions.push(story.selected.findIndex(c => c.id === concept.id));
+        });
+      });
+      return freq;
+    }
+
+    function predictNextFragments(storyIdx, conceptIdx) {
+      const story = stories[storyIdx];
+      if (conceptIdx >= story.selected.length - 1) return [];
+      
+      const currentConcept = story.selected[conceptIdx];
+      const nextConcept = story.selected[conceptIdx + 1];
+      const freq = analyzeFrequency();
+      
+      // Find other stories with same current concept
+      const predictions = [];
+      freq[currentConcept.id].stories.forEach((otherStoryIdx, i) => {
+        if (otherStoryIdx === storyIdx) return;
+        const otherPos = freq[currentConcept.id].positions[i];
+        const otherStory = stories[otherStoryIdx];
+        if (otherPos < otherStory.selected.length - 1) {
+          predictions.push({
+            storyIdx: otherStoryIdx,
+            conceptIdx: otherPos + 1,
+            concept: otherStory.selected[otherPos + 1],
+            isPrediction: true
+          });
+        }
+      });
+      
+      return predictions;
+    }
+
+    function renderLanes(filter = 'all') {
+      const freq = analyzeFrequency();
+      const lanesContainer = document.getElementById('lanes');
+      
+      const html = stories.map((story, storyIdx) => {
+        const blocks = story.selected.map((concept, conceptIdx) => {
+          const conceptFreq = freq[concept.id];
+          const isShared = conceptFreq.count > 1;
+          const color = getCategoryColor(concept.category);
+          
+          if (filter === 'shared' && !isShared) return '<div class="block empty"></div>';
+          if (filter === 'unique' && isShared) return '<div class="block empty"></div>';
+          
+          return `
+            <div class="block ${isShared ? 'shared' : ''}" 
+                 style="background: ${color};"
+                 data-id="${concept.id}"
+                 data-story="${storyIdx}"
+                 data-position="${conceptIdx}"
+                 data-title="${concept.title}"
+                 data-category="${concept.category}"
+                 data-count="${conceptFreq.count}"
+                 data-stories="${conceptFreq.stories.join(', ')}">
+              <div class="block-title">${concept.title}</div>
+              <div class="block-category">${concept.category}</div>
+              ${isShared ? `<div class="block-count">${conceptFreq.count}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="lane">
+            <div class="lane-header">Story ${storyIdx + 1}<br/>(${story.selected.length})</div>
+            <div class="lane-content">${blocks}</div>
+          </div>
+        `;
+      }).join('');
+
+      lanesContainer.innerHTML = html;
+      attachBlockListeners();
+    }
+
+    function attachBlockListeners() {
+      const tooltip = document.getElementById('tooltip');
+      
+      document.querySelectorAll('.block:not(.empty)').forEach(block => {
+        block.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const conceptId = this.dataset.id;
+          const storyIdx = parseInt(this.dataset.story);
+          const position = parseInt(this.dataset.position);
+          
+          if (currentMode === 'trail') {
+            addToTrail(conceptId, storyIdx, position);
+          } else {
+            showMatchCuts(conceptId, storyIdx, position);
+          }
+        });
+
+        block.addEventListener('mouseenter', function(e) {
+          if (window.innerWidth > 768) {
+            const title = this.dataset.title;
+            const category = this.dataset.category;
+            const count = this.dataset.count;
+            const storiesStr = this.dataset.stories;
+            
+            document.getElementById('tooltipTitle').textContent = title;
+            document.getElementById('tooltipCategory').textContent = category;
+            document.getElementById('tooltipStories').textContent = `Appears in ${count} ${count > 1 ? 'stories' : 'story'}: ${storiesStr}`;
+            
+            tooltip.classList.add('active');
+            tooltip.style.left = (e.clientX + 15) + 'px';
+            tooltip.style.top = (e.clientY + 15) + 'px';
+          }
+        });
+
+        block.addEventListener('mouseleave', function() {
+          tooltip.classList.remove('active');
+        });
+      });
+    }
+
+    function showMatchCuts(conceptId, storyIdx, position) {
+      const freq = analyzeFrequency();
+      const conceptData = freq[conceptId];
+      const predictions = predictNextFragments(storyIdx, position);
+      
+      const matchCuts = conceptData.stories
+        .filter(s => s !== storyIdx)
+        .map(s => ({
+          storyIdx: s,
+          conceptIdx: conceptData.positions[conceptData.stories.indexOf(s)],
+          concept: stories[s].selected[conceptData.positions[conceptData.stories.indexOf(s)]],
+          isPrediction: false
+        }));
+      
+      const allOptions = [...matchCuts, ...predictions];
+      
+      const html = allOptions.map(opt => {
+        const nextConcept = opt.storyIdx < stories.length && opt.conceptIdx < stories[opt.storyIdx].selected.length - 1
+          ? stories[opt.storyIdx].selected[opt.conceptIdx + 1]
+          : null;
+        
+        return `
+          <div class="match-cut-option ${opt.isPrediction ? 'match-cut-prediction' : ''}" 
+               data-story="${opt.storyIdx}" 
+               data-position="${opt.conceptIdx}">
+            <div class="match-cut-story">${opt.isPrediction ? '⚡ Predicted' : '🔗 Match Cut'}: Story ${opt.storyIdx + 1}</div>
+            <div>${opt.concept.title}</div>
+            ${nextConcept ? `<div class="match-cut-next">→ Next: ${nextConcept.title}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('matchCutGrid').innerHTML = html;
+      document.getElementById('matchCutPanel').classList.add('active');
+      
+      document.querySelectorAll('.match-cut-option').forEach(opt => {
+        opt.addEventListener('click', function() {
+          const story = parseInt(this.dataset.story);
+          const pos = parseInt(this.dataset.position);
+          jumpToBlock(story, pos);
+        });
+      });
+    }
+
+    function jumpToBlock(storyIdx, position) {
+      const block = document.querySelector(`[data-story="${storyIdx}"][data-position="${position}"]`);
+      if (block) {
+        block.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        block.classList.add('highlighted');
+        setTimeout(() => block.classList.remove('highlighted'), 2000);
+      }
+      document.getElementById('matchCutPanel').classList.remove('active');
+    }
+
+    function addToTrail(conceptId, storyIdx, position) {
+      trailPath.push({ conceptId, storyIdx, position });
+      
+      document.querySelectorAll('.block').forEach(b => {
+        b.classList.remove('trail', 'trail-dim');
+        b.classList.add('trail-dim');
+      });
+      
+      trailPath.forEach(item => {
+        const block = document.querySelector(`[data-story="${item.storyIdx}"][data-position="${item.position}"]`);
+        if (block) {
+          block.classList.remove('trail-dim');
+          block.classList.add('trail');
+        }
+      });
+    }
+
+    document.getElementById('matchCutClose').addEventListener('click', () => {
+      document.getElementById('matchCutPanel').classList.remove('active');
+    });
+
+    document.querySelectorAll('.control-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        if (this.dataset.filter) {
+          document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          renderLanes(this.dataset.filter);
+        }
+        if (this.dataset.mode) {
+          document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          currentMode = this.dataset.mode;
+          if (currentMode === 'explore') {
+            trailPath = [];
+            document.querySelectorAll('.block').forEach(b => {
+              b.classList.remove('trail', 'trail-dim');
+            });
+          }
+        }
+      });
+    });
+
+    renderLanes();
+  </script>
+</body>
+</html>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Story Assembly Game — Procedural Rhetoric Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #fff; }
+
+    .game { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* Header with game state */
+    .game-header { background: #000; border-bottom: 3px solid #c00; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .game-title { font-size: 1.2rem; font-weight: 900; letter-spacing: -1px; }
+    .game-stats { display: flex; gap: 20px; font-size: 11px; }
+    .stat { display: flex; flex-direction: column; align-items: center; }
+    .stat-value { font-size: 18px; font-weight: bold; color: #c00; }
+    .stat-label { font-size: 9px; text-transform: uppercase; color: #666; }
+
+    /* Rules panel */
+    .rules-panel { background: #1a1a1a; border-bottom: 2px solid #333; padding: 12px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .rule-label { font-size: 10px; text-transform: uppercase; color: #666; font-weight: bold; }
+    .rule-btn { padding: 6px 12px; border: 2px solid #444; background: #0a0a0a; color: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 10px; transition: all 0.2s; }
+    .rule-btn:hover { background: #333; border-color: #c00; }
+    .rule-btn.active { background: #c00; border-color: #c00; }
+    .rule-info { font-size: 9px; color: #999; font-style: italic; }
+
+    /* Main game area */
+    .game-main { flex: 1; display: flex; overflow: hidden; }
+    
+    /* Story lanes (left) */
+    .lanes-area { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #0a0a0a; }
+    .lanes { display: flex; gap: 3px; padding: 20px; min-width: max-content; min-height: 100%; }
+    .lane { width: 110px; display: flex; flex-direction: column; gap: 3px; }
+    .lane-header { background: #000; border: 2px solid #333; padding: 10px 6px; text-align: center; font-weight: bold; font-size: 10px; position: sticky; top: 0; z-index: 10; }
+    .lane-content { display: flex; flex-direction: column; gap: 3px; }
+    
+    /* Blocks */
+    .block { min-height: 55px; border: 2px solid #000; padding: 6px; font-size: 8px; line-height: 1.2; cursor: pointer; transition: all 0.15s; position: relative; display: flex; flex-direction: column; justify-content: center; touch-action: manipulation; }
+    .block:hover { transform: scale(1.08); z-index: 5; box-shadow: 0 6px 16px rgba(0,0,0,0.7); }
+    .block:active { transform: scale(0.95); }
+    .block-title { font-weight: bold; font-size: 9px; margin-bottom: 3px; }
+    .block-cat { font-size: 7px; opacity: 0.6; text-transform: uppercase; }
+    
+    /* Game states */
+    .block.empty { background: #1a1a1a; border-color: #222; opacity: 0.2; min-height: 35px; }
+    .block.shared { border-color: #fff; border-width: 3px; }
+    .block.highlighted { border-color: #FFD700; border-width: 4px; box-shadow: 0 0 24px rgba(255,215,0,0.8); animation: pulse 1s infinite; }
+    .block.transclusion { border-color: #00FFFF; border-width: 3px; box-shadow: 0 0 16px rgba(0,255,255,0.5); }
+    .block.prediction { border-color: #FF00FF; border-width: 3px; box-shadow: 0 0 16px rgba(255,0,255,0.5); animation: glow 1.5s infinite; }
+    .block.selected { border-color: #c00; border-width: 4px; }
+    .block.dimmed { opacity: 0.15; }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 24px rgba(255,215,0,0.8); }
+      50% { box-shadow: 0 0 36px rgba(255,215,0,1); }
+    }
+    
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 16px rgba(255,0,255,0.5); }
+      50% { box-shadow: 0 0 28px rgba(255,0,255,0.9); }
+    }
+    
+    .block-badge { position: absolute; top: 3px; right: 3px; width: 14px; height: 14px; background: rgba(0,0,0,0.8); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; }
+    .block-score { position: absolute; bottom: 3px; right: 3px; font-size: 7px; background: rgba(0,0,0,0.7); padding: 2px 4px; border-radius: 2px; color: #FFD700; }
+
+    /* Assembly deck (right) */
+    .assembly-deck { width: 320px; background: #000; border-left: 3px solid #c00; display: flex; flex-direction: column; overflow: hidden; }
+    .deck-header { padding: 16px; border-bottom: 3px solid #c00; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; background: #0a0a0a; }
+    .deck-content { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .deck-item { background: #1a1a1a; border: 2px solid #444; padding: 10px; position: relative; cursor: move; transition: all 0.2s; }
+    .deck-item:hover { border-color: #c00; background: #2a2a2a; }
+    .deck-item-num { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; background: #c00; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+    .deck-item-title { font-weight: bold; font-size: 11px; margin-bottom: 4px; padding-left: 28px; }
+    .deck-item-story { font-size: 9px; color: #999; margin-bottom: 4px; }
+    .deck-item-score { font-size: 9px; color: #FFD700; }
+    .deck-item-remove { position: absolute; top: 6px; right: 6px; cursor: pointer; color: #c00; font-weight: bold; font-size: 14px; opacity: 0; transition: opacity 0.2s; }
+    .deck-item:hover .deck-item-remove { opacity: 1; }
+    
+    .deck-actions { padding: 12px; border-top: 3px solid #c00; display: flex; flex-direction: column; gap: 8px; }
+    .deck-btn { padding: 10px; border: 2px solid #c00; background: #c00; color: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 11px; text-align: center; transition: all 0.2s; }
+    .deck-btn:hover { background: #e00; border-color: #e00; }
+    .deck-btn.secondary { background: #0a0a0a; border-color: #444; color: #fff; }
+    .deck-btn.secondary:hover { background: #333; border-color: #666; }
+
+    /* Prediction overlay */
+    .prediction-overlay { position: fixed; bottom: 0; left: 0; right: 320px; background: rgba(0,0,0,0.95); border-top: 3px solid #FF00FF; padding: 16px 20px; transform: translateY(100%); transition: transform 0.3s; z-index: 100; max-height: 35vh; overflow-y: auto; }
+    .prediction-overlay.active { transform: translateY(0); }
+    .prediction-header { font-weight: bold; font-size: 13px; margin-bottom: 12px; color: #FF00FF; display: flex; justify-content: space-between; align-items: center; }
+    .prediction-close { cursor: pointer; font-size: 18px; }
+    .prediction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .prediction-card { background: #1a1a1a; border: 2px solid #FF00FF; padding: 10px; cursor: pointer; transition: all 0.2s; position: relative; }
+    .prediction-card:hover { border-color: #FFD700; background: #2a2a2a; transform: translateY(-2px); }
+    .prediction-card-label { font-size: 8px; text-transform: uppercase; color: #FF00FF; font-weight: bold; margin-bottom: 4px; }
+    .prediction-card-title { font-size: 10px; font-weight: bold; margin-bottom: 4px; }
+    .prediction-card-story { font-size: 9px; color: #999; }
+    .prediction-card-weight { position: absolute; top: 6px; right: 6px; font-size: 8px; background: #FF00FF; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+
+    /* Legend */
+    .legend { position: fixed; bottom: 20px; right: 340px; background: #000; border: 2px solid #333; padding: 12px; font-size: 9px; z-index: 50; }
+    .legend-title { font-weight: bold; margin-bottom: 6px; text-transform: uppercase; font-size: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .legend-box { width: 16px; height: 16px; border: 2px solid; }
+
+    @media (max-width: 768px) {
+      .game-header { padding: 12px 16px; flex-direction: column; gap: 12px; }
+      .game-stats { gap: 12px; }
+      .rules-panel { padding: 10px 16px; }
+      .lane { width: 85px; }
+      .block { font-size: 7px; min-height: 45px; }
+      .assembly-deck { width: 100%; border-left: none; border-top: 3px solid #c00; max-height: 40vh; }
+      .game-main { flex-direction: column; }
+      .prediction-overlay { right: 0; }
+      .legend { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="game-header">
+      <div class="game-title">🎬 Story Assembly Game</div>
+      <div class="game-stats">
+        <div class="stat">
+          <div class="stat-value" id="assemblyCount">0</div>
+          <div class="stat-label">Assembled</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="coherenceScore">0</div>
+          <div class="stat-label">Coherence</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="noveltyScore">0</div>
+          <div class="stat-label">Novelty</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rules-panel">
+      <span class="rule-label">Game Rules:</span>
+      <button class="rule-btn active" data-rule="transclusion">Auto-Highlight Transclusions</button>
+      <button class="rule-btn active" data-rule="prediction">Show Predictions</button>
+      <button class="rule-btn" data-rule="weight">Weight by Frequency</button>
+      <span class="rule-info">Click blocks to assemble • Hover to see connections • Build coherent narratives</span>
+    </div>
+
+    <div class="game-main">
+      <div class="lanes-area">
+        <div class="lanes" id="lanes"></div>
+      </div>
+
+      <div class="assembly-deck">
+        <div class="deck-header">Your Assembly (<span id="deckCount">0</span>/12)</div>
+        <div class="deck-content" id="deckContent">
+          <div style="text-align: center; color: #666; font-size: 11px; padding: 40px 20px;">
+            Click blocks to start assembling your story
+          </div>
+        </div>
+        <div class="deck-actions">
+          <button class="deck-btn" id="playBtn">▶ Play Assembly</button>
+          <button class="deck-btn secondary" id="clearBtn">Clear All</button>
+          <button class="deck-btn secondary" id="exportBtn">Export JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="prediction-overlay" id="predictionOverlay">
+      <div class="prediction-header">
+        <span>⚡ Predicted Next Fragments (Neural Net)</span>
+        <span class="prediction-close" id="predictionClose">✕</span>
+      </div>
+      <div class="prediction-grid" id="predictionGrid"></div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Procedural Rules</div>
+      <div class="legend-item">
+        <div class="legend-box" style="border-color: #00FFFF; background: rgba(0,255,255,0.2);"></div>
+        <span>Transclusion</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box" style="border-color: #FF00FF; background: rgba(255,0,255,0.2);"></div>
+        <span>Prediction</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box" style="border-color: #FFD700; background: rgba(255,215,0,0.2);"></div>
+        <span>Selected</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="class-analysis-data.js"></script>
+  <script>
+    // Game state
+    let assembly = [];
+    let rules = { transclusion: true, prediction: true, weight: false };
+    let currentHover = null;
+    let freq = {};
+
+    // Color by category
+    const colors = {
+      'Systemic Control': '#E74C3C', 'Systemic Critique': '#E74C3C', 'Systemic Event': '#E74C3C',
+      'Economic Event': '#F39C12', 'Political Ideology': '#F39C12',
+      'Scientific Theory': '#3498DB', 'Concept': '#3498DB',
+      'Future Scenario': '#2ECC71', 'Core Concept': '#2ECC71',
+      'Culture/Identity': '#9B59B6', 'Conspiracy Theory': '#9B59B6'
+    };
+    const getColor = cat => colors[cat] || '#7F8C8D';
+
+    // Analyze frequency & build neural net
+    function analyzeNetwork() {
+      freq = {};
+      const transitions = {};
+      
+      stories.forEach((story, idx) => {
+        story.selected.forEach((concept, pos) => {
+          if (!freq[concept.id]) {
+            freq[concept.id] = { ...concept, count: 0, stories: [], positions: [], nextConcepts: [] };
+          }
+          freq[concept.id].count++;
+          freq[concept.id].stories.push(idx);
+          freq[concept.id].positions.push(pos);
+          
+          // Track transitions (what comes next)
+          if (pos < story.selected.length - 1) {
+            const nextId = story.selected[pos + 1].id;
+            freq[concept.id].nextConcepts.push(nextId);
+          }
+        });
+      });
+      
+      return freq;
+    }
+
+    // Predict next fragments using neural net logic
+    function predictNext(conceptId) {
+      if (!freq[conceptId]) return [];
+      
+      const nextIds = freq[conceptId].nextConcepts;
+      const predictions = {};
+      
+      // Count frequency of each next concept (weights)
+      nextIds.forEach(id => {
+        predictions[id] = (predictions[id] || 0) + 1;
+      });
+      
+      // Convert to array and sort by weight
+      return Object.entries(predictions)
+        .map(([id, weight]) => ({
+          concept: freq[id],
+          weight: weight,
+          probability: (weight / nextIds.length * 100).toFixed(0)
+        }))
+        .sort((a, b) => b.weight - a.weight);
+    }
+
+    // Calculate coherence score (how well fragments connect)
+    function calculateCoherence() {
+      if (assembly.length < 2) return 0;
+      
+      let score = 0;
+      for (let i = 0; i < assembly.length - 1; i++) {
+        const current = assembly[i].id;
+        const next = assembly[i + 1].id;
+        
+        // Check if this transition exists in any story
+        if (freq[current] && freq[current].nextConcepts.includes(next)) {
+          score += 10;
+        }
+        
+        // Bonus for same category
+        if (assembly[i].category === assembly[i + 1].category) {
+          score += 5;
+        }
+      }
+      
+      return Math.min(100, score);
+    }
+
+    // Calculate novelty score (unique combinations)
+    function calculateNovelty() {
+      if (assembly.length === 0) return 0;
+      
+      const uniqueStories = new Set(assembly.map(c => {
+        const conceptFreq = freq[c.id];
+        return conceptFreq ? conceptFreq.stories[0] : null;
+      })).size;
+      
+      return Math.min(100, (uniqueStories / stories.length) * 100).toFixed(0);
+    }
+
+    // Render lanes
+    function renderLanes() {
+      const html = stories.map((story, storyIdx) => {
+        const blocks = story.selected.map((concept, pos) => {
+          const conceptFreq = freq[concept.id];
+          const isShared = conceptFreq && conceptFreq.count > 1;
+          const isInAssembly = assembly.some(c => c.id === concept.id);
+          
+          return `
+            <div class="block ${isShared ? 'shared' : ''} ${isInAssembly ? 'selected' : ''}" 
+                 style="background: ${getColor(concept.category)};"
+                 data-id="${concept.id}"
+                 data-story="${storyIdx}"
+                 data-position="${pos}">
+              <div class="block-title">${concept.title}</div>
+              <div class="block-cat">${concept.category}</div>
+              ${isShared ? `<div class="block-badge">${conceptFreq.count}</div>` : ''}
+              ${rules.weight && conceptFreq ? `<div class="block-score">${conceptFreq.count}×</div>` : ''}
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="lane">
+            <div class="lane-header">S${storyIdx + 1}<br/>(${story.selected.length})</div>
+            <div class="lane-content">${blocks}</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('lanes').innerHTML = html;
+      attachListeners();
+    }
+
+    // Attach block listeners
+    function attachListeners() {
+      document.querySelectorAll('.block:not(.empty)').forEach(block => {
+        block.addEventListener('click', function() {
+          const id = this.dataset.id;
+          const storyIdx = parseInt(this.dataset.story);
+          const pos = parseInt(this.dataset.position);
+          const concept = stories[storyIdx].selected[pos];
+          
+          addToAssembly(concept, storyIdx);
+        });
+
+        block.addEventListener('mouseenter', function() {
+          const id = this.dataset.id;
+          currentHover = id;
+          highlightTransclusions(id);
+          if (rules.prediction && assembly.length > 0) {
+            showPredictions(assembly[assembly.length - 1].id);
+          }
+        });
+
+        block.addEventListener('mouseleave', function() {
+          currentHover = null;
+          clearHighlights();
+        });
+      });
+    }
+
+    // Highlight transclusions (same concept across stories)
+    function highlightTransclusions(conceptId) {
+      if (!rules.transclusion) return;
+      
+      document.querySelectorAll('.block').forEach(b => {
+        if (b.dataset.id === conceptId) {
+          b.classList.add('transclusion');
+        } else {
+          b.classList.add('dimmed');
+        }
+      });
+    }
+
+    // Clear highlights
+    function clearHighlights() {
+      document.querySelectorAll('.block').forEach(b => {
+        b.classList.remove('transclusion', 'prediction', 'dimmed', 'highlighted');
+      });
+    }
+
+    // Show predictions
+    function showPredictions(conceptId) {
+      const predictions = predictNext(conceptId);
+      if (predictions.length === 0) return;
+      
+      // Highlight predicted blocks in lanes
+      predictions.slice(0, 5).forEach(pred => {
+        document.querySelectorAll(`[data-id="${pred.concept.id}"]`).forEach(b => {
+          b.classList.add('prediction');
+        });
+      });
+      
+      // Show prediction panel
+      const html = predictions.slice(0, 8).map(pred => `
+        <div class="prediction-card" data-id="${pred.concept.id}">
+          <div class="prediction-card-label">Next Fragment</div>
+          <div class="prediction-card-title">${pred.concept.title}</div>
+          <div class="prediction-card-story">Appears in ${pred.concept.count} stories</div>
+          <div class="prediction-card-weight">${pred.probability}%</div>
+        </div>
+      `).join('');
+      
+      document.getElementById('predictionGrid').innerHTML = html;
+      document.getElementById('predictionOverlay').classList.add('active');
+      
+      document.querySelectorAll('.prediction-card').forEach(card => {
+        card.addEventListener('click', function() {
+          const id = this.dataset.id;
+          const block = document.querySelector(`[data-id="${id}"]`);
+          if (block) {
+            block.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            block.classList.add('highlighted');
+            setTimeout(() => block.classList.remove('highlighted'), 2000);
+          }
+        });
+      });
+    }
+
+    // Add to assembly
+    function addToAssembly(concept, storyIdx) {
+      if (assembly.length >= 12) {
+        alert('Maximum 12 fragments!');
+        return;
+      }
+      
+      if (assembly.some(c => c.id === concept.id)) {
+        return; // Already in assembly
+      }
+      
+      assembly.push({ ...concept, sourceStory: storyIdx });
+      updateAssembly();
+      updateScores();
+      renderLanes();
+    }
+
+    // Update assembly deck
+    function updateAssembly() {
+      document.getElementById('deckCount').textContent = assembly.length;
+      
+      if (assembly.length === 0) {
+        document.getElementById('deckContent').innerHTML = `
+          <div style="text-align: center; color: #666; font-size: 11px; padding: 40px 20px;">
+            Click blocks to start assembling your story
+          </div>
+        `;
+        return;
+      }
+      
+      const html = assembly.map((concept, idx) => `
+        <div class="deck-item">
+          <div class="deck-item-num">${idx + 1}</div>
+          <div class="deck-item-title">${concept.title}</div>
+          <div class="deck-item-story">From Story ${concept.sourceStory + 1} • ${concept.category}</div>
+          <div class="deck-item-score">Weight: ${freq[concept.id].count}×</div>
+          <div class="deck-item-remove" data-idx="${idx}">×</div>
+        </div>
+      `).join('');
+      
+      document.getElementById('deckContent').innerHTML = html;
+      
+      document.querySelectorAll('.deck-item-remove').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const idx = parseInt(this.dataset.idx);
+          assembly.splice(idx, 1);
+          updateAssembly();
+          updateScores();
+          renderLanes();
+        });
+      });
+    }
+
+    // Update scores
+    function updateScores() {
+      document.getElementById('assemblyCount').textContent = assembly.length;
+      document.getElementById('coherenceScore').textContent = calculateCoherence();
+      document.getElementById('noveltyScore').textContent = calculateNovelty();
+    }
+
+    // Rule toggles
+    document.querySelectorAll('.rule-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const rule = this.dataset.rule;
+        rules[rule] = !rules[rule];
+        this.classList.toggle('active');
+        renderLanes();
+      });
+    });
+
+    // Actions
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (assembly.length > 0 && confirm('Clear assembly?')) {
+        assembly = [];
+        updateAssembly();
+        updateScores();
+        renderLanes();
+      }
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (assembly.length === 0) {
+        alert('Add fragments first!');
+        return;
+      }
+      
+      const data = {
+        title: 'Assembled Story',
+        fragments: assembly,
+        coherence: calculateCoherence(),
+        novelty: calculateNovelty(),
+        timestamp: new Date().toISOString()
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `assembly-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('predictionClose').addEventListener('click', () => {
+      document.getElementById('predictionOverlay').classList.remove('active');
+    });
+
+    // Initialize
+    freq = analyzeNetwork();
+    renderLanes();
+    updateScores();
+  </script>
+</body>
+</html>
