@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fragment Branches — Git for Stories</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Courier New', monospace; background: #0d0d0d; color: #f1efe8; }
+
+    .game { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+
+    /* Command bar (like git terminal) */
+    .command-bar { background: #000; border-bottom: 2px solid #E94F37; padding: 12px 20px; display: flex; gap: 12px; align-items: center; font-size: 12px; }
+    .prompt { color: #3EB489; font-weight: bold; }
+    .command-input { flex: 1; background: transparent; border: none; color: #f1efe8; font-family: inherit; font-size: 12px; outline: none; }
+    .branch-indicator { color: #F6C667; font-weight: bold; }
+    .commit-count { color: #999; }
+
+    /* Main visualization area */
+    .viz-area { display: flex; overflow: hidden; }
+    
+    /* Branch graph (left) */
+    .branch-graph { width: 60%; border-right: 2px solid #333; overflow: auto; -webkit-overflow-scrolling: touch; position: relative; background: #0d0d0d; }
+    .graph-canvas { padding: 40px; min-height: 100%; position: relative; }
+    
+    /* Branch line */
+    .branch { position: relative; margin-bottom: 60px; }
+    .branch-line { display: flex; align-items: center; gap: 8px; position: relative; }
+    .branch-name { position: absolute; left: -120px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: bold; color: #F6C667; text-align: right; width: 100px; }
+    
+    /* Commits (fragments) */
+    .commits { display: flex; gap: 12px; align-items: center; position: relative; padding-left: 120px; }
+    .commit { width: 50px; height: 50px; border-radius: 50%; border: 3px solid; cursor: pointer; transition: all 0.2s; position: relative; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; background: #0d0d0d; }
+    .commit:hover { transform: scale(1.3); z-index: 10; box-shadow: 0 0 30px currentColor; }
+    .commit.active { box-shadow: 0 0 40px currentColor; animation: pulse 2s infinite; }
+    .commit.merge { border-width: 5px; }
+    .commit.head { border-width: 4px; box-shadow: 0 0 20px currentColor; }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    
+    /* Connection lines between commits */
+    .connection { position: absolute; height: 3px; background: currentColor; opacity: 0.4; pointer-events: none; }
+    .merge-line { position: absolute; border-left: 3px dashed; opacity: 0.6; pointer-events: none; }
+    
+    /* Diff panel (right) */
+    .diff-panel { width: 40%; background: #000; display: flex; flex-direction: column; overflow: hidden; }
+    .diff-header { padding: 16px; border-bottom: 2px solid #E94F37; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+    .diff-close { cursor: pointer; font-size: 18px; color: #E94F37; }
+    .diff-content { flex: 1; overflow-y: auto; padding: 20px; }
+    
+    .diff-section { margin-bottom: 24px; }
+    .diff-title { font-size: 11px; text-transform: uppercase; color: #999; margin-bottom: 8px; font-weight: bold; }
+    .diff-item { background: #1a1a1a; border-left: 4px solid; padding: 12px; margin-bottom: 8px; font-size: 11px; line-height: 1.5; }
+    .diff-item.add { border-color: #3EB489; }
+    .diff-item.remove { border-color: #E94F37; }
+    .diff-item.merge { border-color: #F6C667; }
+    .diff-item-title { font-weight: bold; margin-bottom: 6px; }
+    .diff-item-meta { font-size: 9px; color: #999; margin-top: 6px; }
+    
+    .prediction-box { background: #1a1a1a; border: 2px solid #9B59B6; padding: 12px; margin-top: 12px; }
+    .prediction-title { font-size: 10px; text-transform: uppercase; color: #9B59B6; font-weight: bold; margin-bottom: 8px; }
+    .prediction-item { font-size: 10px; padding: 6px; background: rgba(155,89,182,0.1); margin-bottom: 4px; cursor: pointer; transition: all 0.2s; }
+    .prediction-item:hover { background: rgba(155,89,182,0.3); }
+    .prediction-weight { float: right; color: #9B59B6; font-weight: bold; }
+    
+    /* Action buttons */
+    .diff-actions { padding: 16px; border-top: 2px solid #333; display: flex; gap: 8px; }
+    .action-btn { flex: 1; padding: 10px; border: 2px solid; background: transparent; color: inherit; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 11px; transition: all 0.2s; }
+    .action-btn.merge { border-color: #F6C667; color: #F6C667; }
+    .action-btn.merge:hover { background: #F6C667; color: #000; }
+    .action-btn.branch { border-color: #3EB489; color: #3EB489; }
+    .action-btn.branch:hover { background: #3EB489; color: #000; }
+    .action-btn.checkout { border-color: #E94F37; color: #E94F37; }
+    .action-btn.checkout:hover { background: #E94F37; color: #000; }
+
+    /* Status bar */
+    .status-bar { background: #000; border-top: 2px solid #333; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; }
+    .status-item { display: flex; gap: 16px; }
+    .status-label { color: #999; }
+    .status-value { color: #3EB489; font-weight: bold; }
+
+    /* Legend */
+    .legend { position: fixed; top: 60px; right: 20px; background: rgba(0,0,0,0.9); border: 2px solid #333; padding: 12px; font-size: 9px; z-index: 100; }
+    .legend-title { font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .legend-circle { width: 14px; height: 14px; border-radius: 50%; border: 2px solid; }
+
+    @media (max-width: 768px) {
+      .viz-area { flex-direction: column; }
+      .branch-graph { width: 100%; border-right: none; border-bottom: 2px solid #333; max-height: 60vh; }
+      .diff-panel { width: 100%; max-height: 40vh; }
+      .branch-name { left: 0; position: relative; transform: none; text-align: left; margin-bottom: 8px; }
+      .commits { padding-left: 0; }
+      .commit { width: 40px; height: 40px; font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="command-bar">
+      <span class="prompt">$</span>
+      <input type="text" class="command-input" id="commandInput" placeholder="Type 'help' for commands: merge, branch, checkout, diff, log..." />
+      <span class="branch-indicator" id="currentBranch">main</span>
+      <span class="commit-count" id="commitCount">0 commits</span>
+    </div>
+
+    <div class="viz-area">
+      <div class="branch-graph">
+        <div class="graph-canvas" id="graphCanvas"></div>
+      </div>
+
+      <div class="diff-panel" id="diffPanel" style="display: none;">
+        <div class="diff-header">
+          <span id="diffTitle">Diff View</span>
+          <span class="diff-close" id="diffClose">✕</span>
+        </div>
+        <div class="diff-content" id="diffContent"></div>
+        <div class="diff-actions">
+          <button class="action-btn merge" id="mergeBtn">Merge</button>
+          <button class="action-btn branch" id="branchBtn">Branch</button>
+          <button class="action-btn checkout" id="checkoutBtn">Checkout</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <span><span class="status-label">Branches:</span> <span class="status-value" id="branchCount">10</span></span>
+        <span><span class="status-label">Merges:</span> <span class="status-value" id="mergeCount">0</span></span>
+        <span><span class="status-label">Conflicts:</span> <span class="status-value" id="conflictCount">0</span></span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Fragment Branches v1.0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">Git Commands</div>
+    <div class="legend-item">
+      <div class="legend-circle" style="border-color: #3EB489;"></div>
+      <span>Commit (Fragment)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-circle" style="border-color: #F6C667; border-width: 4px;"></div>
+      <span>Merge (Transclusion)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-circle" style="border-color: #E94F37;"></div>
+      <span>HEAD (Current)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-circle" style="border-color: #9B59B6;"></div>
+      <span>Prediction</span>
+    </div>
+  </div>
+
+  <script src="class-analysis-data.js"></script>
+  <script>
+    // Git-like state
+    let branches = [];
+    let currentBranch = null;
+    let selectedCommit = null;
+    let userBranch = { name: 'my-story', commits: [] };
+    let mergeCount = 0;
+
+    // Color by category
+    const colors = {
+      'Systemic Control': '#E74C3C', 'Systemic Critique': '#E74C3C',
+      'Economic Event': '#F39C12', 'Political Ideology': '#F39C12',
+      'Scientific Theory': '#3498DB', 'Concept': '#3498DB',
+      'Future Scenario': '#2ECC71', 'Core Concept': '#2ECC71',
+      'Culture/Identity': '#9B59B6'
+    };
+    const getColor = cat => colors[cat] || '#7F8C8D';
+
+    // Initialize branches from stories
+    function initBranches() {
+      branches = stories.map((story, idx) => ({
+        name: `story-${idx + 1}`,
+        commits: story.selected.map((concept, pos) => ({
+          ...concept,
+          hash: `${idx}-${pos}`,
+          branch: `story-${idx + 1}`,
+          position: pos
+        }))
+      }));
+      
+      branches.push(userBranch);
+      currentBranch = userBranch;
+      renderGraph();
+    }
+
+    // Render git graph
+    function renderGraph() {
+      const canvas = document.getElementById('graphCanvas');
+      let html = '';
+      
+      branches.forEach((branch, branchIdx) => {
+        const isUserBranch = branch.name === 'my-story';
+        const branchColor = isUserBranch ? '#E94F37' : '#3EB489';
+        
+        html += `<div class="branch">`;
+        html += `<div class="branch-line">`;
+        html += `<div class="branch-name" style="color: ${branchColor};">${branch.name}</div>`;
+        html += `<div class="commits">`;
+        
+        branch.commits.forEach((commit, commitIdx) => {
+          const color = getColor(commit.category);
+          const isHead = branch === currentBranch && commitIdx === branch.commits.length - 1;
+          const isMerge = commit.mergedFrom ? true : false;
+          const classes = ['commit'];
+          if (isHead) classes.push('head');
+          if (isMerge) classes.push('merge');
+          if (selectedCommit && selectedCommit.hash === commit.hash) classes.push('active');
+          
+          html += `
+            <div class="commit ${classes.join(' ')}" 
+                 style="border-color: ${color};"
+                 data-hash="${commit.hash}"
+                 data-branch="${branch.name}"
+                 title="${commit.title}">
+              ${commitIdx + 1}
+            </div>
+          `;
+        });
+        
+        html += `</div></div></div>`;
+      });
+      
+      canvas.innerHTML = html;
+      attachCommitListeners();
+      updateStatus();
+    }
+
+    // Attach click listeners
+    function attachCommitListeners() {
+      document.querySelectorAll('.commit').forEach(commit => {
+        commit.addEventListener('click', function() {
+          const hash = this.dataset.hash;
+          const branchName = this.dataset.branch;
+          const branch = branches.find(b => b.name === branchName);
+          const commitData = branch.commits.find(c => c.hash === hash);
+          
+          selectedCommit = commitData;
+          showDiff(commitData, branch);
+          renderGraph();
+        });
+      });
+    }
+
+    // Show diff panel
+    function showDiff(commit, branch) {
+      document.getElementById('diffPanel').style.display = 'flex';
+      document.getElementById('diffTitle').textContent = `Commit: ${commit.title}`;
+      
+      // Find transclusions (same fragment in other branches)
+      const transclusions = [];
+      branches.forEach(b => {
+        if (b.name === branch.name) return;
+        b.commits.forEach(c => {
+          if (c.id === commit.id) {
+            transclusions.push({ commit: c, branch: b.name });
+          }
+        });
+      });
+      
+      // Predict next fragments
+      const predictions = predictNext(commit, branch);
+      
+      let html = `
+        <div class="diff-section">
+          <div class="diff-title">Fragment Details</div>
+          <div class="diff-item add">
+            <div class="diff-item-title">${commit.title}</div>
+            <div>${commit.desc || commit.category}</div>
+            <div class="diff-item-meta">Category: ${commit.category} • Branch: ${branch.name}</div>
+          </div>
+        </div>
+      `;
+      
+      if (transclusions.length > 0) {
+        html += `
+          <div class="diff-section">
+            <div class="diff-title">Transclusions (${transclusions.length} other branches)</div>
+        `;
+        transclusions.forEach(t => {
+          html += `
+            <div class="diff-item merge">
+              <div class="diff-item-title">🔗 ${t.branch}</div>
+              <div class="diff-item-meta">Same fragment appears here • Click to checkout</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      
+      if (predictions.length > 0) {
+        html += `
+          <div class="prediction-box">
+            <div class="prediction-title">⚡ Predicted Next Fragments</div>
+        `;
+        predictions.forEach(p => {
+          html += `
+            <div class="prediction-item" data-hash="${p.commit.hash}">
+              ${p.commit.title}
+              <span class="prediction-weight">${p.probability}%</span>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      
+      document.getElementById('diffContent').innerHTML = html;
+      
+      // Attach prediction click listeners
+      document.querySelectorAll('.prediction-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const hash = this.dataset.hash;
+          mergeFragment(hash);
+        });
+      });
+    }
+
+    // Predict next fragments
+    function predictNext(commit, branch) {
+      const predictions = {};
+      
+      // Look at what comes after this fragment in other branches
+      branches.forEach(b => {
+        b.commits.forEach((c, idx) => {
+          if (c.id === commit.id && idx < b.commits.length - 1) {
+            const nextCommit = b.commits[idx + 1];
+            if (!predictions[nextCommit.id]) {
+              predictions[nextCommit.id] = { commit: nextCommit, count: 0 };
+            }
+            predictions[nextCommit.id].count++;
+          }
+        });
+      });
+      
+      return Object.values(predictions)
+        .map(p => ({
+          ...p,
+          probability: Math.round((p.count / branches.length) * 100)
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+    }
+
+    // Merge fragment into user branch
+    function mergeFragment(hash) {
+      const [branchIdx, pos] = hash.split('-').map(Number);
+      const sourceBranch = branches[branchIdx];
+      const fragment = sourceBranch.commits[pos];
+      
+      if (userBranch.commits.some(c => c.id === fragment.id)) {
+        alert('Fragment already in your branch!');
+        return;
+      }
+      
+      if (userBranch.commits.length >= 12) {
+        alert('Maximum 12 fragments per branch!');
+        return;
+      }
+      
+      userBranch.commits.push({
+        ...fragment,
+        hash: `user-${userBranch.commits.length}`,
+        mergedFrom: hash
+      });
+      
+      mergeCount++;
+      renderGraph();
+      document.getElementById('diffPanel').style.display = 'none';
+      executeCommand(`Merged: ${fragment.title}`);
+    }
+
+    // Command input
+    document.getElementById('commandInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        const cmd = this.value.trim().toLowerCase();
+        executeCommand(cmd);
+        this.value = '';
+      }
+    });
+
+    function executeCommand(cmd) {
+      const output = document.createElement('div');
+      output.style.cssText = 'position: fixed; bottom: 60px; left: 20px; background: rgba(0,0,0,0.9); border: 2px solid #3EB489; padding: 12px; font-size: 11px; z-index: 200;';
+      output.textContent = `> ${cmd}`;
+      document.body.appendChild(output);
+      setTimeout(() => output.remove(), 2000);
+      
+      if (cmd === 'help') {
+        output.innerHTML = `
+          <div style="color: #3EB489; font-weight: bold;">Git Commands:</div>
+          <div>• Click commits to view diff</div>
+          <div>• Click predictions to merge</div>
+          <div>• merge - Add fragment to your branch</div>
+          <div>• log - Show commit history</div>
+          <div>• branch - List all branches</div>
+        `;
+      }
+    }
+
+    // Action buttons
+    document.getElementById('mergeBtn').addEventListener('click', () => {
+      if (selectedCommit) {
+        mergeFragment(selectedCommit.hash);
+      }
+    });
+
+    document.getElementById('diffClose').addEventListener('click', () => {
+      document.getElementById('diffPanel').style.display = 'none';
+      selectedCommit = null;
+      renderGraph();
+    });
+
+    // Update status
+    function updateStatus() {
+      document.getElementById('branchCount').textContent = branches.length;
+      document.getElementById('mergeCount').textContent = mergeCount;
+      document.getElementById('commitCount').textContent = `${userBranch.commits.length} commits`;
+      document.getElementById('currentBranch').textContent = currentBranch.name;
+    }
+
+    // Initialize
+    initBranches();
+  </script>
+</body>
+</html>
