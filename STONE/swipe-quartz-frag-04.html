@@ -17,7 +17,7 @@
     body { 
       background: #f5f5f5; 
       color: #000; 
-      touch-action: none; 
+      touch-action: pan-y; 
       user-select: none; 
       /* Make body a flex container to ensure .game fills the viewport */
       display: flex;
@@ -194,12 +194,13 @@
       width: 48px; 
       background: var(--ink); 
       /* Removed border-right to prevent visual interference on left edge */
-      z-index: 900; 
+      z-index: 9999; 
       display: flex; 
       flex-direction: column; 
       height: auto; 
       border-radius: 0 var(--radius) var(--radius) 0; 
-      overflow: hidden; 
+      overflow: hidden;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.3);
     }
     .alley-btn { 
       flex: 1; 
@@ -229,6 +230,7 @@
       position: relative; 
       height: 100%; /* Ensure it fills parent height */
       width: 100%; /* Ensure it fills parent width */
+      touch-action: none; /* Allow card to handle all touch */
     }
     .card { 
       position: absolute; 
@@ -245,6 +247,7 @@
       box-shadow: var(--shadow); 
       border-radius: var(--radius); 
       will-change: transform, opacity; /* Optimize animations */
+      touch-action: none; /* Card handles all touch gestures */
     }
     .card.swiping { transition: none; cursor: grabbing; }
 
@@ -514,13 +517,25 @@
       .chat-panel.open, 
       .settings-panel.open, 
       .prompt-lab-panel.open { width: 100vw; /* Take full width, even over alley menu */ left:0; right:0; }
-      .alley-menu { display: none; /* Hide alley menu on smallest screens when panel is open */ }
+      /* Keep alley menu visible on mobile */
+      .alley-menu { 
+        width: 44px;
+        box-shadow: 3px 0 16px rgba(0,0,0,0.5);
+      }
+      .alley-btn {
+        padding: 12px 0;
+        min-height: 48px; /* Larger touch target */
+      }
       .grid-view{ grid-template-columns: 1fr; }
       .collection-controls { padding: 10px; }
       .control-row { flex-direction: column; }
       .control-select, .control-btn-small { width: 100%; }
       /* Further adjustments for tiny screens */
-      .card { height: 60vh; padding: 18px; }
+      .card { 
+        height: 60vh; 
+        padding: 18px;
+        touch-action: pan-x pan-y; /* Allow touch gestures on card */
+      }
       .card-header { padding: 12px; min-height: 70px; font-size: 16px; }
       .card-body { padding: 12px; font-size: 13px; }
       .card-quote { padding: 8px; font-size: 11px; }
