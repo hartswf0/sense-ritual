@@ -254,7 +254,7 @@
     .card-header { padding: 24px; font-weight: 900; font-size: 18px; line-height: 1.2; color: #fff; min-height: 96px; display: flex; flex-direction: column; justify-content: center; letter-spacing: -.25px; }
     .card-category { font-size: 10px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; letter-spacing: 2px; font-weight: 800; }
 
-    .card-body { padding: 18px; background: var(--paper); color: var(--ink); overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.55; }
+    .card-body { padding: 18px; background: var(--paper); color: var(--ink); overflow-y: auto; overflow-x: hidden; flex: 1; font-size: 14px; line-height: 1.55; }
     .card-desc { margin-bottom: 10px; color: #333; font-weight: 500; }
     .card-quote { font-style: italic; font-size: 12px; padding: 12px; background: #fff; border-left: 4px solid var(--ink); margin: 12px 0; color: #555; }
     .card-tags { font-size: 10px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee; letter-spacing: .5px; }
@@ -504,7 +504,15 @@
       .chat-panel.open, 
       .settings-panel.open, 
       .prompt-lab-panel.open { width: calc(100vw - 48px); /* Take full width minus alley menu */ }
-      .card{ max-width: 92vw; height: 68vh }
+      .card{ 
+        max-width: calc(100vw - 80px); /* Account for alley menu + padding */
+        height: 68vh;
+        margin-left: 24px; /* Offset for alley menu */
+      }
+      .card-stack {
+        padding: 16px;
+        padding-left: 60px; /* Extra space for alley menu */
+      }
       .list-item { grid-template-columns: 50px 1fr; gap: 10px; }
       .list-item-actions { grid-template-columns: 1fr; }
       .alley-menu { width: 44px; }
@@ -532,18 +540,60 @@
       .control-select, .control-btn-small { width: 100%; }
       /* Further adjustments for tiny screens */
       .card { 
-        height: 60vh; 
-        padding: 18px;
-        touch-action: pan-x pan-y; /* Allow touch gestures on card */
+        height: 65vh;
+        max-width: calc(100vw - 64px); /* Tighter on small screens */
+        margin-left: 16px; /* Less offset */
+        padding: 16px;
+        touch-action: none; /* Card handles all gestures */
       }
-      .card-header { padding: 12px; min-height: 70px; font-size: 16px; }
-      .card-body { padding: 12px; font-size: 13px; }
-      .card-quote { padding: 8px; font-size: 11px; }
-      .card-controls { padding: 8px 12px; }
-      .control-btn { font-size: 10px; padding: 8px; }
+      .card-stack {
+        padding: 8px;
+        padding-left: 52px; /* Account for alley menu */
+      }
+      .card-header { padding: 16px; min-height: 80px; font-size: 16px; }
+      .card-body { padding: 14px; font-size: 13px; }
+      .card-quote { padding: 10px; font-size: 11px; }
+      .card-controls { padding: 10px 12px; }
+      .control-btn { 
+        font-size: 11px; 
+        padding: 12px 8px;
+        min-height: 44px; /* Better touch target */
+      }
       .complete-title { font-size: 28px; }
       .complete-stats { gap: 20px; }
       .complete-stat-value { font-size: 36px; }
+    }
+    
+    /* LANDSCAPE MODE FIX */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .card {
+        height: 85vh;
+        max-width: calc(100vw - 80px);
+        margin-left: 20px;
+      }
+      .card-stack {
+        padding: 8px;
+        padding-left: 56px;
+      }
+      .card-header {
+        padding: 12px 16px;
+        min-height: 60px;
+        font-size: 14px;
+      }
+      .card-body {
+        padding: 12px;
+        font-size: 12px;
+      }
+      .inline-player {
+        margin: 8px 0 0;
+      }
+      .card-controls {
+        padding: 8px 12px;
+      }
+      .control-btn {
+        padding: 8px;
+        font-size: 10px;
+      }
     }
   </style>
 </head>
