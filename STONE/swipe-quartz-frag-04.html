@@ -323,6 +323,9 @@
       opacity: 0;
       pointer-events: none;
     }
+    .alley-menu.collapsed .alley-close {
+      display: none;
+    }
     .alley-close {
       position: absolute;
       top: -12px;
@@ -342,6 +345,12 @@
       cursor: pointer;
       transition: all 0.2s ease;
       z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .alley-menu:hover .alley-close {
+      opacity: 1;
+      pointer-events: auto;
     }
     .alley-close:hover {
       background: rgba(231, 76, 60, 0.8);
@@ -718,6 +727,18 @@
       padding: 12px 18px; background: var(--ink); color: var(--paper); border: 3px solid var(--ink); 
       font-size: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; 
       letter-spacing: 1px; border-radius: 10px; touch-action: manipulation; 
+    }
+
+    /* DESKTOP OPTIMIZATION */
+    @media (min-width: 1200px) {
+      .alley-menu {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .alley-toggle {
+        width: 12px;
+        height: 90px;
+      }
     }
 
     /* RESPONSIVE DESIGN */
@@ -1150,6 +1171,7 @@
                 <label for="simulateAiToggle">Simulate AI Responses (Default)</label>
             </div>
             <div class="settings-note">When simulated, AI responses are generated locally. When unchecked, attempts to use external API.</div>
+            <div id="apiModeStatus" style="margin-top: 0.75rem; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;"></div>
         </div>
         <div class="settings-card">
           <label>Export Collection</label>
@@ -3242,7 +3264,45 @@ ${axes}
     apiModelInput.addEventListener('input', saveAppState);
     apiTemperatureInput.addEventListener('input', saveAppState);
     apiProviderNotesInput.addEventListener('input', saveAppState);
-    simulateAiToggle.addEventListener('change', saveAppState); 
+    simulateAiToggle.addEventListener('change', () => {
+      saveAppState();
+      updateApiModeStatus();
+    });
+    
+    // Update API mode status indicator
+    function updateApiModeStatus() {
+      const statusDiv = document.getElementById('apiModeStatus');
+      const simulateToggle = document.getElementById('simulateAiToggle');
+      const apiKeyField = document.getElementById('apiKeyInput');
+      
+      if (!statusDiv || !simulateToggle || !apiKeyField) return;
+      
+      const simulate = simulateToggle.checked;
+      const apiKey = apiKeyField.value.trim();
+      
+      if (simulate) {
+        statusDiv.style.background = 'rgba(241, 196, 15, 0.1)';
+        statusDiv.style.border = '1px solid rgba(241, 196, 15, 0.3)';
+        statusDiv.style.color = '#F1C40F';
+        statusDiv.textContent = '🎭 Simulation Mode Active';
+      } else if (apiKey) {
+        statusDiv.style.background = 'rgba(46, 204, 113, 0.1)';
+        statusDiv.style.border = '1px solid rgba(46, 204, 113, 0.3)';
+        statusDiv.style.color = '#2ECC71';
+        statusDiv.textContent = '✓ API Mode Active (Key configured)';
+      } else {
+        statusDiv.style.background = 'rgba(231, 76, 60, 0.1)';
+        statusDiv.style.border = '1px solid rgba(231, 76, 60, 0.3)';
+        statusDiv.style.color = '#E74C3C';
+        statusDiv.textContent = '⚠ API Mode Selected but No Key Configured';
+      }
+    }
+    
+    // Update status on API key change
+    apiKeyInput.addEventListener('input', updateApiModeStatus);
+    
+    // Initial status update (delayed to ensure DOM is ready)
+    setTimeout(updateApiModeStatus, 100); 
 
     saveKeyBtn.addEventListener('click', ()=>{ 
       // SaveAppState already called by input event, just toast
@@ -3678,15 +3738,25 @@ ${axes}
           localStorage.setItem('openai_api_key', apiKey);
           const apiKeyInput = document.getElementById('apiKeyInput');
           if (apiKeyInput) apiKeyInput.value = apiKey;
+          state.apiKey = apiKey;
         } else {
           localStorage.removeItem('openai_api_key');
+          state.apiKey = '';
         }
         
         localStorage.setItem('simulate_ai', String(simulate));
         const simulateToggle = document.getElementById('simulateAiToggle');
-        if (simulateToggle) simulateToggle.checked = simulate;
+        if (simulateToggle) {
+          simulateToggle.checked = simulate;
+          // Trigger change event to update state
+          simulateToggle.dispatchEvent(new Event('change'));
+        }
         
-        state.apiKey = apiKey;
+        // Update state.simulateAi directly
+        state.simulateAi = simulate;
+        
+        // Save to persistent storage
+        saveAppState();
       };
       
       document.getElementById('landingLaunch').addEventListener('click', () => {
