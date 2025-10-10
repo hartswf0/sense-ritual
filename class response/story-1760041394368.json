@@ -1,0 +1,55 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "putin-eurasia-defense",
+      "title": "Putin (Eurasia as Defense)",
+      "category": "Political Ideology",
+      "desc": "Summoned a dark, frightening vision of Russia (Eurasia) as the last defense against a corrupt West, promoting Russian exceptionalism.",
+      "quote": "He summoned up a dark, frightening vision from Russia's past. It said that Russia as a whole, what was called Eurasia, was the last defense against a corrupt West that was trying to take over the whole world.",
+      "tags": [
+        "Putin",
+        "Nationalism",
+        "Geopolitics",
+        "Propaganda"
+      ],
+      "start": 4809,
+      "end": 4827,
+      "color": "#D32F2F"
+    },
+    {
+      "id": "china-algorithmic-governance",
+      "title": "China (Algorithmic Governance)",
+      "category": "Systemic Control",
+      "desc": "Adjusting behavior with \"social credits\" for rewards/penalties, forcibly reprogram if unresponsive (Xinjiang).",
+      "quote": "And if the data from all the different sources showed a person behaving well... then they would be given what were called social credits.",
+      "tags": [
+        "China",
+        "Surveillance State",
+        "Social Control",
+        "BF Skinner"
+      ],
+      "start": 5315,
+      "end": 5329,
+      "color": "#4169E1"
+    },
+    {
+      "id": "tupac-grand-stories",
+      "title": "Grand Stories (Tupac)",
+      "category": "Core Concept",
+      "desc": "Believed deeply in their power to move people and to inspire them to change the world.",
+      "quote": "He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.",
+      "tags": [
+        "Tupac",
+        "Revolution",
+        "Collective Action"
+      ],
+      "start": 143,
+      "end": 148,
+      "color": "#F44336"
+    }
+  ],
+  "timestamp": "2025-10-09T20:23:14.368Z",
+  "author": "Student",
+  "version": "1.0"
+}

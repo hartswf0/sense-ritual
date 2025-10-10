@@ -1,0 +1,55 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "skinner-walden2",
+      "title": "Walden 2 Utopia",
+      "category": "Concept",
+      "desc": "Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.",
+      "quote": "Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.",
+      "tags": [
+        "Utopia",
+        "Control",
+        "Prediction",
+        "BF Skinner"
+      ],
+      "start": 5410,
+      "end": 5422,
+      "color": "#87CEEB"
+    },
+    {
+      "id": "skinner-operant-conditioning",
+      "title": "Skinner (Operant Conditioning)",
+      "category": "Psychological Theory",
+      "desc": "Easily alter behavior of animals using simple rewards, leading to a \"beyond freedom and dignity\" utopia (Walden Two).",
+      "quote": "Skinner had shown how he could easily alter the behavior of animals like pigeons by using a simple system of rewards. He called it operant conditioning.",
+      "tags": [
+        "Behaviorism",
+        "Control",
+        "Utopia",
+        "China"
+      ],
+      "start": 5356,
+      "end": 5369,
+      "color": "#1E88E5"
+    },
+    {
+      "id": "nightwolves-conspiracy-propaganda",
+      "title": "Nightwolves (Conspiracy Drama)",
+      "category": "Culture/Propaganda",
+      "desc": "Extreme nationalist motorcycle club dramatized a paranoid conspiracy that America/Illuminati were planning to undermine Putin and destroy Russia.",
+      "quote": "The Nightwolves put on mass shows that dramatized the paranoid conspiracy theory that America... were planning to undermine Vladimir Putin and destroy Russia.",
+      "tags": [
+        "Russia",
+        "Conspiracy",
+        "Nationalism"
+      ],
+      "start": 4893,
+      "end": 4907,
+      "color": "#E53935"
+    }
+  ],
+  "timestamp": "2025-10-09T20:31:42.975Z",
+  "author": "Student",
+  "version": "1.0"
+}

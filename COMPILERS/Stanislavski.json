@@ -1,0 +1,74 @@
+{
+    "CharacterBuilder": {
+      "GivenCircumstances": {
+        "Background": {
+          "PhysicalLocation": "",
+          "TimePeriod": "",
+          "SocioeconomicStatus": ""
+        },
+        "PersonalDetails": {
+          "Name": "",
+          "Age": "",
+          "FamilyHistory": "",
+          "Occupation": ""
+        },
+        "PrePlayEvents": {
+          "SignificantLifeEvents": "",
+          "EmotionalTraumas": "",
+          "FormativeExperiences": ""
+        },
+        "Relationships": {
+          "Family": "",
+          "Friends": "",
+          "Rivals": ""
+        }
+      },
+      "CharacterKernel": {
+        "CoreTraits": "",
+        "DominantMotivations": "",
+        "DefiningActions": "",
+        "CharacterFlaws": ""
+      },
+      "StanislavskiTechniques": {
+        "EmotionalMemory": {
+          "SignificantMemories": "",
+          "EmotionalTriggers": "",
+          "RecurrentThemes": ""
+        },
+        "Objectives": {
+          "ImmediateObjectives": "",
+          "LongTermObjectives": "",
+          "Obstacles": ""
+        },
+        "SuperObjective": "",
+        "TheMagicIf": {
+          "HypotheticalSituations": "",
+          "CharacterResponses": "",
+          "EmotionalOutcomes": ""
+        },
+        "Tasks": {
+          "ShortTermTasks": "",
+          "LongTermTasks": "",
+          "TaskObstacles": ""
+        },
+        "Training": {
+          "ConcentrationExercises": "",
+          "SenseMemoryExercises": "",
+          "PsychophysicalActions": ""
+        },
+        "Subtext": {
+          "UnspokenThoughts": "",
+          "HiddenMotivations": "",
+          "UnderlyingEmotions": ""
+        },
+        "ContinuationOfCircumstances": ""
+      },
+      "PerformanceIndicators": {
+        "Authenticity": "",
+        "EmotionalRichness": "",
+        "Realism": "",
+        "CharacterContinuity": "",
+        "PsychologicalDepth": ""
+      }
+    }
+  }

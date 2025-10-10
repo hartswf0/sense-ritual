@@ -1,0 +1,95 @@
+{
+    "CharacterBuilder": {
+      "StanislavskiSystem": {
+        "GivenCircumstances": {
+          "CharacterBackground": {
+            "FamilyHistory": "",
+            "Education": "",
+            "SignificantLifeEvents": ""
+          },
+          "CurrentLifeSituation": {
+            "Career": "",
+            "RelationshipStatus": "",
+            "ImmediateChallenges": ""
+          },
+          "EnvironmentalFactors": {
+            "Era": "",
+            "CulturalContext": "",
+            "GeographicalSetting": ""
+          }
+        },
+        "ObjectiveAndSuperObjective": {
+          "ShortTermGoals": {
+            "SceneSpecificObjectives": "",
+            "ImmediateDesires": "",
+            "InteractionGoals": ""
+          },
+          "LongTermAmbitions": {
+            "LifeAspirations": "",
+            "CoreMotivations": "",
+            "CharacterArcObjectives": ""
+          }
+        },
+        "EmotionalMemory": {
+          "PastExperiences": {
+            "TraumaticEvents": "",
+            "HappyMemories": "",
+            "FormativeMoments": ""
+          },
+          "EmotionalTriggers": {
+            "SensoryCues": "",
+            "RelationshipDynamics": "",
+            "ConflictResponses": ""
+          }
+        },
+        "SubtextAndPhysicalAction": {
+          "UnspokenThoughts": {
+            "InternalConflict": "",
+            "DesiresVsReality": "",
+            "MoralDilemmas": ""
+          },
+          "ExpressiveActions": {
+            "BodyLanguage": "",
+            "FacialExpressions": "",
+            "GestureAndPosture": ""
+          }
+        },
+        "TheMagicIf": {
+          "HypotheticalScenarios": {
+            "AlternateRealities": "",
+            "ExtremeSituations": "",
+            "MoralChoices": ""
+          },
+          "ImaginedReactions": {
+            "EmotionalResponses": "",
+            "DecisionMaking": "",
+            "BehavioralChanges": ""
+          }
+        },
+        "Communion": {
+          "CharacterInteractions": {
+            "RelationshipNetwork": "",
+            "DominantSubmissiveDynamics": "",
+            "AlliancesAndConflicts": ""
+          },
+          "DependencyExploration": {
+            "EmotionalDependencies": "",
+            "PowerDependencies": "",
+            "SupportSystems": ""
+          }
+        }
+      },
+      "PerformanceIndicators": {
+        "CharacterEvolution": {
+          "MentalStateDevelopment": "",
+          "EmotionalGrowth": "",
+          "PerspectiveShifts": ""
+        },
+        "RealisticPortrayal": {
+          "Believability": "",
+          "Authenticity": "",
+          "HumanComplexity": ""
+        }
+      }
+    }
+  }

@@ -1,0 +1,116 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "graeber-world-we-make",
+      "title": "Graeber (World We Make)",
+      "category": "Core Concept",
+      "desc": "The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.",
+      "quote": "The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.",
+      "tags": [
+        "Graeber",
+        "Agency",
+        "Liberation",
+        "Potential"
+      ],
+      "start": 6678,
+      "end": 6690,
+      "color": "#4CAF50"
+    },
+    {
+      "id": "fragile-structure-discon-frag",
+      "title": "Fragile Structure (Disconnected Fragments)",
+      "category": "Systemic Vulnerability",
+      "desc": "Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.",
+      "quote": "Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.",
+      "tags": [
+        "Illusion",
+        "Vulnerability",
+        "Post-Truth"
+      ],
+      "start": 6164,
+      "end": 6183,
+      "color": "#9E9E9E"
+    },
+    {
+      "id": "skinner-operant-conditioning",
+      "title": "Skinner (Operant Conditioning)",
+      "category": "Psychological Theory",
+      "desc": "Easily alter behavior of animals using simple rewards, leading to a \"beyond freedom and dignity\" utopia (Walden Two).",
+      "quote": "Skinner had shown how he could easily alter the behavior of animals like pigeons by using a simple system of rewards. He called it operant conditioning.",
+      "tags": [
+        "Behaviorism",
+        "Control",
+        "Utopia",
+        "China"
+      ],
+      "start": 5356,
+      "end": 5369,
+      "color": "#1E88E5"
+    },
+    {
+      "id": "skinner-walden2",
+      "title": "Walden 2 Utopia",
+      "category": "Concept",
+      "desc": "Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.",
+      "quote": "Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.",
+      "tags": [
+        "Utopia",
+        "Control",
+        "Prediction",
+        "BF Skinner"
+      ],
+      "start": 5410,
+      "end": 5422,
+      "color": "#87CEEB"
+    },
+    {
+      "id": "future-indiv-disappear",
+      "title": "Future (Individualism Disappears)",
+      "category": "Future Scenario",
+      "desc": "Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.",
+      "quote": "Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.",
+      "tags": [
+        "Dystopia",
+        "Control",
+        "BF Skinner"
+      ],
+      "start": 6421,
+      "end": 6432,
+      "color": "#5C6BC0"
+    },
+    {
+      "id": "future-old-stability",
+      "title": "Future (Return to Old Stability)",
+      "category": "Future Scenario",
+      "desc": "Hope for return to an old stability where individualism can continue to be managed by a benign elite, but enormous pressures will not go away.",
+      "quote": "Many people are hoping that with the election of Joe Biden in America, it will be possible to return to an old stability where individualism can continue to be managed by a benign elite. But although Donald Trump is gone and the Brexit deal done, what they both revealed was that underneath Western societies, there are enormous pressures building up that will not go away.",
+      "tags": [
+        "Nostalgia",
+        "Illusion",
+        "Unresolved Conflict"
+      ],
+      "start": 6490,
+      "end": 6509,
+      "color": "#9FA8DA"
+    },
+    {
+      "id": "future-imagine-new",
+      "title": "Future (Imagine New)",
+      "category": "Future Scenario",
+      "desc": "Regain confidence, imagine genuinely new kinds of futures (David Graeber: \"the world is something we make and could just as easily make differently\").",
+      "quote": "If we can regain our confidence, we will find that we have the power to influence how that future turns out. And as a first step, we have to start imagining what kind of future it is we want to build.",
+      "tags": [
+        "Hope",
+        "Agency",
+        "Transformation"
+      ],
+      "start": 6603,
+      "end": 6609,
+      "color": "#66BB6A"
+    }
+  ],
+  "timestamp": "2025-10-09T20:33:57.537Z",
+  "author": "Student",
+  "version": "1.0"
+}

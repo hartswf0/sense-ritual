@@ -1,0 +1,116 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "cia-godzilla-fear",
+      "title": "CIA & Godzilla (Fear Wave)",
+      "category": "Systemic Impact",
+      "desc": "Disconnected memories from Zubaydah's brain, including from films like Godzilla, spread fear across America.",
+      "quote": "Desperate for the torture to stop, Zuba just spewed out all the disconnected memories inside his brain... many of them drawn from the films he had watched, including Godzilla.",
+      "tags": [
+        "Media",
+        "Propaganda",
+        "Fear",
+        "Systemic"
+      ],
+      "start": 2664,
+      "end": 2675,
+      "color": "#795548"
+    },
+    {
+      "id": "jihad-disintegration-factions",
+      "title": "Jihad Disintegration",
+      "category": "Systemic Event",
+      "desc": "The whole organization of Jihad was disintegrating into rival factions; all ideas of solidarity and collective action had gone.",
+      "tags": [
+        "Disillusionment",
+        "Conflict",
+        "Revolution"
+      ],
+      "start": 1237,
+      "end": 1248,
+      "color": "#90A4AE"
+    },
+    {
+      "id": "mass-incarceration-clinton",
+      "title": "Mass Incarceration (Clinton)",
+      "category": "Systemic Control",
+      "desc": "President Clinton brought in tough new crime rules, imprisoning hundreds of thousands of young black men.",
+      "quote": "Hundreds of thousands of young black men were now imprisoned with no hope of parole, even for minor offenses.",
+      "tags": [
+        "Clinton",
+        "Injustice",
+        "Control",
+        "Politics"
+      ],
+      "start": 1070,
+      "end": 1078,
+      "color": "#78909C"
+    },
+    {
+      "id": "crack-epidemic-afeni-fall",
+      "title": "Crack Epidemic (Afeni's Fall)",
+      "category": "Systemic Event",
+      "desc": "Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.",
+      "quote": "Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.",
+      "tags": [
+        "Social Crisis",
+        "Vulnerability",
+        "Systemic Impact"
+      ],
+      "start": 291,
+      "end": 300,
+      "color": "#424242"
+    },
+    {
+      "id": "afeni-fairyland-conceal",
+      "title": "Unreal Fairyland (Afeni)",
+      "category": "Systemic Critique",
+      "desc": "The world most Americans lived in, both white and black, that concealed the harsh reality of power.",
+      "quote": "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.",
+      "tags": [
+        "Afeni",
+        "Illusion",
+        "Societal Narrative",
+        "Control"
+      ],
+      "start": 197,
+      "end": 204,
+      "color": "#FFCDD2"
+    },
+    {
+      "id": "tupac-thug-life-authenticity",
+      "title": "Thug Life (Authenticity)",
+      "category": "Culture/Identity",
+      "desc": "Tupac tried to become more and more part of that world to prove his authenticity, accused of intensifying violence.",
+      "quote": "In response, Tupac tried to become more and more part of that world to prove his authenticity. But then the black radicals accused him of getting lost in the character he had created.",
+      "tags": [
+        "Tupac",
+        "Identity",
+        "Violence",
+        "Critique"
+      ],
+      "start": 971,
+      "end": 992,
+      "color": "#FF7043"
+    },
+    {
+      "id": "civil-rights-promises-broken",
+      "title": "Civil Rights Promises (Broken)",
+      "category": "Systemic Event",
+      "desc": "The idealism of black politics fell away and communities divided into gangs that then turned on each other.",
+      "quote": "By the 1980s, it was clear that the promises of the civil rights movement had not been kept in America and the idealism of black politics fell away and the communities divided into gangs that then turned on each other.",
+      "tags": [
+        "History",
+        "Disillusionment",
+        "Social Decay"
+      ],
+      "start": 244,
+      "end": 251,
+      "color": "#BDBDBD"
+    }
+  ],
+  "timestamp": "2025-10-09T20:31:41.491Z",
+  "author": "Student",
+  "version": "1.0"
+}

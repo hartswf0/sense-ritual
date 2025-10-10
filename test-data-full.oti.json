@@ -1,0 +1,843 @@
+{
+  "version": "1.0",
+  "title": "Perpetual Fragments",
+  "logline": "A documentary assembled through emergent gameplay, revealing unexpected connections between surveillance, identity, and systemic collapse.",
+  "timestamp": "2025-10-10T03:04:00.000Z",
+  "coherenceScore": 1450,
+  "sourceVideo": "BQ2n6SN7gOY",
+  "sequences": [
+    {
+      "id": 1,
+      "sequenceNumber": 1,
+      "beatName": "Opening Image",
+      "beatNumber": 1,
+      "act": 1,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 2,
+      "flagged": false,
+      "rating": null,
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Godzilla Fear",
+          "title": "Godzilla Fear",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 89,
+          "sourceOut": 103,
+          "duration": 14,
+          "description": "Post-war Japan's monster cinema as metaphor for nuclear anxiety and uncontrollable technological forces.",
+          "tags": ["cinema", "trauma", "technology"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Filter Bubbles",
+          "title": "Filter Bubbles and Echo Chambers",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 245,
+          "sourceOut": 259,
+          "duration": 14,
+          "description": "Algorithmic curation creates isolated information environments where users only encounter confirming viewpoints.",
+          "tags": ["media", "polarization", "algorithms"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Individual Self",
+          "title": "Individual Self",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 412,
+          "sourceOut": 426,
+          "duration": 14,
+          "description": "The construction of autonomous selfhood as both liberation and isolation in late capitalism.",
+          "tags": ["identity", "individualism", "psychology"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "sequenceNumber": 2,
+      "beatName": "Theme Stated",
+      "beatNumber": 2,
+      "act": 1,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 0,
+      "flagged": true,
+      "rating": "up",
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Chaos Theory",
+          "title": "Chaos Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 567,
+          "sourceOut": 579,
+          "duration": 12,
+          "description": "Small changes in initial conditions produce wildly divergent outcomes in complex systems.",
+          "tags": ["mathematics", "complexity", "unpredictability"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Complexity Theory",
+          "title": "Complexity Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 723,
+          "sourceOut": 736,
+          "duration": 13,
+          "description": "Systems with many interacting components produce emergent behaviors that cannot be predicted from individual parts.",
+          "tags": ["systems", "emergence", "chaos"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "sequenceNumber": 3,
+      "beatName": "Set-Up",
+      "beatNumber": 3,
+      "act": 1,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 1,
+      "flagged": false,
+      "rating": "up",
+      "tagged": true,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Attention Economy",
+          "title": "Attention Economy",
+          "category": "Economics",
+          "icon": "💰",
+          "sourceIn": 387,
+          "sourceOut": 400,
+          "duration": 13,
+          "description": "Human attention becomes the scarce resource that platforms compete to capture and monetize.",
+          "tags": ["economics", "psychology", "design"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Complexity Theory",
+          "title": "Complexity Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 723,
+          "sourceOut": 737,
+          "duration": 14,
+          "description": "Systems with many interacting components produce emergent behaviors that cannot be predicted from individual parts.",
+          "tags": ["systems", "emergence", "chaos"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Societal Boom",
+          "title": "Post-War Societal Boom",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1123,
+          "sourceOut": 1136,
+          "duration": 13,
+          "description": "The brief period of shared prosperity and institutional trust following World War II.",
+          "tags": ["history", "economics", "society"]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "sequenceNumber": 4,
+      "beatName": "Catalyst",
+      "beatNumber": 4,
+      "act": 1,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 2,
+      "flagged": false,
+      "rating": null,
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Saudi Dream",
+          "title": "Saudi Dream",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1567,
+          "sourceOut": 1577,
+          "duration": 10,
+          "description": "The utopian vision of modernization through oil wealth, masking authoritarian control.",
+          "tags": ["geopolitics", "oil", "modernization"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Saudi Dream",
+          "title": "Saudi Dream",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1567,
+          "sourceOut": 1577,
+          "duration": 10,
+          "description": "The utopian vision of modernization through oil wealth, masking authoritarian control.",
+          "tags": ["geopolitics", "oil", "modernization"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Filter Bubbles",
+          "title": "Filter Bubbles and Echo Chambers",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 245,
+          "sourceOut": 255,
+          "duration": 10,
+          "description": "Algorithmic curation creates isolated information environments where users only encounter confirming viewpoints.",
+          "tags": ["media", "polarization", "algorithms"]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "sequenceNumber": 5,
+      "beatName": "Debate",
+      "beatNumber": 5,
+      "act": 1,
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "lane": 0,
+      "flagged": true,
+      "rating": "up",
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "CIA Interrogation",
+          "title": "CIA Interrogation Techniques",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1789,
+          "sourceOut": 1799,
+          "duration": 10,
+          "description": "Enhanced interrogation as the breakdown of legal and moral constraints in the War on Terror.",
+          "tags": ["torture", "law", "ethics"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Neural Networks",
+          "title": "Neural Networks",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 2034,
+          "sourceOut": 2043,
+          "duration": 9,
+          "description": "Machine learning systems that mimic brain structure but operate as inscrutable black boxes.",
+          "tags": ["ai", "algorithms", "opacity"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Zubaydah's Diary",
+          "title": "Abu Zubaydah's Diary",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 2156,
+          "sourceOut": 2166,
+          "duration": 10,
+          "description": "The fragmented writings of a torture victim, revealing the destruction of coherent selfhood.",
+          "tags": ["trauma", "memory", "identity"]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "sequenceNumber": 6,
+      "beatName": "Break into Two",
+      "beatNumber": 6,
+      "act": 2,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 1,
+      "flagged": false,
+      "rating": "up",
+      "tagged": true,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Attention Economy",
+          "title": "Attention Economy",
+          "category": "Economics",
+          "icon": "💰",
+          "sourceIn": 387,
+          "sourceOut": 401,
+          "duration": 14,
+          "description": "Human attention becomes the scarce resource that platforms compete to capture and monetize.",
+          "tags": ["economics", "psychology", "design"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Jihad Disintegration",
+          "title": "Jihad Disintegration",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 2345,
+          "sourceOut": 2358,
+          "duration": 13,
+          "description": "The fragmentation of organized resistance into decentralized, unpredictable violence.",
+          "tags": ["terrorism", "networks", "chaos"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Godzilla Fear",
+          "title": "Godzilla Fear",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 89,
+          "sourceOut": 102,
+          "duration": 13,
+          "description": "Post-war Japan's monster cinema as metaphor for nuclear anxiety and uncontrollable technological forces.",
+          "tags": ["cinema", "trauma", "technology"]
+        },
+        {
+          "clipNumber": 4,
+          "clipId": "Filter Bubbles",
+          "title": "Filter Bubbles and Echo Chambers",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 245,
+          "sourceOut": 258,
+          "duration": 13,
+          "description": "Algorithmic curation creates isolated information environments where users only encounter confirming viewpoints.",
+          "tags": ["media", "polarization", "algorithms"]
+        },
+        {
+          "clipNumber": 5,
+          "clipId": "Saudi Dream",
+          "title": "Saudi Dream",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1567,
+          "sourceOut": 1581,
+          "duration": 14,
+          "description": "The utopian vision of modernization through oil wealth, masking authoritarian control.",
+          "tags": ["geopolitics", "oil", "modernization"]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "sequenceNumber": 7,
+      "beatName": "B Story",
+      "beatNumber": 7,
+      "act": 2,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 2,
+      "flagged": false,
+      "rating": null,
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Individual Self",
+          "title": "Individual Self",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 412,
+          "sourceOut": 433,
+          "duration": 21,
+          "description": "The construction of autonomous selfhood as both liberation and isolation in late capitalism.",
+          "tags": ["identity", "individualism", "psychology"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Family of",
+          "title": "Family of Man",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 2678,
+          "sourceOut": 2699,
+          "duration": 21,
+          "description": "The 1955 photography exhibition promoting universal humanism, now seen as naive idealism.",
+          "tags": ["photography", "humanism", "ideology"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Family of",
+          "title": "Family of Man",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 2678,
+          "sourceOut": 2699,
+          "duration": 21,
+          "description": "The 1955 photography exhibition promoting universal humanism, now seen as naive idealism.",
+          "tags": ["photography", "humanism", "ideology"]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "sequenceNumber": 8,
+      "beatName": "Fun and Games",
+      "beatNumber": 8,
+      "act": 2,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 0,
+      "flagged": false,
+      "rating": "down",
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Chaos Theory",
+          "title": "Chaos Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 567,
+          "sourceOut": 575,
+          "duration": 8,
+          "description": "Small changes in initial conditions produce wildly divergent outcomes in complex systems.",
+          "tags": ["mathematics", "complexity", "unpredictability"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Grand Stories",
+          "title": "Grand Stories",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 2890,
+          "sourceOut": 2898,
+          "duration": 8,
+          "description": "The collapse of unifying narratives that once gave meaning to collective experience.",
+          "tags": ["narrative", "postmodernism", "meaning"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Jihad Disintegration",
+          "title": "Jihad Disintegration",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 2345,
+          "sourceOut": 2353,
+          "duration": 8,
+          "description": "The fragmentation of organized resistance into decentralized, unpredictable violence.",
+          "tags": ["terrorism", "networks", "chaos"]
+        },
+        {
+          "clipNumber": 4,
+          "clipId": "Individual Self",
+          "title": "Individual Self",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 412,
+          "sourceOut": 420,
+          "duration": 8,
+          "description": "The construction of autonomous selfhood as both liberation and isolation in late capitalism.",
+          "tags": ["identity", "individualism", "psychology"]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "sequenceNumber": 9,
+      "beatName": "Midpoint",
+      "beatNumber": 9,
+      "act": 2,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 1,
+      "flagged": true,
+      "rating": "up",
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Crack Epidemic",
+          "title": "Crack Epidemic",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 3123,
+          "sourceOut": 3131,
+          "duration": 8,
+          "description": "The devastation of Black communities through drug policy as racialized social control.",
+          "tags": ["drugs", "racism", "policy"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Saudi Dream",
+          "title": "Saudi Dream",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1567,
+          "sourceOut": 1574,
+          "duration": 7,
+          "description": "The utopian vision of modernization through oil wealth, masking authoritarian control.",
+          "tags": ["geopolitics", "oil", "modernization"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Crack Epidemic",
+          "title": "Crack Epidemic",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 3123,
+          "sourceOut": 3131,
+          "duration": 8,
+          "description": "The devastation of Black communities through drug policy as racialized social control.",
+          "tags": ["drugs", "racism", "policy"]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "sequenceNumber": 10,
+      "beatName": "Bad Guys Close In",
+      "beatNumber": 10,
+      "act": 2,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 2,
+      "flagged": false,
+      "rating": "down",
+      "tagged": true,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Chaos Theory",
+          "title": "Chaos Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 567,
+          "sourceOut": 575,
+          "duration": 8,
+          "description": "Small changes in initial conditions produce wildly divergent outcomes in complex systems.",
+          "tags": ["mathematics", "complexity", "unpredictability"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Godzilla Fear",
+          "title": "Godzilla Fear",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 89,
+          "sourceOut": 96,
+          "duration": 7,
+          "description": "Post-war Japan's monster cinema as metaphor for nuclear anxiety and uncontrollable technological forces.",
+          "tags": ["cinema", "trauma", "technology"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Perpetual Now",
+          "title": "Perpetual Now",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 3456,
+          "sourceOut": 3464,
+          "duration": 8,
+          "description": "The collapse of historical consciousness into an eternal present of algorithmic feeds.",
+          "tags": ["time", "memory", "technology"]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "sequenceNumber": 11,
+      "beatName": "All Is Lost",
+      "beatNumber": 11,
+      "act": 2,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 0,
+      "flagged": false,
+      "rating": "up",
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Neural Networks",
+          "title": "Neural Networks",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 2034,
+          "sourceOut": 2053,
+          "duration": 19,
+          "description": "Machine learning systems that mimic brain structure but operate as inscrutable black boxes.",
+          "tags": ["ai", "algorithms", "opacity"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Surveillance Capitalism",
+          "title": "Surveillance Capitalism",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 125,
+          "sourceOut": 144,
+          "duration": 19,
+          "description": "The business model where human experience is commodified as raw material for behavioral prediction and modification.",
+          "tags": ["economics", "privacy", "data"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Family of",
+          "title": "Family of Man",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 2678,
+          "sourceOut": 2697,
+          "duration": 19,
+          "description": "The 1955 photography exhibition promoting universal humanism, now seen as naive idealism.",
+          "tags": ["photography", "humanism", "ideology"]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "sequenceNumber": 12,
+      "beatName": "Dark Night of the Soul",
+      "beatNumber": 12,
+      "act": 2,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 1,
+      "flagged": false,
+      "rating": null,
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Individual Self",
+          "title": "Individual Self",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 412,
+          "sourceOut": 421,
+          "duration": 9,
+          "description": "The construction of autonomous selfhood as both liberation and isolation in late capitalism.",
+          "tags": ["identity", "individualism", "psychology"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Chaos Theory",
+          "title": "Chaos Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 567,
+          "sourceOut": 576,
+          "duration": 9,
+          "description": "Small changes in initial conditions produce wildly divergent outcomes in complex systems.",
+          "tags": ["mathematics", "complexity", "unpredictability"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Mass Incarceration",
+          "title": "Mass Incarceration",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 892,
+          "sourceOut": 900,
+          "duration": 8,
+          "description": "The exponential growth of prison populations as a response to social problems, creating cascading harm.",
+          "tags": ["justice", "policy", "society"]
+        },
+        {
+          "clipNumber": 4,
+          "clipId": "Individual Self",
+          "title": "Individual Self",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 412,
+          "sourceOut": 421,
+          "duration": 9,
+          "description": "The construction of autonomous selfhood as both liberation and isolation in late capitalism.",
+          "tags": ["identity", "individualism", "psychology"]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "sequenceNumber": 13,
+      "beatName": "Break into Three",
+      "beatNumber": 13,
+      "act": 3,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 2,
+      "flagged": true,
+      "rating": "up",
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Neural Networks",
+          "title": "Neural Networks",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 2034,
+          "sourceOut": 2045,
+          "duration": 11,
+          "description": "Machine learning systems that mimic brain structure but operate as inscrutable black boxes.",
+          "tags": ["ai", "algorithms", "opacity"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Mass Incarceration",
+          "title": "Mass Incarceration",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 892,
+          "sourceOut": 903,
+          "duration": 11,
+          "description": "The exponential growth of prison populations as a response to social problems, creating cascading harm.",
+          "tags": ["justice", "policy", "society"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Filter Bubbles",
+          "title": "Filter Bubbles and Echo Chambers",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 245,
+          "sourceOut": 256,
+          "duration": 11,
+          "description": "Algorithmic curation creates isolated information environments where users only encounter confirming viewpoints.",
+          "tags": ["media", "polarization", "algorithms"]
+        },
+        {
+          "clipNumber": 4,
+          "clipId": "Saudi Dream",
+          "title": "Saudi Dream",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1567,
+          "sourceOut": 1578,
+          "duration": 11,
+          "description": "The utopian vision of modernization through oil wealth, masking authoritarian control.",
+          "tags": ["geopolitics", "oil", "modernization"]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "sequenceNumber": 14,
+      "beatName": "Finale",
+      "beatNumber": 14,
+      "act": 3,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 0,
+      "flagged": false,
+      "rating": "up",
+      "tagged": true,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Complexity Theory",
+          "title": "Complexity Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 723,
+          "sourceOut": 733,
+          "duration": 10,
+          "description": "Systems with many interacting components produce emergent behaviors that cannot be predicted from individual parts.",
+          "tags": ["systems", "emergence", "chaos"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Zubaydah's Diary",
+          "title": "Abu Zubaydah's Diary",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 2156,
+          "sourceOut": 2166,
+          "duration": 10,
+          "description": "The fragmented writings of a torture victim, revealing the destruction of coherent selfhood.",
+          "tags": ["trauma", "memory", "identity"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Neural Networks",
+          "title": "Neural Networks",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 2034,
+          "sourceOut": 2044,
+          "duration": 10,
+          "description": "Machine learning systems that mimic brain structure but operate as inscrutable black boxes.",
+          "tags": ["ai", "algorithms", "opacity"]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "sequenceNumber": 15,
+      "beatName": "Final Image",
+      "beatNumber": 15,
+      "act": 3,
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "lane": 1,
+      "flagged": false,
+      "rating": null,
+      "tagged": false,
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Complexity Theory",
+          "title": "Complexity Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 723,
+          "sourceOut": 735,
+          "duration": 12,
+          "description": "Systems with many interacting components produce emergent behaviors that cannot be predicted from individual parts.",
+          "tags": ["systems", "emergence", "chaos"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Individual Self",
+          "title": "Individual Self",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 412,
+          "sourceOut": 423,
+          "duration": 11,
+          "description": "The construction of autonomous selfhood as both liberation and isolation in late capitalism.",
+          "tags": ["identity", "individualism", "psychology"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Godzilla Fear",
+          "title": "Godzilla Fear",
+          "category": "Culture",
+          "icon": "🎭",
+          "sourceIn": 89,
+          "sourceOut": 101,
+          "duration": 12,
+          "description": "Post-war Japan's monster cinema as metaphor for nuclear anxiety and uncontrollable technological forces.",
+          "tags": ["cinema", "trauma", "technology"]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "totalSequences": 15,
+    "totalClips": 55,
+    "totalDuration": 575,
+    "faction": "The Deconstructors",
+    "wave": 8,
+    "kills": 127,
+    "scoreBreakdown": {
+      "base": 750,
+      "sharedClips": 280,
+      "chainConnections": 150,
+      "sequential": 90,
+      "categoryCoherence": 80,
+      "dominantTheme": 100
+    },
+    "flaggedChains": 4,
+    "upvotedChains": 6,
+    "downvotedChains": 2,
+    "taggedChains": 3
+  }
+}

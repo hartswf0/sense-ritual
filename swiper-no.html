@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fragment</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    body { background: #f5f5f5; color: #000; touch-action: none; user-select: none; }
+
+    .game { display: flex; flex-direction: column; height: 100vh; position: relative; }
+    
+    /* Alley Menu */
+    .alley-menu { position: fixed; left: 0; top: 50%; transform: translateY(-50%); width: 48px; background: #000; border-right: 2px solid #000; z-index: 800; display: flex; flex-direction: column; height: 240px; border-radius: 0 12px 12px 0; }
+    .alley-btn { flex: 1; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #f5f5f5; transition: all 0.2s; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .alley-btn:last-child { border-bottom: none; }
+    .alley-btn:active { background: #333; transform: scale(0.9); }
+    
+    /* Main card stack */
+    .card-stack { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px; background: #f5f5f5; overflow: hidden; position: relative; }
+    
+    .card { position: absolute; width: 100%; max-width: 480px; height: 70vh; background: #fff; border: 3px solid #000; cursor: grab; transition: transform 0.3s ease, opacity 0.3s ease; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 12px 48px rgba(0,0,0,0.15); }
+    .card.swiping { transition: none; cursor: grabbing; }
+    
+    .card-header { padding: 28px; font-weight: 900; font-size: 18px; line-height: 1.2; color: #f5f5f5; min-height: 100px; display: flex; flex-direction: column; justify-content: center; letter-spacing: -0.5px; }
+    .card-category { font-size: 11px; text-transform: uppercase; opacity: 0.75; margin-bottom: 12px; letter-spacing: 2px; font-weight: 700; }
+    
+    .card-body { padding: 24px; background: #f5f5f5; color: #000; overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.6; }
+    .card-desc { margin-bottom: 16px; color: #333; font-weight: 500; }
+    .card-quote { font-style: italic; font-size: 12px; padding: 14px; background: #fff; border-left: 4px solid #000; margin: 16px 0; color: #555; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 12px; padding-top: 12px; border-top: 2px solid #eee; letter-spacing: 0.5px; }
+    .card-time { font-size: 11px; color: #666; margin-top: 12px; font-weight: 600; letter-spacing: 0.5px; }
+    
+    .card-controls { padding: 16px 24px; border-top: 2px solid #000; background: #f5f5f5; display: flex; gap: 8px; }
+    .control-btn { flex: 1; padding: 12px; background: #000; color: #f5f5f5; border: 2px solid #000; font-weight: 600; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; }
+    .control-btn:active { background: #f5f5f5; color: #000; }
+    
+    /* Swipe feedback - visual and audio */
+    .swipe-flash { position: fixed; pointer-events: none; z-index: 20; }
+    .swipe-flash.accept { animation: flashAccept 0.5s ease-out; }
+    .swipe-flash.reject { animation: flashReject 0.5s ease-out; }
+    .swipe-flash.info { animation: flashInfo 0.5s ease-out; }
+    .swipe-flash.predict { animation: flashPredict 0.5s ease-out; }
+    
+    @keyframes flashAccept {
+      0% { inset: 0; background: rgba(46, 204, 113, 0.3); }
+      100% { inset: -20px; background: rgba(46, 204, 113, 0); }
+    }
+    @keyframes flashReject {
+      0% { inset: 0; background: rgba(231, 76, 60, 0.3); }
+      100% { inset: -20px; background: rgba(231, 76, 60, 0); }
+    }
+    @keyframes flashInfo {
+      0% { inset: 0; background: rgba(52, 152, 219, 0.3); }
+      100% { inset: -20px; background: rgba(52, 152, 219, 0); }
+    }
+    @keyframes flashPredict {
+      0% { inset: 0; background: rgba(241, 196, 15, 0.3); }
+      100% { inset: -20px; background: rgba(241, 196, 15, 0); }
+    }
+    
+    .swipe-guide { position: absolute; display: flex; gap: 2px; font-weight: 900; font-size: 12px; text-transform: uppercase; opacity: 0; letter-spacing: 1px; pointer-events: none; z-index: 5; transition: opacity 0.2s; }
+    .swipe-guide.right { top: 50%; right: 40px; transform: translateY(-50%); }
+    .swipe-guide.left { top: 50%; left: 40px; transform: translateY(-50%); }
+    .swipe-guide.up { top: 60px; left: 50%; transform: translateX(-50%); }
+    .swipe-guide.down { bottom: 120px; left: 50%; transform: translateX(-50%); }
+    
+    /* Collection Panel */
+    .collection-panel { position: fixed; right: 0; top: 0; width: 0; height: 100vh; background: #f5f5f5; border-left: 3px solid #000; z-index: 900; overflow: hidden; transition: width 0.3s ease; display: flex; flex-direction: column; }
+    .collection-panel.open { width: 420px; }
+    
+    .collection-header { padding: 24px; border-bottom: 3px solid #000; background: #000; color: #f5f5f5; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+    .collection-title { font-weight: 900; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+    .collection-count { font-size: 18px; font-weight: 900; }
+    
+    .collection-view-toggle { display: flex; gap: 4px; }
+    .toggle-btn { width: 32px; height: 32px; background: #f5f5f5; border: 2px solid #f5f5f5; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000; transition: all 0.2s; }
+    .toggle-btn.active { background: #000; border-color: #000; color: #f5f5f5; }
+    
+    .collection-content { flex: 1; overflow: hidden; display: flex; }
+    
+    /* List view */
+    .list-view { width: 100%; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .list-item { background: #fff; border: 2px solid #000; padding: 12px; display: flex; gap: 12px; transition: all 0.2s; }
+    .list-item-preview { width: 60px; height: 60px; background: #000; border: 2px solid #000; display: flex; align-items: center; justify-content: center; color: #f5f5f5; font-weight: 900; flex-shrink: 0; }
+    .list-item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .list-item-title { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+    .list-item-meta { font-size: 9px; opacity: 0.6; letter-spacing: 0.5px; margin-top: 3px; }
+    .list-item-actions { display: flex; gap: 4px; }
+    .list-action-btn { padding: 6px 10px; background: #000; color: #f5f5f5; border: none; font-size: 9px; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; }
+    .list-action-btn:active { background: #f5f5f5; color: #000; }
+    
+    /* Grid view */
+    .grid-view { width: 100%; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-content: start; }
+    .grid-item { background: #fff; border: 2px solid #000; aspect-ratio: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+    .grid-item-visual { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; color: #f5f5f5; }
+    .grid-item-chip { padding: 6px 8px; background: #f5f5f5; border-top: 2px solid #000; display: flex; flex-direction: column; gap: 2px; }
+    .grid-item-number { font-size: 10px; font-weight: 900; letter-spacing: 1px; }
+    .grid-item-name { font-size: 8px; opacity: 0.7; letter-spacing: 0.5px; line-height: 1.2; }
+    
+    .grid-item-remove { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background: #f5f5f5; border: 1px solid #000; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 900; font-size: 12px; transition: all 0.2s; opacity: 0; }
+    .grid-item:hover .grid-item-remove { opacity: 1; }
+    .grid-item-remove:active { background: #000; color: #f5f5f5; }
+    
+    /* Video Player Overlay */
+    .video-player-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); display: none; flex-direction: column; z-index: 2000; border: 3px solid #fff; }
+    .video-player-overlay.active { display: flex; }
+    
+    .video-player-header { padding: 20px 24px; border-bottom: 3px solid #fff; display: flex; justify-content: space-between; align-items: center; background: #000; color: #f5f5f5; }
+    .video-player-title { font-weight: 900; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+    .video-player-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #f5f5f5; font-weight: 900; }
+    
+    .video-player-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    
+    .video-frame-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+    .video-frame { width: 100%; height: 100%; border: none; }
+    
+    .video-controls-panel { padding: 20px 24px; background: #000; border-top: 3px solid #fff; color: #f5f5f5; display: flex; flex-direction: column; gap: 16px; }
+    
+    .timecode-display { display: flex; justify-content: space-between; font-family: 'Courier New', monospace; font-weight: 700; font-size: 12px; letter-spacing: 1px; }
+    
+    .timeline-scrubber { width: 100%; height: 6px; background: #333; border: 2px solid #fff; cursor: pointer; position: relative; }
+    .timeline-scrubber-fill { height: 100%; background: #fff; width: 0%; }
+    
+    .player-button-row { display: flex; gap: 8px; }
+    .player-btn { padding: 10px 16px; background: #fff; color: #000; border: 2px solid #fff; font-weight: 900; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; flex: 1; }
+    .player-btn:active { background: #000; color: #fff; }
+    
+    .export-section { display: flex; gap: 8px; }
+    .export-btn { padding: 10px 16px; background: #fff; color: #000; border: 2px solid #fff; font-weight: 900; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; }
+    .export-btn:active { background: #000; color: #fff; }
+    
+    /* Overlays */
+    .overlay { position: fixed; inset: 0; background: rgba(245,245,245,0.98); display: none; flex-direction: column; z-index: 1000; border: 3px solid #000; }
+    .overlay.active { display: flex; }
+    
+    .overlay-header { padding: 28px; border-bottom: 3px solid #000; background: #000; color: #f5f5f5; }
+    .overlay-title { font-size: 20px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+    .overlay-close { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 32px; cursor: pointer; font-weight: 900; color: #f5f5f5; }
+    
+    .overlay-content { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    .item { background: #fff; border: 2px solid #000; padding: 16px; margin-bottom: 12px; font-size: 13px; }
+    .item-label { font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
+    .item-title { font-size: 15px; font-weight: 600; }
+    .item-weight { float: right; font-size: 18px; font-weight: 900; }
+    
+    .item.pred { cursor: pointer; transition: all 0.2s; }
+    .item.pred:active { background: #000; color: #f5f5f5; }
+    
+    /* Complete Screen */
+    .complete-screen { text-align: center; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .complete-title { font-size: 36px; font-weight: 900; margin-bottom: 28px; letter-spacing: -1px; }
+    .complete-stats { display: flex; gap: 48px; margin: 32px 0; }
+    .complete-stat { display: flex; flex-direction: column; align-items: center; }
+    .complete-stat-value { font-size: 48px; font-weight: 900; }
+    .complete-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 8px; letter-spacing: 1px; }
+    .complete-actions { display: flex; gap: 12px; margin-top: 40px; }
+    .complete-btn { padding: 16px 28px; background: #000; color: #f5f5f5; border: 3px solid #000; font-family: inherit; font-size: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; }
+    .complete-btn:active { background: #f5f5f5; color: #000; }
+    
+    @media (max-width: 768px) {
+      .collection-panel.open { width: 100%; }
+      .grid-view { grid-template-columns: repeat(3, 1fr); }
+      .card { max-width: 90%; height: 65vh; }
+    }
+    
+    @media (max-width: 480px) {
+      .alley-menu { width: 40px; }
+      .alley-btn { font-size: 16px; }
+      .grid-view { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <!-- Alley Menu -->
+    <div class="alley-menu">
+      <button class="alley-btn" id="statsBtn" title="Stats">◊</button>
+      <button class="alley-btn" id="collectionBtn" title="Collection">⊞</button>
+      <button class="alley-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+    
+    <!-- Main Card Stack -->
+    <div class="card-stack" id="cardStack"></div>
+    
+    <!-- Collection Panel -->
+    <div class="collection-panel" id="collectionPanel">
+      <div class="collection-header">
+        <div>
+          <div class="collection-title">Collection</div>
+          <div class="collection-count" id="collectionCount" style="font-size: 12px; margin-top: 4px; opacity: 0.7;">0</div>
+        </div>
+        <div class="collection-view-toggle">
+          <button class="toggle-btn active" id="toggleList" title="List">≡</button>
+          <button class="toggle-btn" id="toggleGrid" title="Grid">⊞</button>
+        </div>
+      </div>
+      <div class="collection-content">
+        <div class="list-view" id="listView"></div>
+        <div class="grid-view" id="gridView" style="display: none;"></div>
+      </div>
+    </div>
+    
+    <!-- Video Player -->
+    <div class="video-player-overlay" id="videoPlayerOverlay">
+      <div class="video-player-header">
+        <div class="video-player-title" id="playerTitle">Fragment</div>
+        <button class="video-player-close" id="playerClose">×</button>
+      </div>
+      <div class="video-player-content">
+        <div class="video-frame-container">
+          <iframe class="video-frame" id="videoFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+        <div class="video-controls-panel">
+          <div class="timecode-display">
+            <div id="currentTime">0:00</div>
+            <div id="duration">0:00</div>
+          </div>
+          <div class="timeline-scrubber">
+            <div class="timeline-scrubber-fill" id="scrubberFill"></div>
+          </div>
+          <div class="player-button-row">
+            <button class="player-btn" id="playBtn">Play</button>
+            <button class="player-btn" id="markInBtn">Mark In</button>
+            <button class="player-btn" id="markOutBtn">Mark Out</button>
+          </div>
+          <div class="export-section">
+            <button class="export-btn" id="exportEDLBtn">Export EDL</button>
+            <button class="export-btn" id="exportJSONBtn">Export JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Transclusion Overlay -->
+    <div class="overlay" id="transclusionOverlay">
+      <div class="overlay-header">
+        <div class="overlay-title">Parallel Instances</div>
+        <button class="overlay-close" id="transclusionClose">×</button>
+      </div>
+      <div class="overlay-content" id="transclusionContent"></div>
+    </div>
+    
+    <!-- Prediction Overlay -->
+    <div class="overlay" id="predictionOverlay">
+      <div class="overlay-header">
+        <div class="overlay-title">Predicted Trajectory</div>
+        <button class="overlay-close" id="predictionClose">×</button>
+      </div>
+      <div class="overlay-content" id="predictionContent"></div>
+    </div>
+    
+    <!-- Completion Overlay -->
+    <div class="overlay" id="completeOverlay">
+      <div class="overlay-content">
+        <div class="complete-screen">
+          <div class="complete-title">Sequence Complete</div>
+          <div class="complete-stats">
+            <div class="complete-stat">
+              <div class="complete-stat-value" id="finalCount">12</div>
+              <div class="complete-stat-label">Fragments</div>
+            </div>
+            <div class="complete-stat">
+              <div class="complete-stat-value" id="finalCoherence">85</div>
+              <div class="complete-stat-label">Coherence</div>
+            </div>
+          </div>
+          <div class="complete-actions">
+            <button class="complete-btn" id="playAgainBtn">Begin Again</button>
+            <button class="complete-btn" id="exportFinalBtn">Export</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const storyFiles = [
+      'class response/story-1760039996486.json',
+      'class response/story-1760041394368.json',
+      'class response/story-1760041501823.json',
+      'class response/story-1760041901493.json',
+      'class response/story-1760041902976.json',
+      'class response/story-1760041916089.json',
+      'class response/story-1760041939758.json',
+      'class response/story-1760042037539.json',
+      'class response/story-1760042055631.json',
+      'class response/story-1760042201386.json'
+    ];
+
+    let stories = [], deck = [], story = [], swipedCards = new Set(), currentCard = null, isDragging = false, startX, startY, currentX = 0, currentY = 0;
+    let currentVideoFragment = null, markIn = null, markOut = null, viewMode = 'list';
+    const colors = { 'Systemic Control':'#E74C3C', 'Economic Event':'#F39C12', 'Scientific Theory':'#3498DB', 'Future Scenario':'#2ECC71', 'Core Concept':'#2ECC71', 'Culture/Identity':'#9B59B6' };
+    const getColor = cat => colors[cat] || '#333';
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2, '0'); return `${m}:${ss}`; };
+
+    function buildEmbed(c) {
+      const videoId = typeof VIDEO_ID !== 'undefined' ? VIDEO_ID : 'BQ2n6SN7gOY';
+      return `https://www.youtube.com/embed/${videoId}?start=${Math.floor(c.start)}&end=${Math.floor(c.end)}&autoplay=1`;
+    }
+
+    // Audio context for swipe sounds
+    let audioContext = null;
+    function getAudioContext() {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      return audioContext;
+    }
+
+    function playSwipeSound(type) {
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        if (type === 'accept') {
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'reject') {
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else if (type === 'info') {
+          osc.frequency.setValueAtTime(600, now);
+          osc.frequency.setValueAtTime(900, now + 0.05);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === 'predict') {
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.setValueAtTime(700, now + 0.04);
+          osc.frequency.setValueAtTime(600, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        }
+      } catch (e) {
+        console.log('Audio not available');
+      }
+    }
+
+    function createFlash(type) {
+      const flash = document.createElement('div');
+      flash.className = `swipe-flash ${type}`;
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 500);
+    }
+
+    Promise.all(storyFiles.map(file => fetch(file).then(r => r.json()).catch(() => null)))
+      .then(loadedStories => {
+        stories = loadedStories.filter(Boolean);
+        buildDeck();
+        updateCollection();
+      })
+      .catch(err => console.error('Error loading stories:', err));
+
+    function buildDeck() {
+      const all = [];
+      stories.forEach((s, i) => {
+        s.selected?.forEach((c, p) => {
+          all.push({ ...c, sourceStory: i, sourcePosition: p });
+        });
+      });
+      deck = all.sort(() => Math.random() - 0.5);
+      showNextCard();
+    }
+
+    function showNextCard() {
+      if (story.length >= 12 || deck.length === 0) { showComplete(); return; }
+      const fragment = deck.pop();
+      if (swipedCards.has(fragment.id)) { showNextCard(); return; }
+      currentCard = fragment;
+      renderCard(fragment);
+    }
+
+    function renderCard(fragment) {
+      const stack = document.getElementById('cardStack');
+      const color = getColor(fragment.category);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-header" style="background-color: ${color};">
+          <div class="card-category">${fragment.category}</div>
+          <div>${fragment.title}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">${fragment.desc || ''}</div>
+          ${fragment.quote ? `<div class="card-quote">"${fragment.quote}"</div>` : ''}
+          ${fragment.tags ? `<div class="card-tags">${fragment.tags.join(' · ')}</div>` : ''}
+          <div class="card-time">${fmt(fragment.start)} – ${fmt(fragment.end)}</div>
+        </div>
+        <div class="card-controls">
+          <button class="control-btn">Play Preview</button>
+        </div>
+        <div class="swipe-guide left">←</div>
+        <div class="swipe-guide right">→</div>
+        <div class="swipe-guide up">↑</div>
+        <div class="swipe-guide down">↓</div>
+      `;
+      stack.querySelectorAll('.card').forEach(c => c.remove());
+      stack.appendChild(card);
+      card.querySelector('.control-btn').addEventListener('click', (e) => { e.stopPropagation(); openVideoPlayer(fragment); });
+      setupCardInteraction(card, fragment);
+    }
+
+    function setupCardInteraction(card, fragment) {
+      const onStart = (e) => {
+        isDragging = true;
+        card.classList.add('swiping');
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+      };
+      const onMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const touch = e.touches ? e.touches[0] : e;
+        currentX = touch.clientX - startX;
+        currentY = touch.clientY - startY;
+        const angle = currentX * 0.03;
+        card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${angle}deg)`;
+        
+        const guides = card.querySelectorAll('.swipe-guide');
+        guides.forEach(g => g.style.opacity = '0');
+        
+        if (Math.abs(currentX) > Math.abs(currentY)) {
+          if (currentX > 50) {
+            card.querySelector('.swipe-guide.right').style.opacity = Math.min(currentX / 150, 1);
+          } else if (currentX < -50) {
+            card.querySelector('.swipe-guide.left').style.opacity = Math.min(Math.abs(currentX) / 150, 1);
+          }
+        } else {
+          if (currentY < -50) {
+            card.querySelector('.swipe-guide.up').style.opacity = Math.min(Math.abs(currentY) / 150, 1);
+          } else if (currentY > 50) {
+            card.querySelector('.swipe-guide.down').style.opacity = Math.min(currentY / 150, 1);
+          }
+        }
+      };
+      const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        card.classList.remove('swiping');
+        const threshold = 80;
+        if (Math.abs(currentX) > Math.abs(currentY)) {
+          if (currentX > threshold) swipeRight(fragment);
+          else if (currentX < -threshold) swipeLeft(fragment);
+          else resetCard(card);
+        } else {
+          if (currentY < -threshold) swipeUp(fragment);
+          else if (currentY > threshold) swipeDown(fragment);
+          else resetCard(card);
+        }
+        currentX = 0;
+        currentY = 0;
+      };
+      card.addEventListener('touchstart', onStart, { passive: false });
+      card.addEventListener('touchmove', onMove, { passive: false });
+      card.addEventListener('touchend', onEnd);
+      card.addEventListener('mousedown', onStart);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+    }
+
+    function resetCard(card) {
+      card.style.transform = '';
+      card.querySelectorAll('.swipe-guide').forEach(el => el.style.opacity = '0');
+    }
+    
+    function swipeRight(fragment) { 
+      createFlash('accept');
+      playSwipeSound('accept');
+      story.push(fragment); 
+      swipedCards.add(fragment.id); 
+      animateCardOut('right'); 
+      setTimeout(showNextCard, 300); 
+      updateCollection(); 
+    }
+    function swipeLeft(fragment) { 
+      createFlash('reject');
+      playSwipeSound('reject');
+      swipedCards.add(fragment.id); 
+      animateCardOut('left'); 
+      setTimeout(showNextCard, 300); 
+    }
+    function swipeUp(fragment) { 
+      createFlash('info');
+      playSwipeSound('info');
+      showTransclusions(fragment); 
+      setTimeout(() => { const card = document.querySelector('.card'); if (card) resetCard(card); }, 100); 
+    }
+    function swipeDown(fragment) { 
+      createFlash('predict');
+      playSwipeSound('predict');
+      showPredictions(fragment); 
+      setTimeout(() => { const card = document.querySelector('.card'); if (card) resetCard(card); }, 100); 
+    }
+
+    function animateCardOut(direction) {
+      const card = document.querySelector('.card');
+      if (!card) return;
+      const distance = window.innerWidth;
+      const x = direction === 'right' ? distance : direction === 'left' ? -distance : 0;
+      const y = direction === 'up' ? -distance : direction === 'down' ? distance : 0;
+      card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+      card.style.transform = `translate(${x}px, ${y}px) rotate(${x * 0.1}deg)`;
+      card.style.opacity = '0';
+    }
+
+    function updateCollection() {
+      document.getElementById('collectionCount').textContent = story.length;
+      
+      // Update list view
+      const listView = document.getElementById('listView');
+      listView.innerHTML = story.map((frag, idx) => `
+        <div class="list-item" data-idx="${idx}">
+          <div class="list-item-preview" style="background-color: ${getColor(frag.category)};">${idx + 1}</div>
+          <div class="list-item-info">
+            <div class="list-item-title">${frag.title}</div>
+            <div class="list-item-meta">${frag.category} · ${fmt(frag.start)}–${fmt(frag.end)}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="list-action-btn" data-action="watch" data-idx="${idx}">Watch</button>
+            <button class="list-action-btn" data-action="remove" data-idx="${idx}">×</button>
+          </div>
+        </div>
+      `).join('');
+      
+      // Update grid view
+      const gridView = document.getElementById('gridView');
+      gridView.innerHTML = story.map((frag, idx) => `
+        <div class="grid-item" data-idx="${idx}">
+          <div class="grid-item-visual" style="background-color: ${getColor(frag.category)};">
+            <div>${idx + 1}</div>
+            <div class="grid-item-remove" data-action="remove" data-idx="${idx}">×</div>
+          </div>
+          <div class="grid-item-chip">
+            <div class="grid-item-number">ITEM ${idx + 1}</div>
+            <div class="grid-item-name">${frag.title.substring(0, 20)}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Attach events
+      document.querySelectorAll('[data-action="watch"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx);
+          openVideoPlayer(story[idx]);
+        });
+      });
+      
+      document.querySelectorAll('[data-action="remove"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx);
+          story.splice(idx, 1);
+          updateCollection();
+        });
+      });
+    }
+
+    function openVideoPlayer(fragment) {
+      currentVideoFragment = fragment;
+      markIn = fragment.start;
+      markOut = fragment.end;
+      
+      const frame = document.getElementById('videoFrame');
+      frame.src = buildEmbed(fragment);
+      
+      document.getElementById('playerTitle').textContent = fragment.title;
+      document.getElementById('videoPlayerOverlay').classList.add('active');
+    }
+
+    function showTransclusions(fragment) {
+      const transclusions = [];
+      stories.forEach((s, idx) => {
+        s.selected?.forEach(c => {
+          if (c.id === fragment.id) transclusions.push({ story: idx + 1, concept: c });
+        });
+      });
+      const html = transclusions.length ? transclusions.map(t => `<div class="item"><div class="item-label">Story ${t.story}</div><div class="item-title">${t.concept.title}</div></div>`).join('') : '<div style="text-align: center; padding: 40px; opacity: 0.5;">No parallel instances</div>';
+      document.getElementById('transclusionContent').innerHTML = html;
+      document.getElementById('transclusionOverlay').classList.add('active');
+    }
+
+    function showPredictions(fragment) {
+      const predictions = {};
+      stories.forEach(s => {
+        s.selected?.forEach((c, idx) => {
+          if (c.id === fragment.id && idx < s.selected.length - 1) {
+            const next = s.selected[idx + 1];
+            if (!predictions[next.id]) predictions[next.id] = { concept: next, count: 0 };
+            predictions[next.id].count++;
+          }
+        });
+      });
+      const sorted = Object.values(predictions)
+        .map(p => ({ ...p, probability: Math.round((p.count / Math.max(1, stories.length)) * 100) }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      const html = sorted.length ? sorted.map(p => `<div class="item pred" data-id="${p.concept.id}"><div class="item-label">Probability</div><div class="item-title">${p.concept.title}<span class="item-weight">${p.probability}%</span></div></div>`).join('') : '<div style="text-align: center; padding: 40px; opacity: 0.5;">No predictions available</div>';
+      document.getElementById('predictionContent').innerHTML = html;
+      document.getElementById('predictionOverlay').classList.add('active');
+      document.querySelectorAll('.item.pred').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const fragment = deck.find(f => f.id === id);
+          if (fragment) {
+            story.push(fragment);
+            swipedCards.add(fragment.id);
+            document.getElementById('predictionOverlay').classList.remove('active');
+            updateCollection();
+            showNextCard();
+          }
+        });
+      });
+    }
+
+    function showComplete() {
+      const coherence = calculateCoherence();
+      document.getElementById('finalCount').textContent = story.length;
+      document.getElementById('finalCoherence').textContent = coherence;
+      document.getElementById('completeOverlay').classList.add('active');
+    }
+
+    function calculateCoherence() {
+      if (story.length < 2) return 0;
+      let score = 0;
+      for (let i = 0; i < story.length - 1; i++) {
+        if (story[i].category === story[i + 1].category) score += 10;
+        if (story[i].sourceStory !== story[i + 1].sourceStory) score += 5;
+      }
+      return Math.min(100, score);
+    }
+
+    function exportEDL() {
+      let edl = 'TITLE: Sequence\n\n';
+      story.forEach((frag, idx) => {
+        const startTC = fmt(frag.start);
+        const endTC = fmt(frag.end);
+        const eventNum = String(idx + 1).padStart(3, '0');
+        edl += `${eventNum}  AX       V     C        ${startTC}00     ${endTC}00     ${startTC}00     ${endTC}00\n`;
+        edl += `* FROM CLIP NAME: ${frag.title}\n\n`;
+      });
+      
+      const blob = new Blob([edl], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sequence-${Date.now()}.edl`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJSON() {
+      const data = {
+        title: 'Fragment Sequence',
+        fragments: story.map(f => ({
+          id: f.id,
+          title: f.title,
+          category: f.category,
+          start: f.start,
+          end: f.end,
+          duration: f.end - f.start
+        })),
+        coherence: calculateCoherence(),
+        timestamp: new Date().toISOString(),
+        count: story.length
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sequence-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Event listeners
+    document.getElementById('collectionBtn').addEventListener('click', () => {
+      document.getElementById('collectionPanel').classList.toggle('open');
+    });
+    
+    document.getElementById('toggleList').addEventListener('click', () => {
+      viewMode = 'list';
+      document.getElementById('listView').style.display = 'flex';
+      document.getElementById('gridView').style.display = 'none';
+      document.getElementById('toggleList').classList.add('active');
+      document.getElementById('toggleGrid').classList.remove('active');
+    });
+    
+    document.getElementById('toggleGrid').addEventListener('click', () => {
+      viewMode = 'grid';
+      document.getElementById('listView').style.display = 'none';
+      document.getElementById('gridView').style.display = 'grid';
+      document.getElementById('toggleList').classList.remove('active');
+      document.getElementById('toggleGrid').classList.add('active');
+    });
+    
+    document.getElementById('playerClose').addEventListener('click', () => {
+      document.getElementById('videoPlayerOverlay').classList.remove('active');
+      document.getElementById('videoFrame').src = '';
+      currentVideoFragment = null;
+    });
+    
+    document.getElementById('playBtn').addEventListener('click', () => {
+      if (currentVideoFragment) {
+        openVideoPlayer(currentVideoFragment);
+      }
+    });
+    
+    document.getElementById('markInBtn').addEventListener('click', () => {
+      if (currentVideoFragment) markIn = currentVideoFragment.start;
+    });
+    
+    document.getElementById('markOutBtn').addEventListener('click', () => {
+      if (currentVideoFragment) markOut = currentVideoFragment.end;
+    });
+    
+    document.getElementById('exportEDLBtn').addEventListener('click', exportEDL);
+    document.getElementById('exportJSONBtn').addEventListener('click', exportJSON);
+    
+    document.getElementById('transclusionClose').addEventListener('click', () => {
+      document.getElementById('transclusionOverlay').classList.remove('active');
+    });
+    document.getElementById('predictionClose').addEventListener('click', () => {
+      document.getElementById('predictionOverlay').classList.remove('active');
+    });
+    
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+      story = [];
+      swipedCards.clear();
+      document.getElementById('completeOverlay').classList.remove('active');
+      buildDeck();
+      updateCollection();
+    });
+    
+    document.getElementById('exportFinalBtn').addEventListener('click', exportJSON);
+
+    buildDeck();
+  </script>
+</body>
+</html>

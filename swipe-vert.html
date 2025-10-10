@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fragment Swipe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Courier New', monospace; background: #000; color: #fff; touch-action: none; user-select: none; }
+
+    .game { display: flex; flex-direction: column; height: 100vh; }
+    .top-bar { padding: 16px 20px; display: flex; justify-content: space-between; background: #000; border-bottom: 3px solid #c00; }
+    .score { display: flex; gap: 20px; font-size: 13px; font-weight: bold; }
+    .score-item { display: flex; flex-direction: column; align-items: center; }
+    .score-value { font-size: 24px; font-weight: 900; color: #c00; }
+    .score-label { font-size: 10px; opacity: 0.8; text-transform: uppercase; }
+
+    .card-stack { flex: 1; position: relative; overflow: hidden; background: #0a0a0a; }
+    .card { position: absolute; width: 100%; height: 100%; background: #fff; border: none; cursor: grab; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; display: flex; flex-direction: column; }
+    .card.swiping { transition: none; cursor: grabbing; }
+    .card.next { transform: translateY(100%); }
+    .card.prev { transform: translateY(-100%); }
+    .card-header { padding: 20px; font-weight: bold; font-size: 18px; line-height: 1.3; color: #fff; min-height: 80px; display: flex; flex-direction: column; justify-content: center; }
+    .card-category { font-size: 11px; text-transform: uppercase; opacity: 0.9; margin-bottom: 8px; }
+    .card-body { padding: 20px; background: #fff; color: #000; overflow-y: auto; flex: 1; font-size: 13px; line-height: 1.6; }
+    .card-desc { margin-bottom: 16px; color: #333; }
+    .card-quote { font-style: italic; font-size: 12px; padding: 12px; background: #f9f9f9; border-left: 3px solid #c00; margin: 16px 0; color: #555; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+    .card-time { font-size: 11px; color: #666; margin-top: 12px; font-weight: bold; }
+    .card-footer { padding: 16px 20px; border-top: 2px solid #eee; background: #fff; display: flex; justify-content: center; }
+    .play-btn { padding: 12px 24px; background: #c00; color: #fff; border: none; font-family: inherit; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .play-btn:hover { background: #e00; }
+
+    .swipe-hint { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: bold; text-transform: uppercase; opacity: 0.5; z-index: 5; animation: bounce 2s infinite; }
+    @keyframes bounce { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-10px); } }
+    
+    .action-btns { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 12px; z-index: 100; }
+    .action-btn { width: 48px; height: 48px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,0.8); color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .action-btn:hover { background: #c00; transform: scale(1.1); }
+    .action-btn.add { background: #4CAF50; border-color: #4CAF50; }
+    .action-btn.add:hover { background: #66BB6A; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; z-index: 1000; }
+    .overlay.active { display: flex; }
+    .overlay-header { padding: 20px; display: flex; justify-content: space-between; border-bottom: 2px solid #c00; }
+    .overlay-title { font-size: 20px; font-weight: 900; }
+    .overlay-close { font-size: 28px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.1); }
+    .overlay-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+    .item { background: #1a1a1a; border-left: 4px solid; padding: 16px; margin-bottom: 12px; font-size: 13px; }
+    .item.trans { border-color: #2196F3; }
+    .item.pred { border-color: #FF9800; cursor: pointer; }
+    .item.pred:hover { background: #2a2a2a; }
+    .item-label { font-size: 11px; font-weight: bold; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px; }
+    .item-title { font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+    .item-weight { float: right; font-size: 18px; font-weight: 900; color: #FF9800; }
+
+    .complete-screen { text-align: center; padding: 40px 20px; }
+    .complete-emoji { font-size: 80px; margin-bottom: 20px; }
+    .complete-title { font-size: 32px; font-weight: 900; margin-bottom: 16px; }
+    .complete-stats { display: flex; justify-content: center; gap: 30px; margin: 30px 0; }
+    .complete-stat-value { font-size: 48px; font-weight: 900; color: #c00; }
+    .complete-stat-label { font-size: 12px; opacity: 0.7; text-transform: uppercase; }
+    .complete-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 40px; max-width: 300px; margin-left: auto; margin-right: auto; }
+    .complete-btn { padding: 16px; border: 2px solid #c00; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; background: #000; color: #fff; }
+    .complete-btn:hover { background: #c00; }
+
+    .video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    .video-overlay.active { display: flex; }
+    .video-container { position: relative; width: 92%; max-width: 1100px; aspect-ratio: 16/9; }
+    .video-frame { width: 100%; height: 100%; border: 3px solid #fff; }
+    .video-close { position: absolute; top: -50px; right: 0; background: none; border: 2px solid #fff; color: #fff; font-size: 32px; cursor: pointer; width: 48px; height: 48px; font-weight: bold; }
+    .video-close:hover { background: #fff; color: #000; }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="top-bar">
+      <div class="score">
+        <div class="score-item"><div class="score-value" id="storyCount">0</div><div class="score-label">Story</div></div>
+        <div class="score-item"><div class="score-value" id="coherence">0</div><div class="score-label">Flow</div></div>
+      </div>
+      <div class="score">
+        <div class="score-item"><div class="score-value" id="remaining">68</div><div class="score-label">Left</div></div>
+      </div>
+    </div>
+    <div class="card-stack" id="cardStack">
+      <div class="swipe-hint">↑ Swipe up for next</div>
+    </div>
+    
+    <div class="action-btns">
+      <button class="action-btn add" id="addBtn" title="Add to story">+</button>
+      <button class="action-btn" id="playBtn" title="Play video">▶</button>
+      <button class="action-btn" id="backBtn" title="Back">←</button>
+    </div>
+  </div>
+
+  <div class="video-overlay" id="videoOverlay">
+    <div class="video-container">
+      <button class="video-close" id="videoClose">×</button>
+      <iframe class="video-frame" id="videoFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <div class="overlay" id="transclusionOverlay">
+    <div class="overlay-header"><div class="overlay-title">👥 Who Else</div><div class="overlay-close" id="transclusionClose">×</div></div>
+    <div class="overlay-content" id="transclusionContent"></div>
+  </div>
+
+  <div class="overlay" id="predictionOverlay">
+    <div class="overlay-header"><div class="overlay-title">🔮 Next</div><div class="overlay-close" id="predictionClose">×</div></div>
+    <div class="overlay-content" id="predictionContent"></div>
+  </div>
+
+  <div class="overlay" id="completeOverlay">
+    <div class="overlay-content">
+      <div class="complete-screen">
+        <div class="complete-emoji">🎉</div>
+        <div class="complete-title">Story Complete!</div>
+        <div class="complete-stats">
+          <div class="complete-stat"><div class="complete-stat-value" id="finalCount">12</div><div class="complete-stat-label">Fragments</div></div>
+          <div class="complete-stat"><div class="complete-stat-value" id="finalCoherence">85</div><div class="complete-stat-label">Flow</div></div>
+        </div>
+        <div class="complete-actions">
+          <button class="complete-btn" id="playAgainBtn">Play Again</button>
+          <button class="complete-btn" id="exportBtn">Export JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load stories from class response folder
+    const storyFiles = [
+      'class response/story-1760039996486.json',
+      'class response/story-1760041394368.json',
+      'class response/story-1760041501823.json',
+      'class response/story-1760041901493.json',
+      'class response/story-1760041902976.json',
+      'class response/story-1760041916089.json',
+      'class response/story-1760041939758.json',
+      'class response/story-1760042037539.json',
+      'class response/story-1760042055631.json',
+      'class response/story-1760042201386.json'
+    ];
+
+    let stories = [];
+    let allConcepts = [];
+    
+    // Load all stories
+    Promise.all(storyFiles.map(file => fetch(file).then(r => r.json())))
+      .then(loadedStories => {
+        stories = loadedStories;
+        // Extract all unique concepts
+        const conceptMap = {};
+        stories.forEach(story => {
+          story.selected.forEach(concept => {
+            if (!conceptMap[concept.id]) {
+              conceptMap[concept.id] = concept;
+            }
+          });
+        });
+        allConcepts = Object.values(conceptMap);
+        console.log(`Loaded ${stories.length} stories with ${allConcepts.length} unique concepts`);
+        buildDeck();
+      })
+      .catch(err => {
+        console.error('Error loading stories:', err);
+        alert('Error loading data. Please check console.');
+      });
+
+    let deck = [], story = [], currentIndex = 0, history = [], isDragging = false, startY, currentY = 0;
+    const colors = {'Systemic Control':'#E74C3C','Economic Event':'#F39C12','Scientific Theory':'#3498DB','Future Scenario':'#2ECC71','Core Concept':'#2ECC71','Culture/Identity':'#9B59B6'};
+    const getColor = cat => colors[cat] || '#7F8C8D';
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2, '0'); return `${m}:${ss}`; };
+    function buildEmbed(c) { 
+      const videoId = typeof VIDEO_ID !== 'undefined' ? VIDEO_ID : 'BQ2n6SN7gOY';
+      return `https://www.youtube.com/embed/${videoId}?start=${Math.floor(c.start)}&end=${Math.floor(c.end)}&autoplay=1`; 
+    }
+
+    function buildDeck() {
+      const all = [];
+      stories.forEach((s, i) => { 
+        s.selected.forEach((c, p) => { 
+          all.push({ ...c, sourceStory: i, sourcePosition: p }); 
+        }); 
+      });
+      deck = all.sort(() => Math.random() - 0.5);
+      console.log(`Built deck with ${deck.length} cards`);
+      showCard(0);
+    }
+
+    function showCard(index) {
+      if (index < 0 || index >= deck.length) return;
+      currentIndex = index;
+      const fragment = deck[index];
+      renderCard(fragment);
+      updateStats();
+    }
+
+    function nextCard() {
+      if (currentIndex < deck.length - 1) {
+        showCard(currentIndex + 1);
+      }
+    }
+
+    function prevCard() {
+      if (currentIndex > 0) {
+        showCard(currentIndex - 1);
+      }
+    }
+
+    function renderCard(fragment) {
+      const stack = document.getElementById('cardStack');
+      const color = getColor(fragment.category);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-header" style="background-color: ${color};">
+          <div class="card-category">${fragment.category}</div>
+          <div>${fragment.title}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">${fragment.desc || ''}</div>
+          ${fragment.quote ? `<div class="card-quote">"${fragment.quote}"</div>` : ''}
+          ${fragment.tags ? `<div class="card-tags">${fragment.tags.join(' · ')}</div>` : ''}
+          <div class="card-time">${fmt(fragment.start)} – ${fmt(fragment.end)}</div>
+        </div>
+        <div class="card-footer"><button class="play-btn">▶ Play Video</button></div>
+      `;
+      stack.querySelectorAll('.card').forEach(c => c.remove());
+      stack.appendChild(card);
+      card.querySelector('.play-btn').addEventListener('click', (e) => { e.stopPropagation(); openVideo(fragment); });
+      setupCardInteraction(card);
+    }
+
+    function setupCardInteraction(card) {
+      const onStart = (e) => { 
+        isDragging = true; 
+        card.classList.add('swiping'); 
+        const touch = e.touches ? e.touches[0] : e; 
+        startY = touch.clientY; 
+      };
+      
+      const onMove = (e) => {
+        if (!isDragging) return;
+        const touch = e.touches ? e.touches[0] : e;
+        currentY = touch.clientY - startY;
+        card.style.transform = `translateY(${currentY}px)`;
+      };
+      
+      const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        card.classList.remove('swiping');
+        const threshold = 80;
+        
+        if (currentY < -threshold) {
+          // Swipe up = next
+          card.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          card.style.transform = 'translateY(-100%)';
+          setTimeout(() => { nextCard(); }, 300);
+        } else if (currentY > threshold) {
+          // Swipe down = previous
+          card.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          card.style.transform = 'translateY(100%)';
+          setTimeout(() => { prevCard(); }, 300);
+        } else {
+          // Reset
+          card.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          card.style.transform = 'translateY(0)';
+        }
+        currentY = 0;
+      };
+      
+      card.addEventListener('touchstart', onStart);
+      card.addEventListener('touchmove', onMove);
+      card.addEventListener('touchend', onEnd);
+      card.addEventListener('mousedown', onStart);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+    }
+
+    function openVideo(concept) {
+      const frame = document.getElementById('videoFrame');
+      frame.src = buildEmbed(concept);
+      document.getElementById('videoOverlay').classList.add('active');
+    }
+
+    function showTransclusions(fragment) {
+      const transclusions = [];
+      stories.forEach((s, idx) => { s.selected.forEach(c => { if (c.id === fragment.id) transclusions.push({ story: idx + 1, concept: c }); }); });
+      const html = transclusions.map(t => `<div class="item trans"><div class="item-label">Story ${t.story}</div><div class="item-title">${t.concept.title}</div></div>`).join('');
+      document.getElementById('transclusionContent').innerHTML = html || '<p style="text-align: center; opacity: 0.5;">No other stories chose this fragment</p>';
+      document.getElementById('transclusionOverlay').classList.add('active');
+    }
+
+    function showPredictions(fragment) {
+      const predictions = {};
+      stories.forEach(s => {
+        s.selected.forEach((c, idx) => {
+          if (c.id === fragment.id && idx < s.selected.length - 1) {
+            const next = s.selected[idx + 1];
+            if (!predictions[next.id]) predictions[next.id] = { concept: next, count: 0 };
+            predictions[next.id].count++;
+          }
+        });
+      });
+      const sorted = Object.values(predictions).map(p => ({ ...p, probability: Math.round((p.count / stories.length) * 100) })).sort((a, b) => b.count - a.count).slice(0, 5);
+      const html = sorted.map(p => `<div class="item pred" data-id="${p.concept.id}"><div class="item-label">Predicted Next</div><div class="item-title">${p.concept.title}<span class="item-weight">${p.probability}%</span></div></div>`).join('');
+      document.getElementById('predictionContent').innerHTML = html || '<p style="text-align: center; opacity: 0.5;">No predictions available</p>';
+      document.getElementById('predictionOverlay').classList.add('active');
+      document.querySelectorAll('.item.pred').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const fragment = deck.find(f => f.id === id);
+          if (fragment) { story.push(fragment); swipedCards.add(fragment.id); document.getElementById('predictionOverlay').classList.remove('active'); showNextCard(); }
+        });
+      });
+    }
+
+    function showComplete() {
+      const coherence = calculateCoherence();
+      document.getElementById('finalCount').textContent = story.length;
+      document.getElementById('finalCoherence').textContent = coherence;
+      document.getElementById('completeOverlay').classList.add('active');
+    }
+
+    function calculateCoherence() {
+      if (story.length < 2) return 0;
+      let score = 0;
+      for (let i = 0; i < story.length - 1; i++) {
+        if (story[i].category === story[i + 1].category) score += 10;
+        if (story[i].sourceStory !== story[i + 1].sourceStory) score += 5;
+      }
+      return Math.min(100, score);
+    }
+
+    function updateStats() {
+      document.getElementById('storyCount').textContent = story.length;
+      document.getElementById('coherence').textContent = calculateCoherence();
+      document.getElementById('remaining').textContent = deck.length - currentIndex - 1;
+    }
+
+    // Button handlers
+    document.getElementById('addBtn').addEventListener('click', () => {
+      const fragment = deck[currentIndex];
+      if (!story.find(s => s.id === fragment.id)) {
+        story.push(fragment);
+        updateStats();
+        document.getElementById('addBtn').style.background = '#66BB6A';
+        setTimeout(() => { document.getElementById('addBtn').style.background = '#4CAF50'; }, 200);
+      }
+    });
+
+    document.getElementById('playBtn').addEventListener('click', () => {
+      openVideo(deck[currentIndex]);
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    document.getElementById('videoClose').addEventListener('click', () => { 
+      document.getElementById('videoOverlay').classList.remove('active'); 
+      document.getElementById('videoFrame').src = ''; 
+    });
+    
+    document.getElementById('transclusionClose').addEventListener('click', () => { 
+      document.getElementById('transclusionOverlay').classList.remove('active'); 
+    });
+    
+    document.getElementById('predictionClose').addEventListener('click', () => { 
+      document.getElementById('predictionOverlay').classList.remove('active'); 
+    });
+    
+    document.getElementById('playAgainBtn').addEventListener('click', () => { 
+      story = []; 
+      currentIndex = 0;
+      document.getElementById('completeOverlay').classList.remove('active'); 
+      buildDeck(); 
+    });
+    
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const data = { title: 'My Story', fragments: story, coherence: calculateCoherence(), timestamp: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `story-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

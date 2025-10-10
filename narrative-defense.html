@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narrative Defense: The Noosphere Wars</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Title Screen */
+        .title-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        .title-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title-text {
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: bold;
+            letter-spacing: 0.3rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            animation: slideIn 1s ease-out;
+        }
+
+        .subtitle-text {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            letter-spacing: 0.2rem;
+            opacity: 0.7;
+            margin-bottom: 2rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        .faction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 800px;
+            width: 90%;
+            animation: fadeIn 2s ease-out;
+        }
+
+        .faction-card {
+            padding: 2rem;
+            border: 3px solid;
+            background: rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .faction-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 40px currentColor;
+        }
+
+        .faction-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .faction-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 0.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .faction-desc {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Game Interface */
+        .game-container {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .game-container.active {
+            display: flex;
+        }
+
+        .game-hud {
+            padding: 1rem 2rem;
+            background: rgba(0, 0, 0, 0.95);
+            border-bottom: 2px solid;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .hud-left {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .faction-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 0.1rem;
+        }
+
+        .resource-display {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .hud-right {
+            display: flex;
+            gap: 2rem;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .playfield {
+            flex: 1;
+            position: relative;
+            background: #0a0a0a;
+            overflow: hidden;
+        }
+
+        .grid-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 0.3rem;
+            padding: 1rem;
+        }
+
+        .grid-cell {
+            border: 1px solid #222;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .grid-cell:hover {
+            border-color: #666;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .grid-cell.placeable {
+            border-color: currentColor;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .narrative-node {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 2px solid;
+            background: rgba(0, 0, 0, 0.8);
+            animation: nodeSpawn 0.3s ease-out;
+        }
+
+        @keyframes nodeSpawn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .narrative-node.linked {
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .node-health {
+            position: absolute;
+            bottom: 2px;
+            left: 5%;
+            width: 90%;
+            height: 3px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid currentColor;
+        }
+
+        .node-health-fill {
+            height: 100%;
+            background: currentColor;
+            transition: width 0.2s;
+        }
+
+        .svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .narrative-link {
+            stroke-width: 3;
+            opacity: 0.6;
+            stroke-linecap: round;
+            animation: linkPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes linkPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .coherence-field {
+            fill: currentColor;
+            opacity: 0.1;
+            animation: fieldPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes fieldPulse {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.2; }
+        }
+
+        .hostile-fragment {
+            position: absolute;
+            width: clamp(40px, 5vw, 60px);
+            height: clamp(40px, 5vw, 60px);
+            border: 3px solid #E24A4A;
+            background: rgba(226, 74, 74, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            font-weight: bold;
+            color: #E24A4A;
+            animation: fragmentMove 15s linear;
+            z-index: 2;
+        }
+
+        .hostile-fragment.fast {
+            animation-duration: 10s;
+        }
+
+        .hostile-fragment.tank {
+            width: clamp(50px, 6vw, 75px);
+            height: clamp(50px, 6vw, 75px);
+            border-width: 4px;
+            animation-duration: 20s;
+        }
+
+        @keyframes fragmentMove {
+            from { right: -10%; }
+            to { right: 110%; }
+        }
+
+        .fragment-health {
+            position: absolute;
+            bottom: 2px;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #E24A4A;
+        }
+
+        .fragment-health-fill {
+            height: 100%;
+            background: #E24A4A;
+            transition: width 0.2s;
+        }
+
+        .projectile {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .control-panel {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 2px solid;
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            min-height: 120px;
+        }
+
+        .node-card {
+            min-width: 100px;
+            padding: 1rem;
+            border: 2px solid;
+            background: rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .node-card:hover:not(.disabled) {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px currentColor;
+        }
+
+        .node-card.selected {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .node-card.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .node-card-icon {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .node-card-name {
+            font-size: 0.8rem;
+            font-weight: bold;
+            letter-spacing: 0.05rem;
+        }
+
+        .node-card-cost {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        .node-card-info {
+            font-size: 0.6rem;
+            opacity: 0.6;
+            text-align: center;
+        }
+
+        .kinetic-text {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 100;
+            animation: kineticFloat 2s ease-out forwards;
+        }
+
+        @keyframes kineticFloat {
+            0% { opacity: 0; transform: translateY(20px) scale(0.8); }
+            50% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1); }
+        }
+
+        .damage-number {
+            position: absolute;
+            font-size: 1.2rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 100;
+            animation: damageFloat 1s ease-out forwards;
+        }
+
+        @keyframes damageFloat {
+            to {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+        }
+
+        .hit-flash {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: hitExpand 0.4s ease-out forwards;
+            z-index: 99;
+        }
+
+        @keyframes hitExpand {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .game-over.show {
+            display: flex;
+            animation: fadeIn 0.5s;
+        }
+
+        .game-over-title {
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: bold;
+            letter-spacing: 0.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .game-over-stats {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            line-height: 2;
+            margin-bottom: 2rem;
+        }
+
+        .restart-btn {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 0.1rem;
+            border: 3px solid;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .restart-btn:hover {
+            background: currentColor;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-screen" id="titleScreen">
+        <div class="title-text">NARRATIVE DEFENSE</div>
+        <div class="subtitle-text">THE NOOSPHERE WARS</div>
+        <div class="faction-grid">
+            <div class="faction-card" style="color: #00ffff; border-color: #00ffff;" data-faction="universalist">
+                <div class="faction-icon">◯</div>
+                <div class="faction-name">UNIVERSALISTS</div>
+                <div class="faction-desc">Unified narratives<br>Strong coherence fields</div>
+            </div>
+            <div class="faction-card" style="color: #ff00ff; border-color: #ff00ff;" data-faction="deconstructor">
+                <div class="faction-icon">◬</div>
+                <div class="faction-name">DECONSTRUCTORS</div>
+                <div class="faction-desc">Fragment enemies<br>High damage output</div>
+            </div>
+            <div class="faction-card" style="color: #ffff00; border-color: #ffff00;" data-faction="algorithm">
+                <div class="faction-icon">◈</div>
+                <div class="faction-name">ALGORITHMS</div>
+                <div class="faction-desc">Data-driven defense<br>Resource efficiency</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <div class="game-hud" id="gameHud">
+            <div class="hud-left">
+                <div class="faction-display" id="factionDisplay">UNIVERSALISTS</div>
+                <div class="resource-display">
+                    <div class="resource-item">
+                        <span>RP:</span>
+                        <span id="rpDisplay">150</span>
+                    </div>
+                    <div class="resource-item">
+                        <span>COHERENCE:</span>
+                        <span id="coherenceDisplay">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hud-right">
+                <div>WAVE: <span id="waveDisplay">1</span></div>
+                <div>ELIMINATED: <span id="killDisplay">0</span></div>
+            </div>
+        </div>
+
+        <div class="playfield" id="playfield">
+            <svg class="svg-layer" id="svgLayer"></svg>
+            <div class="grid-layer" id="gridLayer"></div>
+        </div>
+
+        <div class="control-panel" id="controlPanel"></div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <div class="game-over-title" id="gameOverTitle">VICTORY</div>
+        <div class="game-over-stats" id="gameOverStats"></div>
+        <button class="restart-btn" id="restartBtn">RESTART DEFENSE</button>
+    </div>
+
+    <script>
+        const FACTIONS = {
+            universalist: {
+                name: 'UNIVERSALISTS',
+                color: '#00ffff',
+                nodes: {
+                    turret: { cost: 100, icon: '◆', damage: 25, rate: 1000, range: 3 },
+                    wall: { cost: 50, icon: '▮', health: 300 },
+                    generator: { cost: 75, icon: '◈', rpGen: 30, rate: 4000 },
+                    link: { cost: 25, icon: '◐', multiplier: 1.5 }
+                }
+            },
+            deconstructor: {
+                name: 'DECONSTRUCTORS',
+                color: '#ff00ff',
+                nodes: {
+                    turret: { cost: 100, icon: '◭', damage: 40, rate: 1500, range: 2 },
+                    wall: { cost: 50, icon: '▯', health: 200 },
+                    generator: { cost: 75, icon: '◐', rpGen: 25, rate: 4000 },
+                    link: { cost: 25, icon: '◬', multiplier: 1.3 }
+                }
+            },
+            algorithm: {
+                name: 'ALGORITHMS',
+                color: '#ffff00',
+                nodes: {
+                    turret: { cost: 80, icon: '◈', damage: 20, rate: 800, range: 4 },
+                    wall: { cost: 40, icon: '▭', health: 250 },
+                    generator: { cost: 60, icon: '◇', rpGen: 35, rate: 3500 },
+                    link: { cost: 20, icon: '◊', multiplier: 1.4 }
+                }
+            }
+        };
+
+        const FRAGMENT_TYPES = {
+            basic: { health: 100, speed: 15, damage: 15, icon: '▼', rp: 30 },
+            fast: { health: 60, speed: 10, damage: 10, icon: '▽', rp: 20 },
+            tank: { health: 250, speed: 20, damage: 25, icon: '▼', rp: 50 }
+        };
+
+        class Game {
+            constructor() {
+                this.faction = null;
+                this.factionData = null;
+                this.rp = 150;
+                this.coherence = 0;
+                this.wave = 1;
+                this.kills = 0;
+                this.selectedNode = null;
+                this.nodes = [];
+                this.links = [];
+                this.fragments = [];
+                this.projectiles = [];
+                this.gameOver = false;
+                this.waveInterval = null;
+                this.gridCells = [];
+            }
+
+            init(faction) {
+                this.faction = faction;
+                this.factionData = FACTIONS[faction];
+                this.setupUI();
+                this.createGrid();
+                this.createNodeCards();
+                this.startGame();
+            }
+
+            setupUI() {
+                const hud = document.getElementById('gameHud');
+                const panel = document.getElementById('controlPanel');
+                const gameOver = document.getElementById('gameOver');
+                const color = this.factionData.color;
+                
+                hud.style.borderColor = color;
+                panel.style.borderColor = color;
+                gameOver.style.color = color;
+                
+                document.getElementById('factionDisplay').textContent = this.factionData.name;
+                document.getElementById('factionDisplay').style.color = color;
+            }
+
+            createGrid() {
+                const gridLayer = document.getElementById('gridLayer');
+                for (let row = 0; row < 6; row++) {
+                    for (let col = 0; col < 12; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        cell.style.color = this.factionData.color;
+                        
+                        cell.addEventListener('click', () => this.placeNode(row, col));
+                        
+                        gridLayer.appendChild(cell);
+                        this.gridCells.push({ row, col, element: cell, node: null });
+                    }
+                }
+            }
+
+            createNodeCards() {
+                const panel = document.getElementById('controlPanel');
+                Object.entries(this.factionData.nodes).forEach(([type, data]) => {
+                    const card = document.createElement('div');
+                    card.className = 'node-card';
+                    card.dataset.type = type;
+                    card.style.color = this.factionData.color;
+                    card.style.borderColor = this.factionData.color;
+                    
+                    let info = '';
+                    if (data.damage) info = `DMG: ${data.damage}`;
+                    else if (data.health) info = `HP: ${data.health}`;
+                    else if (data.rpGen) info = `+${data.rpGen} RP`;
+                    else if (data.multiplier) info = `x${data.multiplier} boost`;
+                    
+                    card.innerHTML = `
+                        <div class="node-card-icon">${data.icon}</div>
+                        <div class="node-card-name">${type.toUpperCase()}</div>
+                        <div class="node-card-cost">${data.cost} RP</div>
+                        <div class="node-card-info">${info}</div>
+                    `;
+                    
+                    card.addEventListener('click', () => this.selectNode(type, card));
+                    panel.appendChild(card);
+                });
+            }
+
+            selectNode(type, card) {
+                const cost = this.factionData.nodes[type].cost;
+                if (this.rp < cost) return;
+                
+                document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+                document.querySelectorAll('.grid-cell').forEach(c => c.classList.remove('placeable'));
+                
+                this.selectedNode = type;
+                card.classList.add('selected');
+                
+                this.gridCells.forEach(cell => {
+                    if (!cell.node) {
+                        cell.element.classList.add('placeable');
+                    }
+                });
+            }
+
+            placeNode(row, col) {
+                if (!this.selectedNode) return;
+                
+                const cell = this.gridCells.find(c => c.row === row && c.col === col);
+                if (cell.node) return;
+                
+                const nodeData = this.factionData.nodes[this.selectedNode];
+                if (this.rp < nodeData.cost) return;
+                
+                this.rp -= nodeData.cost;
+                this.updateDisplay();
+                
+                const node = document.createElement('div');
+                node.className = 'narrative-node';
+                node.style.color = this.factionData.color;
+                node.style.borderColor = this.factionData.color;
+                node.innerHTML = nodeData.icon;
+                
+                const nodeObj = {
+                    element: node,
+                    type: this.selectedNode,
+                    row,
+                    col,
+                    health: nodeData.health || 100,
+                    maxHealth: nodeData.health || 100,
+                    data: nodeData,
+                    lastShot: 0,
+                    lastGen: 0,
+                    links: []
+                };
+                
+                if (nodeData.health || this.selectedNode === 'wall') {
+                    node.innerHTML += `<div class="node-health"><div class="node-health-fill"></div></div>`;
+                    this.updateNodeHealth(nodeObj);
+                }
+                
+                cell.element.appendChild(node);
+                cell.node = nodeObj;
+                this.nodes.push(nodeObj);
+                
+                this.spawnKineticText('NODE PLACED', this.factionData.color, 
+                    cell.element.offsetLeft + cell.element.offsetWidth / 2,
+                    cell.element.offsetTop + cell.element.offsetHeight / 2);
+                
+                this.tryAutoLink(nodeObj);
+                
+                this.selectedNode = null;
+                document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+                document.querySelectorAll('.grid-cell').forEach(c => c.classList.remove('placeable'));
+            }
+
+            tryAutoLink(node) {
+                if (node.type === 'link') return;
+                
+                const adjacent = this.nodes.filter(n => {
+                    if (n === node) return false;
+                    const dist = Math.abs(n.row - node.row) + Math.abs(n.col - node.col);
+                    return dist === 1;
+                });
+                
+                adjacent.forEach(adj => {
+                    if (!this.links.find(l => 
+                        (l.from === node && l.to === adj) || 
+                        (l.from === adj && l.to === node))) {
+                        this.createLink(node, adj);
+                    }
+                });
+            }
+
+            createLink(node1, node2) {
+                const link = { from: node1, to: node2 };
+                this.links.push(link);
+                node1.links.push(node2);
+                node2.links.push(node1);
+                
+                node1.element.classList.add('linked');
+                node2.element.classList.add('linked');
+                
+                this.coherence += 10;
+                this.updateDisplay();
+                this.renderLinks();
+            }
+
+            renderLinks() {
+                const svg = document.getElementById('svgLayer');
+                svg.innerHTML = '';
+                
+                const playfield = document.getElementById('playfield');
+                const rect = playfield.getBoundingClientRect();
+                
+                this.links.forEach(link => {
+                    const cell1 = this.gridCells.find(c => c.node === link.from);
+                    const cell2 = this.gridCells.find(c => c.node === link.to);
+                    
+                    if (cell1 && cell2) {
+                        const rect1 = cell1.element.getBoundingClientRect();
+                        const rect2 = cell2.element.getBoundingClientRect();
+                        
+                        const x1 = rect1.left + rect1.width / 2 - rect.left;
+                        const y1 = rect1.top + rect1.height / 2 - rect.top;
+                        const x2 = rect2.left + rect2.width / 2 - rect.left;
+                        const y2 = rect2.top + rect2.height / 2 - rect.top;
+                        
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', x1);
+                        line.setAttribute('y1', y1);
+                        line.setAttribute('x2', x2);
+                        line.setAttribute('y2', y2);
+                        line.setAttribute('class', 'narrative-link');
+                        line.setAttribute('stroke', this.factionData.color);
+                        svg.appendChild(line);
+                        
+                        // Create coherence field polygon if 3+ nodes linked
+                        if (link.from.links.length >= 2) {
+                            const points = [link.from, ...link.from.links.slice(0, 2)]
+                                .map(n => {
+                                    const c = this.gridCells.find(gc => gc.node === n);
+                                    const r = c.element.getBoundingClientRect();
+                                    return `${r.left + r.width/2 - rect.left},${r.top + r.height/2 - rect.top}`;
+                                }).join(' ');
+                            
+                            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                            poly.setAttribute('points', points);
+                            poly.setAttribute('class', 'coherence-field');
+                            poly.setAttribute('fill', this.factionData.color);
+                            svg.appendChild(poly);
+                        }
+                    }
+                });
+                
+                svg.setAttribute('width', rect.width);
+                svg.setAttribute('height', rect.height);
+            }
+
+            startGame() {
+                this.spawnWave();
+                this.waveInterval = setInterval(() => {
+                    this.wave++;
+                    this.updateDisplay();
+                    this.spawnWave();
+                }, 25000);
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            spawnWave() {
+                const count = 4 + this.wave * 2;
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => this.spawnFragment(), i * 2000 + Math.random() * 2000);
+                }
+            }
+
+            spawnFragment() {
+                if (this.gameOver) return;
+                
+                const types = ['basic', 'basic', 'fast', 'tank'];
+                const type = types[Math.min(Math.floor(Math.random() * types.length), 2 + Math.floor(this.wave / 3))];
+                const data = FRAGMENT_TYPES[type];
+                
+                const row = Math.floor(Math.random() * 6);
+                
+                const fragment = document.createElement('div');
+                fragment.className = 'hostile-fragment';
+                if (type === 'fast') fragment.classList.add('fast');
+                if (type === 'tank') fragment.classList.add('tank');
+                fragment.innerHTML = data.icon + '<div class="fragment-health"><div class="fragment-health-fill"></div></div>';
+                fragment.style.top = (row * 16.66) + 8.33 + '%';
+                
+                const fragObj = {
+                    element: fragment,
+                    type,
+                    row,
+                    health: data.health,
+                    maxHealth: data.health,
+                    damage: data.damage,
+                    speed: data.speed,
+                    rp: data.rp,
+                    attacking: null
+                };
+                
+                document.getElementById('playfield').appendChild(fragment);
+                this.fragments.push(fragObj);
+                this.updateFragmentHealth(fragObj);
+            }
+
+            gameLoop() {
+                if (this.gameOver) return;
+                
+                const now = Date.now();
+                
+                // Update fragments
+                this.fragments.forEach(frag => {
+                    if (frag.attacking) {
+                        if (!frag.attacking.element.parentNode) {
+                            frag.attacking = null;
+                        } else if (now - frag.lastAttack > 1000) {
+                            frag.lastAttack = now;
+                            frag.attacking.health -= frag.damage;
+                            this.updateNodeHealth(frag.attacking);
+                            this.spawnDamageText(frag.damage, '#E24A4A', 
+                                frag.element.offsetLeft, frag.element.offsetTop);
+                            
+                            if (frag.attacking.health <= 0) {
+                                frag.attacking.element.remove();
+                                this.nodes = this.nodes.filter(n => n !== frag.attacking);
+                                frag.attacking = null;
+                            }
+                        }
+                    }
+                });
+                
+                // Turrets shoot
+                this.nodes.forEach(node => {
+                    if (node.data.damage && now - node.lastShot > node.data.rate) {
+                        const target = this.findTarget(node);
+                        if (target) {
+                            node.lastShot = now;
+                            this.fireProjectile(node, target);
+                        }
+                    }
+                    
+                    if (node.data.rpGen && now - node.lastGen > node.data.genRate) {
+                        node.lastGen = now;
+                        const bonus = node.links.length * 5;
+                        this.rp += node.data.rpGen + bonus;
+                        this.updateDisplay();
+                        this.spawnKineticText(`+${node.data.rpGen + bonus}`, this.factionData.color,
+                            node.element.offsetLeft + node.element.offsetWidth / 2,
+                            node.element.offsetTop);
+                    }
+                });
+                
+                // Check for fragments reaching left edge
+                this.fragments.forEach(frag => {
+                    const rect = frag.element.getBoundingClientRect();
+                    if (rect.right < 0) {
+                        this.endGame(false);
+                    }
+                });
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            findTarget(node) {
+                const cell = this.gridCells.find(c => c.node === node);
+                const nodeRect = cell.element.getBoundingClientRect();
+                
+                let closest = null;
+                let minDist = Infinity;
+                
+                this.fragments.forEach(frag => {
+                    if (Math.abs(frag.row - node.row) > (node.data.range || 2)) return;
+                    
+                    const fragRect = frag.element.getBoundingClientRect();
+                    const dist = fragRect.left - nodeRect.left;
+                    
+                    if (dist > 0 && dist < minDist) {
+                        minDist = dist;
+                        closest = frag;
+                    }
+                });
+                
+                return closest;
+            }
+
+            fireProjectile(node, target) {
+                const cell = this.gridCells.find(c => c.node === node);
+                const nodeRect = cell.element.getBoundingClientRect();
+                const targetRect = target.element.getBoundingClientRect();
+                
+                const proj = document.createElement('div');
+                proj.className = 'projectile';
+                proj.style.left = nodeRect.right + 'px';
+                proj.style.top = (nodeRect.top + nodeRect.height / 2) + 'px';
+                proj.style.color = this.factionData.color;
+                
+                document.getElementById('playfield').appendChild(proj);
+                
+                const dx = targetRect.left - nodeRect.right;
+                const dy = (targetRect.top + targetRect.height / 2) - (nodeRect.top + nodeRect.height / 2);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const time = dist / 0.5;
+                
+                proj.style.animation = `none`;
+                proj.style.transition = `all ${time}ms linear`;
+                
+                setTimeout(() => {
+                    proj.style.left = (targetRect.left + targetRect.width / 2) + 'px';
+                    proj.style.top = (targetRect.top + targetRect.height / 2) + 'px';
+                }, 10);
+                
+                setTimeout(() => {
+                    proj.remove();
+                    if (target.element.parentNode) {
+                        const dmg = node.data.damage * (1 + node.links.length * 0.2);
+                        target.health -= dmg;
+                        this.updateFragmentHealth(target);
+                        this.spawnDamageText(Math.round(dmg), this.factionData.color,
+                            targetRect.left, targetRect.top);
+                        
+                        if (target.health <= 0) {
+                            target.element.remove();
+                            this.fragments = this.fragments.filter(f => f !== target);
+                            this.rp += target.rp;
+                            this.kills++;
+                            this.updateDisplay();
+                            this.spawnKineticText('+' + target.rp, this.factionData.color,
+                                targetRect.left, targetRect.top);
+                        }
+                    }
+                }, time);
+            }
+
+            updateNodeHealth(node) {
+                const bar = node.element.querySelector('.node-health-fill');
+                if (bar) {
+                    bar.style.width = (node.health / node.maxHealth * 100) + '%';
+                }
+            }
+
+            updateFragmentHealth(frag) {
+                const bar = frag.element.querySelector('.fragment-health-fill');
+                if (bar) {
+                    bar.style.width = (frag.health / frag.maxHealth * 100) + '%';
+                }
+            }
+
+            updateDisplay() {
+                document.getElementById('rpDisplay').textContent = this.rp;
+                document.getElementById('coherenceDisplay').textContent = this.coherence;
+                document.getElementById('waveDisplay').textContent = this.wave;
+                document.getElementById('killDisplay').textContent = this.kills;
+            }
+
+            spawnKineticText(text, color, x, y) {
+                const el = document.createElement('div');
+                el.className = 'kinetic-text';
+                el.textContent = text;
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                el.style.color = color;
+                document.getElementById('playfield').appendChild(el);
+                setTimeout(() => el.remove(), 2000);
+            }
+
+            spawnDamageText(damage, color, x, y) {
+                const el = document.createElement('div');
+                el.className = 'damage-number';
+                el.textContent = '-' + Math.round(damage);
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                el.style.color = color;
+                document.getElementById('playfield').appendChild(el);
+                setTimeout(() => el.remove(), 1000);
+            }
+
+            endGame(victory) {
+                this.gameOver = true;
+                clearInterval(this.waveInterval);
+                
+                const screen = document.getElementById('gameOver');
+                const title = document.getElementById('gameOverTitle');
+                const stats = document.getElementById('gameOverStats');
+                
+                title.textContent = victory ? 'VICTORY' : 'BREACH';
+                title.style.color = victory ? this.factionData.color : '#E24A4A';
+                stats.innerHTML = `
+                    WAVES SURVIVED: ${this.wave}<br>
+                    FRAGMENTS ELIMINATED: ${this.kills}<br>
+                    COHERENCE ACHIEVED: ${this.coherence}
+                `;
+                screen.style.color = this.factionData.color;
+                screen.classList.add('show');
+            }
+        }
+
+        let game;
+        
+        document.querySelectorAll('.faction-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const faction = card.dataset.faction;
+                document.getElementById('titleScreen').classList.add('hidden');
+                setTimeout(() => {
+                    document.getElementById('titleScreen').style.display = 'none';
+                    document.getElementById('gameContainer').classList.add('active');
+                    game = new Game();
+                    game.init(faction);
+                }, 500);
+            });
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>

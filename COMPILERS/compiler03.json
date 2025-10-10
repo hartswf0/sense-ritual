@@ -1,0 +1,85 @@
+{
+    "CharacterDevelopment": {
+      "BasicCharacteristics": {
+        "Literal": {
+          "PhysicalAttributes": "",
+          "Background": "",
+          "CurrentCircumstances": ""
+        },
+        "PsychologicalProfile": {
+          "PersonalityTraits": [],
+          "EmotionalRange": "",
+          "CognitivePatterns": ""
+        }
+      },
+      "CoreMotivations": {
+        "Want": {
+          "DeepDesires": "",
+          "InfluencingFactors": "",
+          "EmotionalRoots": ""
+        },
+        "EssentialAction": {
+          "PrimaryActions": "",
+          "ActionPurpose": "",
+          "ActionImpact": ""
+        },
+        "AsIf": {
+          "PersonalAnalogies": "",
+          "EmotionalConnection": "",
+          "BehavioralImplications": ""
+        }
+      },
+      "StrategicPlanning": {
+        "Goal": {
+          "Objective": "",
+          "GoalSignificance": "",
+          "GoalChallenges": ""
+        },
+        "Obstacle": {
+          "Nature": "",
+          "ImpactOnGoal": "",
+          "EmotionalResponse": ""
+        },
+        "Tactics": {
+          "Approach": "",
+          "TacticEffectiveness": "",
+          "Adaptability": ""
+        },
+        "Expectation": {
+          "AnticipatedOutcome": "",
+          "HopeVsReality": "",
+          "Preparedness": ""
+        }
+      },
+      "InterpersonalDynamics": {
+        "Relationships": {
+          "Family": [],
+          "Friends": [],
+          "Adversaries": [],
+          "LoveInterests": []
+        },
+        "SocialInteractions": {
+          "CommunicationStyle": "",
+          "ConflictManagement": "",
+          "AllianceBuilding": ""
+        }
+      },
+      "PerformanceIndicators": {
+        "NuancedPortrayal": {
+          "Authenticity": "",
+          "Believability": "",
+          "HumanExperienceDepth": ""
+        },
+        "EmotionalConnection": {
+          "ActorAudienceResonance": "",
+          "EmotionalImpact": "",
+          "Relatability": ""
+        },
+        "InteractiveDynamics": {
+          "CharacterConsistency": "",
+          "InteractionWithOtherCharacters": "",
+          "NarrativeIntegration": ""
+        }
+      }
+    }
+  }

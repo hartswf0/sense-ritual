@@ -1,0 +1,117 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "pokemon-go-persuasive",
+      "title": "Pokémon Go (Persuasive Gaming)",
+      "category": "Technological Apparatus",
+      "desc": "An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.",
+      "quote": "Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.",
+      "tags": [
+        "Gaming",
+        "Behavioral Control",
+        "Monetization"
+      ],
+      "start": 3789,
+      "end": 3795,
+      "color": "#FFEB3B"
+    },
+    {
+      "id": "china-algorithmic-governance",
+      "title": "China (Algorithmic Governance)",
+      "category": "Systemic Control",
+      "desc": "Adjusting behavior with \"social credits\" for rewards/penalties, forcibly reprogram if unresponsive (Xinjiang).",
+      "quote": "And if the data from all the different sources showed a person behaving well... then they would be given what were called social credits.",
+      "tags": [
+        "China",
+        "Surveillance State",
+        "Social Control",
+        "BF Skinner"
+      ],
+      "start": 5315,
+      "end": 5329,
+      "color": "#4169E1"
+    },
+    {
+      "id": "china-land-grab-corruption",
+      "title": "China (Massive Land Grab)",
+      "category": "Systemic Event",
+      "desc": "Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.",
+      "quote": "Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.",
+      "tags": [
+        "Corruption",
+        "Injustice",
+        "Economy",
+        "Systemic"
+      ],
+      "start": 3043,
+      "end": 3050,
+      "color": "#F4511E"
+    },
+    {
+      "id": "2008-global-economic-crash",
+      "title": "2008 Global Economic Crash",
+      "category": "Systemic Event",
+      "desc": "Mortgage systems failed completely, leading to global crash; governments transferred private debt to public, leading to austerity.",
+      "quote": "In 2008, the systems in the banks that had structured the mortgage loans failed completely. It led to a global economic crash.",
+      "tags": [
+        "Economy",
+        "Crisis",
+        "Inequality",
+        "Systemic"
+      ],
+      "start": 4329,
+      "end": 4336,
+      "color": "#E57373"
+    },
+    {
+      "id": "liberal-avoidance-despair",
+      "title": "Liberal Avoidance (Despair)",
+      "category": "Critique",
+      "desc": "Liberals avoided facing genuine grievances and real anger, having no idea how to solve problems of desolation/despair.",
+      "quote": "But the liberal opposition, it was a way of avoiding facing up to the genuine grievances and the very real anger in America that Trump's election had revealed.",
+      "tags": [
+        "Politics",
+        "Elite Disconnect",
+        "Failure"
+      ],
+      "start": 6143,
+      "end": 6152,
+      "color": "#BBDEFB"
+    },
+    {
+      "id": "future-imagine-new",
+      "title": "Future (Imagine New)",
+      "category": "Future Scenario",
+      "desc": "Regain confidence, imagine genuinely new kinds of futures (David Graeber: \"the world is something we make and could just as easily make differently\").",
+      "quote": "If we can regain our confidence, we will find that we have the power to influence how that future turns out. And as a first step, we have to start imagining what kind of future it is we want to build.",
+      "tags": [
+        "Hope",
+        "Agency",
+        "Transformation"
+      ],
+      "start": 6603,
+      "end": 6609,
+      "color": "#66BB6A"
+    },
+    {
+      "id": "zubaydah-diary-fragments",
+      "title": "Zubaydah's Diary (Fragments)",
+      "category": "Personal Apparatus",
+      "desc": "A vast collage of memories and feelings, written after shrapnel pierced his skull, leaving his world in fragments.",
+      "quote": "Then his memories from the past began to come back but in a mass of fragments. Nothing linked them. They made no sense.",
+      "tags": [
+        "Trauma",
+        "Memory",
+        "Fragmentation",
+        "Identity"
+      ],
+      "start": 1166,
+      "end": 1172,
+      "color": "#BCAAA4"
+    }
+  ],
+  "timestamp": "2025-10-09T20:25:01.822Z",
+  "author": "Student",
+  "version": "1.0"
+}

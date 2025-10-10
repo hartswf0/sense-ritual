@@ -1,0 +1,40 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "mass-incarceration-clinton",
+      "title": "Mass Incarceration (Clinton)",
+      "category": "Systemic Control",
+      "desc": "President Clinton brought in tough new crime rules, imprisoning hundreds of thousands of young black men.",
+      "quote": "Hundreds of thousands of young black men were now imprisoned with no hope of parole, even for minor offenses.",
+      "tags": [
+        "Clinton",
+        "Injustice",
+        "Control",
+        "Politics"
+      ],
+      "start": 1070,
+      "end": 1078,
+      "color": "#78909C"
+    },
+    {
+      "id": "cultural-fairy-tale-tupac",
+      "title": "Culture as Fairy Tale (Tupac)",
+      "category": "Systemic Critique",
+      "desc": "By moving radical politics into culture, Tupac helped keep anger and dissent sealed off from real politics and power.",
+      "quote": "By moving radical politics into the world of culture, Tupac Shakur had also become part of the fairy tale world because he helped keep the anger and the dissent sealed off from the real world of politics and power.",
+      "tags": [
+        "Media",
+        "Illusion",
+        "Politics",
+        "Dissent"
+      ],
+      "start": 1099,
+      "end": 1113,
+      "color": "#90CAF9"
+    }
+  ],
+  "timestamp": "2025-10-09T19:59:56.483Z",
+  "author": "Student",
+  "version": "1.0"
+}

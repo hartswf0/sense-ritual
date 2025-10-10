@@ -1,0 +1,2982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chain Collector: Assemble the Documentary</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Title Screen */
+        .title-screen {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .title-screen.hidden {
+            animation: slideOutLeft 0.8s ease-in forwards;
+        }
+
+        .title {
+            font-size: clamp(24px, 8vw, 64px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 10px;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .title-line {
+            display: block;
+            animation: slideIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .title-line:nth-child(1) { animation-delay: 0.1s; }
+        .title-line:nth-child(2) { animation-delay: 0.3s; }
+
+        .subtitle {
+            font-size: clamp(11px, 3vw, 16px);
+            letter-spacing: 0.4em;
+            margin-bottom: 40px;
+            animation: fadeInUp 1s ease-out 0.6s forwards;
+            opacity: 0;
+        }
+
+        .faction-select {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            opacity: 0;
+            padding: 0 20px;
+            width: 100%;
+            max-width: 500px;
+            animation: fadeInUp 1s ease-out 0.9s forwards;
+        }
+
+        .faction-btn {
+            padding: 18px 30px;
+            font-size: clamp(13px, 3vw, 16px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            border: 3px solid;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .faction-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: currentColor;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .faction-btn:active::before {
+            transform: translateX(0);
+        }
+
+        .faction-btn span {
+            position: relative;
+            z-index: 1;
+            transition: color 0.3s ease;
+        }
+
+        .faction-btn:active span {
+            color: #000;
+        }
+
+        /* Main Game */
+        .game-interface {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+        }
+
+        .game-interface.active {
+            display: flex;
+        }
+
+        /* HUD */
+        .game-hud {
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.95);
+            border-bottom: 2px solid;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .faction-label {
+            font-size: clamp(11px, 2.5vw, 14px);
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .resource-bar {
+            display: flex;
+            gap: 25px;
+            font-size: clamp(14px, 3vw, 18px);
+            font-weight: 700;
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .resource-icon {
+            font-size: clamp(16px, 3.5vw, 20px);
+        }
+
+        /* Playfield */
+        .playfield {
+            flex: 1;
+            position: relative;
+            background: #0a0a0a;
+            overflow: hidden;
+        }
+
+        .lane {
+            height: 20%;
+            border-bottom: 1px solid #1a1a1a;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .lane::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, currentColor 20%, currentColor 80%, transparent);
+            opacity: 0.2;
+        }
+
+        /* Defense Grid Slots */
+        .defense-slot {
+            width: clamp(55px, 13vw, 90px);
+            height: 85%;
+            border: 2px dashed #222;
+            margin: 0 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .defense-slot.active {
+            border-style: solid;
+            background: rgba(74, 144, 226, 0.15);
+            box-shadow: inset 0 0 20px rgba(74, 144, 226, 0.2);
+        }
+
+        .defense-slot:active {
+            transform: scale(0.95);
+        }
+
+        /* AI Defense Systems */
+        .ai-system {
+            width: 100%;
+            height: 100%;
+            border: 3px solid;
+            background: linear-gradient(135deg, rgba(74, 144, 226, 0.3), rgba(74, 144, 226, 0.1));
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(24px, 6vw, 42px);
+            font-weight: 700;
+            animation: systemBoot 0.4s ease-out;
+        }
+
+        .ai-system.turret::after {
+            content: '';
+            position: absolute;
+            width: 25%;
+            height: 70%;
+            background: currentColor;
+            right: -12%;
+            clip-path: polygon(0 40%, 100% 45%, 100% 55%, 0 60%);
+            animation: turretPulse 0.6s ease-in-out infinite;
+        }
+
+        /* Media Zombies */
+        .zombie {
+            width: clamp(90px, 20vw, 140px);
+            height: clamp(70px, 16vw, 100px);
+            border: 3px solid #E24A4A;
+            background: linear-gradient(135deg, rgba(226, 74, 74, 0.4), rgba(226, 74, 74, 0.1));
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            font-weight: 700;
+            color: #E24A4A;
+            animation: zombieAdvance 20s linear forwards;
+            right: 0;
+            box-shadow: 0 0 15px rgba(226, 74, 74, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s ease, top 0.3s ease, width 0.3s ease, left 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .zombie.timeline-clip {
+            animation: none;
+            height: clamp(60px, 14vw, 80px);
+        }
+        
+        .playhead {
+            position: absolute;
+            width: 3px;
+            background: #FFD700;
+            box-shadow: 0 0 10px #FFD700, 0 0 20px rgba(255, 215, 0, 0.5);
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s, left 0.1s linear;
+        }
+        
+        .playhead.active {
+            opacity: 1;
+        }
+
+        .zombie-video-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            z-index: 0;
+            filter: grayscale(100%) contrast(1.2);
+            mix-blend-mode: screen;
+        }
+
+        .zombie.playing .zombie-video-bg {
+            opacity: 0.6;
+            animation: videoStatic 0.5s ease-out, videoFadeIn 1s ease-out;
+        }
+
+        .zombie.playing {
+            background: rgba(226, 74, 74, 0.7);
+        }
+
+        .zombie.playing::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: #E24A4A;
+            opacity: 0.5;
+            mix-blend-mode: multiply;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .zombie-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zombie:hover {
+            transform: scale(1.1);
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(226, 74, 74, 0.6);
+        }
+
+        .zombie.fast {
+            animation-duration: 14s;
+            border-style: dashed;
+        }
+
+        .zombie.tank {
+            width: clamp(100px, 22vw, 160px);
+            height: clamp(80px, 18vw, 120px);
+            border-width: 4px;
+            animation-duration: 28s;
+        }
+
+        .zombie.boss {
+            width: clamp(120px, 25vw, 180px);
+            height: clamp(90px, 20vw, 140px);
+            border-width: 5px;
+            animation-duration: 35s;
+            box-shadow: 0 0 30px rgba(226, 74, 74, 0.6);
+        }
+        
+        .zombie-icon {
+            font-size: clamp(18px, 4.5vw, 28px);
+            margin-bottom: 4px;
+        }
+        
+        .zombie-title {
+            font-size: clamp(9px, 2.2vw, 12px);
+            text-align: center;
+            line-height: 1.2;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 8px rgba(0,0,0,0.9),
+                0 0 12px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.7);
+            padding: 3px 6px;
+            border-radius: 3px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Projectiles */
+        .projectile {
+            width: clamp(10px, 2.5vw, 14px);
+            height: clamp(10px, 2.5vw, 14px);
+            background: #4A90E2;
+            position: absolute;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            box-shadow: 0 0 15px #4A90E2, 0 0 25px rgba(74, 144, 226, 0.5);
+            animation: projectileTravel 1.5s linear forwards;
+        }
+
+        .projectile.sniper {
+            background: #FFD700;
+            box-shadow: 0 0 20px #FFD700;
+            width: clamp(12px, 3vw, 16px);
+            height: clamp(12px, 3vw, 16px);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 2px solid;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(clamp(80px, 20vw, 110px), 1fr));
+            gap: 10px;
+            z-index: 10;
+            max-height: 35vh;
+            overflow-y: auto;
+        }
+
+        .system-card {
+            aspect-ratio: 1;
+            border: 3px solid;
+            background: linear-gradient(135deg, rgba(74, 144, 226, 0.15), transparent);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .system-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: currentColor;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .system-card.selected::before {
+            opacity: 0.2;
+        }
+
+        .system-card.selected {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(74, 144, 226, 0.6);
+        }
+
+        .system-card.disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+
+        .system-card:not(.disabled):active {
+            transform: scale(0.92);
+        }
+
+        .system-icon {
+            font-size: clamp(28px, 7vw, 48px);
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+
+        .system-cost {
+            font-size: clamp(11px, 2.8vw, 15px);
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+
+        .system-name {
+            font-size: clamp(9px, 2.2vw, 12px);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cooldown-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(18px, 4.5vw, 28px);
+            font-weight: 700;
+            transition: height 0.1s linear;
+        }
+
+        /* Effects */
+        .particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background: currentColor;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            pointer-events: none;
+            animation: particleBlast 0.7s ease-out forwards;
+        }
+
+        .impact-wave {
+            position: absolute;
+            border: 3px solid;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            animation: waveExpand 0.5s ease-out forwards;
+            pointer-events: none;
+        }
+
+        .damage-text {
+            position: absolute;
+            font-size: clamp(16px, 4vw, 24px);
+            font-weight: 700;
+            animation: damageRise 1.2s ease-out forwards;
+            pointer-events: none;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* Health Display */
+        .health-display {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid currentColor;
+            overflow: hidden;
+        }
+
+        .health-bar {
+            height: 100%;
+            background: currentColor;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        /* Narrative Flash */
+        .narrative-flash {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(28px, 7vw, 56px);
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            text-shadow: 0 0 30px currentColor;
+        }
+        .narrative-flash.show {
+            animation: narrativePulse 1.5s ease-out forwards;
+        }
+
+        /* Fragment Info Popup */
+        .fragment-info {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.98);
+            border: 3px solid;
+            padding: 20px;
+            max-width: 90%;
+            width: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 60;
+            display: none;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .fragment-info.show {
+            display: block;
+        }
+
+        .fragment-video {
+            width: 100%;
+            height: auto;
+            max-height: 250px;
+            margin-bottom: 15px;
+            border: 2px solid;
+            background: #000;
+        }
+
+        .fragment-info-title {
+            font-size: clamp(16px, 4vw, 20px);
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+        }
+
+        .fragment-info-category {
+            font-size: clamp(11px, 2.5vw, 13px);
+            opacity: 0.7;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .fragment-info-desc {
+            font-size: clamp(13px, 3vw, 15px);
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-bottom: 12px;
+        }
+
+        .fragment-info-time {
+            font-size: clamp(11px, 2.5vw, 13px);
+            opacity: 0.6;
+            font-family: monospace;
+        }
+
+        .close-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: 2px solid;
+            color: inherit;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        /* Intro Screen */
+        .intro-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .intro-title {
+            font-size: clamp(24px, 6vw, 48px);
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .intro-subtitle {
+            font-size: clamp(14px, 3vw, 20px);
+            opacity: 0.8;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        .intro-instructions {
+            max-width: 600px;
+            font-size: clamp(12px, 2.5vw, 14px);
+            line-height: 1.8;
+            opacity: 0.7;
+            margin-bottom: 40px;
+            text-align: left;
+        }
+
+        .intro-instructions li {
+            margin-bottom: 12px;
+        }
+
+        .intro-buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .intro-btn {
+            padding: 16px 32px;
+            border: 3px solid;
+            background: none;
+            font-family: inherit;
+            font-size: clamp(12px, 2.5vw, 14px);
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .intro-btn.primary {
+            background: currentColor;
+        }
+
+        .intro-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Compact Side Menu */
+        .side-menu {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 70;
+        }
+        
+        .control-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-btn-round {
+            width: 48px;
+            height: 48px;
+            border: 3px solid;
+            background: rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn-round:hover {
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.95);
+        }
+
+        .control-btn-round:active {
+            transform: scale(0.95);
+        }
+
+        /* Help Overlay */
+        .help-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            z-index: 90;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .help-overlay.show {
+            display: flex;
+        }
+
+        .help-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .help-title {
+            font-size: clamp(20px, 5vw, 32px);
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        .help-close {
+            width: 40px;
+            height: 40px;
+            border: 2px solid;
+            background: none;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: 900;
+        }
+
+        .help-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .help-section {
+            margin-bottom: 32px;
+        }
+
+        .help-section-title {
+            font-size: clamp(16px, 4vw, 20px);
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+
+        .help-section-text {
+            font-size: clamp(12px, 3vw, 14px);
+            line-height: 1.8;
+            opacity: 0.8;
+        }
+
+        /* Endgame Screen */
+        .endgame-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.97);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .endgame-screen.show {
+            display: flex;
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        .endgame-title {
+            font-size: clamp(36px, 12vw, 84px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            margin-bottom: 30px;
+            text-shadow: 0 0 40px currentColor;
+        }
+
+        .endgame-stats {
+            font-size: clamp(15px, 4vw, 22px);
+            margin-bottom: 40px;
+            line-height: 2;
+            letter-spacing: 0.1em;
+        }
+
+        .stat-line {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .stat-line:nth-child(1) { animation-delay: 0.2s; }
+        .stat-line:nth-child(2) { animation-delay: 0.4s; }
+        .stat-line:nth-child(3) { animation-delay: 0.6s; }
+
+        .continue-btn {
+            padding: 18px 50px;
+            font-size: clamp(15px, 3.5vw, 20px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            border: 3px solid;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out 0.8s forwards;
+        }
+
+        .continue-btn:active {
+            background: currentColor;
+            color: #000;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-60px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutLeft {
+            to {
+                opacity: 0;
+                transform: translateX(-100%);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes systemBoot {
+            from {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes zombieAdvance {
+            from { right: -10%; }
+            to { right: 110%; }
+        }
+
+        @keyframes projectileTravel {
+            from {
+                transform: translateX(0) rotate(0deg);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100vw) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes turretPulse {
+            0%, 100% { opacity: 1; transform: scaleX(1); }
+            50% { opacity: 0.6; transform: scaleX(1.3); }
+        }
+
+        @keyframes particleBlast {
+            to {
+                transform: translate(var(--tx), var(--ty)) scale(0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes waveExpand {
+            to {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes damageRise {
+            to {
+                transform: translateY(-40px) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        @keyframes narrativePulse {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.7);
+            }
+            40% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes videoStatic {
+            0%, 100% { filter: grayscale(100%) contrast(1.2) brightness(1); }
+            10% { filter: grayscale(100%) contrast(3) brightness(2); }
+            20% { filter: grayscale(100%) contrast(0.5) brightness(0.5); }
+            30% { filter: grayscale(100%) contrast(2.5) brightness(1.8); }
+            40% { filter: grayscale(100%) contrast(0.8) brightness(0.7); }
+            50% { filter: grayscale(100%) contrast(2) brightness(1.5); }
+        }
+
+        @keyframes videoFadeIn {
+            from { opacity: 0; }
+            to { opacity: 0.6; }
+        }
+
+        /* Chain Collection Panel - Overlay Mode */
+        .chain-panel {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.97);
+            z-index: 150;
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .chain-panel.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        @media (min-width: 768px) {
+            .chain-panel {
+                left: 0;
+                right: auto;
+                width: 450px;
+                border-right: 3px solid;
+            }
+        }
+
+        .chain-header {
+            padding: 16px;
+            border-bottom: 3px solid;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.9);
+        }
+        
+        .chain-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chain-close-btn {
+            width: 32px;
+            height: 32px;
+            border: 2px solid;
+            background: none;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .assemble-hand-btn {
+            padding: 12px 20px;
+            border: 3px solid;
+            background: rgba(0, 0, 0, 0.9);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .assemble-hand-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .assemble-hand-btn:not(:disabled):hover {
+            background: currentColor;
+            color: #000;
+            transform: scale(1.02);
+        }
+
+        .chain-title {
+            font-size: clamp(16px, 3vw, 24px);
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        .chain-score {
+            font-size: clamp(14px, 2.5vw, 20px);
+            font-weight: 700;
+        }
+
+        .chain-grid {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chain-item {
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid;
+            padding: 8px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .chain-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .chain-item.claimable {
+            animation: chainPulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        @keyframes chainPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .chain-lane-view {
+            position: relative;
+            height: clamp(70px, 16vw, 90px);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        
+        .chain-wall {
+            position: absolute;
+            right: 8px;
+            width: clamp(55px, 13vw, 70px);
+            height: 80%;
+            border: 3px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: 700;
+            background: linear-gradient(135deg, rgba(74, 144, 226, 0.3), rgba(74, 144, 226, 0.1));
+            opacity: 0.6;
+        }
+        
+        .chain-clips {
+            position: absolute;
+            right: clamp(70px, 15vw, 90px);
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            height: 100%;
+            padding: 8px;
+        }
+
+        .chain-clip-mini {
+            position: relative;
+            height: clamp(60px, 14vw, 80px);
+            border: 3px solid;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(20px, 5vw, 32px);
+            font-weight: 900;
+            background: rgba(226, 74, 74, 0.7);
+            padding: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(226, 74, 74, 0.3);
+        }
+        
+        .chain-clip-mini::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: #E24A4A;
+            opacity: 0.5;
+            mix-blend-mode: multiply;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .chain-clip-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            z-index: 0;
+            filter: grayscale(100%) contrast(1.2);
+            mix-blend-mode: screen;
+        }
+        
+        .chain-clip-mini:hover {
+            background: linear-gradient(135deg, rgba(226, 74, 74, 0.6), rgba(226, 74, 74, 0.2));
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 0 25px rgba(226, 74, 74, 0.5);
+        }
+        
+        .clip-mini-duration {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            font-size: clamp(9px, 2vw, 11px);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 3px 6px;
+            opacity: 0.9;
+            border: 2px solid;
+            font-weight: 700;
+        }
+        
+        .clip-mini-title {
+            font-size: clamp(9px, 2vw, 11px);
+            opacity: 0.9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            font-weight: 700;
+            z-index: 2;
+        }
+        
+        .clip-mini-number {
+            position: relative;
+            z-index: 2;
+        }
+
+        .chain-info {
+            font-size: 10px;
+            opacity: 0.6;
+            position: absolute;
+            bottom: 4px;
+            left: 8px;
+        }
+        
+        .chain-note {
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid;
+            font-size: 10px;
+            font-style: italic;
+            opacity: 0.8;
+            min-height: 40px;
+        }
+        
+        .chain-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+        
+        .chain-action-btn {
+            padding: 4px 6px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(0, 0, 0, 0.9);
+            cursor: pointer;
+            transition: all 0.15s;
+            opacity: 0.7;
+            border-radius: 3px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .chain-action-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.95);
+        }
+        
+        .chain-action-btn.active {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border-color: currentColor;
+        }
+
+        .chain-claim-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 12px;
+            border: 2px solid;
+            background: rgba(0, 0, 0, 0.8);
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chain-claim-btn:hover {
+            background: currentColor;
+            color: #000;
+        }
+
+        /* Chain Alert - Compact Icon */
+        .chain-alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid;
+            padding: 12px 20px;
+            z-index: 200;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: alertSlideDown 0.3s ease-out;
+            cursor: pointer;
+            max-width: 90%;
+        }
+        
+        @keyframes alertSlideDown {
+            from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .chain-alert.show {
+            display: flex;
+        }
+
+        @keyframes alertPop {
+            from { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .alert-icon {
+            font-size: 24px;
+            animation: chainPulse 1.5s ease-in-out infinite;
+        }
+        
+        .alert-compact-text {
+            font-size: clamp(11px, 2.5vw, 14px);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .alert-count {
+            font-size: clamp(16px, 3.5vw, 20px);
+            font-weight: 900;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Title Sequence -->
+        <div class="title-screen" id="titleScreen">
+            <h1 class="title">
+                <span class="title-line">CHAIN COLLECTOR</span>
+                <span class="title-line">ASSEMBLE THE EDIT</span>
+            </h1>
+            <p class="subtitle">A PROCEDURAL RHETORIC EXPERIENCE</p>
+            <div class="faction-select">
+                <button class="faction-btn" style="color: #4A90E2; border-color: #4A90E2;" onclick="selectFaction('universalist')">
+                    <span>THE UNIVERSALISTS</span>
+                </button>
+                <button class="faction-btn" style="color: #E24A4A; border-color: #E24A4A;" onclick="selectFaction('deconstructor')">
+                    <span>THE DECONSTRUCTORS</span>
+                </button>
+                <button class="faction-btn" style="color: #FFD700; border-color: #FFD700;" onclick="selectFaction('algorithm')">
+                    <span>ALGORITHM ADVOCATES</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1 class="intro-title" id="introTitle">CHAIN COLLECTOR</h1>
+            <p class="intro-subtitle">DOCUMENTARY ASSEMBLY PROTOCOL</p>
+            <ul class="intro-instructions">
+                <li><strong>Deploy Systems:</strong> Click grid slots to place defensive systems</li>
+                <li><strong>Fragment Threats:</strong> Hostile narratives form timelines at your walls</li>
+                <li><strong>Timeline Width:</strong> Each clip's width = its video duration</li>
+                <li><strong>Collective Damage:</strong> Stacked fragments attack together</li>
+                <li><strong>Click Fragments:</strong> View video and details</li>
+                <li><strong>Choose Your Faction:</strong> Each has unique defensive capabilities</li>
+            </ul>
+            <div class="intro-buttons">
+                <button class="intro-btn primary" id="startGameBtn" style="color: #4A90E2; border-color: #4A90E2;">START DEFENSE</button>
+                <button class="intro-btn" id="showHelpBtn" style="color: #4A90E2; border-color: #4A90E2;">HELP</button>
+            </div>
+        </div>
+
+        <!-- Game Interface -->
+        <div class="game-interface" id="gameInterface" style="display: none;">
+            <div class="game-hud" id="gameHud">
+                <div>
+                    <div class="faction-label" id="factionLabel">THE UNIVERSALISTS</div>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource">
+                        <span class="resource-icon">◈</span>
+                        <span id="resourceCount">150</span>
+                    </div>
+                    <div class="resource">
+                        <span>WAVE</span>
+                        <span id="waveNumber">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="playfield" id="playfield"></div>
+
+            <div class="control-panel" id="controlPanel"></div>
+        </div>
+        
+        <!-- Compact Side Menu -->
+        <div class="side-menu">
+            <div class="control-bar">
+                <button class="control-btn-round" id="chainsBtn" title="View Chains" style="color: #4A90E2; border-color: #4A90E2;">⊞</button>
+                <button class="control-btn-round" id="pauseBtn" title="Pause" style="color: #4A90E2; border-color: #4A90E2;">⏸</button>
+                <button class="control-btn-round" id="helpBtn" title="Help" style="color: #4A90E2; border-color: #4A90E2;">?</button>
+            </div>
+        </div>
+
+        <!-- Chain Collection Panel -->
+        <div class="chain-panel" id="chainPanel">
+            <div class="chain-header" style="border-color: #4A90E2; color: #4A90E2;">
+                <div class="chain-header-top">
+                    <div class="chain-title">COLLECTED CHAINS</div>
+                    <button class="chain-close-btn" id="chainCloseBtn" style="border-color: #4A90E2; color: #4A90E2;">✕</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="chain-score" id="chainScore">0/12</div>
+                    <button class="assemble-hand-btn" id="assembleHandBtn" style="border-color: #4A90E2; color: #4A90E2; width: auto; padding: 8px 16px; font-size: 10px;" disabled>
+                        ASSEMBLE FINAL CUT
+                    </button>
+                </div>
+            </div>
+            <div class="chain-grid" id="chainGrid"></div>
+        </div>
+
+        <!-- Chain Alert - Compact -->
+        <div class="chain-alert" id="chainAlert" style="border-color: #FFD700; color: #FFD700;">
+            <div class="alert-icon">⚡</div>
+            <div>
+                <div class="alert-compact-text">CHAIN READY</div>
+                <div class="alert-count" id="alertChainInfo">3 clips</div>
+            </div>
+        </div>
+
+        <!-- Help Overlay -->
+        <div class="help-overlay" id="helpOverlay">
+            <div class="help-header">
+                <h2 class="help-title" style="color: #4A90E2;">HELP & CONTROLS</h2>
+                <button class="help-close" id="helpClose" style="color: #4A90E2; border-color: #4A90E2;">✕</button>
+            </div>
+            <div class="help-content" style="color: #4A90E2;">
+                <div class="help-section">
+                    <h3 class="help-section-title">Objective</h3>
+                    <p class="help-section-text">Defend against hostile narrative fragments from "Can't Get You Out of My Head" documentary. Deploy defensive systems to protect your noosphere from ideological collapse.</p>
+                </div>
+                <div class="help-section">
+                    <h3 class="help-section-title">Timeline System</h3>
+                    <p class="help-section-text">When fragments hit your walls, they form horizontal timelines. Each clip's width represents its video duration. The golden playhead scans across active timelines. Fragments collectively damage walls.</p>
+                </div>
+                <div class="help-section">
+                    <h3 class="help-section-title">Defensive Systems</h3>
+                    <p class="help-section-text"><strong>Turret (100):</strong> Basic damage<br><strong>Wall (50):</strong> Blocks and absorbs damage<br><strong>Generator (80):</strong> Slows threats<br><strong>Sniper (200):</strong> High single-target damage<br><strong>AOE (175):</strong> Area disruption</p>
+                </div>
+                <div class="help-section">
+                    <h3 class="help-section-title">Controls</h3>
+                    <p class="help-section-text"><strong>Click slots:</strong> Deploy systems<br><strong>Click fragments:</strong> View video details<br><strong>Pause button:</strong> Pause/resume game<br><strong>? button:</strong> Show this help</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Narrative Flash -->
+        <div class="narrative-flash" id="narrativeFlash"></div>
+
+        <!-- Fragment Info Popup -->
+        <div class="fragment-info" id="fragmentInfo">
+            <button class="close-info" id="closeInfo">✕</button>
+            <iframe class="fragment-video" id="fragVideo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            <div class="fragment-info-title" id="fragTitle"></div>
+            <div class="fragment-info-category" id="fragCategory"></div>
+            <div class="fragment-info-desc" id="fragDesc"></div>
+            <div class="fragment-info-time" id="fragTime"></div>
+        </div>
+
+        <!-- Endgame Screen -->
+        <div class="endgame-screen" id="endgameScreen">
+            <h1 class="endgame-title" id="endgameTitle">VICTORY</h1>
+            <div class="endgame-stats" id="endgameStats">
+                <div class="stat-line">WAVES DEFENDED: <span id="finalWave">0</span></div>
+                <div class="stat-line">THREATS NEUTRALIZED: <span id="finalKills">0</span></div>
+                <div class="stat-line">COHERENCE MAINTAINED: <span id="finalScore">0</span>%</div>
+            </div>
+            <button class="continue-btn" id="continueBtn" onclick="location.reload()">RESTART DEFENSE</button>
+        </div>
+        
+        <!-- Final Cut Screen -->
+        <div class="endgame-screen" id="finalCutScreen" style="display: none;">
+            <h1 class="endgame-title">FINAL CUT</h1>
+            <div id="finalCutContent" style="padding: 20px; max-width: 800px; margin: 0 auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY'; // Can't Get You Out of My Head
+        
+        function buildVideoEmbed(fragment) {
+            const origin = encodeURIComponent(location.origin);
+            return `https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${fragment.start}&end=${fragment.end}&controls=1&modestbranding=1&fs=1&iv_load_policy=3&origin=${origin}&autoplay=1&mute=1&loop=1&playlist=${YOUTUBE_VIDEO_ID}`;
+        }
+
+        const FACTIONS = {
+            universalist: {
+                name: 'THE UNIVERSALISTS',
+                color: '#4A90E2',
+                icon: '◯',
+                desc: 'Unified narrative synthesis'
+            },
+            deconstructor: {
+                name: 'THE DECONSTRUCTORS',
+                color: '#E24A4A',
+                icon: '◬',
+                desc: 'Critical deconstruction protocols'
+            },
+            algorithm: {
+                name: 'ALGORITHM ADVOCATES',
+                color: '#FFD700',
+                icon: '◈',
+                desc: 'Data-driven pattern recognition'
+            }
+        };
+
+        const SYSTEMS = {
+            turret: {
+                cost: 100,
+                icon: '◆',
+                name: 'Turret',
+                damage: 25,
+                fireRate: 900,
+                desc: 'Standard rhetorical defense'
+            },
+            wall: {
+                cost: 50,
+                icon: '▮',
+                name: 'Wall',
+                health: 250,
+                desc: 'Narrative barrier'
+            },
+            generator: {
+                cost: 80,
+                icon: '◈',
+                name: 'Generator',
+                genAmount: 30,
+                genRate: 4500,
+                desc: 'Resource synthesis'
+            },
+            sniper: {
+                cost: 200,
+                icon: '◭',
+                name: 'Sniper',
+                damage: 120,
+                fireRate: 2500,
+                desc: 'Precision strike'
+            },
+            aoe: {
+                cost: 175,
+                icon: '✦',
+                name: 'AOE',
+                damage: 80,
+                fireRate: 3000,
+                splash: 1,
+                desc: 'Area disruption'
+            }
+        };
+
+        const STORY_FRAGMENTS = [
+            { id: 'fom-exhibition-1950s', title: 'Family of Man', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', icon: '◯', threat: 'basic', start: 27, end: 53 },
+            { id: 'bayer-individual-self', title: 'Individual Self', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story.', icon: '◐', threat: 'basic', start: 67, end: 78 },
+            { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', category: 'Systemic Critique', desc: 'The world that concealed the harsh reality of power.', icon: '◑', threat: 'fast', start: 197, end: 204 },
+            { id: 'tupac-grand-stories', title: 'Grand Stories', category: 'Core Concept', desc: 'Believed deeply in their power to move people and inspire change.', icon: '◒', threat: 'basic', start: 143, end: 148 },
+            { id: 'society-boom-q', title: 'Societal Boom', category: 'Systemic Control', desc: 'Society lets you go far, but as soon as you ask questions, boom.', icon: '◓', threat: 'fast', start: 230, end: 237 },
+            { id: 'crack-epidemic-afeni-fall', title: 'Crack Epidemic', category: 'Systemic Event', desc: 'Crack swept through black communities, Afeni became addicted.', icon: '◔', threat: 'tank', start: 291, end: 300 },
+            { id: 'mass-incarceration-clinton', title: 'Mass Incarceration', category: 'Systemic Control', desc: 'Hundreds of thousands imprisoned with no hope of parole.', icon: '◕', threat: 'tank', start: 1070, end: 1078 },
+            { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society', category: 'Systemic Critique', desc: 'Billions created a dreamlike society, deeply corrupt.', icon: '◖', threat: 'basic', start: 379, end: 384 },
+            { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary", category: 'Personal Apparatus', desc: 'Memories in fragments, nothing linked them, made no sense.', icon: '◗', threat: 'fast', start: 1166, end: 1172 },
+            { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', category: 'Systemic Event', desc: 'Organization disintegrating, all solidarity gone.', icon: '◘', threat: 'tank', start: 1237, end: 1248 },
+            { id: 'zubaydah-perpetual-now', title: 'Perpetual Now', category: 'Emotional State', desc: 'Trapped in perpetual now, haunted by fragments.', icon: '◙', threat: 'fast', start: 1313, end: 1320 },
+            { id: 'cia-enhanced-interrogation', title: 'CIA Interrogation', category: 'Systemic Control', desc: 'Waterboarding 83 times to create learned helplessness.', icon: '◚', threat: 'boss', start: 2604, end: 2616 },
+            { id: 'cia-godzilla-fear', title: 'Godzilla Fear', category: 'Systemic Impact', desc: 'Disconnected memories spread fear across America.', icon: '◛', threat: 'fast', start: 2664, end: 2675 },
+            { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'Tiny changes have massive catastrophic consequences.', icon: '◜', threat: 'basic', start: 664, end: 669 },
+            { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers see hidden patterns, make chaos manageable.', icon: '◝', threat: 'basic', start: 738, end: 751 },
+            { id: 'hinton-neural-networks', title: 'Neural Networks', category: 'Technological Apparatus', desc: 'AI learns from mass data, ignores all human stories.', icon: '◞', threat: 'boss', start: 3595, end: 3606 },
+            { id: 'algorithms-predict-behavior', title: 'Predictive Algorithms', category: 'Technological Apparatus', desc: 'Algorithms that predict and shape human behavior.', icon: '◟', threat: 'tank', start: 3650, end: 3670 },
+            { id: 'surveillance-capitalism', title: 'Surveillance Capitalism', category: 'Systemic Control', desc: 'Extracting behavioral data to predict and modify.', icon: '◠', threat: 'boss', start: 3700, end: 3720 },
+            { id: 'filter-bubble-isolation', title: 'Filter Bubbles', category: 'Media Apparatus', desc: 'Algorithms isolate us in personalized realities.', icon: '◡', threat: 'fast', start: 3750, end: 3770 },
+            { id: 'attention-economy', title: 'Attention Economy', category: 'Systemic Control', desc: 'Engineered to capture and monetize attention.', icon: '◢', threat: 'tank', start: 3800, end: 3820 }
+        ];
+
+        const THREATS = {
+            basic: { health: 120, speed: 20, damage: 12, reward: 25 },
+            fast: { health: 70, speed: 14, damage: 10, reward: 35 },
+            tank: { health: 350, speed: 32, damage: 25, reward: 50 },
+            boss: { health: 600, speed: 40, damage: 40, reward: 100 }
+        };
+
+        const game = {
+            faction: null,
+            color: null,
+            resources: 150,
+            wave: 1,
+            kills: 0,
+            selected: null,
+            systems: [],
+            threats: [],
+            active: false,
+            paused: false,
+            spawnTimeouts: [],
+            intervals: {},
+            playheads: {},
+            chains: [], // Collected chains
+            score: 0,
+            pendingChain: null // Chain waiting to be claimed
+        };
+
+        function selectFaction(key) {
+            game.faction = FACTIONS[key];
+            game.color = game.faction.color;
+            
+            document.getElementById('titleScreen').classList.add('hidden');
+            document.getElementById('introScreen').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('titleScreen').style.display = 'none';
+                document.getElementById('introScreen').style.display = 'none';
+                document.getElementById('gameInterface').style.display = 'flex';
+                document.getElementById('gameInterface').classList.add('active');
+                initializeGame();
+            }, 800);
+        }
+
+        // Intro and help controls
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            document.getElementById('introScreen').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('introScreen').style.display = 'none';
+                document.getElementById('titleScreen').style.display = 'flex';
+            }, 300);
+        });
+
+        document.getElementById('showHelpBtn').addEventListener('click', () => {
+            document.getElementById('helpOverlay').classList.add('show');
+        });
+
+        document.getElementById('helpBtn').addEventListener('click', () => {
+            document.getElementById('helpOverlay').classList.add('show');
+        });
+
+        document.getElementById('helpClose').addEventListener('click', () => {
+            document.getElementById('helpOverlay').classList.remove('show');
+        });
+
+        // Pause control - pauses ALL threats
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            game.paused = !game.paused;
+            const btn = document.getElementById('pauseBtn');
+            btn.textContent = game.paused ? '▶' : '⏸';
+            
+            // Clear pending spawn timeouts when pausing
+            if (game.paused) {
+                game.spawnTimeouts.forEach(id => clearTimeout(id));
+                game.spawnTimeouts = [];
+            }
+            
+            // Pause/resume ALL threat animations (blocked and unblocked)
+            game.threats.forEach(threat => {
+                if (threat.element && threat.element.style) {
+                    threat.element.style.animationPlayState = game.paused ? 'paused' : 'running';
+                }
+            });
+        });
+
+        // Chain panel controls - auto-pause game
+        document.getElementById('chainsBtn').addEventListener('click', () => {
+            const panel = document.getElementById('chainPanel');
+            const wasOpen = panel.classList.contains('active');
+            panel.classList.toggle('active');
+            
+            // Auto-pause when opening, resume when closing
+            if (!wasOpen && !game.paused) {
+                game.paused = true;
+                document.getElementById('pauseBtn').textContent = '▶';
+                game.threats.forEach(threat => {
+                    if (threat.element && threat.element.style) {
+                        threat.element.style.animationPlayState = 'paused';
+                    }
+                });
+            } else if (wasOpen && game.paused) {
+                game.paused = false;
+                document.getElementById('pauseBtn').textContent = '⏸';
+                game.threats.forEach(threat => {
+                    if (threat.element && threat.element.style) {
+                        threat.element.style.animationPlayState = 'running';
+                    }
+                });
+            }
+        });
+
+        document.getElementById('chainCloseBtn').addEventListener('click', () => {
+            document.getElementById('chainPanel').classList.remove('active');
+            // Resume game when closing
+            if (game.paused) {
+                game.paused = false;
+                document.getElementById('pauseBtn').textContent = '⏸';
+                game.threats.forEach(threat => {
+                    if (threat.element && threat.element.style) {
+                        threat.element.style.animationPlayState = 'running';
+                    }
+                });
+            }
+        });
+
+        function initializeGame() {
+            styleInterface();
+            createLanes();
+            createSystemCards();
+            startResourceGeneration();
+            startWaveSystem();
+            startGameLoop();
+            showNarrative('INITIALIZE DEFENSE', game.color);
+        }
+
+        function styleInterface() {
+            const hud = document.getElementById('gameHud');
+            const panel = document.getElementById('controlPanel');
+            
+            hud.style.borderColor = game.color;
+            panel.style.borderColor = game.color;
+            
+            document.getElementById('factionLabel').textContent = game.faction.name;
+            document.getElementById('factionLabel').style.color = game.color;
+            
+            document.querySelectorAll('.resource').forEach(el => el.style.color = game.color);
+        }
+
+        function createLanes() {
+            const field = document.getElementById('playfield');
+            for (let lane = 0; lane < 5; lane++) {
+                const laneEl = document.createElement('div');
+                laneEl.className = 'lane';
+                laneEl.style.color = game.color;
+                
+                for (let col = 0; col < 9; col++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'defense-slot';
+                    slot.dataset.lane = lane;
+                    slot.dataset.col = col;
+                    slot.style.borderColor = game.color;
+                    slot.onclick = () => deploySystem(lane, col);
+                    laneEl.appendChild(slot);
+                }
+                
+                field.appendChild(laneEl);
+            }
+        }
+
+        function createSystemCards() {
+            const panel = document.getElementById('controlPanel');
+            Object.entries(SYSTEMS).forEach(([key, sys]) => {
+                const card = document.createElement('div');
+                card.className = 'system-card';
+                card.dataset.type = key;
+                card.style.borderColor = game.color;
+                card.style.color = game.color;
+                card.innerHTML = `
+                    <div class="system-icon">${sys.icon}</div>
+                    <div class="system-cost">${sys.cost}</div>
+                    <div class="system-name">${sys.name}</div>
+                    <div class="cooldown-bar" style="height: 0%"></div>
+                `;
+                card.onclick = () => selectSystem(key);
+                panel.appendChild(card);
+            });
+        }
+
+        function selectSystem(type) {
+            const sys = SYSTEMS[type];
+            if (game.resources < sys.cost) return;
+            if (sys.cooldown > 0) return;
+            
+            document.querySelectorAll('.system-card').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.defense-slot').forEach(s => s.classList.remove('active'));
+            
+            game.selected = type;
+            document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+            document.querySelectorAll('.defense-slot').forEach(s => s.classList.add('active'));
+        }
+
+        function deploySystem(lane, col) {
+            if (!game.selected) return;
+            
+            const slot = document.querySelector(`.defense-slot[data-lane="${lane}"][data-col="${col}"]`);
+            if (slot.querySelector('.ai-system')) return;
+            
+            const sys = SYSTEMS[game.selected];
+            if (game.resources < sys.cost) return;
+            
+            game.resources -= sys.cost;
+            updateDisplay();
+            
+            const system = document.createElement('div');
+            system.className = 'ai-system';
+            if (game.selected === 'turret' || game.selected === 'sniper') {
+                system.classList.add('turret');
+            }
+            system.style.borderColor = game.color;
+            system.style.color = game.color;
+            system.innerHTML = sys.icon;
+            
+            const sysObj = {
+                element: system,
+                type: game.selected,
+                lane,
+                col,
+                health: sys.health || 100,
+                maxHealth: sys.health || 100,
+                lastAction: 0
+            };
+            
+            if (sys.health) {
+                system.innerHTML += `<div class="health-display"><div class="health-bar"></div></div>`;
+                updateSystemHealth(sysObj);
+            }
+            
+            slot.appendChild(system);
+            game.systems.push(sysObj);
+            
+            spawnParticles(slot.offsetLeft + slot.offsetWidth / 2, slot.offsetTop + slot.offsetHeight / 2, 10, game.color);
+            
+            sys.cooldown = 6;
+            startCooldown(game.selected);
+            
+            game.selected = null;
+            document.querySelectorAll('.system-card').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.defense-slot').forEach(s => s.classList.remove('active'));
+        }
+
+        function startCooldown(type) {
+            const card = document.querySelector(`.system-card[data-type="${type}"]`);
+            const bar = card.querySelector('.cooldown-bar');
+            const sys = SYSTEMS[type];
+            
+            bar.style.height = '100%';
+            bar.textContent = sys.cooldown;
+            card.classList.add('disabled');
+            
+            const interval = setInterval(() => {
+                sys.cooldown--;
+                bar.textContent = sys.cooldown;
+                bar.style.height = (sys.cooldown / 6 * 100) + '%';
+                
+                if (sys.cooldown <= 0) {
+                    clearInterval(interval);
+                    bar.style.height = '0%';
+                    card.classList.remove('disabled');
+                }
+            }, 1000);
+        }
+
+        function startResourceGeneration() {
+            setInterval(() => {
+                if (!game.active) return;
+                
+                game.systems.forEach(sys => {
+                    if (sys.type === 'generator') {
+                        const data = SYSTEMS.generator;
+                        game.resources += data.genAmount;
+                        updateDisplay();
+                        showFloatingText(`+${data.genAmount}`, game.color, sys.element);
+                    }
+                });
+            }, 4500);
+        }
+
+        function startWaveSystem() {
+            game.active = true;
+            spawnWave();
+            
+            setInterval(() => {
+                if (!game.active || game.paused) return;
+                game.wave++;
+                updateDisplay();
+                showNarrative(`WAVE ${game.wave}`, game.color);
+                spawnWave();
+            }, 30000);
+        }
+
+        function spawnWave() {
+            if (!game.active || game.paused) return;
+            const count = 5 + game.wave * 3;
+            for (let i = 0; i < count; i++) {
+                const timeoutId = setTimeout(() => {
+                    if (!game.paused) spawnThreat();
+                }, i * 2500 + Math.random() * 2000);
+                game.spawnTimeouts.push(timeoutId);
+            }
+        }
+
+        function spawnThreat() {
+            if (!game.active || game.paused) return;
+            
+            // Pick a random story fragment
+            const fragment = STORY_FRAGMENTS[Math.floor(Math.random() * STORY_FRAGMENTS.length)];
+            const type = fragment.threat;
+            const data = THREATS[type];
+            const lane = Math.floor(Math.random() * 5);
+            
+            const threat = document.createElement('div');
+            threat.className = 'zombie';
+            if (type === 'fast') threat.classList.add('fast');
+            if (type === 'tank') threat.classList.add('tank');
+            if (type === 'boss') threat.classList.add('boss');
+            
+            // Display fragment icon and title with video background
+            threat.innerHTML = `
+                <iframe class="zombie-video-bg" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                <div class="zombie-content">
+                    <div class="zombie-icon">${fragment.icon}</div>
+                    <div class="zombie-title">${fragment.title}</div>
+                    <div class="health-display"><div class="health-bar"></div></div>
+                </div>
+            `;
+            
+            // Check for vertical stacking in same lane
+            const laneThreats = game.threats.filter(t => t.lane === lane && !t.blocked);
+            let targetTop = lane * 20 + 10;
+            
+            if (laneThreats.length > 0) {
+                // Stack vertically to avoid overlap
+                const lastThreat = laneThreats[laneThreats.length - 1];
+                const lastRect = lastThreat.element.getBoundingClientRect();
+                const playfieldRect = document.getElementById('playfield').getBoundingClientRect();
+                const lastTopPercent = ((lastRect.top - playfieldRect.top) / playfieldRect.height) * 100;
+                const heightPercent = (lastRect.height / playfieldRect.height) * 100;
+                
+                // Check if we need to offset vertically
+                const baseTop = lane * 20 + 10;
+                const minGap = 2; // 2% gap
+                
+                if (Math.abs(lastTopPercent - baseTop) < heightPercent + minGap) {
+                    // Stack above or below
+                    const stackAbove = baseTop - heightPercent - minGap;
+                    const stackBelow = baseTop + heightPercent + minGap;
+                    
+                    // Choose direction that keeps us in lane bounds
+                    if (stackAbove >= lane * 20 && stackAbove >= 0) {
+                        targetTop = stackAbove;
+                    } else if (stackBelow <= (lane + 1) * 20 && stackBelow <= 100) {
+                        targetTop = stackBelow;
+                    }
+                }
+            }
+            
+            // Keep threat centered in lane using pixel positioning
+            const playfieldRect = document.getElementById('playfield').getBoundingClientRect();
+            const laneHeight = playfieldRect.height / 5;
+            const laneTop = lane * laneHeight;
+            const centerTop = laneTop + (laneHeight / 2);
+            
+            threat.style.top = centerTop + 'px';
+            threat.style.transform = 'translateY(-50%)';
+            threat.title = `${fragment.title}: ${fragment.desc}`; // Tooltip
+            
+            // Store iframe reference (will load on contact)
+            const iframe = threat.querySelector('.zombie-video-bg');
+            iframe.dataset.fragmentId = fragment.id;
+            
+            // Click to show fragment info with video
+            threat.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showFragmentInfo(fragment);
+            });
+            
+            const threatObj = {
+                element: threat,
+                type,
+                lane,
+                health: data.health,
+                maxHealth: data.health,
+                damage: data.damage,
+                speed: data.speed,
+                reward: data.reward,
+                blocked: false,
+                fragment: fragment // Store fragment data
+            };
+            
+            document.getElementById('playfield').appendChild(threat);
+            game.threats.push(threatObj);
+            updateThreatHealth(threatObj);
+        }
+
+        function updatePlayheads() {
+            if (game.paused) return;
+            
+            // Update each lane's playhead based on timeline
+            Object.keys(game.playheads).forEach(laneKey => {
+                const playheadData = game.playheads[laneKey];
+                if (!playheadData || !playheadData.element) return;
+                
+                const laneTimeline = game.threats.filter(t => 
+                    t.blocked && t.lane === playheadData.lane && t.wallContact
+                );
+                
+                if (laneTimeline.length === 0) {
+                    playheadData.element.classList.remove('active');
+                    return;
+                }
+                
+                // Find timeline bounds
+                const rects = laneTimeline.map(t => t.element.getBoundingClientRect());
+                const leftmost = Math.min(...rects.map(r => r.left));
+                const rightmost = Math.max(...rects.map(r => r.right));
+                const timelineWidth = rightmost - leftmost;
+                
+                if (timelineWidth > 0) {
+                    playheadData.element.classList.add('active');
+                    
+                    // Animate playhead across timeline
+                    const elapsed = (Date.now() - playheadData.startTime) % 3000; // 3 second cycle
+                    const progress = elapsed / 3000;
+                    playheadData.element.style.left = (leftmost + (timelineWidth * progress)) + 'px';
+                }
+            });
+        }
+
+        function startGameLoop() {
+            function loop() {
+                if (!game.active) return;
+                if (game.paused) {
+                    requestAnimationFrame(loop);
+                    return;
+                }
+                
+                const now = Date.now();
+                updatePlayheads();
+                
+                // Check threats hitting systems
+                game.threats.forEach(threat => {
+                    if (threat.blocked) return;
+                    
+                    const threatRect = threat.element.getBoundingClientRect();
+                    
+                    game.systems.forEach(sys => {
+                        if (sys.lane !== threat.lane) return;
+                        
+                        const sysRect = sys.element.getBoundingClientRect();
+                        
+                        if (threatRect.right >= sysRect.left && threatRect.left <= sysRect.right) {
+                            if (!threat.blocked) {
+                                threat.blocked = true;
+                                threat.element.style.animationPlayState = 'paused';
+                                threat.element.classList.add('playing', 'timeline-clip');
+                                threat.wallContact = sys;
+                                
+                                // Find existing timeline clips in this lane
+                                const laneTimeline = game.threats.filter(t => 
+                                    t.blocked && t.lane === threat.lane && t.wallContact === sys && t !== threat
+                                );
+                                
+                                const playfieldRect = document.getElementById('playfield').getBoundingClientRect();
+                                const laneHeight = playfieldRect.height / 5;
+                                const laneTop = threat.lane * laneHeight;
+                                
+                                // Center vertically in lane
+                                threat.element.style.top = (laneTop + (laneHeight / 2)) + 'px';
+                                threat.element.style.transform = 'translateY(-50%)';
+                                
+                                // Calculate width based on fragment duration
+                                const duration = threat.fragment.end - threat.fragment.start;
+                                const pixelsPerSecond = 3; // Adjust for timeline scale
+                                const clipWidth = Math.max(60, duration * pixelsPerSecond);
+                                threat.element.style.width = clipWidth + 'px';
+                                
+                                // Position horizontally - build timeline from wall
+                                let timelineLeft = sysRect.left - clipWidth - 2;
+                                
+                                if (laneTimeline.length > 0) {
+                                    // Stack horizontally (timeline sequence)
+                                    const leftmostClip = laneTimeline.reduce((leftmost, t) => {
+                                        const tRect = t.element.getBoundingClientRect();
+                                        return tRect.left < leftmost ? tRect.left : leftmost;
+                                    }, Infinity);
+                                    
+                                    timelineLeft = leftmostClip - clipWidth - 2;
+                                }
+                                
+                                threat.element.style.left = timelineLeft + 'px';
+                                threat.element.style.right = 'auto';
+                                
+                                // Add playhead to lane if not exists
+                                const laneKey = `lane_${threat.lane}`;
+                                if (!game.playheads[laneKey]) {
+                                    const playhead = document.createElement('div');
+                                    playhead.className = 'playhead';
+                                    playhead.style.top = (laneTop) + 'px';
+                                    playhead.style.height = laneHeight + 'px';
+                                    document.getElementById('playfield').appendChild(playhead);
+                                    
+                                    game.playheads[laneKey] = {
+                                        element: playhead,
+                                        lane: threat.lane,
+                                        startTime: Date.now()
+                                    };
+                                }
+                                
+                                // Load and play YouTube video on contact
+                                const iframe = threat.element.querySelector('.zombie-video-bg');
+                                if (iframe && !iframe.src) {
+                                    iframe.src = buildVideoEmbed(threat.fragment);
+                                }
+                            }
+                            
+                            // All blocked threats in lane collectively damage wall
+                            const attackers = game.threats.filter(t => 
+                                t.blocked && t.lane === threat.lane && t.wallContact === sys
+                            );
+                            
+                            attackers.forEach(attacker => {
+                                if (!attacker.lastHit || now - attacker.lastHit > 1500) {
+                                    attacker.lastHit = now;
+                                    sys.health -= attacker.damage;
+                                }
+                            });
+                            
+                            updateSystemHealth(sys);
+                            if (attackers.length > 0) {
+                                const totalDamage = attackers.reduce((sum, a) => sum + a.damage, 0);
+                                showDamage(totalDamage, '#E24A4A', sys.element);
+                            }
+                            
+                            if (sys.health <= 0) {
+                                sys.element.remove();
+                                game.systems = game.systems.filter(s => s !== sys);
+                                
+                                // Timeline continues forward - find next wall
+                                const nextWall = game.systems.find(s => 
+                                    s.lane === threat.lane && s.col > sys.col
+                                );
+                                
+                                if (nextWall) {
+                                    // Timeline moves to next wall
+                                    attackers.forEach(attacker => {
+                                        attacker.wallContact = nextWall;
+                                        attacker.element.style.animationPlayState = 'running';
+                                        
+                                        // Animate to next wall position
+                                        const nextRect = nextWall.element.getBoundingClientRect();
+                                        const currentRect = attacker.element.getBoundingClientRect();
+                                        const distance = nextRect.left - currentRect.right - 2;
+                                        
+                                        attacker.element.style.transition = 'left 2s linear';
+                                        attacker.element.style.left = (currentRect.left + distance) + 'px';
+                                    });
+                                } else {
+                                    // No more walls - release timeline
+                                    attackers.forEach(attacker => {
+                                        attacker.blocked = false;
+                                        attacker.wallContact = null;
+                                        attacker.element.classList.remove('playing', 'timeline-clip');
+                                        attacker.element.style.animationPlayState = 'running';
+                                        attacker.element.style.width = '';
+                                        attacker.element.style.left = '';
+                                        attacker.element.style.right = '0';
+                                        attacker.element.style.transition = '';
+                                        
+                                        // Unload video
+                                        const iframe = attacker.element.querySelector('.zombie-video-bg');
+                                        if (iframe) {
+                                            iframe.src = '';
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    });
+                    
+                    if (threatRect.right < 0) {
+                        endGame(false);
+                    }
+                });
+                
+                // Systems fire
+                game.systems.forEach(sys => {
+                    if (sys.type !== 'turret' && sys.type !== 'sniper' && sys.type !== 'aoe') return;
+                    
+                    const data = SYSTEMS[sys.type];
+                    if (now - sys.lastAction < data.fireRate) return;
+                    
+                    const target = findThreatInLane(sys.lane);
+                    if (target) {
+                        sys.lastAction = now;
+                        fireAtThreat(sys, target, data);
+                    }
+                });
+                
+                requestAnimationFrame(loop);
+            }
+            
+            loop();
+        }
+
+        function findThreatInLane(lane) {
+            const threats = game.threats.filter(t => t.lane === lane);
+            if (threats.length === 0) return null;
+            
+            let closest = null;
+            let minLeft = Infinity;
+            
+            threats.forEach(t => {
+                const rect = t.element.getBoundingClientRect();
+                if (rect.left < minLeft) {
+                    minLeft = rect.left;
+                    closest = t;
+                }
+            });
+            
+            return closest;
+        }
+
+        function fireAtThreat(sys, threat, data) {
+            const sysRect = sys.element.getBoundingClientRect();
+            const threatRect = threat.element.getBoundingClientRect();
+            
+            const proj = document.createElement('div');
+            proj.className = 'projectile';
+            if (sys.type === 'sniper') proj.classList.add('sniper');
+            proj.style.left = sysRect.right + 'px';
+            proj.style.top = (sysRect.top + sysRect.height / 2) + 'px';
+            
+            document.getElementById('playfield').appendChild(proj);
+            
+            const dx = threatRect.left - sysRect.right;
+            const time = Math.abs(dx) / 0.8;
+            
+            proj.style.setProperty('--tx', dx + 'px');
+            proj.style.animationDuration = time + 'ms';
+            
+            setTimeout(() => {
+                if (game.paused) {
+                    proj.remove();
+                    return;
+                }
+                proj.remove();
+                if (threat.element.parentNode) {
+                    threat.health -= data.damage;
+                    updateThreatHealth(threat);
+                    showDamage(data.damage, game.color, threat.element);
+                    spawnImpact(threatRect.left + threatRect.width / 2, 
+                               threatRect.top + threatRect.height / 2);
+                    
+                    if (threat.health <= 0) {
+                        threat.element.remove();
+                        game.threats = game.threats.filter(t => t !== threat);
+                        game.resources += threat.reward;
+                        game.kills++;
+                        updateDisplay();
+                        showFloatingText(`+${threat.reward}`, game.color, threat.element);
+                    }
+                }
+            }, time);
+        }
+
+        function updateSystemHealth(sys) {
+            const bar = sys.element.querySelector('.health-bar');
+            if (bar) bar.style.width = (sys.health / sys.maxHealth * 100) + '%';
+        }
+
+        function updateThreatHealth(threat) {
+            const bar = threat.element.querySelector('.health-bar');
+            if (bar) bar.style.width = (threat.health / threat.maxHealth * 100) + '%';
+        }
+
+        function updateDisplay() {
+            document.getElementById('resourceCount').textContent = game.resources;
+            document.getElementById('waveNumber').textContent = game.wave;
+            
+            Object.entries(SYSTEMS).forEach(([type, sys]) => {
+                const card = document.querySelector(`.system-card[data-type="${type}"]`);
+                if (game.resources < sys.cost && !card.classList.contains('disabled')) {
+                    card.style.opacity = '0.5';
+                } else if (game.resources >= sys.cost && !card.classList.contains('disabled')) {
+                    card.style.opacity = '1';
+                }
+            });
+        }
+
+        function showNarrative(text, color) {
+            const flash = document.getElementById('narrativeFlash');
+            flash.textContent = text;
+            flash.style.color = color;
+            flash.classList.add('show');
+            setTimeout(() => flash.classList.remove('show'), 1500);
+        }
+
+        function showFloatingText(text, color, element) {
+            const rect = element.getBoundingClientRect();
+            const div = document.createElement('div');
+            div.className = 'damage-text';
+            div.textContent = text;
+            div.style.color = color;
+            div.style.left = (rect.left + rect.width / 2) + 'px';
+            div.style.top = rect.top + 'px';
+            document.getElementById('playfield').appendChild(div);
+            setTimeout(() => div.remove(), 1200);
+        }
+
+        function showDamage(amount, color, element) {
+            const rect = element.getBoundingClientRect();
+            const div = document.createElement('div');
+            div.className = 'damage-text';
+            div.textContent = '-' + amount;
+            div.style.color = color;
+            div.style.left = (rect.left + rect.width / 2) + 'px';
+            div.style.top = rect.top + 'px';
+            document.getElementById('playfield').appendChild(div);
+            setTimeout(() => div.remove(), 1200);
+        }
+
+        function spawnImpact(x, y) {
+            const impact = document.createElement('div');
+            impact.className = 'impact-wave';
+            impact.style.borderColor = game.color;
+            impact.style.left = x + 'px';
+            impact.style.top = y + 'px';
+            document.getElementById('playfield').appendChild(impact);
+            setTimeout(() => impact.remove(), 500);
+        }
+
+        function spawnParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.color = color;
+                
+                const angle = (Math.PI * 2 * i) / count;
+                const dist = 40 + Math.random() * 20;
+                particle.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+                particle.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+                
+                document.getElementById('playfield').appendChild(particle);
+                setTimeout(() => particle.remove(), 700);
+            }
+        }
+
+        function showFragmentInfo(fragment) {
+            const popup = document.getElementById('fragmentInfo');
+            const iframe = document.getElementById('fragVideo');
+            const title = document.getElementById('fragTitle');
+            const category = document.getElementById('fragCategory');
+            const desc = document.getElementById('fragDesc');
+            const time = document.getElementById('fragTime');
+            
+            title.textContent = fragment.title;
+            category.textContent = fragment.category;
+            desc.textContent = fragment.desc;
+            
+            const formatTime = (sec) => {
+                const m = Math.floor(sec / 60);
+                const s = sec % 60;
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            };
+            time.textContent = `Video: ${formatTime(fragment.start)} - ${formatTime(fragment.end)}`;
+            
+            // Load YouTube embed with fragment's timestamp
+            iframe.src = buildVideoEmbed(fragment);
+            
+            popup.style.borderColor = game.color;
+            popup.style.color = game.color;
+            iframe.style.borderColor = game.color;
+            document.getElementById('closeInfo').style.borderColor = game.color;
+            
+            popup.classList.add('show');
+        }
+
+        function endGame(victory) {
+            game.active = false;
+            
+            const screen = document.getElementById('endgameScreen');
+            const title = document.getElementById('endgameTitle');
+            const btn = document.getElementById('continueBtn');
+            
+            title.textContent = victory ? 'VICTORY' : 'BREACH';
+            title.style.color = victory ? game.color : '#E24A4A';
+            btn.style.borderColor = game.color;
+            btn.style.color = game.color;
+            
+            document.getElementById('finalWave').textContent = game.wave;
+            document.getElementById('finalKills').textContent = game.kills;
+            document.getElementById('finalScore').textContent = Math.round((game.kills / (game.wave * 10)) * 100);
+            
+            screen.classList.add('show');
+        }
+
+        // Close fragment info popup
+        document.getElementById('closeInfo').addEventListener('click', () => {
+            const popup = document.getElementById('fragmentInfo');
+            const iframe = document.getElementById('fragVideo');
+            iframe.src = ''; // Unload video
+            popup.classList.remove('show');
+        });
+
+        // Chain Collection System
+        function checkForClaimableChains() {
+            // Check each lane for chains of 3+ fragments
+            for (let lane = 0; lane < 5; lane++) {
+                const laneTimeline = game.threats.filter(t => 
+                    t.blocked && t.lane === lane && t.wallContact
+                );
+                
+                if (laneTimeline.length >= 3) {
+                    // Found a claimable chain - update or create pending chain
+                    if (!game.pendingChain || game.pendingChain.lane !== lane) {
+                        game.pendingChain = {
+                            lane,
+                            fragments: laneTimeline.map(t => t.fragment),
+                            threats: laneTimeline
+                        };
+                        showChainAlert();
+                    } else if (laneTimeline.length > game.pendingChain.fragments.length) {
+                        // Chain grew longer - update it
+                        game.pendingChain.fragments = laneTimeline.map(t => t.fragment);
+                        game.pendingChain.threats = laneTimeline;
+                        showChainAlert();
+                    }
+                    break;
+                }
+            }
+        }
+
+        function showChainAlert() {
+            if (!game.pendingChain) return;
+            
+            const alert = document.getElementById('chainAlert');
+            const info = document.getElementById('alertChainInfo');
+            info.textContent = `${game.pendingChain.fragments.length} clips · Lane ${game.pendingChain.lane + 1}`;
+            alert.classList.add('show');
+            game.paused = true; // Pause game
+            
+            // Update pause button
+            const btn = document.getElementById('pauseBtn');
+            if (btn) btn.textContent = '▶';
+            
+            // Pause all threats
+            game.threats.forEach(threat => {
+                if (threat.element && threat.element.style) {
+                    threat.element.style.animationPlayState = 'paused';
+                }
+            });
+            
+            // Make alert clickable to claim
+            alert.onclick = () => {
+                claimChain();
+                alert.onclick = null;
+            };
+        }
+
+        function claimChain() {
+            if (!game.pendingChain) return;
+            
+            const chain = game.pendingChain;
+            
+            // Capture wall info from threats
+            const wallSystem = chain.threats[0]?.wallContact;
+            
+            game.chains.push({
+                id: Date.now(),
+                fragments: chain.fragments,
+                threats: chain.threats.map(t => ({
+                    fragment: t.fragment,
+                    blocked: t.blocked,
+                    wallContact: t.wallContact
+                })),
+                lane: chain.lane,
+                wall: wallSystem ? {
+                    type: wallSystem.type,
+                    col: wallSystem.col,
+                    health: wallSystem.health
+                } : null,
+                timestamp: Date.now()
+            });
+            
+            // Calculate score based on coherence
+            const score = calculateChainScore(chain.fragments);
+            game.score += score;
+            
+            // Remove threats from board
+            chain.threats.forEach(threat => {
+                threat.element.remove();
+                game.threats = game.threats.filter(t => t !== threat);
+            });
+            
+            // Remove the wall from the game board (it's been collected!)
+            if (wallSystem) {
+                wallSystem.element.remove();
+                game.systems = game.systems.filter(s => s !== wallSystem);
+                showNarrative(`WALL COLLECTED`, game.color);
+            }
+            
+            updateChainPanel();
+            hideChainAlert();
+            showNarrative(`+${score} CHAIN CLAIMED`, game.color);
+        }
+
+        function calculateChainScore(fragments) {
+            let score = fragments.length * 10; // Base score
+            
+            // Bonus for same category
+            const categories = fragments.map(f => f.category);
+            const uniqueCategories = new Set(categories);
+            if (uniqueCategories.size === 1) score += 50; // All same category
+            
+            // Bonus for sequential timing
+            for (let i = 0; i < fragments.length - 1; i++) {
+                if (fragments[i].end === fragments[i + 1].start) {
+                    score += 20; // Sequential bonus
+                }
+            }
+            
+            return score;
+        }
+
+        function updateChainPanel() {
+            const grid = document.getElementById('chainGrid');
+            const scoreEl = document.getElementById('chainScore');
+            const assembleBtn = document.getElementById('assembleHandBtn');
+            
+            const totalFragments = game.chains.reduce((sum, c) => sum + c.fragments.length, 0);
+            scoreEl.textContent = `${totalFragments}/12`;
+            
+            // Enable assemble button when we have 12 fragments
+            assembleBtn.disabled = totalFragments < 12;
+            
+            grid.innerHTML = game.chains.map((chain, idx) => {
+                const totalDuration = chain.fragments.reduce((sum, f) => sum + (f.end - f.start), 0);
+                const categories = [...new Set(chain.fragments.map(f => f.category))];
+                const coherent = categories.length === 1;
+                
+                // Get wall icon
+                const wallIcon = chain.wall ? (SYSTEMS[chain.wall.type]?.icon || '◼') : '◼';
+                
+                // Get unique icons from fragments
+                const uniqueIcons = [...new Set(chain.fragments.map(f => f.icon))];
+                const chainSignature = uniqueIcons.slice(0, 3).join(' ');
+                
+                return `
+                    <div class="chain-item ${coherent ? 'coherent' : ''}" style="border-color: ${game.color}; color: ${game.color};">
+                        <!-- Chain Number Strip -->
+                        <div style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 5; display: flex; flex-direction: column; gap: 4px;">
+                            <div style="background: rgba(0, 0, 0, 0.9); border: 2px solid ${game.color}; border-radius: 3px; padding: 6px 8px; text-align: center; font-size: clamp(12px, 2.5vw, 16px); font-weight: 900; min-width: 32px;">
+                                #${idx + 1}
+                            </div>
+                            <div style="background: rgba(0, 0, 0, 0.9); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 3px; padding: 6px 4px; text-align: center; display: flex; flex-direction: column; gap: 2px; min-width: 32px;">
+                                ${uniqueIcons.slice(0, 3).map(icon => `<div style="font-size: clamp(14px, 3vw, 18px);">${icon}</div>`).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="chain-lane-view">
+                            <!-- Wall on the right -->
+                            ${chain.wall ? `
+                                <div class="chain-wall" style="border-color: ${game.color}; color: ${game.color};">
+                                    ${wallIcon}
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Clips stacked against wall -->
+                            <div class="chain-clips">
+                                ${chain.fragments.map((f, i) => {
+                                    const duration = Math.round(f.end - f.start);
+                                    const clipWidth = Math.max(60, duration * 3);
+                                    const videoUrl = buildVideoEmbed(f);
+                                    const clipId = f.title.split(' ').slice(0, 2).join(' ');
+                                    return `
+                                        <div class="chain-clip-mini" style="border-color: ${game.color}; color: ${game.color}; width: ${clipWidth}px;">
+                                            <iframe class="chain-clip-video" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen src="${videoUrl}"></iframe>
+                                            <div class="clip-mini-title">${clipId}</div>
+                                            <div class="clip-mini-number">${i + 1}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="chain-info">${Math.round(totalDuration)}s</div>
+                        
+                        <div class="chain-actions">
+                            <button class="chain-action-btn ${chain.flagged ? 'active' : ''}" 
+                                style="color: ${game.color};" 
+                                onclick="toggleChainFlag(${idx})" 
+                                title="Flag">⚑</button>
+                            <button class="chain-action-btn ${chain.rating === 'up' ? 'active' : ''}" 
+                                style="color: ${game.color};" 
+                                onclick="rateChain(${idx}, 'up')" 
+                                title="Good">↑</button>
+                            <button class="chain-action-btn ${chain.rating === 'down' ? 'active' : ''}" 
+                                style="color: ${game.color};" 
+                                onclick="rateChain(${idx}, 'down')" 
+                                title="Weak">↓</button>
+                            <button class="chain-action-btn ${chain.tagged ? 'active' : ''}" 
+                                style="color: ${game.color};" 
+                                onclick="toggleChainTag(${idx})" 
+                                title="Tag">#</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function toggleChainFlag(chainIndex) {
+            if (game.chains[chainIndex]) {
+                game.chains[chainIndex].flagged = !game.chains[chainIndex].flagged;
+                updateChainPanel();
+            }
+        }
+        
+        function rateChain(chainIndex, rating) {
+            if (game.chains[chainIndex]) {
+                // Toggle rating: if same rating clicked, clear it
+                game.chains[chainIndex].rating = game.chains[chainIndex].rating === rating ? null : rating;
+                updateChainPanel();
+            }
+        }
+        
+        function toggleChainTag(chainIndex) {
+            if (game.chains[chainIndex]) {
+                game.chains[chainIndex].tagged = !game.chains[chainIndex].tagged;
+                updateChainPanel();
+            }
+        }
+        
+        function exportChainEDL(chainIndex) {
+            const chain = game.chains[chainIndex];
+            if (!chain) return;
+            
+            let edl = `TITLE: Chain ${chainIndex + 1}\nFCM: NON-DROP FRAME\n\n`;
+            
+            let recordIn = 0;
+            chain.fragments.forEach((frag, i) => {
+                const duration = frag.end - frag.start;
+                const recordOut = recordIn + duration;
+                
+                edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+                edl += `${formatTimecode(frag.start)} ${formatTimecode(frag.end)} `;
+                edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`;
+                edl += `* FROM CLIP NAME: ${frag.title}\n`;
+                edl += `* CATEGORY: ${frag.category}\n\n`;
+                
+                recordIn = recordOut;
+            });
+            
+            const blob = new Blob([edl], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chain_${chainIndex + 1}_${Date.now()}.edl`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function formatTimecode(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            const f = Math.floor((seconds % 1) * 30); // Assuming 30fps
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+        }
+
+        function hideChainAlert() {
+            document.getElementById('chainAlert').classList.remove('show');
+            game.pendingChain = null;
+            game.paused = false;
+            
+            // Update pause button
+            const btn = document.getElementById('pauseBtn');
+            if (btn) btn.textContent = '⏸';
+            
+            // Resume all threat animations
+            game.threats.forEach(threat => {
+                if (threat.element && threat.element.style) {
+                    threat.element.style.animationPlayState = 'running';
+                }
+            });
+        }
+
+        // Chain alert is now clickable directly (no separate buttons needed)
+
+        // Check for claimable chains every 2 seconds
+        setInterval(() => {
+            if (game.active && !game.paused && !game.pendingChain) {
+                checkForClaimableChains();
+            }
+        }, 2000);
+
+        // Assemble Final Cut - Score the "hand"
+        document.getElementById('assembleHandBtn').addEventListener('click', () => {
+            const totalFragments = game.chains.reduce((sum, c) => sum + c.fragments.length, 0);
+            if (totalFragments < 12) return;
+            
+            game.paused = true;
+            const handScore = calculateHandScore();
+            showFinalCutScore(handScore);
+        });
+
+        function calculateHandScore() {
+            let score = 0;
+            const allFragments = game.chains.flatMap(c => c.fragments);
+            
+            // Base score: 10 per fragment
+            score += allFragments.length * 10;
+            
+            // 1. Shared clips across chains (cross-chain coherence)
+            const fragmentIds = allFragments.map(f => f.id);
+            const duplicates = fragmentIds.filter((id, index) => fragmentIds.indexOf(id) !== index);
+            const uniqueDuplicates = [...new Set(duplicates)];
+            score += uniqueDuplicates.length * 100; // Big bonus for shared clips
+            
+            // 2. Head-to-tail connections (one chain's last = another's first)
+            let connections = 0;
+            for (let i = 0; i < game.chains.length; i++) {
+                for (let j = 0; j < game.chains.length; j++) {
+                    if (i === j) continue;
+                    const tailClip = game.chains[i].fragments[game.chains[i].fragments.length - 1];
+                    const headClip = game.chains[j].fragments[0];
+                    
+                    // Check if tail connects to head (same clip or sequential timing)
+                    if (tailClip.id === headClip.id || tailClip.end === headClip.start) {
+                        connections++;
+                        score += 150; // Major bonus for chain connections
+                    }
+                }
+            }
+            
+            // 3. Category coherence within chains
+            game.chains.forEach(chain => {
+                const categories = chain.fragments.map(f => f.category);
+                const uniqueCategories = new Set(categories);
+                if (uniqueCategories.size === 1) {
+                    score += 80; // Bonus for coherent chain
+                }
+            });
+            
+            // 4. Sequential timing within chains
+            let sequentialCount = 0;
+            game.chains.forEach(chain => {
+                for (let i = 0; i < chain.fragments.length - 1; i++) {
+                    if (chain.fragments[i].end === chain.fragments[i + 1].start) {
+                        sequentialCount++;
+                        score += 30; // Sequential bonus
+                    }
+                }
+            });
+            
+            // 5. Global category distribution
+            const allCategories = allFragments.map(f => f.category);
+            const categoryCount = {};
+            allCategories.forEach(cat => {
+                categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+            });
+            const dominantCategory = Object.keys(categoryCount).reduce((a, b) => 
+                categoryCount[a] > categoryCount[b] ? a : b
+            );
+            const dominance = categoryCount[dominantCategory] / allFragments.length;
+            if (dominance >= 0.6) {
+                score += 200; // Bonus for thematic coherence
+            }
+            
+            return {
+                total: score,
+                breakdown: {
+                    base: allFragments.length * 10,
+                    sharedClips: uniqueDuplicates.length * 100,
+                    chainConnections: connections * 150,
+                    sequential: sequentialCount * 30,
+                    categoryCoherence: game.chains.filter(c => new Set(c.fragments.map(f => f.category)).size === 1).length * 80,
+                    dominantTheme: dominance >= 0.6 ? 200 : 0
+                },
+                stats: {
+                    totalChains: game.chains.length,
+                    sharedClips: uniqueDuplicates.length,
+                    connections,
+                    sequentialCount,
+                    dominantCategory,
+                    dominance: Math.round(dominance * 100)
+                }
+            };
+        }
+
+        function showFinalCutScore(handScore) {
+            const screen = document.getElementById('finalCutScreen');
+            const content = document.getElementById('finalCutContent');
+            
+            content.innerHTML = `
+                <div style="font-size: clamp(48px, 10vw, 96px); font-weight: 900; margin: 20px 0; color: ${game.color};">
+                    ${handScore.total}
+                </div>
+                <div style="font-size: clamp(14px, 3vw, 20px); opacity: 0.8; margin-bottom: 30px;">
+                    COHERENCE SCORE
+                </div>
+                
+                <div style="text-align: left; font-size: clamp(12px, 2.5vw, 16px); line-height: 1.8; margin-bottom: 30px;">
+                    <div style="margin: 8px 0;"><strong>Base Score:</strong> ${handScore.breakdown.base}</div>
+                    <div style="margin: 8px 0;"><strong>Shared Clips:</strong> ${handScore.breakdown.sharedClips} <span style="opacity: 0.7; font-size: 0.9em;">(${handScore.stats.sharedClips} clips reused across chains)</span></div>
+                    <div style="margin: 8px 0;"><strong>Chain Connections:</strong> ${handScore.breakdown.chainConnections} <span style="opacity: 0.7; font-size: 0.9em;">(${handScore.stats.connections} chains link head-to-tail)</span></div>
+                    <div style="margin: 8px 0;"><strong>Sequential Timing:</strong> ${handScore.breakdown.sequential} <span style="opacity: 0.7; font-size: 0.9em;">(${handScore.stats.sequentialCount} clips flow seamlessly)</span></div>
+                    <div style="margin: 8px 0;"><strong>Category Coherence:</strong> ${handScore.breakdown.categoryCoherence} <span style="opacity: 0.7; font-size: 0.9em;">(chains stay on theme)</span></div>
+                    <div style="margin: 8px 0;"><strong>Dominant Theme:</strong> ${handScore.breakdown.dominantTheme} <span style="opacity: 0.7; font-size: 0.9em;">(${handScore.stats.dominantCategory} - ${handScore.stats.dominance}%)</span></div>
+                </div>
+                
+                <div style="margin: 30px 0; padding: 20px; border: 2px solid ${game.color}; background: rgba(0,0,0,0.5);">
+                    <div style="font-size: clamp(14px, 3vw, 18px); font-weight: 700; margin-bottom: 16px;">BEAT SHEET</div>
+                    <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; font-size: 12px; line-height: 1.6;">
+                        ${game.chains.map((chain, idx) => {
+                            const duration = Math.round(chain.fragments.reduce((sum, f) => sum + (f.end - f.start), 0));
+                            const clipIds = chain.fragments.map(f => f.title.split(' ').slice(0, 2).join(' ')).join(' → ');
+                            const flags = [];
+                            if (chain.flagged) flags.push('⚑');
+                            if (chain.rating === 'up') flags.push('↑');
+                            if (chain.rating === 'down') flags.push('↓');
+                            if (chain.tagged) flags.push('#');
+                            return `<div style="margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.5); border-left: 3px solid ${game.color};">
+                                <strong>Seq ${idx + 1}</strong> (${duration}s) ${flags.join(' ')}<br>
+                                <span style="opacity: 0.8;">${clipIds}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div style="font-size: clamp(14px, 3vw, 18px); font-weight: 700; margin-bottom: 16px; margin-top: 20px;">NAME YOUR FILM</div>
+                    <input type="text" id="filmTitle" placeholder="Untitled Documentary" 
+                        style="width: 100%; padding: 12px; background: rgba(0,0,0,0.8); border: 2px solid ${game.color}; color: ${game.color}; font-family: inherit; font-size: 16px; margin-bottom: 12px;">
+                    <textarea id="filmLogline" placeholder="Logline (optional)" rows="3"
+                        style="width: 100%; padding: 12px; background: rgba(0,0,0,0.8); border: 2px solid ${game.color}; color: ${game.color}; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                    <div style="font-size: 12px; opacity: 0.7; margin-top: 8px;">
+                        ${game.chains.length} sequences · ${game.chains.reduce((sum, c) => sum + c.fragments.length, 0)} clips · ${Math.round(game.chains.reduce((sum, c) => c.fragments.reduce((s, f) => s + (f.end - f.start), 0) + sum, 0))}s total
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 30px;">
+                    <button onclick="exportFinalCutOTI()" style="padding: 16px 32px; border: 3px solid ${game.color}; background: rgba(0,0,0,0.9); color: ${game.color}; cursor: pointer; font-family: inherit; font-weight: 900; font-size: 16px; text-transform: uppercase;">
+                        EXPORT FILM
+                    </button>
+                    <button onclick="location.reload()" style="padding: 16px 32px; border: 2px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.8); color: rgba(255,255,255,0.7); cursor: pointer; font-family: inherit; font-weight: 700; font-size: 14px;">
+                        NEW GAME
+                    </button>
+                </div>
+            `;
+            
+            screen.style.display = 'flex';
+        }
+        
+        function generateFunnyTitle() {
+            const allFragments = game.chains.flatMap(c => c.fragments);
+            const words = allFragments.map(f => f.title.split(' ')).flat();
+            const uniqueWords = [...new Set(words)].filter(w => w.length > 4);
+            
+            if (uniqueWords.length >= 2) {
+                const word1 = uniqueWords[Math.floor(Math.random() * uniqueWords.length)];
+                const word2 = uniqueWords[Math.floor(Math.random() * uniqueWords.length)];
+                return `${word1} ${word2}: A Documentary`;
+            }
+            
+            const categories = [...new Set(allFragments.map(f => f.category))];
+            return `The ${categories[0] || 'Untitled'} Chronicles`;
+        }
+        
+        function exportFinalCutOTI() {
+            let filmTitle = document.getElementById('filmTitle')?.value.trim();
+            const filmLogline = document.getElementById('filmLogline')?.value || "";
+            
+            // Auto-generate funny title if empty
+            if (!filmTitle) {
+                filmTitle = generateFunnyTitle();
+            }
+            
+            const oti = {
+                version: "1.0",
+                title: filmTitle,
+                logline: filmLogline,
+                timestamp: new Date().toISOString(),
+                coherenceScore: calculateHandScore().total,
+                sourceVideo: "BQ2n6SN7gOY",
+                sequences: game.chains.map((chain, idx) => ({
+                    id: chain.id,
+                    sequenceNumber: idx + 1,
+                    lane: chain.lane,
+                    wall: chain.wall ? {
+                        type: chain.wall.type,
+                        col: chain.wall.col,
+                        health: chain.wall.health
+                    } : null,
+                    flagged: chain.flagged || false,
+                    rating: chain.rating || null,
+                    tagged: chain.tagged || false,
+                    note: chain.note || "",
+                    clips: chain.fragments.map((frag, clipIdx) => ({
+                        clipNumber: clipIdx + 1,
+                        clipId: frag.title.split(' ').slice(0, 2).join(' '),
+                        title: frag.title,
+                        category: frag.category,
+                        icon: frag.icon,
+                        sourceIn: frag.start,
+                        sourceOut: frag.end,
+                        duration: frag.end - frag.start,
+                        tags: frag.tags || [],
+                        description: frag.desc || ""
+                    }))
+                })),
+                metadata: {
+                    totalSequences: game.chains.length,
+                    totalClips: game.chains.reduce((sum, c) => sum + c.fragments.length, 0),
+                    totalDuration: game.chains.reduce((sum, c) => 
+                        sum + c.fragments.reduce((s, f) => s + (f.end - f.start), 0), 0
+                    ),
+                    faction: game.faction.name,
+                    wave: game.wave,
+                    kills: game.kills,
+                    scoreBreakdown: calculateHandScore().breakdown,
+                    flaggedChains: game.chains.filter(c => c.flagged).length,
+                    upvotedChains: game.chains.filter(c => c.rating === 'up').length,
+                    downvotedChains: game.chains.filter(c => c.rating === 'down').length,
+                    taggedChains: game.chains.filter(c => c.tagged).length
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(oti, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const filename = filmTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'final_cut';
+            a.href = url;
+            a.download = `${filename}_${Date.now()}.oti.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function exportFinalCutEDL() {
+            let edl = `TITLE: Final Cut Assembly\nFCM: NON-DROP FRAME\n\n`;
+            let editNumber = 1;
+            let recordIn = 0;
+            
+            game.chains.forEach((chain, chainIdx) => {
+                edl += `* SEQUENCE ${chainIdx + 1}\n`;
+                if (chain.note) edl += `* NOTE: ${chain.note}\n`;
+                edl += `\n`;
+                
+                chain.fragments.forEach((frag) => {
+                    const duration = frag.end - frag.start;
+                    const recordOut = recordIn + duration;
+                    
+                    edl += `${String(editNumber).padStart(3, '0')}  001      V     C        `;
+                    edl += `${formatTimecode(frag.start)} ${formatTimecode(frag.end)} `;
+                    edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`;
+                    edl += `* FROM CLIP: ${frag.title}\n`;
+                    edl += `* CATEGORY: ${frag.category}\n\n`;
+                    
+                    recordIn = recordOut;
+                    editNumber++;
+                });
+            });
+            
+            const blob = new Blob([edl], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `final_cut_${Date.now()}.edl`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

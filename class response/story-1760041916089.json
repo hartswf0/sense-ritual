@@ -1,0 +1,190 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "bayer-individual-self",
+      "title": "Individual Self (Central)",
+      "category": "Core Concept",
+      "desc": "At the center of that world is the individual self, making their own story out of photographs.",
+      "quote": "The individual would make their own story out of the photographs.",
+      "tags": [
+        "Bayer",
+        "Agency",
+        "Self-determination"
+      ],
+      "start": 67,
+      "end": 78,
+      "color": "#AED581"
+    },
+    {
+      "id": "civil-rights-promises-broken",
+      "title": "Civil Rights Promises (Broken)",
+      "category": "Systemic Event",
+      "desc": "The idealism of black politics fell away and communities divided into gangs that then turned on each other.",
+      "quote": "By the 1980s, it was clear that the promises of the civil rights movement had not been kept in America and the idealism of black politics fell away and the communities divided into gangs that then turned on each other.",
+      "tags": [
+        "History",
+        "Disillusionment",
+        "Social Decay"
+      ],
+      "start": 244,
+      "end": 251,
+      "color": "#BDBDBD"
+    },
+    {
+      "id": "saudi-dream-corrupt",
+      "title": "Saudi Dream Society (Corrupt)",
+      "category": "Systemic Critique",
+      "desc": "Billions of dollars from the West created a dreamlike society run by an elite, but also deeply corrupt.",
+      "quote": "This vast wave of money had created a dreamlike society run by an elite where no one paid any tax.",
+      "tags": [
+        "Saudi",
+        "Wealth",
+        "Corruption",
+        "Illusion"
+      ],
+      "start": 379,
+      "end": 384,
+      "color": "#FFD54F"
+    },
+    {
+      "id": "dot-com-burst-money-power",
+      "title": "Dot-Com Bust (Money Power)",
+      "category": "Economic Event",
+      "desc": "The crash meant Google met the power of money, which was going to reshape their aims completely by venture capitalists.",
+      "quote": "Google managed to survive, but the crash meant that they met the power of money, which was going to reshape their aims completely.",
+      "tags": [
+        "Economy",
+        "Crisis",
+        "Corporate Control"
+      ],
+      "start": 2210,
+      "end": 2215,
+      "color": "#BCAAA4"
+    },
+    {
+      "id": "data-gold-rush-surveillance",
+      "title": "Data Gold Rush (Surveillance)",
+      "category": "Economic Apparatus",
+      "desc": "Products (Roomba, We Vibe, Kayla doll, Pokémon Go) set up to mine traces of human behavior everywhere.",
+      "quote": "Products of more and more companies around the world were set up to mine all the traces of human behavior everywhere.",
+      "tags": [
+        "Surveillance Capitalism",
+        "Privacy",
+        "Commercial"
+      ],
+      "start": 3691,
+      "end": 3698,
+      "color": "#FFD700"
+    },
+    {
+      "id": "pokemon-go-persuasive",
+      "title": "Pokémon Go (Persuasive Gaming)",
+      "category": "Technological Apparatus",
+      "desc": "An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.",
+      "quote": "Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.",
+      "tags": [
+        "Gaming",
+        "Behavioral Control",
+        "Monetization"
+      ],
+      "start": 3789,
+      "end": 3795,
+      "color": "#FFEB3B"
+    },
+    {
+      "id": "nightwolves-conspiracy-propaganda",
+      "title": "Nightwolves (Conspiracy Drama)",
+      "category": "Culture/Propaganda",
+      "desc": "Extreme nationalist motorcycle club dramatized a paranoid conspiracy that America/Illuminati were planning to undermine Putin and destroy Russia.",
+      "quote": "The Nightwolves put on mass shows that dramatized the paranoid conspiracy theory that America... were planning to undermine Vladimir Putin and destroy Russia.",
+      "tags": [
+        "Russia",
+        "Conspiracy",
+        "Nationalism"
+      ],
+      "start": 4893,
+      "end": 4907,
+      "color": "#E53935"
+    },
+    {
+      "id": "brexit-take-back-control",
+      "title": "Brexit (Take Back Control)",
+      "category": "Political Project",
+      "desc": "For Dominic Cummings, a way to get rid of failed elites and old political systems, transforming a decaying society.",
+      "quote": "For Dominic Cummings, Brexit was not an end in itself. For him, it was a way of getting rid of the failed elites and the old political systems that ran Britain.",
+      "tags": [
+        "Populism",
+        "Nationalism",
+        "Disenchantment"
+      ],
+      "start": 4476,
+      "end": 4488,
+      "color": "#EF5350"
+    },
+    {
+      "id": "future-indiv-disappear",
+      "title": "Future (Individualism Disappears)",
+      "category": "Future Scenario",
+      "desc": "Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.",
+      "quote": "Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.",
+      "tags": [
+        "Dystopia",
+        "Control",
+        "BF Skinner"
+      ],
+      "start": 6421,
+      "end": 6432,
+      "color": "#5C6BC0"
+    },
+    {
+      "id": "graeber-world-we-make",
+      "title": "Graeber (World We Make)",
+      "category": "Core Concept",
+      "desc": "The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.",
+      "quote": "The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.",
+      "tags": [
+        "Graeber",
+        "Agency",
+        "Liberation",
+        "Potential"
+      ],
+      "start": 6678,
+      "end": 6690,
+      "color": "#4CAF50"
+    },
+    {
+      "id": "russia-dream-consumption",
+      "title": "Russia (Dream World of Consumption)",
+      "category": "Systemic Critique",
+      "desc": "The country rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.",
+      "quote": "The country, he said, rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.",
+      "tags": [
+        "Social Decay",
+        "Illusion",
+        "Economy"
+      ],
+      "start": 3611,
+      "end": 3618,
+      "color": "#BBDEFB"
+    },
+    {
+      "id": "thornley-op-mindfuck",
+      "title": "Operation Mindfuck (Thornley)",
+      "category": "Theory/Action",
+      "desc": "Spread Illuminati theory to parody/ridicule conspiracy theories, believing they undermined individual confidence.",
+      "quote": "They had spread the conspiracy theory that the Illuminati were really the secret rulers of the world. They had done it to parody and ridicule all conspiracy theories because they thought that they undermined the confidence of individuals and made them easier to control.",
+      "tags": [
+        "Parody",
+        "Manipulation",
+        "Subversion"
+      ],
+      "start": 4182,
+      "end": 4196,
+      "color": "#9575CD"
+    }
+  ],
+  "timestamp": "2025-10-09T20:31:56.085Z",
+  "author": "Student",
+  "version": "1.0"
+}

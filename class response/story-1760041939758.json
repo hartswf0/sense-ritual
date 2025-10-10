@@ -1,0 +1,134 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "chaos-theory-unpredictable",
+      "title": "Chaos Theory",
+      "category": "Scientific Theory",
+      "desc": "One tiny change in equations could have massive catastrophic consequences which they could never have predicted.",
+      "quote": "One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.",
+      "tags": [
+        "Science",
+        "Complexity",
+        "Prediction",
+        "Limits of Control"
+      ],
+      "start": 664,
+      "end": 669,
+      "color": "#42A5F5"
+    },
+    {
+      "id": "pokemon-go-persuasive",
+      "title": "Pokémon Go (Persuasive Gaming)",
+      "category": "Technological Apparatus",
+      "desc": "An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.",
+      "quote": "Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.",
+      "tags": [
+        "Gaming",
+        "Behavioral Control",
+        "Monetization"
+      ],
+      "start": 3789,
+      "end": 3795,
+      "color": "#FFEB3B"
+    },
+    {
+      "id": "illuminati-mind-control",
+      "title": "Illuminati (Mind Control Theory)",
+      "category": "Conspiracy Theory",
+      "desc": "Millions convinced major stars were manipulated by Illuminati via MK Ultra/Disney, with hidden messages and triangles in videos.",
+      "quote": "Millions of people became convinced that all the major stars, from Britney Spears to Beyonce, were being manipulated and controlled by the Illuminati. The theory said that the Illuminati had worked with the CIA and their MK Ultra project and with Walt Disney to create a new system of mind control.",
+      "tags": [
+        "Conspiracy",
+        "Media",
+        "Control",
+        "Paranoia"
+      ],
+      "start": 4216,
+      "end": 4221,
+      "color": "#5E35B1"
+    },
+    {
+      "id": "complexity-theory-patterns",
+      "title": "Complexity Theory",
+      "category": "Scientific Theory",
+      "desc": "Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).",
+      "quote": "But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.",
+      "tags": [
+        "Science",
+        "Patterns",
+        "Management",
+        "Control"
+      ],
+      "start": 738,
+      "end": 751,
+      "color": "#2196F3"
+    },
+    {
+      "id": "dot-com-burst-money-power",
+      "title": "Dot-Com Bust (Money Power)",
+      "category": "Economic Event",
+      "desc": "The crash meant Google met the power of money, which was going to reshape their aims completely by venture capitalists.",
+      "quote": "Google managed to survive, but the crash meant that they met the power of money, which was going to reshape their aims completely.",
+      "tags": [
+        "Economy",
+        "Crisis",
+        "Corporate Control"
+      ],
+      "start": 2210,
+      "end": 2215,
+      "color": "#BCAAA4"
+    },
+    {
+      "id": "skinner-walden2",
+      "title": "Walden 2 Utopia",
+      "category": "Concept",
+      "desc": "Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.",
+      "quote": "Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.",
+      "tags": [
+        "Utopia",
+        "Control",
+        "Prediction",
+        "BF Skinner"
+      ],
+      "start": 5410,
+      "end": 5422,
+      "color": "#87CEEB"
+    },
+    {
+      "id": "conspiracy-theories-human-ai",
+      "title": "Conspiracy Theories (Human AI)",
+      "category": "Social Phenomenon",
+      "desc": "Humans spent vast amounts of time searching online data for patterns like AI, turning them into fantastic, elaborate stories.",
+      "quote": "But then it got more complicated because human beings were also exposed to the avalanche of data online and they started to behave in very much the same way as Jeffrey Hinton's artificial intelligence machines.",
+      "tags": [
+        "Social",
+        "Fragmentation",
+        "Narrative",
+        "Post-Truth"
+      ],
+      "start": 4129,
+      "end": 4161,
+      "color": "#7E57C2"
+    },
+    {
+      "id": "afeni-fairyland-conceal",
+      "title": "Unreal Fairyland (Afeni)",
+      "category": "Systemic Critique",
+      "desc": "The world most Americans lived in, both white and black, that concealed the harsh reality of power.",
+      "quote": "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.",
+      "tags": [
+        "Afeni",
+        "Illusion",
+        "Societal Narrative",
+        "Control"
+      ],
+      "start": 197,
+      "end": 204,
+      "color": "#FFCDD2"
+    }
+  ],
+  "timestamp": "2025-10-09T20:32:19.756Z",
+  "author": "Student",
+  "version": "1.0"
+}

@@ -1,0 +1,73 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "chaos-theory-unpredictable",
+      "title": "Chaos Theory",
+      "category": "Scientific Theory",
+      "desc": "One tiny change in equations could have massive catastrophic consequences which they could never have predicted.",
+      "quote": "One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.",
+      "tags": [
+        "Science",
+        "Complexity",
+        "Prediction",
+        "Limits of Control"
+      ],
+      "start": 664,
+      "end": 669,
+      "color": "#42A5F5"
+    },
+    {
+      "id": "cia-godzilla-fear",
+      "title": "CIA & Godzilla (Fear Wave)",
+      "category": "Systemic Impact",
+      "desc": "Disconnected memories from Zubaydah's brain, including from films like Godzilla, spread fear across America.",
+      "quote": "Desperate for the torture to stop, Zuba just spewed out all the disconnected memories inside his brain... many of them drawn from the films he had watched, including Godzilla.",
+      "tags": [
+        "Media",
+        "Propaganda",
+        "Fear",
+        "Systemic"
+      ],
+      "start": 2664,
+      "end": 2675,
+      "color": "#795548"
+    },
+    {
+      "id": "complexity-theory-patterns",
+      "title": "Complexity Theory",
+      "category": "Scientific Theory",
+      "desc": "Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).",
+      "quote": "But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.",
+      "tags": [
+        "Science",
+        "Patterns",
+        "Management",
+        "Control"
+      ],
+      "start": 738,
+      "end": 751,
+      "color": "#2196F3"
+    },
+    {
+      "id": "cia-enhanced-interrogation",
+      "title": "CIA Enhanced Interrogation",
+      "category": "Systemic Control",
+      "desc": "Used waterboarding 83 times, smashing, and freezing to reduce Abu Zubaydah to a state of \"learned helplessness\".",
+      "quote": "They would use it to reduce Abu Zubeda back to a state of learned helplessness. They called it enhanced interrogation.",
+      "tags": [
+        "Torture",
+        "Power",
+        "Control",
+        "Psychology",
+        "Systemic"
+      ],
+      "start": 2604,
+      "end": 2616,
+      "color": "#B71C1C"
+    }
+  ],
+  "timestamp": "2025-10-09T20:36:41.382Z",
+  "author": "Student",
+  "version": "1.0"
+}

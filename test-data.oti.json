@@ -1,0 +1,242 @@
+{
+  "version": "1.0",
+  "title": "Perpetual Fragments",
+  "logline": "A documentary assembled through emergent gameplay, revealing unexpected connections between surveillance, identity, and systemic collapse.",
+  "timestamp": "2025-10-10T03:04:00.000Z",
+  "coherenceScore": 1450,
+  "sourceVideo": "BQ2n6SN7gOY",
+  "sequences": [
+    {
+      "id": 1,
+      "sequenceNumber": 1,
+      "beatName": "Opening Image",
+      "beatNumber": 1,
+      "act": 1,
+      "syntagmaType": "DS",
+      "syntagmaName": "Descriptive Syntagma",
+      "lane": 0,
+      "flagged": true,
+      "rating": "up",
+      "tagged": false,
+      "note": "Establishes the technological landscape",
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Surveillance Capitalism",
+          "title": "Surveillance Capitalism",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 125,
+          "sourceOut": 142,
+          "duration": 17,
+          "description": "The business model where human experience is commodified as raw material for behavioral prediction and modification.",
+          "tags": ["economics", "privacy", "data"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Filter Bubbles",
+          "title": "Filter Bubbles and Echo Chambers",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 245,
+          "sourceOut": 263,
+          "duration": 18,
+          "description": "Algorithmic curation creates isolated information environments where users only encounter confirming viewpoints.",
+          "tags": ["media", "polarization", "algorithms"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Attention Economy",
+          "title": "Attention Economy",
+          "category": "Economics",
+          "icon": "💰",
+          "sourceIn": 387,
+          "sourceOut": 402,
+          "duration": 15,
+          "description": "Human attention becomes the scarce resource that platforms compete to capture and monetize.",
+          "tags": ["economics", "psychology", "design"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "sequenceNumber": 2,
+      "beatName": "Theme Stated",
+      "beatNumber": 2,
+      "act": 1,
+      "syntagmaType": "SC",
+      "syntagmaName": "Scene",
+      "lane": 1,
+      "flagged": false,
+      "rating": "up",
+      "tagged": true,
+      "note": "Core question: Can we govern what we can't understand?",
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Epistemic Crisis",
+          "title": "Epistemic Crisis",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 567,
+          "sourceOut": 589,
+          "duration": 22,
+          "description": "The breakdown of shared frameworks for determining truth and knowledge in democratic societies.",
+          "tags": ["democracy", "truth", "institutions"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Complexity Theory",
+          "title": "Complexity Theory",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 723,
+          "sourceOut": 741,
+          "duration": 18,
+          "description": "Systems with many interacting components produce emergent behaviors that cannot be predicted from individual parts.",
+          "tags": ["systems", "emergence", "chaos"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "sequenceNumber": 3,
+      "beatName": "Set-Up",
+      "beatNumber": 3,
+      "act": 1,
+      "syntagmaType": "BS",
+      "syntagmaName": "Bracket Syntagma",
+      "lane": 2,
+      "flagged": false,
+      "rating": null,
+      "tagged": false,
+      "note": "Examples of system failures",
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Mass Incarceration",
+          "title": "Mass Incarceration",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 892,
+          "sourceOut": 915,
+          "duration": 23,
+          "description": "The exponential growth of prison populations as a response to social problems, creating cascading harm.",
+          "tags": ["justice", "policy", "society"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Financial Crisis",
+          "title": "2008 Financial Crisis",
+          "category": "Economics",
+          "icon": "💰",
+          "sourceIn": 1045,
+          "sourceOut": 1069,
+          "duration": 24,
+          "description": "Complex financial instruments created systemic risk that regulators and executives failed to comprehend.",
+          "tags": ["finance", "regulation", "risk"]
+        },
+        {
+          "clipNumber": 3,
+          "clipId": "Algorithmic Bias",
+          "title": "Algorithmic Bias",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 1234,
+          "sourceOut": 1251,
+          "duration": 17,
+          "description": "Machine learning systems encode and amplify historical prejudices in automated decision-making.",
+          "tags": ["ai", "discrimination", "justice"]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "sequenceNumber": 4,
+      "beatName": "Catalyst",
+      "beatNumber": 4,
+      "act": 1,
+      "syntagmaType": "AS",
+      "syntagmaName": "Autonomous Shot",
+      "lane": 0,
+      "flagged": true,
+      "rating": "up",
+      "tagged": true,
+      "note": "The moment of recognition",
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Pandemic Response",
+          "title": "Pandemic Response Failures",
+          "category": "Politics",
+          "icon": "🏛️",
+          "sourceIn": 1456,
+          "sourceOut": 1483,
+          "duration": 27,
+          "description": "Global institutions proved unable to coordinate effective responses to a predictable crisis, revealing deep governance failures.",
+          "tags": ["health", "governance", "crisis"]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "sequenceNumber": 5,
+      "beatName": "Debate",
+      "beatNumber": 5,
+      "act": 1,
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "lane": 1,
+      "flagged": false,
+      "rating": "down",
+      "tagged": false,
+      "note": "Competing visions for the future",
+      "clips": [
+        {
+          "clipNumber": 1,
+          "clipId": "Techno Optimism",
+          "title": "Techno-Optimism",
+          "category": "Technology",
+          "icon": "📊",
+          "sourceIn": 1678,
+          "sourceOut": 1697,
+          "duration": 19,
+          "description": "The belief that technological innovation will solve problems faster than it creates them.",
+          "tags": ["innovation", "progress", "ideology"]
+        },
+        {
+          "clipNumber": 2,
+          "clipId": "Degrowth Movement",
+          "title": "Degrowth Movement",
+          "category": "Economics",
+          "icon": "💰",
+          "sourceIn": 1823,
+          "sourceOut": 1845,
+          "duration": 22,
+          "description": "Advocates for planned reduction of production and consumption to achieve ecological sustainability.",
+          "tags": ["ecology", "economics", "alternatives"]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "totalSequences": 5,
+    "totalClips": 13,
+    "totalDuration": 232,
+    "faction": "The Deconstructors",
+    "wave": 3,
+    "kills": 47,
+    "scoreBreakdown": {
+      "base": 500,
+      "sharedClips": 150,
+      "chainConnections": 200,
+      "sequential": 180,
+      "categoryCoherence": 120,
+      "dominantTheme": 100
+    },
+    "flaggedChains": 2,
+    "upvotedChains": 3,
+    "downvotedChains": 1,
+    "taggedChains": 2
+  }
+}

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Lab - Film Generator Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 40px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-bottom: 40px;
+        }
+        
+        .section {
+            background: rgba(0, 255, 0, 0.05);
+            border: 2px solid #00ff00;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        
+        .section h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #00ff00;
+        }
+        
+        .file-input-area {
+            border: 2px dashed #00ff00;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        
+        .file-input-area:hover {
+            background: rgba(0, 255, 0, 0.1);
+        }
+        
+        .file-input-area.dragover {
+            background: rgba(0, 255, 0, 0.2);
+            border-color: #fff;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #00cc00;
+            transform: scale(1.05);
+        }
+        
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .preview {
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-box .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 5px;
+        }
+        
+        .stat-box .label {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .beat-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+        
+        .beat-list li {
+            background: rgba(0, 255, 0, 0.05);
+            border-left: 4px solid #00ff00;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .beat-list .beat-number {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .beat-list .syntagma {
+            opacity: 0.7;
+            font-size: 11px;
+        }
+        
+        .log {
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 11px;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        
+        .log-entry.success { color: #00ff00; }
+        .log-entry.error { color: #ff0000; }
+        .log-entry.info { color: #00aaff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 PROMPT LAB</h1>
+        <div class="subtitle">Film Generator Testing Portal · Load OTI.JSON · Test Film Generation</div>
+        
+        <!-- File Upload Section -->
+        <div class="section">
+            <h2>1. LOAD OTI.JSON</h2>
+            <div class="file-input-area" id="dropZone">
+                <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                <div>Drop OTI.JSON file here or click to browse</div>
+                <input type="file" id="fileInput" accept=".json">
+            </div>
+            <button onclick="loadSampleData()">LOAD SAMPLE DATA</button>
+            <button onclick="loadTestData()">LOAD FULL TEST DATA</button>
+        </div>
+        
+        <!-- Data Preview Section -->
+        <div class="section" id="dataSection" style="display: none;">
+            <h2>2. DATA PREVIEW</h2>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="value" id="statBeats">0</div>
+                    <div class="label">BEATS</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="statShots">0</div>
+                    <div class="label">SHOTS</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="statRuntime">0s</div>
+                    <div class="label">RUNTIME</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="statScore">0</div>
+                    <div class="label">COHERENCE</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px; margin-bottom: 15px;">BEAT SHEET</h3>
+            <ul class="beat-list" id="beatList"></ul>
+            
+            <h3 style="margin-top: 30px; margin-bottom: 15px;">SEQUENCE NOTES</h3>
+            <div id="sequenceNotes" style="margin-bottom: 20px;"></div>
+            
+            <h3 style="margin-top: 30px; margin-bottom: 15px;">RAW JSON</h3>
+            <div class="preview" id="jsonPreview"></div>
+        </div>
+        
+        <!-- Generation Section -->
+        <div class="section" id="generateSection" style="display: none;">
+            <h2>3. GENERATE FILM</h2>
+            
+            <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,255,0,0.05); border: 1px solid #00ff00;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="textOnlyMode" style="margin-right: 10px; width: 20px; height: 20px;">
+                    <span style="font-size: 14px;">TEXT-ONLY MODE (No YouTube embeds, pure narrative)</span>
+                </label>
+            </div>
+            
+            <button onclick="generateAndPreviewFilm()" id="previewBtn">🎬 PREVIEW FILM</button>
+            <button onclick="downloadFilmHTML()" id="downloadHtmlBtn">💾 DOWNLOAD HTML</button>
+            <button onclick="downloadFFmpegScript()" id="downloadFfmpegBtn">⚙️ DOWNLOAD FFMPEG SCRIPT</button>
+            <button onclick="downloadStorymap()" id="downloadStorymapBtn">📝 DOWNLOAD STORYMAP</button>
+            
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+    
+    <script src="film-generator.js"></script>
+    <script>
+        let currentOTI = null;
+        
+        // File drop zone
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.json')) {
+                loadFile(file);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) loadFile(file);
+        });
+        
+        function loadFile(file) {
+            log(`Loading ${file.name}...`, 'info');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    loadOTIData(data);
+                    log(`✓ Loaded ${file.name}`, 'success');
+                } catch (err) {
+                    log(`✗ Error parsing JSON: ${err.message}`, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function loadTestData() {
+            log('Loading full test data (15 beats, 55 clips)...', 'info');
+            fetch('test-data-full.oti.json')
+                .then(res => res.json())
+                .then(data => {
+                    loadOTIData(data);
+                    log('✓ Full test data loaded - realistic gameplay data', 'success');
+                })
+                .catch(err => {
+                    log(`✗ Error loading test data: ${err.message}`, 'error');
+                });
+        }
+        
+        function loadSampleData() {
+            log('Loading sample data...', 'info');
+            const sample = {
+                version: "1.0",
+                title: "Sample Documentary",
+                logline: "A test film for the prompt lab",
+                timestamp: new Date().toISOString(),
+                coherenceScore: 850,
+                sourceVideo: "BQ2n6SN7gOY",
+                sequences: [
+                    {
+                        id: 1,
+                        sequenceNumber: 1,
+                        beatName: "Opening Image",
+                        beatNumber: 1,
+                        act: 1,
+                        syntagmaType: "DS",
+                        syntagmaName: "Descriptive Syntagma",
+                        lane: 0,
+                        clips: [
+                            {
+                                clipNumber: 1,
+                                clipId: "Surveillance Capitalism",
+                                title: "Surveillance Capitalism",
+                                category: "Technology",
+                                icon: "📊",
+                                sourceIn: 12,
+                                sourceOut: 24,
+                                duration: 12
+                            },
+                            {
+                                clipNumber: 2,
+                                clipId: "Filter Bubbles",
+                                title: "Filter Bubbles and Echo Chambers",
+                                category: "Technology",
+                                icon: "📊",
+                                sourceIn: 45,
+                                sourceOut: 60,
+                                duration: 15
+                            }
+                        ]
+                    },
+                    {
+                        id: 2,
+                        sequenceNumber: 2,
+                        beatName: "Theme Stated",
+                        beatNumber: 2,
+                        act: 1,
+                        syntagmaType: "SC",
+                        syntagmaName: "Scene",
+                        lane: 1,
+                        clips: [
+                            {
+                                clipNumber: 1,
+                                clipId: "Epistemic Crisis",
+                                title: "Epistemic Crisis",
+                                category: "Politics",
+                                icon: "🏛️",
+                                sourceIn: 120,
+                                sourceOut: 138,
+                                duration: 18
+                            }
+                        ]
+                    }
+                ],
+                metadata: {
+                    totalSequences: 2,
+                    totalClips: 3,
+                    totalDuration: 45,
+                    faction: "The Deconstructors"
+                }
+            };
+            loadOTIData(sample);
+            log('✓ Sample data loaded', 'success');
+        }
+        
+        function loadOTIData(data) {
+            currentOTI = data;
+            
+            // Show sections
+            document.getElementById('dataSection').style.display = 'block';
+            document.getElementById('generateSection').style.display = 'block';
+            
+            // Update stats
+            document.getElementById('statBeats').textContent = data.sequences.length;
+            document.getElementById('statShots').textContent = data.metadata.totalClips;
+            document.getElementById('statRuntime').textContent = data.metadata.totalDuration + 's';
+            document.getElementById('statScore').textContent = data.coherenceScore || 0;
+            
+            // Update beat list
+            const beatList = document.getElementById('beatList');
+            beatList.innerHTML = data.sequences.map(seq => {
+                const clipDetails = seq.clips.map(c => {
+                    const desc = c.description || c.desc || '';
+                    const tags = c.tags || [];
+                    return `<div style="margin: 8px 0; padding: 8px; background: rgba(0,255,0,0.03); border-left: 2px solid #00ff00;">
+                        <strong>${c.title}</strong> (${c.duration}s)
+                        ${desc ? `<br><span style="opacity: 0.7; font-size: 11px;">${desc}</span>` : ''}
+                        ${tags.length > 0 ? `<br><span style="opacity: 0.5; font-size: 10px;">${tags.map(t => '#' + t).join(' ')}</span>` : ''}
+                    </div>`;
+                }).join('');
+                
+                return `
+                <li>
+                    <span class="beat-number">Beat ${seq.beatNumber || seq.sequenceNumber}: ${seq.beatName || 'Sequence ' + seq.sequenceNumber}</span>
+                    <br>
+                    <span class="syntagma">${seq.syntagmaType || ''} ${seq.syntagmaName ? '- ' + seq.syntagmaName : ''} · ${seq.clips.length} shots · ${seq.clips.reduce((sum, c) => sum + c.duration, 0)}s</span>
+                    ${seq.note ? `<br><span style="opacity: 0.6; font-size: 11px; font-style: italic;">Note: ${seq.note}</span>` : ''}
+                    ${clipDetails}
+                </li>
+            `;
+            }).join('');
+            
+            // Update sequence notes
+            const notesEl = document.getElementById('sequenceNotes');
+            const notedSequences = data.sequences.filter(s => s.note);
+            if (notedSequences.length > 0) {
+                notesEl.innerHTML = notedSequences.map(seq => 
+                    `<div style="margin: 10px 0; padding: 12px; background: rgba(0,255,0,0.05); border-left: 3px solid #00ff00;">
+                        <strong>Beat ${seq.beatNumber}: ${seq.beatName}</strong><br>
+                        <span style="opacity: 0.8;">${seq.note}</span>
+                    </div>`
+                ).join('');
+            } else {
+                notesEl.innerHTML = '<span style="opacity: 0.5;">No sequence notes</span>';
+            }
+            
+            // Update JSON preview
+            document.getElementById('jsonPreview').textContent = JSON.stringify(data, null, 2);
+        }
+        
+        function generateAndPreviewFilm() {
+            if (!currentOTI) return;
+            const textOnly = document.getElementById('textOnlyMode').checked;
+            log(`Generating ${textOnly ? 'text-only' : 'video'} film HTML...`, 'info');
+            
+            try {
+                const html = textOnly ? generateTextOnlyFilm(currentOTI) : generateFilmHTML(currentOTI);
+                log(`✓ Film HTML generated (${textOnly ? 'text-only' : 'with video'})`, 'success');
+                
+                // Open in new window
+                const filmWindow = window.open('', '_blank');
+                filmWindow.document.write(html);
+                filmWindow.document.close();
+                log('✓ Film opened in new window', 'success');
+            } catch (err) {
+                log(`✗ Error generating film: ${err.message}`, 'error');
+            }
+        }
+        
+        function downloadFilmHTML() {
+            if (!currentOTI) return;
+            const textOnly = document.getElementById('textOnlyMode').checked;
+            log(`Generating ${textOnly ? 'text-only' : 'video'} film HTML for download...`, 'info');
+            
+            try {
+                const html = textOnly ? generateTextOnlyFilm(currentOTI) : generateFilmHTML(currentOTI);
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const filename = currentOTI.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'film';
+                const suffix = textOnly ? '_text' : '_film';
+                a.href = url;
+                a.download = `${filename}${suffix}.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+                log(`✓ Downloaded ${filename}${suffix}.html`, 'success');
+            } catch (err) {
+                log(`✗ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        function downloadFFmpegScript() {
+            if (!currentOTI) return;
+            log('Generating FFmpeg script...', 'info');
+            
+            try {
+                const script = generateFFmpegScript(currentOTI);
+                const blob = new Blob([script], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const filename = currentOTI.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'film';
+                a.href = url;
+                a.download = `${filename}_ffmpeg.sh`;
+                a.click();
+                URL.revokeObjectURL(url);
+                log(`✓ Downloaded ${filename}_ffmpeg.sh`, 'success');
+            } catch (err) {
+                log(`✗ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        function downloadStorymap() {
+            if (!currentOTI) return;
+            log('Generating storymap...', 'info');
+            
+            try {
+                // Simple storymap generation (you can expand this)
+                let storymap = `# ${currentOTI.title}\n\n`;
+                storymap += `${currentOTI.logline}\n\n`;
+                storymap += `---\n\n`;
+                
+                currentOTI.sequences.forEach(seq => {
+                    storymap += `## Beat ${seq.beatNumber}: ${seq.beatName}\n\n`;
+                    storymap += `**Syntagma:** ${seq.syntagmaType} - ${seq.syntagmaName}\n\n`;
+                    seq.clips.forEach((clip, idx) => {
+                        storymap += `### Shot ${idx + 1}: ${clip.title}\n`;
+                        storymap += `- Duration: ${clip.duration}s\n`;
+                        storymap += `- Timecode: ${formatTimecode(clip.sourceIn)} - ${formatTimecode(clip.sourceOut)}\n\n`;
+                    });
+                    storymap += `---\n\n`;
+                });
+                
+                const blob = new Blob([storymap], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const filename = currentOTI.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'storymap';
+                a.href = url;
+                a.download = `${filename}_storymap.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+                log(`✓ Downloaded ${filename}_storymap.md`, 'success');
+            } catch (err) {
+                log(`✗ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+    </script>
+</body>
+</html>

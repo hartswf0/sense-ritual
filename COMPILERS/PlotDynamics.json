@@ -1,0 +1,144 @@
+{
+    "PlotDynamics": {
+      "StoryStructure": {
+        "Introduction": {
+          "SettingEstablishment": {
+            "LocationDetails": "",
+            "HistoricalPeriod": "",
+            "CulturalBackdrop": ""
+          },
+          "CharacterIntroductions": {
+            "ProtagonistIntroduction": "",
+            "SupportingCharacters": "",
+            "AntagonistReveal": ""
+          },
+          "InitialConflict": {
+            "ConflictNature": "",
+            "ConflictStake": "",
+            "CharacterInvolvement": ""
+          }
+        },
+        "RisingAction": {
+          "ConflictEscalation": {
+            "StakesIncrease": "",
+            "NewChallenges": "",
+            "CharacterResponse": ""
+          },
+          "CharacterChallenges": {
+            "PersonalStruggle": "",
+            "InterpersonalConflict": "",
+            "ExternalPressures": ""
+          },
+          "PlotComplications": {
+            "UnexpectedTwists": "",
+            "AdditionalObstacles": "",
+            "IntensifiedDynamics": ""
+          }
+        },
+        "Climax": {
+          "PeakConflict": {
+            "CrisisPoint": "",
+            "TensionHeight": "",
+            "CharacterLimitTesting": ""
+          },
+          "ProtagonistDecisionPoint": {
+            "CriticalChoice": "",
+            "RiskFactors": "",
+            "PotentialOutcomes": ""
+          },
+          "AntagonistShowdown": {
+            "ConfrontationDetails": "",
+            "PowerBalance": "",
+            "ShowdownOutcome": ""
+          }
+        },
+        "FallingAction": {
+          "ConflictResolution": {
+            "ResolutionMethod": "",
+            "ConflictAftermath": "",
+            "CharacterImpact": ""
+          },
+          "CharacterResolutions": {
+            "CharacterArcClosure": "",
+            "RelationshipOutcome": "",
+            "PersonalAchievements": ""
+          },
+          "TyingLooseEnds": {
+            "UnresolvedIssues": "",
+            "NarrativeClosure": "",
+            "ForeshadowingFuture": ""
+          }
+        },
+        "Conclusion": {
+          "StoryWrapUp": {
+            "NarrativeSummary": "",
+            "ThematicResolution": "",
+            "FinalMessage": ""
+          },
+          "CharacterFates": {
+            "ProtagonistEndState": "",
+            "SupportingCharactersOutcome": "",
+            "AntagonistFate": ""
+          },
+          "LastingImpacts": {
+            "StoryImpactOnWorld": "",
+            "CharacterLegacy": "",
+            "AudienceTakeaway": ""
+          }
+        }
+      },
+      "CharacterGrowth": {
+        "PersonalDevelopment": {
+          "InternalConflictResolution": {
+            "InnerTurmoilAddressed": "",
+            "ResolutionMechanism": "",
+            "SelfRealization": ""
+          },
+          "GrowthArcCompletion": {
+            "DevelopmentJourney": "",
+            "GrowthMilestones": "",
+            "CharacterTransformation": ""
+          },
+          "TransformationRealization": {
+            "NewSelfUnderstanding": "",
+            "AlteredWorldview": "",
+            "FutureAspirations": ""
+          }
+        },
+        "RelationshipEvolution": {
+          "InterpersonalDynamics": {
+            "RelationshipStart": "",
+            "DynamicsChange": "",
+            "RelationshipDepth": ""
+          },
+          "BondStrengthening": {
+            "TrustBuilding": "",
+            "SharedExperiences": "",
+            "BondTest": ""
+          },
+          "ConflictAndResolution": {
+            "RelationshipConflict": "",
+            "ResolutionStrategies": "",
+            "RelationshipOutcome": ""
+          }
+        },
+        "MoralEvolution": {
+          "ValueChanges": {
+            "InitialValues": "",
+            "InfluencingEvents": "",
+            "EvolvedValues": ""
+          },
+          "EthicalDilemmas": {
+            "DilemmaNature": "",
+            "DecisionMakingProcess": "",
+            "OutcomeOfChoices": ""
+          },
+          "FinalMoralStance": {
+            "CharacterEthics": "",
+            "MoralConsistency": "",
+            "ImpactOnActions": ""
+          }
+        }
+      }
+    }
+  }

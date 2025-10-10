@@ -1,0 +1,132 @@
+{
+  "title": "My Story",
+  "selected": [
+    {
+      "id": "bayer-individual-self",
+      "title": "Individual Self (Central)",
+      "category": "Core Concept",
+      "desc": "At the center of that world is the individual self, making their own story out of photographs.",
+      "quote": "The individual would make their own story out of the photographs.",
+      "tags": [
+        "Bayer",
+        "Agency",
+        "Self-determination"
+      ],
+      "start": 67,
+      "end": 78,
+      "color": "#AED581"
+    },
+    {
+      "id": "society-boom-q",
+      "title": "Societal \"Boom\" (Repression)",
+      "category": "Systemic Control",
+      "desc": "Society will let you go as far as you want, but as soon as you start asking too many questions, \"boom\".",
+      "quote": "Well, society is like that. They'll let you go as far as you want, but as soon as you start asking too many questions and you're ready to change, boom.",
+      "tags": [
+        "Repression",
+        "Control",
+        "Censorship"
+      ],
+      "start": 230,
+      "end": 237,
+      "color": "#616161"
+    },
+    {
+      "id": "cultural-fairy-tale-tupac",
+      "title": "Culture as Fairy Tale (Tupac)",
+      "category": "Systemic Critique",
+      "desc": "By moving radical politics into culture, Tupac helped keep anger and dissent sealed off from real politics and power.",
+      "quote": "By moving radical politics into the world of culture, Tupac Shakur had also become part of the fairy tale world because he helped keep the anger and the dissent sealed off from the real world of politics and power.",
+      "tags": [
+        "Media",
+        "Illusion",
+        "Politics",
+        "Dissent"
+      ],
+      "start": 1099,
+      "end": 1113,
+      "color": "#90CAF9"
+    },
+    {
+      "id": "skinner-walden2",
+      "title": "Walden 2 Utopia",
+      "category": "Concept",
+      "desc": "Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.",
+      "quote": "Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.",
+      "tags": [
+        "Utopia",
+        "Control",
+        "Prediction",
+        "BF Skinner"
+      ],
+      "start": 5410,
+      "end": 5422,
+      "color": "#87CEEB"
+    },
+    {
+      "id": "london-second-empire-discretion",
+      "title": "London (Second Empire of Secrecy)",
+      "category": "Systemic Apparatus",
+      "desc": "City's 'discretion in the market' turned into a force shield, hiding hundreds of billions of illegal fortunes, making the world seem bewilderingly complicated.",
+      "quote": "Now, the discretion that the city was still so proud of had in reality turned into a force shield. It stopped any proper investigation of what was really going on.",
+      "tags": [
+        "Finance",
+        "Corruption",
+        "Offshore",
+        "Globalization"
+      ],
+      "start": 5013,
+      "end": 5019,
+      "color": "#757575"
+    },
+    {
+      "id": "2008-global-economic-crash",
+      "title": "2008 Global Economic Crash",
+      "category": "Systemic Event",
+      "desc": "Mortgage systems failed completely, leading to global crash; governments transferred private debt to public, leading to austerity.",
+      "quote": "In 2008, the systems in the banks that had structured the mortgage loans failed completely. It led to a global economic crash.",
+      "tags": [
+        "Economy",
+        "Crisis",
+        "Inequality",
+        "Systemic"
+      ],
+      "start": 4329,
+      "end": 4336,
+      "color": "#E57373"
+    },
+    {
+      "id": "future-indiv-disappear",
+      "title": "Future (Individualism Disappears)",
+      "category": "Future Scenario",
+      "desc": "Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.",
+      "quote": "Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.",
+      "tags": [
+        "Dystopia",
+        "Control",
+        "BF Skinner"
+      ],
+      "start": 6421,
+      "end": 6432,
+      "color": "#5C6BC0"
+    },
+    {
+      "id": "future-old-stability",
+      "title": "Future (Return to Old Stability)",
+      "category": "Future Scenario",
+      "desc": "Hope for return to an old stability where individualism can continue to be managed by a benign elite, but enormous pressures will not go away.",
+      "quote": "Many people are hoping that with the election of Joe Biden in America, it will be possible to return to an old stability where individualism can continue to be managed by a benign elite. But although Donald Trump is gone and the Brexit deal done, what they both revealed was that underneath Western societies, there are enormous pressures building up that will not go away.",
+      "tags": [
+        "Nostalgia",
+        "Illusion",
+        "Unresolved Conflict"
+      ],
+      "start": 6490,
+      "end": 6509,
+      "color": "#9FA8DA"
+    }
+  ],
+  "timestamp": "2025-10-09T20:34:15.628Z",
+  "author": "Student",
+  "version": "1.0"
+}
