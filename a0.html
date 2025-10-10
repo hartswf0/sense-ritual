@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sense Ritual — Narrative Assembly Tools</title>
+  <meta name="description" content="Interactive tools for documentary editing, narrative assembly, and film generation through gameplay" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #fff; 
+      color: #000;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+
+    .header {
+      margin-bottom: 80px;
+      padding-bottom: 40px;
+      border-bottom: 4px solid #000;
+    }
+
+    .headline {
+      font-size: clamp(2.5rem, 10vw, 5rem);
+      font-weight: 900;
+      letter-spacing: -3px;
+      margin-bottom: 16px;
+      line-height: 0.9;
+      text-transform: uppercase;
+    }
+
+    .subhead {
+      font-size: clamp(0.85rem, 2.5vw, 1rem);
+      font-weight: 400;
+      color: #000;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      max-width: 600px;
+    }
+
+    .tag-line {
+      font-size: clamp(0.7rem, 2vw, 0.8rem);
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: 700;
+    }
+
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-size: clamp(0.9rem, 3vw, 1.1rem);
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-left: 4px solid #000;
+      padding-left: 12px;
+    }
+
+    .section-desc {
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      padding-left: 16px;
+    }
+
+    .nav-grid {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .nav-card {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 28px;
+      text-decoration: none;
+      color: #000;
+      transition: all 0.15s;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: start;
+      touch-action: manipulation;
+    }
+
+    .nav-card:hover, .nav-card:active {
+      background: #000;
+      color: #fff;
+    }
+
+    .nav-card-content {
+      display: grid;
+      gap: 12px;
+    }
+
+    .nav-card-marker {
+      width: 48px;
+      height: 48px;
+      background: #000;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .nav-card:hover .nav-card-marker, .nav-card:active .nav-card-marker {
+      background: #fff;
+      color: #000;
+    }
+
+    .warning-note {
+      font-size: clamp(0.7rem, 2vw, 0.75rem);
+      color: #999;
+      padding: 12px 16px;
+      border-left: 4px solid #999;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .nav-card-title {
+      font-size: clamp(1rem, 3vw, 1.2rem);
+      font-weight: 900;
+      line-height: 1.2;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+    }
+
+    .nav-card-desc {
+      font-size: clamp(0.75rem, 2.5vw, 0.85rem);
+      line-height: 1.5;
+      color: #666;
+    }
+
+    .nav-card:hover .nav-card-desc, .nav-card:active .nav-card-desc {
+      color: #ccc;
+    }
+
+    .nav-card-tag {
+      display: inline-block;
+      font-size: clamp(0.65rem, 2vw, 0.7rem);
+      padding: 6px 10px;
+      background: #000;
+      color: #fff;
+      margin-top: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .nav-card:hover .nav-card-tag, .nav-card:active .nav-card-tag {
+      background: #fff;
+      color: #000;
+    }
+
+    .footer {
+      font-size: 0.85rem;
+      color: #999;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 2px solid #eee;
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 40px 16px; }
+      .header { margin-bottom: 40px; padding-bottom: 30px; }
+      .section { margin-bottom: 40px; }
+      .nav-card { padding: 20px; }
+      .nav-card-icon { top: 16px; right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="headline">Sense Ritual</h1>
+      <p class="subhead">Interactive tools for documentary editing, narrative assembly, and film generation through gameplay</p>
+      <p class="tag-line">Expanded Cinema / Procedural Rhetoric / Playable Interfaces</p>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Film Assembly Tools</h2>
+      <p class="section-desc">Game-based editors for building documentary narratives</p>
+      
+      <div class="nav-grid">
+        <a href="matrix-editor.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Matrix Editor</div>
+            <div class="nav-card-desc">Tower defense meets video editing. Collect clips, build 15-beat narrative chains, generate playable films with geometric visualizations.</div>
+            <div class="nav-card-tag">Game / Film Generator</div>
+          </div>
+          <div class="nav-card-marker">01</div>
+        </a>
+
+        <a href="swiper-so.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Fragment Swiper</div>
+            <div class="nav-card-desc">Mobile-first swipe interface. Chat with AI-compiled fragments, sort/filter collections, export CSV/charts/logs.</div>
+            <div class="nav-card-tag">Mobile / AI Chat</div>
+          </div>
+          <div class="nav-card-marker">02</div>
+        </a>
+
+        <a href="prompt-lab.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Prompt Lab</div>
+            <div class="nav-card-desc">Test film generation without gameplay. Load OTI.JSON, preview films, export HTML/FFmpeg/storymap. Debugging portal.</div>
+            <div class="nav-card-tag">Testing / Export</div>
+          </div>
+          <div class="nav-card-marker">03</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Analysis & Visualization</h2>
+      <p class="section-desc">Tools for exploring narrative patterns and transclusions</p>
+      
+      <div class="nav-grid">
+        <a href="class-analysis.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Class Story Analysis</div>
+            <div class="nav-card-desc">Transclusion patterns across 10 student stories. Lane-based visualization reveals shared concepts and divergent interpretations.</div>
+            <div class="nav-card-tag">Visualization</div>
+          </div>
+          <div class="nav-card-marker">04</div>
+        </a>
+
+        <a href="a3.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Concept Explorer</div>
+            <div class="nav-card-desc">68 interconnected concepts from Adam Curtis's documentary. Grid, List, and 3D views for building narrative journeys.</div>
+            <div class="nav-card-tag">3D / Interactive</div>
+          </div>
+          <div class="nav-card-marker">05</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Experimental Interfaces</h2>
+      <p class="section-desc">Early prototypes and alternative approaches</p>
+      
+      <div class="nav-grid">
+        <a href="fragment-branches.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Fragment Branches</div>
+            <div class="nav-card-desc">Version control as expanded cinema. Stories = branches, fragments = commits. Git for narrative assembly.</div>
+            <div class="nav-card-tag">Git-like</div>
+          </div>
+          <div class="nav-card-marker">06</div>
+        </a>
+
+        <a href="story-game.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Story Assembly Game</div>
+            <div class="nav-card-desc">Procedural rhetoric engine with neural net predictions and coherence scoring. Early prototype of Matrix Editor.</div>
+            <div class="nav-card-tag">Prototype</div>
+          </div>
+          <div class="nav-card-marker">07</div>
+        </a>
+
+        <a href="trails_before_links_saul_bass_film_html.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Trails Before Links</div>
+            <div class="nav-card-desc">Saul Bass–inspired cinematic deck exploring trails as primary navigation patterns before hyperlinks.</div>
+            <div class="nav-card-tag">Cinematic</div>
+          </div>
+          <div class="nav-card-marker">08</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Experimental / Unstable</h2>
+      <div class="warning-note">Warning: These tools are experimental and may not function correctly. Use for testing only.</div>
+      
+      <div class="nav-grid">
+        <a href="chain-collector.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Chain Collector</div>
+            <div class="nav-card-desc">Early chain-building interface. Collect fragments into sequences with basic scoring. Superseded by Matrix Editor.</div>
+            <div class="nav-card-tag">Deprecated</div>
+          </div>
+          <div class="nav-card-marker">09</div>
+        </a>
+
+        <a href="narrative-defence.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Narrative Defence</div>
+            <div class="nav-card-desc">Tower defense prototype without video editing features. Pure game mechanics testing ground.</div>
+            <div class="nav-card-tag">Prototype</div>
+          </div>
+          <div class="nav-card-marker">10</div>
+        </a>
+
+        <a href="swipe.html" class="nav-card">
+          <div class="nav-card-content">
+            <div class="nav-card-title">Fragment Swipe (Legacy)</div>
+            <div class="nav-card-desc">Original swipe interface without AI chat or advanced export features. See Fragment Swiper for current version.</div>
+            <div class="nav-card-tag">Legacy</div>
+          </div>
+          <div class="nav-card-marker">11</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="footer">
+      Sense Ritual / Tools for narrative assembly through interactive gameplay / All tools work offline except AI features
+    </div>
+  </div>
+</body>
+</html>
