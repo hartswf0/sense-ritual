@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test: Fragment Closure Bug</title>
+  <style>
+    body { font-family: monospace; padding: 40px; }
+    .card { border: 3px solid #000; padding: 20px; margin: 20px 0; max-width: 400px; }
+    button { padding: 10px 20px; margin: 5px; font-size: 14px; font-weight: bold; }
+    #log { background: #f0f0f0; padding: 20px; margin-top: 20px; max-height: 400px; overflow: auto; }
+    .log-entry { margin: 4px 0; font-size: 12px; }
+    .error { color: red; font-weight: bold; }
+    .success { color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Fragment Closure Test</h1>
+  <p>This tests if fragment identity is preserved in closures</p>
+  
+  <div id="cardContainer"></div>
+  
+  <h2>Collection:</h2>
+  <div id="collection" style="border: 2px solid #000; padding: 10px; min-height: 100px;"></div>
+  
+  <h2>Console Log:</h2>
+  <div id="log"></div>
+  
+  <script>
+    // Data
+    const fragments = [
+      { id: 'a', title: 'Fragment A', desc: 'First fragment' },
+      { id: 'b', title: 'Fragment B', desc: 'Second fragment' },
+      { id: 'c', title: 'Fragment C', desc: 'Third fragment' },
+      { id: 'd', title: 'Fragment D', desc: 'Fourth fragment' }
+    ];
+    
+    let deck = [...fragments];
+    let story = [];
+    let currentCard = null;
+    
+    // Logging
+    function log(message, type = '') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
+    
+    // Collection
+    function updateCollection() {
+      const collectionDiv = document.getElementById('collection');
+      if (story.length === 0) {
+        collectionDiv.innerHTML = '<em>Empty - swipe some cards</em>';
+        return;
+      }
+      
+      collectionDiv.innerHTML = story.map((frag, i) => 
+        `<div>${i+1}. ${frag.title} (id: ${frag.id})</div>`
+      ).join('');
+      
+      // Check for bug
+      const uniqueTitles = new Set(story.map(f => f.title));
+      if (uniqueTitles.size !== story.length) {
+        log(`❌ BUG DETECTED: ${story.length} items but only ${uniqueTitles.size} unique titles`, 'error');
+      } else {
+        log(`✓ Collection OK: ${story.length} unique fragments`, 'success');
+      }
+    }
+    
+    // Card rendering
+    function showNextCard() {
+      if (deck.length === 0) {
+        document.getElementById('cardContainer').innerHTML = '<p><strong>All done! Check collection above.</strong></p>';
+        return;
+      }
+      
+      const fragment = deck.pop();
+      currentCard = fragment;
+      
+      log(`showNextCard() called for: ${fragment.title} (id: ${fragment.id})`);
+      log(`  → currentCard set to: ${currentCard.title}`);
+      
+      renderCard(fragment);
+    }
+    
+    function renderCard(fragment) {
+      log(`renderCard() called with: ${fragment.title} (id: ${fragment.id})`);
+      
+      const container = document.getElementById('cardContainer');
+      container.innerHTML = `
+        <div class="card">
+          <h3>${fragment.title}</h3>
+          <p>${fragment.desc}</p>
+          <p><em>ID: ${fragment.id}</em></p>
+          <button onclick="collectViaGlobal()">Collect (using currentCard)</button>
+          <button onclick="collectViaParam_${fragment.id}()">Collect (using closure)</button>
+        </div>
+      `;
+      
+      // Create closure function
+      window['collectViaParam_' + fragment.id] = function() {
+        collectCard(fragment);
+      };
+      
+      log(`  → Created closure function for: ${fragment.title}`);
+      log(`  → Closure captures fragment: ${fragment.title} (id: ${fragment.id})`);
+    }
+    
+    // Collection methods
+    function collectViaGlobal() {
+      log(`collectViaGlobal() called`);
+      log(`  → Using currentCard: ${currentCard.title} (id: ${currentCard.id})`);
+      collectCard(currentCard);
+    }
+    
+    function collectCard(fragment) {
+      log(`collectCard() received: ${fragment.title} (id: ${fragment.id})`);
+      log(`  → story BEFORE: [${story.map(f => f.title).join(', ')}]`);
+      
+      story.push(fragment);
+      
+      log(`  → story AFTER: [${story.map(f => f.title).join(', ')}]`);
+      
+      updateCollection();
+      showNextCard();
+    }
+    
+    // Start
+    log('=== TEST STARTED ===');
+    log('Instructions: Click either button to collect, then compare results');
+    log('');
+    showNextCard();
+  </script>
+</body>
+</html>

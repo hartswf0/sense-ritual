@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fragment Compiler</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --black: #000; --white: #fff;
+      --grey-light: #f8f8f8; --grey-mid: #e0e0e0; --grey-dark: #1a1a1a;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: var(--white); color: var(--black);
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+
+    .app { display: flex; width: 100%; height: 100%; flex-direction: column; }
+
+    .header { height: 56px; border-bottom: 1px solid var(--grey-mid); display: flex; align-items: center; padding: 0 20px; background: var(--white); flex-shrink: 0; }
+    .header-title { font-size: 13px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .header-meta { margin-left: auto; font-size: 11px; color: var(--grey-dark); }
+
+    .main { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+    .stage { flex: 1; display: flex; align-items: center; justify-content: center; background: var(--white); border-right: 1px solid var(--grey-mid); padding: 20px; overflow: hidden; }
+    .stage-stack { position: relative; width: 100%; max-width: 380px; height: 100%; max-height: 520px; }
+
+    .card { position: absolute; inset: 0; background: var(--white); border: 1px solid var(--grey-mid); padding: 36px 28px; display: flex; flex-direction: column; justify-content: space-between; cursor: grab; touch-action: none; transition: opacity var(--transition), transform 0.05s ease-out; will-change: transform; }
+    .card.dragging { transition: none; cursor: grabbing; }
+
+    .card-label { font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey-dark); margin-bottom: 20px; }
+    .card-title { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 18px; letter-spacing: -0.01em; }
+    .card-desc { font-size: 12px; line-height: 1.5; color: var(--grey-dark); margin-bottom: 16px; }
+    .card-quote { font-size: 11px; font-style: italic; line-height: 1.5; color: var(--grey-dark); margin-bottom: 20px; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 24px; }
+    .tag { font-size: 9px; padding: 3px 6px; border: 1px solid var(--grey-mid); background: transparent; }
+    .card-footer { display: flex; justify-content: space-between; font-size: 10px; color: var(--grey-dark); border-top: 1px solid var(--grey-mid); padding-top: 16px; }
+
+    .panels { display: flex; gap: 0; overflow: hidden; flex-shrink: 0; }
+    .panel { width: 340px; background: var(--white); border-left: 1px solid var(--grey-mid); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header { height: 56px; border-bottom: 1px solid var(--grey-mid); display: flex; align-items: center; padding: 0 20px; flex-shrink: 0; }
+    .panel-tabs { display: flex; gap: 16px; }
+    .panel-tab { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; background: none; border: none; cursor: pointer; color: var(--grey-dark); padding: 0; transition: color var(--transition); }
+    .panel-tab.active { color: var(--black); }
+
+    .panel-content { flex: 1; overflow-y: auto; padding: 20px; display: none; flex-direction: column; gap: 16px; }
+    .panel-content.active { display: flex; }
+
+    .collection-item { padding: 14px; border: 1px solid var(--grey-mid); cursor: pointer; transition: all var(--transition); display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; background: var(--white); }
+    .collection-item:hover { background: var(--grey-light); }
+    .collection-item.dragging { opacity: 0.5; }
+
+    .collection-item-info { flex: 1; min-width: 0; }
+    .collection-item-title { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+    .collection-item-meta { font-size: 9px; color: var(--grey-dark); }
+
+    .status-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .status-dot.pending { background: #ffa500; }
+    .status-dot.compiled { background: #0066ff; }
+    .status-dot.chatting { background: #00aa00; }
+
+    .item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .action-btn { width: 24px; height: 24px; border: 1px solid var(--grey-mid); background: var(--white); cursor: pointer; font-size: 9px; transition: all var(--transition); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .action-btn:hover { background: var(--black); color: var(--white); border-color: var(--black); }
+
+    .empty-state { display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--grey-dark); font-size: 11px; flex-direction: column; gap: 12px; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .compiler-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .compiler-btn { padding: 10px; border: 1px solid var(--grey-mid); background: var(--white); cursor: pointer; font-size: 9px; font-weight: 600; transition: all var(--transition); }
+    .compiler-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
+    .compiler-btn:hover { background: var(--grey-light); }
+
+    .form-textarea { padding: 10px; border: 1px solid var(--grey-mid); background: var(--white); font-family: inherit; font-size: 11px; resize: none; min-height: 70px; transition: border-color var(--transition); }
+    .form-textarea:focus { outline: none; border-color: var(--black); }
+
+    .button { padding: 10px 12px; border: 1px solid var(--black); background: var(--black); color: var(--white); font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; transition: all var(--transition); }
+    .button:hover { background: var(--white); color: var(--black); }
+    .button-outline { background: var(--white); color: var(--black); }
+    .button-outline:hover { background: var(--black); color: var(--white); }
+
+    .chat-header { display: flex; flex-direction: column; padding-bottom: 12px; border-bottom: 1px solid var(--grey-mid); margin-bottom: 12px; }
+    .chat-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+    .chat-status { font-size: 9px; color: var(--grey-dark); }
+
+    .chat-history { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .chat-message { font-size: 11px; line-height: 1.4; word-wrap: break-word; }
+    .chat-message.user { align-self: flex-end; max-width: 85%; text-align: right; }
+    .chat-message.ai { align-self: flex-start; max-width: 85%; color: var(--grey-dark); }
+
+    .ai-thinking { font-size: 11px; color: var(--grey-dark); font-style: italic; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .chat-input-area { display: flex; flex-direction: column; gap: 6px; }
+    .chat-input { width: 100%; padding: 10px; border: 1px solid var(--grey-mid); background: var(--white); font-family: inherit; font-size: 11px; resize: none; height: 70px; transition: border-color var(--transition); }
+    .chat-input:focus { outline: none; border-color: var(--black); }
+    .char-count { font-size: 9px; color: var(--grey-dark); text-align: right; }
+
+    .status-badge { display: inline-block; padding: 2px 4px; font-size: 8px; font-weight: 600; text-transform: uppercase; }
+    .soul-preview { border: 1px solid var(--grey-mid); padding: 10px; font-family: monospace; font-size: 9px; overflow-x: auto; max-height: 120px; overflow-y: auto; background: var(--grey-light); }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: var(--grey-mid); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--grey-dark); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .stage { border-right: none; }
+      .main { flex-direction: column; }
+      .panels { flex-direction: column; min-height: 0; }
+      .panel { width: 100%; border-left: none; border-top: 1px solid var(--grey-mid); flex: 1; min-height: 0; }
+      .stage { flex: 0 0 auto; max-height: 300px; }
+    }
+
+    @media (max-width: 640px) {
+      .header { padding: 0 16px; height: 50px; }
+      .stage { padding: 16px; }
+      .stage-stack { max-width: 100%; }
+      .card { padding: 28px 20px; }
+      .card-title { font-size: 22px; }
+      .panel-header { padding: 0 16px; height: 50px; }
+      .panel-content { padding: 16px; }
+      .panel { max-height: none; }
+      .compiler-options { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="header-title">Fragment Compiler</div>
+      <div class="header-meta"><span id="header-count">0</span> items</div>
+    </div>
+
+    <div class="main">
+      <div class="stage">
+        <div class="stage-stack">
+          <div class="card" id="current-card">
+            <div>
+              <div class="card-label" id="card-label"></div>
+              <div class="card-title" id="card-title"></div>
+              <div class="card-desc" id="card-desc"></div>
+              <div class="card-quote" id="card-quote"></div>
+              <div class="card-tags" id="card-tags"></div>
+            </div>
+            <div class="card-footer">
+              <div><span id="card-index">1</span> / <span id="card-total">6</span></div>
+              <div id="card-status">Ready</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panels">
+        <!-- Collection / Compile Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-tabs">
+              <button class="panel-tab active" data-panel="collection">Collection</button>
+              <button class="panel-tab" data-panel="compile">Compile</button>
+            </div>
+          </div>
+
+          <div class="panel-content active" id="collection">
+            <div class="empty-state">
+              <div>No fragments</div>
+              <div style="font-size: 9px; color: var(--grey-dark);">Swipe right on cards</div>
+            </div>
+          </div>
+
+          <div class="panel-content" id="compile">
+            <div class="form-group">
+              <label class="form-label">Compiler Type</label>
+              <div class="compiler-options">
+                <button class="compiler-btn active" data-compiler="archetype">Archetype</button>
+                <button class="compiler-btn" data-compiler="psychological">Psychology</button>
+                <button class="compiler-btn" data-compiler="narrative">Narrative</button>
+                <button class="compiler-btn" data-compiler="quantum">Quantum</button>
+                <button class="compiler-btn" data-compiler="collective">Collective</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Hydration Hints</label>
+              <textarea class="form-textarea" id="hydration" placeholder="Add context to guide compilation..."></textarea>
+            </div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="button" id="compile-btn">Compile Selected</button>
+              <button class="button button-outline" id="compile-all-btn">Compile All</button>
+              <button class="button button-outline" id="download-souls">Download Souls JSON</button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Soul Preview</label>
+              <div class="soul-preview" id="soul-preview">{ compiled souls appear here }</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-tabs">
+              <button class="panel-tab active" data-panel="chat">Chat</button>
+            </div>
+          </div>
+
+          <div class="panel-content active" id="chat">
+            <div class="chat-header">
+              <div class="chat-title" id="chat-title">Select a fragment</div>
+              <div class="chat-status" id="chat-status">—</div>
+            </div>
+            <div class="chat-history" id="chat-history"></div>
+            <div class="chat-input-area">
+              <textarea class="chat-input" id="chat-input" placeholder="Type to engage..." maxlength="500"></textarea>
+              <div class="char-count"><span id="chat-chars">0</span> / 500</div>
+              <button class="button" id="chat-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Data ----
+    const rawConcepts = [
+      { id: 'fom-1', title: 'Family of Man', category: 'Exhibition', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', tags: ['Bayer', '1950s', 'Humanism'], quote: 'We are all one world.' },
+      { id: 'bayer-self', title: 'Individual Self', category: 'Core Concept', desc: 'At the center is the individual self, making their own story.', tags: ['Bayer', 'Agency'], quote: 'The individual would make their own story.' },
+      { id: 'utopia', title: 'Utopian Vision', category: 'Theory', desc: 'Self-arranging fragments to withstand tyranny.', tags: ['Idealism'], quote: 'Strong enough to withstand tyranny.' },
+      { id: 'tupac', title: 'Grand Stories', category: 'Core Concept', desc: 'Believed in power to move people and inspire change.', tags: ['Revolution'], quote: 'Stories move people to change.' },
+      { id: 'gell-mann', title: 'Underlying Patterns', category: 'Theory', desc: 'Patterns at every level of the universe.', tags: ['Universal'], quote: 'Patterns in thought and societies.' },
+      { id: 'hinton', title: 'Neural Networks', category: 'AI', desc: 'AI learns from data, ignores all human stories.', tags: ['AI', 'Algorithms'], quote: 'Intelligence that ignored stories.' },
+    ];
+
+    // ---- State ----
+    const state = {
+      currentIndex: 0,
+      story: [],
+      selectedItemId: null,
+      selectedCompiler: 'archetype',
+      draggedIndex: null,
+      isThinking: false,
+      drag: { active: false, startX: 0, startY: 0, lastX: 0 }
+    };
+
+    // ---- Helpers ----
+    function generateInstanceId() { return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`; }
+
+    function createCollectedItem(fragment) {
+      return {
+        instanceId: generateInstanceId(),
+        fragment,
+        status: 'PENDING', // PENDING | COMPILED | CHATTING
+        compiler: null,
+        soul: null,
+        addedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+    }
+
+    // ---- Rendering ----
+    function renderCard(index) {
+      const total = rawConcepts.length;
+      if (index < 0) index = 0;
+      if (index >= total) index = 0; // loop
+      state.currentIndex = index;
+      const frag = rawConcepts[index];
+      document.getElementById('card-label').textContent = frag.category;
+      document.getElementById('card-title').textContent = frag.title;
+      document.getElementById('card-desc').textContent = frag.desc;
+      document.getElementById('card-quote').textContent = frag.quote;
+      document.getElementById('card-index').textContent = index + 1;
+      document.getElementById('card-total').textContent = total;
+      document.getElementById('card-tags').innerHTML = frag.tags.map(t => `<div class="tag">${t}</div>`).join('');
+      document.getElementById('card-status').textContent = 'Ready';
+      const c = document.getElementById('current-card');
+      c.style.transform = 'translateX(0px) rotate(0deg)';
+      c.style.opacity = '1';
+    }
+
+    function addToStory(fragment) {
+      const item = createCollectedItem(fragment);
+      state.story.push(item);
+      state.selectedItemId = item.instanceId;
+      updateCollection();
+      updateHeader();
+    }
+
+    function removeFromStory(instanceId) {
+      state.story = state.story.filter(i => i.instanceId !== instanceId);
+      if (state.selectedItemId === instanceId) { state.selectedItemId = null; clearChat(); }
+      updateCollection();
+      updateHeader();
+    }
+
+    function updateHeader() { document.getElementById('header-count').textContent = state.story.length; }
+
+    function updateCollection() {
+      const content = document.getElementById('collection');
+      if (state.story.length === 0) {
+        content.innerHTML = '<div class="empty-state"><div>No fragments</div><div style="font-size: 9px; color: var(--grey-dark);">Swipe right on cards</div></div>';
+        return;
+      }
+
+      content.innerHTML = state.story.map((item, idx) => {
+        const statusLabel = item.status === 'PENDING' ? 'PENDING' : item.status === 'COMPILED' ? 'COMPILED' : 'CHATTING';
+        return `
+          <div class="collection-item" draggable="true" data-id="${item.instanceId}" data-index="${idx}">
+            <div class="collection-item-info">
+              <div class="collection-item-title">${item.fragment.title}</div>
+              <div class="collection-item-meta"><span class="status-dot ${item.status.toLowerCase()}"></span><span>${statusLabel}</span> · ${item.addedAt}</div>
+            </div>
+            <div class="item-actions">
+              <button class="action-btn" title="Chat" data-action="chat" data-id="${item.instanceId}">→</button>
+              <button class="action-btn" title="Delete" data-action="delete" data-id="${item.instanceId}">✕</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Action buttons
+      document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action; const id = btn.dataset.id;
+          if (action === 'chat') { state.selectedItemId = id; updateChatForItem(); switchPanelTab('chat'); }
+          if (action === 'delete') { removeFromStory(id); }
+        });
+      });
+
+      // Drag-reorder
+      document.querySelectorAll('.collection-item').forEach(itemEl => {
+        itemEl.addEventListener('dragstart', () => { state.draggedIndex = parseInt(itemEl.dataset.index); itemEl.classList.add('dragging'); });
+        itemEl.addEventListener('dragend', () => { itemEl.classList.remove('dragging'); });
+        itemEl.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          const target = parseInt(itemEl.dataset.index);
+          if (state.draggedIndex !== target) {
+            const [moved] = state.story.splice(state.draggedIndex, 1);
+            state.story.splice(target, 0, moved);
+            state.draggedIndex = target;
+            updateCollection();
+          }
+        });
+      });
+    }
+
+    // ---- Chat ----
+    function updateChatForItem() {
+      const item = state.story.find(i => i.instanceId === state.selectedItemId);
+      if (!item) return;
+      document.getElementById('chat-title').textContent = item.fragment.title;
+      document.getElementById('chat-status').textContent = item.status === 'COMPILED' ? 'COMPILED' : 'PENDING';
+      document.getElementById('chat-history').innerHTML = '';
+      const input = document.getElementById('chat-input');
+      input.value = ''; document.getElementById('chat-chars').textContent = '0';
+      const sendBtn = document.getElementById('chat-send');
+      if (item.status === 'PENDING') { input.placeholder = 'Compile fragment first in Compile tab'; sendBtn.disabled = true; }
+      else { input.placeholder = 'Type to engage...'; sendBtn.disabled = false; }
+    }
+
+    function clearChat() {
+      document.getElementById('chat-title').textContent = 'Select a fragment';
+      document.getElementById('chat-status').textContent = '—';
+      document.getElementById('chat-history').innerHTML = '';
+      const input = document.getElementById('chat-input'); input.value = ''; document.getElementById('chat-chars').textContent = '0';
+    }
+
+    function showAiThinking() {
+      state.isThinking = true;
+      const history = document.getElementById('chat-history');
+      const thinkingEl = document.createElement('div');
+      thinkingEl.className = 'ai-thinking'; thinkingEl.id = 'ai-thinking';
+      thinkingEl.textContent = 'AI is thinking...';
+      history.appendChild(thinkingEl); history.scrollTop = history.scrollHeight;
+    }
+
+    function removeAiThinking() { const el = document.getElementById('ai-thinking'); if (el) el.remove(); state.isThinking = false; }
+
+    // ---- Tabs ----
+    function switchPanelTab(name) {
+      document.querySelectorAll('.panel-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.panel-tab').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById(name);
+      if (target) target.classList.add('active');
+      const tab = document.querySelector(`[data-panel="${name}"]`);
+      if (tab) tab.classList.add('active');
+    }
+
+    // ---- Card Gestures ----
+    function bindCardGestures() {
+      const card = document.getElementById('current-card');
+      const threshold = 120; // px to trigger action
+      const maxRotate = 12; // deg
+
+      function onDown(e) {
+        e.preventDefault();
+        card.setPointerCapture?.(e.pointerId);
+        state.drag.active = true; state.drag.startX = e.clientX; state.drag.startY = e.clientY; state.drag.lastX = 0;
+        card.classList.add('dragging');
+      }
+
+      function onMove(e) {
+        if (!state.drag.active) return;
+        const dx = e.clientX - state.drag.startX; const dy = e.clientY - state.drag.startY;
+        state.drag.lastX = dx;
+        const rot = (dx / 200) * maxRotate; const opacity = Math.max(0.25, 1 - Math.abs(dx) / 600);
+        card.style.transform = `translate(${dx}px, ${dy * 0.05}px) rotate(${rot}deg)`;
+        card.style.opacity = String(opacity);
+        document.getElementById('card-status').textContent = dx > threshold * 0.6 ? '→ collect' : (dx < -threshold * 0.6 ? '← skip' : 'drag');
+      }
+
+      function snapBack() {
+        card.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+        card.style.transform = 'translate(0px, 0px) rotate(0deg)';
+        card.style.opacity = '1';
+        setTimeout(() => { card.style.transition = ''; }, 260);
+        document.getElementById('card-status').textContent = 'Ready';
+      }
+
+      function flyOut(dir) {
+        const offX = dir === 'right' ? window.innerWidth : -window.innerWidth;
+        card.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+        card.style.transform = `translate(${offX}px, 0) rotate(${dir === 'right' ? maxRotate : -maxRotate}deg)`;
+        card.style.opacity = '0';
+        setTimeout(() => {
+          card.style.transition = '';
+          card.style.transform = 'translate(0,0) rotate(0)';
+          card.style.opacity = '1';
+          nextCard(dir === 'right');
+        }, 260);
+      }
+
+      function onUp() {
+        if (!state.drag.active) return;
+        card.classList.remove('dragging');
+        const dx = state.drag.lastX;
+        state.drag.active = false; state.drag.startX = 0; state.drag.startY = 0; state.drag.lastX = 0;
+        if (dx > threshold) { // collect
+          addToStory(rawConcepts[state.currentIndex]);
+          flyOut('right');
+        } else if (dx < -threshold) { // skip
+          flyOut('left');
+        } else { snapBack(); }
+      }
+
+      card.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    }
+
+    function nextCard(collected) {
+      // If collected is true we already added; here just advance
+      const next = (state.currentIndex + 1) % rawConcepts.length;
+      renderCard(next);
+    }
+
+    // ---- Keyboard Shortcuts ----
+    function bindShortcuts() {
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') { addToStory(rawConcepts[state.currentIndex]); nextCard(true); }
+        else if (e.key === 'ArrowLeft') { nextCard(false); }
+        else if (e.key === 'c') { switchPanelTab('collection'); }
+        else if (e.key === 'x') { switchPanelTab('compile'); }
+        else if (e.key === 'h') { switchPanelTab('chat'); }
+      });
+    }
+
+    // ---- Boot ----
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCard(0);
+      updateCollection();
+      bindCardGestures();
+      bindShortcuts();
+
+      // Tabs
+      document.querySelectorAll('.panel-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchPanelTab(btn.dataset.panel));
+      });
+
+      // Compiler selection
+      document.querySelectorAll('.compiler-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.compiler-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.selectedCompiler = btn.dataset.compiler;
+        });
+      });
+
+      // Compile selected
+      document.getElementById('compile-btn').addEventListener('click', () => {
+        const item = state.story.find(i => i.instanceId === state.selectedItemId);
+        if (item) {
+          item.status = 'COMPILED';
+          item.compiler = state.selectedCompiler;
+          item.soul = {
+            id: item.instanceId,
+            type: state.selectedCompiler,
+            hydration: document.getElementById('hydration').value || null,
+            fragment: item.fragment,
+            timestamp: new Date().toISOString()
+          };
+          document.getElementById('soul-preview').textContent = JSON.stringify(item.soul, null, 2);
+          updateCollection();
+          updateChatForItem();
+        }
+      });
+
+      // Compile all
+      document.getElementById('compile-all-btn').addEventListener('click', () => {
+        const hydration = document.getElementById('hydration').value || null;
+        state.story.forEach(item => {
+          if (item.status === 'PENDING') {
+            item.status = 'COMPILED';
+            item.compiler = state.selectedCompiler;
+            item.soul = { id: item.instanceId, type: state.selectedCompiler, hydration, fragment: item.fragment, timestamp: new Date().toISOString() };
+          }
+        });
+        updateCollection();
+        // Show a combined preview
+        const souls = state.story.filter(i => i.soul).map(i => i.soul);
+        document.getElementById('soul-preview').textContent = JSON.stringify(souls, null, 2);
+      });
+
+      // Download souls
+      document.getElementById('download-souls').addEventListener('click', () => {
+        const souls = state.story.filter(i => i.soul).map(i => i.soul);
+        const blob = new Blob([JSON.stringify(souls, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'souls.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+
+      // Chat input count
+      document.getElementById('chat-input').addEventListener('input', (e) => {
+        document.getElementById('chat-chars').textContent = e.target.value.length;
+      });
+
+      // Chat send (mock)
+      document.getElementById('chat-send').addEventListener('click', () => {
+        const msg = document.getElementById('chat-input').value.trim();
+        if (!msg || state.isThinking) return;
+        const item = state.story.find(i => i.instanceId === state.selectedItemId);
+        if (!item) return;
+
+        const history = document.getElementById('chat-history');
+        const userMsg = document.createElement('div'); userMsg.className = 'chat-message user'; userMsg.textContent = msg; history.appendChild(userMsg);
+        document.getElementById('chat-input').value = ''; document.getElementById('chat-chars').textContent = '0';
+
+        showAiThinking();
+        setTimeout(() => {
+          removeAiThinking();
+          const aiMsg = document.createElement('div'); aiMsg.className = 'chat-message ai';
+          aiMsg.textContent = (item.status === 'COMPILED')
+            ? `Soul(${item.compiler}) acknowledges: “${msg}”.`
+            : 'Compile this fragment first in the Compile tab.';
+          history.appendChild(aiMsg); history.scrollTop = history.scrollHeight;
+        }, 900);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+{
+    "StateBureaucracyCharacterCompiler": {
+      "CharacterElements": {
+        "IdentificationRecords": {
+          "NationalIdentity": {
+            "CitizenshipStatus": {
+              "Type": "",
+              "AcquisitionMethod": ""
+            },
+            "LegalIdentifiers": {
+              "SocialSecurityNumber": {
+                "IssuanceDate": "",
+                "IssuingAuthority": ""
+              },
+              "PassportID": {
+                "ExpirationDate": "",
+                "IssuingCountry": ""
+              }
+            }
+          },
+          "BirthAndFamilyRecords": {
+            "BirthCertificateDetails": {
+              "PlaceOfBirth": "",
+              "Parentage": ""
+            },
+            "FamilyRegistry": {
+              "Siblings": "",
+              "MaritalStatusOfParents": ""
+            }
+          }
+        },
+        "LegalStatus": {
+          "CriminalRecord": {
+            "ExistenceOfRecord": "",
+            "RecordDetails": {
+              "OffenseType": "",
+              "Sentence": ""
+            }
+          },
+          "CivilStatus": {
+            "MarriageRecords": {
+              "MarriageDate": "",
+              "MarriageLocation": ""
+            },
+            "DivorceRecords": {
+              "DivorceDate": "",
+              "LegalGrounds": ""
+            }
+          }
+        },
+        "EconomicClassification": {
+          "EmploymentRecords": {
+            "Occupation": {
+              "Industry": "",
+              "Role": ""
+            },
+            "EmploymentHistory": {
+              "PreviousEmployers": "",
+              "DurationOfEmployment": ""
+            }
+          },
+          "FinancialStatus": {
+            "CreditScore": {
+              "ScoreValue": "",
+              "CreditHistory": ""
+            },
+            "TaxationDetails": {
+              "AnnualIncome": "",
+              "TaxBracket": ""
+            }
+          }
+        },
+        "EducationAndQualifications": {
+          "AcademicRecords": {
+            "HighestLevelOfEducation": {
+              "DegreeType": "",
+              "InstitutionName": ""
+            },
+            "Qualifications": {
+              "Certifications": "",
+              "SkillsAcquired": ""
+            }
+          },
+          "ProfessionalLicenses": {
+            "TypeOfLicense": {
+              "Field": "",
+              "IssuingBody": ""
+            },
+            "LicenseNumber": {
+              "ExpirationDate": "",
+              "RenewalRequirements": ""
+            }
+          }
+        },
+        "HealthAndMedicalRecords": {
+          "MedicalHistory": {
+            "ChronicConditions": {
+              "ConditionName": "",
+              "TreatmentHistory": ""
+            },
+            "HospitalizationRecords": {
+              "HospitalName": "",
+              "ReasonForHospitalization": ""
+            }
+          },
+          "HealthcareAccess": {
+            "InsuranceStatus": {
+              "Provider": "",
+              "CoverageLevel": ""
+            },
+            "PrimaryCareDetails": {
+              "PrimaryCarePhysician": "",
+              "FrequencyOfVisits": ""
+            }
+          }
+        },
+        "MilitaryAndCivilService": {
+          "ConscriptionStatus": {
+            "MilitaryService": {
+              "Branch": "",
+              "ServicePeriod": ""
+            },
+            "Exemptions": {
+              "Reason": "",
+              "Documentation": ""
+            }
+          },
+          "CivilServiceRecords": {
+            "GovernmentEmployment": {
+              "Department": "",
+              "Role": ""
+            },
+            "RolesAndResponsibilities": {
+              "Duties": "",
+              "LengthOfService": ""
+            }
+          }
+        },
+        "VotingAndPoliticalAffiliation": {
+          "VoterRegistration": {
+            "VotingHistory": {
+              "ElectionsParticipated": "",
+              "VotingPreferences": ""
+            },
+            "ElectoralDistrict": {
+              "DistrictName": "",
+              "Representative": ""
+            }
+          },
+          "PoliticalPartyMembership": {
+            "PartyAffiliation": {
+              "PartyName": "",
+              "MembershipDuration": ""
+            },
+            "MembershipLevel": {
+              "Position": "",
+              "Responsibilities": ""
+            }
+          }
+        },
+        "ResidencyAndPropertyRecords": {
+          "HousingStatus": {
+            "PropertyOwnership": {
+              "PropertyType": "",
+              "OwnershipDuration": ""
+            },
+            "RentalAgreements": {
+              "Landlord": "",
+              "LeaseTerms": ""
+            }
+          },
+          "ResidencyPermits": {
+            "VisaType": {
+              "Purpose": "",
+              "ValidityPeriod": ""
+            },
+            "ResidencyStatus": {
+              "ResidencyType": "",
+              "RenewalConditions": ""
+            }
+          }
+        },
+        "SocialWelfareAndBenefits": {
+          "WelfareEntitlements": {
+            "Eligibility": {
+              "QualifyingConditions": "",
+              "ApplicationProcess": ""
+            },
+            "ReceivedBenefits": {
+              "BenefitType": "",
+              "DurationOfReceipt": ""
+            }
+          },
+          "DisabilityStatus": {
+            "DisabilityClassification": {
+              "DisabilityType": "",
+              "ImpactOnDailyLife": ""
+            },
+            "SupportServices": {
+              "ServiceType": "",
+              "ServiceProvider": ""
+            }
+          }
+        },
+        "SurveillanceAndDataRecords": {
+          "OnlineActivity": {
+            "SocialMediaUsage": {
+              "PlatformsUsed": "",
+              "ActivityLevel": ""
+            },
+            "DataPrivacyStatus": {
+              "DataProtectionMeasures": "",
+              "DataBreaches": ""
+            }
+          },
+          "SurveillanceRecords": {
+            "CCTVFootage": {
+              "LocationsMonitored": "",
+              "StorageDuration": ""
+            },
+            "GPSData": {
+              "TrackingDevices": "",
+              "DataUsage": ""
+            }
+          }
+        },
+        "SampleStateDefinedCharacters": {
+        }
+      }
+    }
+  }

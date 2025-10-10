@@ -1,0 +1,2534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fragment — Swipe · Compile · Chat</title>
+  <meta name="theme-color" content="#000000">
+  <style>
+    /* MOBILE-FIRST VARIABLES & RESET */
+    :root {
+      --ink: #000; --paper: #f5f5f5; --card: #fff; --line: #000; 
+      --muted: #888; --accent: #111; --good: #2ECC71; --warn: #F1C40F; 
+      --bad: #E74C3C; --info: #3498DB;
+      --radius: 12px; --gap: 12px; --shadow: 0 8px 32px rgba(0,0,0,.12);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { 
+      margin: 0; padding: 0; box-sizing: border-box; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    html, body { 
+      width: 100%; height: 100%; overflow: hidden; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--paper); color: var(--ink);
+      touch-action: manipulation;
+    }
+
+    /* MOBILE LAYOUT */
+    .mobile-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: calc(100vh - var(--safe-top) - var(--safe-bottom));
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      position: relative;
+    }
+
+    /* SWIPE AREA - MAIN CONTENT */
+    .swipe-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* CARD STACK */
+    .card-stack {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+    }
+
+    .card {
+      position: absolute;
+      width: 100%;
+      max-width: 400px;
+      height: 65vh;
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      will-change: transform, opacity;
+    }
+
+    .card.swiping {
+      transition: none;
+    }
+
+    .card-header {
+      padding: 16px;
+      background: var(--accent);
+      color: white;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .card-category {
+      font-size: 10px;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+      font-weight: 800;
+    }
+
+    .card-title {
+      font-weight: 900;
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: -0.25px;
+    }
+
+    .card-body {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .card-desc {
+      margin-bottom: 10px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .card-quote {
+      font-style: italic;
+      font-size: 12px;
+      padding: 10px;
+      background: #fff;
+      border-left: 3px solid var(--ink);
+      margin: 10px 0;
+      color: #555;
+    }
+
+    .card-tags {
+      font-size: 10px;
+      color: #999;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+      letter-spacing: 0.5px;
+    }
+
+    .card-time {
+      font-size: 11px;
+      color: #666;
+      margin-top: 8px;
+      font-weight: 700;
+    }
+
+    .card-controls {
+      padding: 12px 16px;
+      border-top: 2px solid var(--ink);
+      background: var(--paper);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .control-btn {
+      padding: 12px;
+      background: var(--ink);
+      color: var(--paper);
+      border: 2px solid var(--ink);
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 8px;
+      transition: all 0.15s;
+    }
+
+    .control-btn.ghost {
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    /* BOTTOM NAVIGATION */
+    .bottom-nav {
+      display: flex;
+      border-top: 2px solid var(--ink);
+      background: var(--paper);
+      height: 60px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .nav-btn.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* MODALS / PANELS */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--paper);
+      z-index: 1000;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal.open {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 16px;
+      border-bottom: 2px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .close-btn {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--paper);
+      background: transparent;
+      color: var(--paper);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 16px;
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+    }
+
+    /* COLLECTION STYLES */
+    .collection-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+    }
+
+    .collection-count {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 6px;
+    }
+
+    .view-btn {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+    }
+
+    .view-btn.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .filters-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .filter-select {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .list-view, .grid-view {
+      display: none;
+    }
+
+    .list-view.active, .grid-view.active {
+      display: block;
+    }
+
+    .list-item {
+      background: var(--card);
+      border: 2px solid var(--ink);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 50px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .list-item.selected {
+      border-color: var(--info);
+      outline: 2px solid var(--info);
+    }
+
+    .list-item-preview {
+      width: 50px;
+      height: 50px;
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--paper);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .list-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-item-title {
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .list-item-meta {
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    .list-item-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 8px 10px;
+      border: 2px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .action-btn.ghost {
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    .grid-view {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .grid-item {
+      background: var(--card);
+      border: 2px solid var(--ink);
+      aspect-ratio: 1;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .grid-item.selected {
+      border-color: var(--info);
+      outline: 2px solid var(--info);
+    }
+
+    .grid-item-visual {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--paper);
+      position: relative;
+    }
+
+    .grid-item-remove {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      background: var(--paper);
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .grid-item-chip {
+      padding: 8px;
+      border-top: 2px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .grid-item-number {
+      font-size: 10px;
+      font-weight: 900;
+      margin-bottom: 2px;
+    }
+
+    .grid-item-name {
+      font-size: 9px;
+      opacity: 0.8;
+      line-height: 1.2;
+    }
+
+    /* CHAT STYLES */
+    .chat-profile {
+      padding: 12px;
+      border-bottom: 2px solid var(--ink);
+      background: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .chat-thread {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-bubble {
+      background: var(--card);
+      border: 2px solid var(--ink);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      max-width: 85%;
+      align-self: flex-start;
+      word-break: break-word; /* Ensure long words break */
+    }
+
+    .chat-bubble.me {
+      background: var(--ink);
+      color: var(--paper);
+      align-self: flex-end;
+    }
+
+    .chat-bubble.loading {
+      opacity: 0.6;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .chat-input-area {
+      padding: 16px;
+      border-top: 2px solid var(--ink);
+      background: var(--paper);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-hints {
+      font-size: 11px;
+      opacity: 0.6;
+      line-height: 1.4;
+    }
+
+    .chat-hints strong {
+      opacity: 1;
+      color: var(--accent);
+    }
+
+    .char-counter {
+      font-size: 10px;
+      opacity: 0.5;
+      text-align: right;
+    }
+
+    .char-counter.warning {
+      opacity: 1;
+      color: var(--warn);
+      font-weight: 800;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid var(--ink);
+      background: var(--card);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .send-btn {
+      padding: 12px 16px;
+      border: 2px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 8px;
+      font-weight: 800;
+      cursor: pointer;
+      min-width: 60px;
+    }
+
+    /* PROMPT LAB STYLES */
+    .lab-card {
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .lab-label {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .lab-select, .lab-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .lab-textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .lab-note {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .lab-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .lab-btn {
+      padding: 10px 12px;
+      border: 2px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .lab-output {
+      border: 1px dashed var(--ink);
+      padding: 12px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      min-height: 100px;
+      max-height: 200px;
+      overflow: auto;
+    }
+
+    /* SETTINGS STYLES */
+    .settings-card {
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .settings-label {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .settings-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .settings-btn {
+      padding: 10px 12px;
+      border: 2px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .settings-note {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+
+    .settings-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .export-btn {
+      padding: 10px 12px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex: 1;
+      min-width: 100px;
+    }
+
+    /* STATUS INDICATORS */
+    .status-badge {
+      display: inline-block;
+      font-size: 8px;
+      font-weight: 900;
+      padding: 2px 6px;
+      margin-left: 6px;
+      border-radius: 4px;
+      background: var(--muted);
+      color: var(--paper);
+      vertical-align: middle;
+    }
+
+    .status-badge.JOINED { background: var(--good); }
+    .status-badge.UNMATCHED { background: var(--bad); }
+    .status-badge.COMPILED { background: var(--info); }
+    .status-badge.PENDING { background: var(--warn); }
+
+    /* ANIMATIONS */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    @keyframes typing-dot {
+        0%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-4px); }
+    }
+    .typing-dots {
+        display: inline-flex;
+        align-items: center;
+        height: 12px; /* Ensure vertical alignment */
+    }
+    .typing-dots span {
+        width: 4px;
+        height: 4px;
+        background: var(--ink); /* Should match bubble text color */
+        border-radius: 50%;
+        margin: 0 1px;
+        animation: typing-dot 1s infinite ease-in-out;
+    }
+    .chat-bubble.me .typing-dots span {
+        background: var(--paper);
+    }
+    .typing-dots span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    .typing-dots span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    .conviction-bar {
+      height: 10px;
+      background: linear-gradient(90deg, var(--bad) 0%, var(--warn) 50%, var(--good) 100%);
+      border-radius: 5px;
+      transition: width 0.3s ease-in-out;
+    }
+
+    /* UTILITY CLASSES */
+    .hidden { display: none !important; }
+    .text-center { text-align: center; }
+    .mt-1 { margin-top: 8px; }
+    .mb-1 { margin-bottom: 8px; }
+
+    /* DARK MODE SUPPORT */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #fff;
+        --paper: #1a1a1a;
+        --card: #2d2d2d;
+        --muted: #666;
+      }
+      .chat-input, .filter-select, .settings-input, .lab-select, .lab-textarea, .lab-output, .view-btn {
+        background: #3a3a3a;
+        color: var(--ink);
+        border-color: #555;
+      }
+      .card-quote {
+        background: #3a3a3a;
+        border-left-color: #888;
+      }
+      .card-body { color: #ccc; }
+      .card-desc { color: #ddd; }
+      .card-tags, .card-time { color: #bbb; }
+      .settings-note, .lab-note { color: #aaa; }
+      .export-btn {
+        background: #3a3a3a;
+        color: var(--ink);
+        border-color: #555;
+      }
+      .export-btn:hover { background: #555; }
+    }
+
+    /* TABLET/DESKTOP ENHANCEMENTS */
+    @media (min-width: 768px) {
+      .card { max-width: 500px; height: 70vh; }
+      .grid-view { grid-template-columns: repeat(3, 1fr); }
+      .modal { max-width: 500px; margin: 0 auto; }
+    }
+
+    /* LARGE SCREENS */
+    @media (min-width: 1024px) {
+      .card { max-width: 600px; }
+      .grid-view { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-container">
+    <!-- SWIPE AREA - MAIN CONTENT -->
+    <div class="swipe-area">
+      <div class="card-stack" id="cardStack">
+        <!-- Cards will be injected here by JavaScript -->
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav">
+      <button class="nav-btn" id="collectionBtn" data-modal="collectionModal">
+        <span class="nav-icon">⊞</span>
+        <span class="nav-label">Collection</span>
+      </button>
+      <button class="nav-btn" id="chatBtn" data-modal="chatModal">
+        <span class="nav-icon">◊</span>
+        <span class="nav-label">Chat</span>
+      </button>
+      <button class="nav-btn" id="labBtn" data-modal="labModal">
+        <span class="nav-icon">∞</span>
+        <span class="nav-label">Compiler</span>
+      </button>
+      <button class="nav-btn" id="settingsBtn" data-modal="settingsModal">
+        <span class="nav-icon">⚙</span>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
+
+    <!-- COLLECTION MODAL -->
+    <div class="modal" id="collectionModal">
+      <div class="modal-header">
+        <div class="modal-title">Collection</div>
+        <button class="close-btn" data-close="collectionModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="collection-stats">
+          <div class="collection-count" id="collectionCount">0 fragments</div>
+          <div class="view-toggle">
+            <button class="view-btn active" data-view="list">≡</button>
+            <button class="view-btn" data-view="grid">⊞</button>
+          </div>
+        </div>
+        
+        <div class="filters-row">
+          <select class="filter-select" id="sortSelect">
+            <option value="index">Sort: Added</option>
+            <option value="category">Sort: Category</option>
+            <option value="status">Sort: Status</option>
+          </select>
+          <select class="filter-select" id="filterSelect">
+            <option value="all">All</option>
+            <option value="joined">Joined</option>
+            <option value="compiled">Compiled</option>
+            <option value="pending">Pending</option>
+            <option value="unmatched">Unmatched</option>
+          </select>
+        </div>
+
+        <div class="list-view active" id="listView">
+          <!-- List items will be injected here -->
+        </div>
+        
+        <div class="grid-view" id="gridView">
+          <!-- Grid items will be injected here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT MODAL -->
+    <div class="modal" id="chatModal">
+      <div class="modal-header">
+        <div class="modal-title">Chat</div>
+        <button class="close-btn" data-close="chatModal">✕</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column;">
+        <div class="chat-profile" id="chatProfile">
+          Select a fragment to start chatting
+        </div>
+        
+        <div class="chat-thread" id="chatThread">
+          <!-- Chat messages will appear here -->
+        </div>
+        
+        <div class="chat-input-area" id="preChatPrompt" style="display: none;">
+          <p class="text-center mb-1">This fragment needs compilation.</p>
+          <button class="action-btn" id="promptCompileBtn">Compile as <span id="promptCompilerType">Stanislavski</span></button>
+          <button class="action-btn ghost" id="promptChatRawBtn">Chat Raw</button>
+        </div>
+        
+        <div class="chat-input-area" id="actualChatInput" style="display: none;">
+          <div class="chat-hints" id="chatHints">
+            Think: <strong>What makes this clip essential?</strong>
+          </div>
+          <div class="char-counter" id="charCounter">0 / 200</div>
+          <div class="chat-input-row">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Say something persuasive..." maxlength="200">
+            <button class="send-btn" id="chatSend">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT LAB MODAL -->
+    <div class="modal" id="labModal">
+      <div class="modal-header">
+        <div class="modal-title">Compiler Lab</div>
+        <button class="close-btn" data-close="labModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="lab-card">
+          <label class="lab-label">Compiler Type</label>
+          <select class="lab-select" id="compilerSelect">
+            <option value="Stanislavski">Stanislavski - Method acting</option>
+            <option value="CharacterGrowth">CharacterGrowth - Evolution</option>
+            <option value="PlotDynamics">PlotDynamics - Structure</option>
+            <option value="MagicCompiler07">MagicCompiler07 - Hypotheticals</option>
+            <option value="compiler03">Compiler03 - Strategy</option>
+            <option value="StateBureaucracy">StateBureaucracy - Systems</option>
+          </select>
+          <div class="lab-note">Choose how to compile fragment personality</div>
+        </div>
+
+        <div class="lab-card">
+          <label class="lab-label">Hydration Hints (Optional)</label>
+          <textarea class="lab-textarea" id="hydrationHints" 
+                    placeholder="essence=defiant teacher; wound=betrayal; need=shared reality"></textarea>
+          <div class="lab-note">Provide optional hints in key=value pairs</div>
+        </div>
+
+        <div class="lab-card">
+          <label class="lab-label">Actions</label>
+          <div class="lab-actions">
+            <button class="lab-btn" id="compileCurrentBtn">Compile Current</button>
+            <button class="lab-btn" id="compileAllBtn">Compile All</button>
+            <button class="lab-btn" id="viewSoulBtn" disabled>View Soul</button>
+          </div>
+        </div>
+
+        <div class="lab-card">
+          <label class="lab-label">Compiled Soul</label>
+          <div class="lab-output" id="soulPreview">No soul compiled yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal" id="settingsModal">
+      <div class="modal-header">
+        <div class="modal-title">Settings</div>
+        <button class="close-btn" data-close="settingsModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-card">
+          <label class="settings-label">OpenAI API Key</label>
+          <input type="password" class="settings-input" id="apiKey" placeholder="sk-...">
+          <button class="settings-btn" id="saveKey">Save Key</button>
+          <div class="settings-note">Stored locally. Leave blank for simulation mode.</div>
+        </div>
+
+        <div class="settings-card">
+          <label class="settings-label">AI Mode</label>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <input type="checkbox" id="simulateAiToggle">
+            <label for="simulateAiToggle">Simulate AI Responses</label>
+          </div>
+          <div class="settings-note">When unchecked, uses external API with your key</div>
+        </div>
+
+        <div class="settings-card">
+          <label class="settings-label">Export Data</label>
+          <div class="settings-actions">
+            <button class="export-btn" id="exportJSONBtn">Export JSON</button>
+            <button class="export-btn" id="exportCSVBtn">Export CSV</button>
+            <button class="export-btn" id="exportLogBtn">Export Logs</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <label class="settings-label">Danger Zone</label>
+          <button class="settings-btn" style="background: var(--bad); border-color: var(--bad);" 
+                  id="clearAllBtn">Clear All Data</button>
+          <div class="settings-note">⚠️ This will delete everything. Cannot be undone.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════
+    // MOBILE-FIRST CORE ARCHITECTURE
+    // ═══════════════════════════════════════════════════════════════════
+
+    // --- UTILITIES ---
+    const hexToRgb = (hex) => {
+        const bigint = parseInt(hex.slice(1), 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `${r}, ${g}, ${b}`;
+    };
+
+    // --- PROMPT ARCHITECTURE COMPONENTS (Adapted for Mobile) ---
+
+    // Mobile-optimized Compiler Prompt Templates
+    const MOBILE_PROMPTS = {
+      "Stanislavski": `You are the STANISLAVSKI COMPILER v7.3, optimized for mobile context. Transform fragments into concise, playable character souls using method acting principles.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Ground EVERYTHING in the fragment's concrete details.
+- Identify "Given Circumstances" and a clear "Through Line".
+- Map 3-5 emotional traits and 1-3 key phrases from the fragment.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that makes this fragment playable and emotionally resonant.`,
+
+      "CharacterGrowth": `You are the CHARACTER GROWTH COMPILER v4.1, optimized for mobile context. Transform fragments into characters with evolving personal journeys, focusing on core growth aspects.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Focus on personal evolution, relationships, and transformation.
+- Identify the character's starting point and 1-2 potential growth arc drivers.
+- Map 1-2 key fears and 1-2 positive communication keywords.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that shows personal evolution and relational depth.`,
+
+      "PlotDynamics": `You are the PLOT DYNAMICS COMPILER v5.2, optimized for mobile context. Transform fragments into characters defined by their narrative function, concisely.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Focus on story structure integration and narrative function.
+- Define the character's primary drive in the plot and 1-2 key fears.
+- Map their approach to conflict and decision rules based on fragment impact.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that serves clear narrative functions within larger structures.`,
+
+      "MagicCompiler07": `You are the MAGIC COMPILER 07, optimized for mobile context. Transform fragments using "Magic If" hypothetical reasoning to explore character dimensions concisely.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Use radical "what if" scenarios to explore core traits.
+- Define the character through a unique cognitive style and a governing law reflecting possibility.
+- Map 1-3 key phrases that evoke alternative realities.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that exists in multiple potential states simultaneously.`,
+
+      "compiler03": `You are the COMPILER 03, optimized for mobile context. Transform fragments into strategic, tactical characters with clear objectives.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Focus on strategic motivations and tactical decision-making.
+- Define their primary drive as a strategic objective and their cognitive style as analytical.
+- Map keywords related to power, control, or resources.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that operates with strategic intelligence and tactical precision.`,
+
+      "StateBureaucracy": `You are the STATE BUREAUCRACY COMPILER v3.8, optimized for mobile context. Transform fragments into administrative/surveillance personas, focusing on systemic function.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Define the character through systems, procedures, and classifications.
+- Map their voice and key communication keywords to bureaucratic language.
+- Identify their moral compass as compliant or procedural.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that operates as part of institutional machinery.`
+    };
+
+    // Mobile-optimized Character Soul JSON Schema
+    const MOBILE_SOUL_SCHEMA = {
+      SchemaID: "POML.CharSoul.v1_Mobile",
+      SeedRef: {
+        id: "string",
+        title: "string",
+        category: "string",
+        timecode: "string"
+      },
+      Identity: {
+        Moniker: "string (character name/title, 1-3 words)",
+        Essence: "string (core nature, 3-5 words)",
+        Wound: "string (core vulnerability/fear, 1-2 sentences)",
+        Need: "string (deepest desire/objective, 1-2 sentences)",
+        Law: "string (governing principle/motto, 3-7 words)",
+        Voice: "string (speech patterns, rhythm, tone, 3-7 words)"
+      },
+      Personality: {
+        Traits: "array of strings (3-5 dominant traits)",
+        CognitiveStyle: "string (thinking patterns, 1-3 words)",
+        EmotionalTone: "string (emotional capacity/mood, 1-3 words)",
+        MoralCompass: "string (ethical framework, 1-3 words)"
+      },
+      Motivation: {
+        PrimaryDrive: "string (main motivation, 1-2 sentences)",
+        Fears: "array of strings (1-2 core fears)"
+      },
+      Communication: {
+        Keywords: "array of strings (3-5 characteristic words)",
+        Metaphors: "array of strings (1-2 go-to imagery types)"
+      },
+      DecisionRules: {
+        WhenToTrust: "string (trust conditions, 1-2 sentences)",
+        WhenToDoubt: "string (doubt triggers, 1-2 sentences)"
+      },
+      ContextualMemory: {
+        KeyPhrases: "array of strings (1-3 formative phrases from fragment)",
+        CategoryImpact: "string (how fragment category shapes character, 1-2 sentences)"
+      },
+      compiler_metadata: {
+        type: "string (compiler used)",
+        timestamp: "string (generation time)",
+        hints_used: "object (processed hints)"
+      }
+    };
+
+    // Mobile-optimized Seed Mapping Logic
+    const MOBILE_SEED_MAPPERS = {
+      titleToMoniker: (seed) => {
+        const title = seed.title || '';
+        return title.replace(/\s*\([^)]*\)/g, '').replace(/^(The|A|An)\s+/i, '').trim() || seed.category || 'Fragment';
+      },
+      descToEssence: (seed) => {
+        const desc = seed.desc || '';
+        return desc.split(' ').slice(0, 5).join(' ').toLowerCase();
+      },
+      categoryToVoice: (seed) => {
+        const category = seed.category || '';
+        const voices = {
+          'Systemic Control': 'authoritative, precise', 'Economic Event': 'urgent, pragmatic',
+          'Scientific Theory': 'methodical, curious', 'Future Scenario': 'speculative, warning',
+          'Core Concept': 'fundamental, declarative', 'Culture/Identity': 'expressive, personal',
+          'Media Apparatus': 'mediated, critical', 'Theory': 'abstract, explanatory',
+          'Systemic Critique': 'critical, urgent', 'Systemic Event': 'factual, somber'
+        };
+        return voices[category] || 'direct, engaged, specific';
+      },
+      tagsToTraits: (seed) => {
+        const tags = seed.tags || [];
+        const traits = [];
+        if (tags.some(t => t.toLowerCase().includes('control') || t.toLowerCase().includes('power'))) traits.push('authoritarian', 'controlling');
+        if (tags.some(t => t.toLowerCase().includes('illusion') || t.toLowerCase().includes('reality'))) traits.push('skeptical', 'perceptive');
+        if (tags.some(t => t.toLowerCase().includes('individual') || t.toLowerCase().includes('self'))) traits.push('independent', 'self-reliant');
+        if (tags.some(t => t.toLowerCase().includes('system') || t.toLowerCase().includes('structure'))) traits.push('systemic-thinker', 'orderly');
+        if (traits.length === 0) traits.push('observant', 'analytical', 'grounded');
+        return traits.slice(0, 5);
+      },
+      quoteToKeyPhrases: (seed) => {
+        const quote = seed.quote || '';
+        const sentences = quote.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        return sentences.map(s => s.trim()).slice(0, 3);
+      }
+    };
+
+    // Mobile-optimized Hydration Hint Processing
+    const MOBILE_HINT_PROCESSORS = {
+      essence: (value) => value.split(/\s+/).filter(w => w.length > 0).slice(0, 5).join(' '),
+      wound: (value) => value.toLowerCase().replace(/^(a|an|the)\s+/, '').trim(),
+      need: (value) => value.toLowerCase().replace(/^(to)\s+/, '').trim(),
+      voice: (value) => value.split(',').map(p => p.trim()).join(', ')
+    };
+
+    // --- GLOBAL STATE & PERSISTENCE ---
+    const LOCAL_STORAGE_KEY_MOBILE = 'fragmentMobileApp';
+
+    const MobileState = {
+      deck: [], // Remaining cards to swipe (full fragment objects)
+      collection: [], // Collected fragments (full fragment objects with added soul/chat data)
+      currentCard: null, // The *fragment object* currently displayed on the main card stack
+      selectedFragment: null, // The *fragment object* currently selected from the collection/chat
+
+      settings: {
+        compiler: 'Stanislavski',
+        hints: '',
+        apiKey: '',
+        simulateAI: true,
+        collectionViewMode: 'list', // 'list' or 'grid'
+        sortSelect: 'index', // 'index', 'category', 'status'
+        filterSelect: 'all', // 'all', 'joined', 'compiled', 'pending', 'unmatched'
+      },
+      
+      personaCache: {}, // { "fragId::compilerName": soul_object }
+
+      init() {
+        this.load();
+        if (this.deck.length === 0 && this.collection.length < RAW_CONCEPTS.length) {
+          this.shuffleDeck();
+        } else if (this.deck.length === 0 && this.collection.length === RAW_CONCEPTS.length) {
+          // All cards swiped, no more in deck
+          this.currentCard = null;
+          this.showCompletion();
+          return; // Don't try to show a card if deck is empty and all collected
+        }
+        
+        if (!this.currentCard) { // If no current card was loaded or deck was empty
+            this.showNextCard();
+        } else {
+            this.renderCard(this.currentCard); // Render the loaded current card
+        }
+        
+        this.setupEventListeners();
+        this.updateCollectionUI();
+        this.updateChatUI();
+        this.updateLabUI();
+        // Set UI inputs from settings after loading
+        document.getElementById('compilerSelect').value = this.settings.compiler;
+        document.getElementById('hydrationHints').value = this.settings.hints;
+        document.getElementById('apiKey').value = this.settings.apiKey;
+        document.getElementById('simulateAiToggle').checked = this.settings.simulateAI;
+        document.getElementById('sortSelect').value = this.settings.sortSelect;
+        document.getElementById('filterSelect').value = this.settings.filterSelect;
+        this.switchView(this.settings.collectionViewMode); // Restore view mode
+      },
+
+      load() {
+        const saved = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MOBILE) || '{}');
+        if (Object.keys(saved).length > 0) {
+          this.deck = saved.deck || [];
+          this.collection = saved.collection || [];
+          this.currentCard = saved.currentCard || null;
+          this.selectedFragment = saved.selectedFragmentId ? this.collection.find(f => f.id === saved.selectedFragmentId) : null;
+          Object.assign(this.settings, saved.settings);
+          this.personaCache = saved.personaCache || {};
+          console.log('App state loaded.');
+        } else {
+          console.log('No saved state found, initializing new session.');
+          this.shuffleDeck();
+        }
+      },
+
+      save() {
+        const stateToSave = {
+          deck: this.deck,
+          collection: this.collection,
+          currentCard: this.currentCard,
+          selectedFragmentId: this.selectedFragment ? this.selectedFragment.id : null,
+          settings: this.settings,
+          personaCache: this.personaCache
+        };
+        localStorage.setItem(LOCAL_STORAGE_KEY_MOBILE, JSON.stringify(stateToSave));
+      },
+
+      shuffleDeck() {
+        const swipedIds = new Set(this.collection.map(f => f.id));
+        this.deck = [...RAW_CONCEPTS].filter(rc => !swipedIds.has(rc.id)).sort(() => Math.random() - 0.5);
+      },
+
+      showNextCard() {
+        if (this.deck.length === 0) {
+          this.currentCard = null;
+          if (this.collection.length === RAW_CONCEPTS.length) {
+            this.showCompletion();
+          } else {
+            this.showToast("No more cards to swipe!");
+          }
+          this.renderCard(null); // Clear the card stack
+          return;
+        }
+        
+        this.currentCard = this.deck.pop();
+        this.renderCard(this.currentCard);
+        this.save();
+      },
+
+      renderCard(fragment) {
+        const stack = document.getElementById('cardStack');
+        if (!fragment) {
+          stack.innerHTML = '<p class="text-center mt-1" style="font-size:1.2em;font-weight:700">No more fragments to swipe. Check your collection!</p>';
+          return;
+        }
+
+        const color = this.getColor(fragment.category);
+        
+        stack.innerHTML = `
+          <div class="card" id="currentCard">
+            <div class="card-header" style="background: ${color}">
+              <div class="card-category">${fragment.category}</div>
+              <div class="card-title">${fragment.title}</div>
+            </div>
+            <div class="card-body">
+              <div class="card-desc">${fragment.desc}</div>
+              ${fragment.quote ? `<div class="card-quote">"${fragment.quote}"</div>` : ''}
+              ${fragment.tags ? `<div class="card-tags">${fragment.tags.join(' · ')}</div>` : ''}
+              <div class="card-time">${this.formatTime(fragment.start)} – ${this.formatTime(fragment.end)}</div>
+            </div>
+            <div class="card-controls">
+              <button class="control-btn ghost" data-action="reject">Skip</button>
+              <button class="control-btn" data-action="accept">Collect</button>
+            </div>
+          </div>
+        `;
+
+        this.setupCardInteractions();
+      },
+
+      setupCardInteractions() {
+        const card = document.getElementById('currentCard');
+        if (!card) return;
+
+        let startX = 0, startY = 0, currentX = 0, currentY = 0;
+        let isDragging = false;
+        const threshold = 60; // pixels to trigger swipe
+        const rotationFactor = 0.1; // degrees per pixel
+
+        const onStart = (e) => {
+          isDragging = true;
+          startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+          startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+          card.classList.add('swiping');
+          card.style.transition = 'none'; // Disable transition during drag
+        };
+
+        const onMove = (e) => {
+          if (!isDragging) return;
+          
+          const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+          const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+          currentX = clientX - startX;
+          currentY = clientY - startY;
+          
+          const rotate = currentX * rotationFactor;
+          const opacity = Math.max(0.5, 1 - Math.abs(currentX) / 300); // Fade out slightly
+          
+          card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
+          card.style.opacity = opacity;
+        };
+
+        const onEnd = () => {
+          if (!isDragging) return;
+          isDragging = false;
+          card.classList.remove('swiping');
+          card.style.transition = 'transform 0.2s ease, opacity 0.2s ease'; // Re-enable transition
+
+          if (Math.abs(currentX) > threshold) {
+            this.handleSwipe(currentX > 0 ? 'right' : 'left');
+          } else {
+            // Snap back to center
+            card.style.transform = '';
+            card.style.opacity = '1';
+          }
+        };
+
+        card.addEventListener('touchstart', onStart, { passive: true });
+        card.addEventListener('touchmove', onMove, { passive: true });
+        card.addEventListener('touchend', onEnd);
+        card.addEventListener('touchcancel', onEnd); // Handle if touch is interrupted
+
+        card.addEventListener('mousedown', onStart);
+        card.addEventListener('mousemove', onMove);
+        card.addEventListener('mouseup', onEnd);
+        card.addEventListener('mouseleave', onEnd); // If mouse leaves card area
+
+        // Button handlers
+        card.querySelectorAll('[data-action]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent card swipe if button clicked
+            this.handleSwipe(btn.dataset.action === 'accept' ? 'right' : 'left');
+          });
+        });
+      },
+
+      handleSwipe(direction) {
+        if (!this.currentCard) return;
+
+        this.createSwipeFlash(direction);
+        this.playSwipeSound(direction); // Placeholder sound
+
+        if (direction === 'right') {
+          // Add default chat/soul data structure
+          const fragmentWithData = {
+            ...this.currentCard,
+            chatHistory: [{role: 'system', content: `You've collected "${this.currentCard.title}". What's your pitch? You can compile my soul in the Compiler Lab or just start chatting.`}],
+            chatMetadata: { turnCount: 0, conviction: 50, decision: null }
+          };
+          this.collection.push(fragmentWithData);
+          this.showToast(`Collected: ${this.currentCard.title}`);
+          this.selectFragment(fragmentWithData);
+          this.openModal('chatModal');
+        } else if (direction === 'left') {
+          this.showToast(`Skipped: ${this.currentCard.title}`);
+        }
+
+        // Animate card out
+        const card = document.getElementById('currentCard');
+        if (card) {
+          const distance = window.innerWidth * 1.5;
+          card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+          card.style.transform = `translate(${direction === 'right' ? distance : -distance}px, 0) rotate(${direction === 'right' ? 30 : -30}deg)`;
+          card.style.opacity = '0';
+        }
+
+        setTimeout(() => {
+          this.showNextCard();
+        }, 300); // Delay before showing next card
+        this.save();
+      },
+
+      selectFragment(fragment) {
+        this.selectedFragment = fragment;
+        this.updateChatUI();
+        this.updateLabUI();
+        this.updateCollectionUI(); // To highlight selected item
+        this.save();
+      },
+
+      // --- UI Management ---
+      setupEventListeners() {
+        // Modal controls
+        document.querySelectorAll('[data-modal]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-btn').forEach(nb => nb.classList.remove('active'));
+            btn.classList.add('active'); // Highlight active nav button
+            this.openModal(btn.dataset.modal);
+          });
+        });
+
+        document.querySelectorAll('[data-close]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-btn').forEach(nb => nb.classList.remove('active')); // De-highlight nav buttons
+            this.closeModal(btn.dataset.close);
+          });
+        });
+
+        // Collection View toggles
+        document.querySelectorAll('.view-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.switchView(btn.dataset.view);
+            this.settings.collectionViewMode = btn.dataset.view; // Persist setting
+            this.save();
+          });
+        });
+
+        // Collection filters/sort
+        document.getElementById('sortSelect').addEventListener('change', (e) => {
+          this.settings.sortSelect = e.target.value;
+          this.updateCollectionUI();
+          this.save();
+        });
+        document.getElementById('filterSelect').addEventListener('change', (e) => {
+          this.settings.filterSelect = e.target.value;
+          this.updateCollectionUI();
+          this.save();
+        });
+
+        // Chat functionality
+        document.getElementById('chatSend').addEventListener('click', () => this.handleChatSend());
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) { // Prevent new line on Enter for mobile
+            e.preventDefault(); 
+            this.handleChatSend();
+          }
+        });
+        document.getElementById('chatInput').addEventListener('input', () => this.updateCharCounter());
+
+        document.getElementById('promptCompileBtn').addEventListener('click', () => this.compileCurrent());
+        document.getElementById('promptChatRawBtn').addEventListener('click', () => {
+          if (this.selectedFragment) {
+            this.selectedFragment.soul = null; // Explicitly no soul
+            this.addChatMessage('system', "Starting raw chat. My personality will be basic without a compiled soul.");
+            this.updateChatUI();
+            this.save();
+          }
+        });
+
+        // Compiler Lab actions
+        document.getElementById('compileCurrentBtn').addEventListener('click', () => this.compileCurrent());
+        document.getElementById('compileAllBtn').addEventListener('click', () => this.compileAll());
+        document.getElementById('viewSoulBtn').addEventListener('click', () => this.viewSoulJson());
+        document.getElementById('compilerSelect').addEventListener('change', (e) => {
+          this.settings.compiler = e.target.value;
+          this.updateLabUI(); // Update compiler type in pre-chat prompt
+          this.save();
+        });
+        document.getElementById('hydrationHints').addEventListener('input', (e) => {
+          this.settings.hints = e.target.value;
+          this.save();
+        });
+
+        // Settings
+        document.getElementById('saveKey').addEventListener('click', () => this.saveSettings());
+        document.getElementById('clearAllBtn').addEventListener('click', () => this.clearAllData());
+        document.getElementById('simulateAiToggle').addEventListener('change', (e) => {
+            this.settings.simulateAI = e.target.checked;
+            this.save();
+        });
+
+        // Exports
+        document.getElementById('exportJSONBtn').addEventListener('click', () => this.exportJSON());
+        document.getElementById('exportCSVBtn').addEventListener('click', () => this.exportCSV());
+        document.getElementById('exportLogBtn').addEventListener('click', () => this.exportLogs());
+      },
+
+      openModal(modalId) {
+        document.getElementById(modalId).classList.add('open');
+        if (modalId === 'collectionModal') this.updateCollectionUI();
+        if (modalId === 'chatModal') this.updateChatUI();
+        if (modalId === 'labModal') this.updateLabUI();
+        // Remove focus from any active element to prevent keyboard issues on iOS
+        if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
+        }
+      },
+
+      closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('open');
+      },
+
+      switchView(viewType) {
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.view-btn[data-view="${viewType}"]`).classList.add('active');
+        
+        document.getElementById('listView').classList.toggle('active', viewType === 'list');
+        document.getElementById('gridView').classList.toggle('active', viewType === 'grid');
+      },
+
+      // --- Chat System ---
+      updateCharCounter() {
+        const input = document.getElementById('chatInput');
+        const counter = document.getElementById('charCounter');
+        const hints = document.getElementById('chatHints');
+        const len = input.value.length;
+
+        counter.textContent = `${len} / 200`;
+        counter.classList.toggle('warning', len > 150);
+
+        if (len === 0) {
+            hints.innerHTML = 'Think: <strong>What makes this clip essential?</strong>';
+        } else if (len < 50) {
+            hints.innerHTML = 'Keep going: <strong>Be specific.</strong> Generic praise won\'t convince.';
+        } else if (len < 120) {
+            hints.innerHTML = 'Good start: <strong>Connect to meaning.</strong> Why does this fit your vision?';
+        } else {
+            hints.innerHTML = 'Strong: <strong>Show understanding.</strong> Quote the clip, reference its context.';
+        }
+      },
+
+      updateChatUI() {
+        const profile = document.getElementById('chatProfile');
+        const preChat = document.getElementById('preChatPrompt');
+        const chatInputArea = document.getElementById('actualChatInput');
+        const promptCompilerTypeSpan = document.getElementById('promptCompilerType');
+
+        if (!this.selectedFragment) {
+          profile.innerHTML = 'Select a fragment to start chatting';
+          preChat.style.display = 'none';
+          chatInputArea.style.display = 'none';
+          this.renderChatThread([]); // Clear chat thread
+          return;
+        }
+
+        // Update profile
+        const fragment = this.selectedFragment;
+        const color = this.getColor(fragment.category);
+        const chatMetadata = fragment.chatMetadata || { turnCount: 0, conviction: 50, decision: null };
+        const status = chatMetadata.decision || (fragment.soul ? 'COMPILED' : 'PENDING');
+        const convictionPercent = Math.round(chatMetadata.conviction);
+
+        profile.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: ${color}; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--paper); font-weight: 900;">${this.collection.indexOf(fragment) + 1}</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 900; font-size: 14px;">${fragment.title} <span class="status-badge ${status}">${status}</span></div>
+              <div style="font-size: 11px; opacity: 0.7;">${fragment.category} • ${this.formatTime(fragment.start)}</div>
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-size: 11px;">
+            <div style="display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 4px;">
+              <span>CONVICTION</span>
+              <span>${convictionPercent}% - ${this.getConvictionStatusLabel(convictionPercent)}</span>
+            </div>
+            <div style="height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; border: 1px solid var(--ink);">
+              <div class="conviction-bar" style="width: ${convictionPercent}%;"></div>
+            </div>
+            ${status === 'PENDING' ? '<p style="font-size:10px; opacity:.8; margin-top:4px;">Compile soul or chat raw to begin.</p>' : ''}
+            ${chatMetadata.decision ? `<p style="font-size:10px; opacity:.8; margin-top:4px;">Fragment has made a decision: <strong>${chatMetadata.decision}</strong>.</p>` : ''}
+          </div>
+        `;
+        document.getElementById('promptCompilerType').textContent = this.settings.compiler;
+
+        // Show appropriate input area
+        const needsCompile = !fragment.soul && !chatMetadata.decision;
+        const chatEnded = chatMetadata.decision !== null;
+
+        if (needsCompile) {
+            preChat.style.display = 'flex';
+            chatInputArea.style.display = 'none';
+        } else {
+            preChat.style.display = 'none';
+            chatInputArea.style.display = 'flex';
+            const chatInputEl = document.getElementById('chatInput');
+            const chatSendBtn = document.getElementById('chatSend');
+            chatInputEl.disabled = chatEnded;
+            chatSendBtn.disabled = chatEnded;
+            chatInputEl.placeholder = chatEnded ? `Conversation ${status.toLowerCase()}.` : "Say something persuasive...";
+        }
+        
+        this.renderChatThread(fragment.chatHistory);
+      },
+
+      renderChatThread(messages) {
+        const thread = document.getElementById('chatThread');
+        thread.innerHTML = messages.map(m => `
+          <div class="chat-bubble ${m.role === 'user' ? 'me' : ''} ${m.role === 'system' ? 'system-msg' : ''}">
+            ${m.content}
+          </div>
+        `).join('');
+        thread.scrollTop = thread.scrollHeight;
+      },
+
+      async handleChatSend() {
+        const inputEl = document.getElementById('chatInput');
+        const message = inputEl.value.trim();
+        
+        if (!message || !this.selectedFragment) return;
+        
+        const fragment = this.selectedFragment;
+        const chatMetadata = fragment.chatMetadata;
+
+        if (chatMetadata.decision) { // If chat has already ended
+            this.showToast(`Conversation has ${chatMetadata.decision.toLowerCase()}.`);
+            return;
+        }
+
+        // Add user message
+        this.addChatMessage('user', message);
+        chatMetadata.turnCount++;
+        inputEl.value = '';
+        this.updateCharCounter();
+        this.save();
+        this.updateChatUI(); // Update UI immediately after user message
+
+        // Show typing indicator
+        this.showTypingIndicator();
+
+        // Simulate AI response
+        setTimeout(async () => {
+          this.hideTypingIndicator();
+          const aiResponse = await this.generateAIResponse(message);
+          this.addChatMessage('assistant', aiResponse);
+          this.save();
+          this.updateChatUI(); // Update UI after AI response
+        }, 1000 + Math.random() * 1000); // Simulate network delay
+      },
+
+      addChatMessage(role, content) {
+        if (!this.selectedFragment) return;
+        this.selectedFragment.chatHistory.push({ role, content, timestamp: new Date().toISOString() });
+        this.renderChatThread(this.selectedFragment.chatHistory);
+      },
+
+      showTypingIndicator() {
+        const thread = document.getElementById('chatThread');
+        if (!thread) return;
+
+        let indicator = document.getElementById('typingIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'typingIndicator';
+            indicator.className = `chat-bubble loading ${this.selectedFragment.chatMetadata?.decision ? '' : 'assistant-typing'}`; // Differentiate
+            indicator.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+            thread.appendChild(indicator);
+            thread.scrollTop = thread.scrollHeight;
+        }
+      },
+
+      hideTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+      },
+
+      getConvictionStatusLabel(conviction) {
+        if (conviction < 20) return 'HIGHLY SKEPTICAL';
+        if (conviction < 40) return 'UNCONVINCED';
+        if (conviction < 60) return 'CONSIDERING';
+        if (conviction < 80) return 'LEANING YES';
+        return 'NEARLY CONVINCED';
+      },
+
+      // Argument quality analysis & Conviction updates (simplified for mobile)
+      analyzeArgumentQuality(userMessage, fragment) {
+        let score = 0;
+        const msg = userMessage.toLowerCase();
+        
+        // Basic length bonus
+        if (userMessage.length > 30) score += 5;
+        if (userMessage.length > 80) score += 10;
+        
+        // Keyword matching from title/desc/tags
+        const fragmentKeywords = [
+            fragment.title, fragment.desc, ...(fragment.tags || [])
+        ].map(s => s.toLowerCase()).join(' ').split(/\s+/).filter(w => w.length > 3);
+        
+        const uniqueKeywords = [...new Set(fragmentKeywords)];
+        uniqueKeywords.forEach(keyword => {
+            if (msg.includes(keyword)) score += 3;
+        });
+
+        // Direct quote reference (simplified)
+        if (fragment.quote && msg.includes(fragment.quote.toLowerCase().substring(0, 20))) score += 7;
+
+        // Thematic relevance (simplified)
+        const thematicWords = ['power', 'control', 'system', 'truth', 'individual', 'change'];
+        thematicWords.forEach(word => {
+            if (msg.includes(word) && fragment.tags.includes(word)) score += 2;
+        });
+        
+        // Negative sentiment (simple detection)
+        const negativeKeywords = ['no', 'not', 'disagree', 'fail', 'wrong'];
+        if (negativeKeywords.some(nk => msg.includes(nk))) score -= 5;
+
+        // Clamp score and convert to conviction change
+        score = Math.max(0, Math.min(50, score)); // Max raw score of 50
+        const convictionChange = Math.round((score / 50) * 30) - 15; // Max +15, min -15
+        
+        return convictionChange;
+      },
+
+      async generateAIResponse(userMessage) {
+        const fragment = this.selectedFragment;
+        if (!fragment) return "Error: No fragment selected.";
+
+        const chatMetadata = fragment.chatMetadata;
+        const convictionChange = this.analyzeArgumentQuality(userMessage, fragment);
+        chatMetadata.conviction = Math.max(0, Math.min(100, chatMetadata.conviction + convictionChange));
+
+        const currentTurn = chatMetadata.turnCount;
+        let responseText = "Hmm, interesting. Elaborate.";
+
+        if (fragment.soul) {
+          const soul = fragment.soul;
+          const { Moniker, Essence, Need, Law } = soul.Identity;
+          const { Traits } = soul.Personality;
+          const { Keywords } = soul.Communication;
+
+          if (currentTurn === 1) {
+            responseText = `As ${Moniker}, my ${Essence} resonates with your inquiry. What aspect of my core (my ${Need}) are you seeking to integrate?`;
+          } else if (currentTurn === 2) {
+            responseText = `My ${Law} guides me. How does your vision align with such a principle? Speak in ${Keywords[0] || 'clear'} terms.`;
+          } else if (currentTurn === 3) {
+            responseText = `My ${Traits[0]} nature demands more specifics. How does my ${fragment.category} directly influence your narrative?`;
+          } else if (currentTurn === 4) {
+            responseText = `Your current conviction is ${Math.round(chatMetadata.conviction)}%. Convince me now, or I make my decision.`;
+          } else if (currentTurn >= 5) { // Final Decision Turn
+            let decision;
+            if (chatMetadata.conviction >= 70) {
+              decision = 'JOINED';
+              responseText = `Alright. You've demonstrated enough coherence and understanding of my ${Essence}. I am integrated. DECISION: JOINED`;
+            } else if (chatMetadata.conviction >= 40) {
+              decision = Math.random() < 0.5 ? 'JOINED' : 'UNMATCHED';
+              if (decision === 'JOINED') {
+                responseText = `You're on the edge. I'll join, but your vision better hold true to my ${Need}. DECISION: JOINED`;
+              } else {
+                responseText = `Close, but not quite. I'm not convinced you fully grasp my ${Essence}. DECISION: UNMATCHED`;
+              }
+            } else {
+              decision = 'UNMATCHED';
+              responseText = `Insufficient understanding of my ${Essence}. I cannot be used as a mere fragment. DECISION: UNMATCHED`;
+            }
+            chatMetadata.decision = decision;
+          }
+        } else { // No soul compiled, basic responses
+          if (currentTurn === 1) {
+            responseText = `I'm just a raw fragment of "${fragment.title}". What story do you see in me?`;
+          } else if (currentTurn === 2) {
+            responseText = `You speak of cohesion. How do you propose to truly connect my ${fragment.category} to your narrative?`;
+          } else if (currentTurn === 3) {
+            responseText = `My quote: "${fragment.quote.substring(0,40)}...". How does that specific sentiment fit your vision?`;
+          } else if (currentTurn === 4) {
+            responseText = `My conviction in your vision is ${Math.round(chatMetadata.conviction)}%. Next turn, I decide.`;
+          } else if (currentTurn >= 5) {
+            let decision;
+            if (chatMetadata.conviction >= 60) { // Slightly easier to convince raw
+              decision = 'JOINED';
+              responseText = `Your raw intuition is enough for me. I'm in. DECISION: JOINED`;
+            } else {
+              decision = 'UNMATCHED';
+              responseText = `Your pitch lacks substance for even a raw fragment like me. DECISION: UNMATCHED`;
+            }
+            chatMetadata.decision = decision;
+          }
+        }
+        return responseText;
+      },
+
+      // --- Compiler System ---
+      async _internalCompilePersona(fragment, compiler, hints = {}) {
+        const cacheKey = `${fragment.id}::${compiler}`;
+        if (this.personaCache[cacheKey]) {
+          return this.personaCache[cacheKey];
+        }
+
+        const promptTemplate = MOBILE_PROMPTS[compiler];
+        if (!promptTemplate) throw new Error(`Unknown compiler: ${compiler}`);
+
+        const seedData = {
+          id: fragment.id, title: fragment.title, category: fragment.category,
+          desc: fragment.desc, quote: fragment.quote, tags: fragment.tags,
+          start: fragment.start, end: fragment.end, timecode: `${this.formatTime(fragment.start)}-${this.formatTime(fragment.end)}`
+        };
+
+        const processedHints = {};
+        Object.keys(hints).forEach(key => {
+          if (MOBILE_HINT_PROCESSORS[key]) {
+            processedHints[key] = MOBILE_HINT_PROCESSORS[key](hints[key]);
+          } else {
+            processedHints[key] = hints[key];
+          }
+        });
+
+        // Simulate AI generation - in a real app, this would be an API call
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
+
+        // Generate a mock soul based on MOBILE_SOUL_SCHEMA and seed mappers
+        const generatedSoul = {
+          SchemaID: MOBILE_SOUL_SCHEMA.SchemaID,
+          SeedRef: { ...seedData },
+          Identity: {
+            Moniker: processedHints.moniker || MOBILE_SEED_MAPPERS.titleToMoniker(seedData),
+            Essence: processedHints.essence || MOBILE_SEED_MAPPERS.descToEssence(seedData),
+            Wound: processedHints.wound || `${seedData.category.toLowerCase()} vulnerability`,
+            Need: processedHints.need || `to find ${seedData.category.toLowerCase()} coherence`,
+            Law: `embrace ${seedData.category.toLowerCase()} complexity`,
+            Voice: processedHints.voice || MOBILE_SEED_MAPPERS.categoryToVoice(seedData)
+          },
+          Personality: {
+            Traits: MOBILE_SEED_MAPPERS.tagsToTraits(seedData),
+            CognitiveStyle: 'pattern-seeking',
+            EmotionalTone: 'observant',
+            MoralCompass: 'contextual'
+          },
+          Motivation: {
+            PrimaryDrive: `understand the true nature of ${seedData.category.toLowerCase()}`,
+            Fears: ['oversimplification', 'misinterpretation']
+          },
+          Communication: {
+            Keywords: seedData.tags || ['analyze', 'context', 'structure'],
+            Metaphors: ['systemic', 'layered']
+          },
+          DecisionRules: {
+            TrustCondition: 'evidence aligns with core principles',
+            DoubtTrigger: 'lack of specificity or abstraction'
+          },
+          ContextualMemory: {
+            KeyPhrases: MOBILE_SEED_MAPPERS.quoteToKeyPhrases(seedData),
+            CategoryImpact: `shaped by the dynamics of ${seedData.category.toLowerCase()}`
+          },
+          compiler_metadata: {
+            type: compiler,
+            timestamp: new Date().toISOString(),
+            hints_used: processedHints
+          }
+        };
+
+        // Apply some minimal validation/repair (can be expanded)
+        const finalSoul = this._validateAndRepairSoul(generatedSoul, MOBILE_SOUL_SCHEMA);
+        this.personaCache[cacheKey] = finalSoul;
+        return finalSoul;
+      },
+
+      _validateAndRepairSoul(soul, schema) {
+          // Simple validation/repair: ensure arrays are arrays and strings are not empty
+          for (const key in schema) {
+              if (typeof schema[key] === 'object' && schema[key] !== null && !Array.isArray(schema[key])) {
+                  if (!soul[key]) soul[key] = {}; // Ensure nested objects exist
+                  this._validateAndRepairSoul(soul[key], schema[key]);
+              } else if (Array.isArray(schema[key])) {
+                  if (!Array.isArray(soul[key])) {
+                      soul[key] = soul[key] ? [soul[key]] : [];
+                  }
+              } else if (typeof schema[key] === 'string' && soul[key] === undefined) {
+                  soul[key] = 'N/A'; // Default missing strings
+              }
+          }
+          return soul;
+      },
+
+      async compileCurrent() {
+        if (!this.selectedFragment) {
+          this.showToast('Select a fragment first');
+          return;
+        }
+        
+        const fragment = this.selectedFragment;
+        const compiler = document.getElementById('compilerSelect').value;
+        const hintsRaw = document.getElementById('hydrationHints').value.trim();
+        const hints = {};
+        if (hintsRaw) {
+          hintsRaw.split(';').forEach(pair => {
+            const [k, v] = pair.split('=').map(s => s.trim());
+            if (k && v) hints[k] = v;
+          });
+        }
+
+        this.showToast('Compiling current fragment...');
+        try {
+          const soul = await this._internalCompilePersona(fragment, compiler, hints);
+          fragment.soul = soul; // Attach soul
+          this.showToast('Soul compiled successfully!');
+          this.addChatMessage('system', `✓ Soul compiled! My core identity is now defined by ${soul.Identity.Moniker} using the ${compiler} compiler.`);
+        } catch (error) {
+          console.error("Compilation error:", error);
+          this.showToast(`Compilation failed: ${error.message}`);
+          this.addChatMessage('system', `❌ Compilation failed: ${error.message}. Proceeding with basic personality.`);
+        } finally {
+          this.updateChatUI();
+          this.updateLabUI();
+          this.updateCollectionUI();
+          this.save();
+        }
+      },
+
+      async compileAll() {
+        if (this.collection.length === 0) {
+          this.showToast('No fragments to compile');
+          return;
+        }
+
+        const compiler = document.getElementById('compilerSelect').value;
+        const hintsRaw = document.getElementById('hydrationHints').value.trim();
+        const hints = {};
+        if (hintsRaw) {
+          hintsRaw.split(';').forEach(pair => {
+            const [k, v] = pair.split('=').map(s => s.trim());
+            if (k && v) hints[k] = v;
+          });
+        }
+
+        this.showToast(`Compiling ${this.collection.length} fragments...`);
+        let compiledCount = 0;
+        for (const fragment of this.collection) {
+          if (!fragment.soul) { // Only compile if not already compiled
+            try {
+              const soul = await this._internalCompilePersona(fragment, compiler, hints);
+              fragment.soul = soul;
+              compiledCount++;
+            } catch (error) {
+              console.warn(`Failed to compile ${fragment.id}:`, error);
+            }
+          }
+        }
+        this.showToast(`Compiled ${compiledCount} new souls.`);
+        this.updateCollectionUI();
+        this.updateChatUI(); // Update if selected fragment was compiled
+        this.updateLabUI(); // Update if selected fragment was compiled
+        this.save();
+      },
+
+      viewSoulJson() {
+        const soulPreview = document.getElementById('soulPreview');
+        if (this.selectedFragment?.soul) {
+          soulPreview.textContent = JSON.stringify(this.selectedFragment.soul, null, 2);
+          this.showToast('Soul loaded into preview.');
+        } else {
+          soulPreview.textContent = 'No soul compiled for selected fragment.';
+          this.showToast('No soul to preview.');
+        }
+      },
+
+      updateLabUI() {
+        const soulPreview = document.getElementById('soulPreview');
+        const viewSoulBtn = document.getElementById('viewSoulBtn');
+        const promptCompilerTypeSpan = document.getElementById('promptCompilerType');
+        
+        promptCompilerTypeSpan.textContent = this.settings.compiler;
+
+        if (this.selectedFragment && this.selectedFragment.soul) {
+          soulPreview.textContent = JSON.stringify(this.selectedFragment.soul, null, 2);
+          viewSoulBtn.disabled = false;
+        } else {
+          soulPreview.textContent = 'No soul compiled for selected fragment. Compile to see preview.';
+          viewSoulBtn.disabled = true;
+        }
+
+        // Also update compiler/hints fields from settings
+        document.getElementById('compilerSelect').value = this.settings.compiler;
+        document.getElementById('hydrationHints').value = this.settings.hints;
+        document.getElementById('compileCurrentBtn').disabled = !this.selectedFragment;
+      },
+
+      // --- Collection Management ---
+      getFilteredAndSortedCollection() {
+        let filtered = [...this.collection];
+
+        // Apply filter
+        if (this.settings.filterSelect !== 'all') {
+            filtered = filtered.filter(frag => {
+                const chatMetadata = frag.chatMetadata || { decision: null };
+                const status = chatMetadata.decision || (frag.soul ? 'COMPILED' : 'PENDING');
+                return status === this.settings.filterSelect.toUpperCase();
+            });
+        }
+
+        // Apply sort
+        if (this.settings.sortSelect === 'category') {
+            filtered.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+        } else if (this.settings.sortSelect === 'status') {
+            filtered.sort((a, b) => {
+                const statusA = (a.chatMetadata?.decision || (a.soul ? 'COMPILED' : 'PENDING'));
+                const statusB = (b.chatMetadata?.decision || (b.soul ? 'COMPILED' : 'PENDING'));
+                return statusA.localeCompare(statusB);
+            });
+        } else { // 'index' or default
+            // Already sorted by original collection order (implicit)
+            // If we re-sort, we'd need to add an originalIndex property.
+            // For now, "index" means maintaining current displayed order.
+        }
+        return filtered;
+      },
+
+      updateCollectionUI() {
+        const countDisplay = document.getElementById('collectionCount');
+        const filteredCollection = this.getFilteredAndSortedCollection();
+        countDisplay.textContent = `${filteredCollection.length} / ${this.collection.length} fragments`;
+
+        this.renderListView();
+        this.renderGridView();
+        // Ensure the correct view is active
+        this.switchView(this.settings.collectionViewMode);
+      },
+
+      renderListView() {
+        const list = document.getElementById('listView');
+        const filteredCollection = this.getFilteredAndSortedCollection();
+
+        list.innerHTML = filteredCollection.map((fragment, index) => {
+          const color = this.getColor(fragment.category);
+          const isSelected = this.selectedFragment && this.selectedFragment.id === fragment.id;
+          const chatMetadata = fragment.chatMetadata || {};
+          const status = chatMetadata.decision || (fragment.soul ? 'COMPILED' : 'PENDING');
+          const conviction = chatMetadata.conviction !== undefined ? Math.round(chatMetadata.conviction) : 'N/A';
+
+          return `
+            <div class="list-item ${isSelected ? 'selected' : ''}" data-id="${fragment.id}" tabindex="0">
+              <div class="list-item-preview" style="background: ${color}">${this.collection.indexOf(fragment) + 1}</div>
+              <div class="list-item-info">
+                <div class="list-item-title">${fragment.title} <span class="status-badge ${status}">${status}</span></div>
+                <div class="list-item-meta">${fragment.category} • ${this.formatTime(fragment.start)}</div>
+                ${status !== 'PENDING' ? `<div style="font-size:10px; opacity:.8;">Conviction: ${conviction}%</div>` : ''}
+              </div>
+              <div class="list-item-actions">
+                <button class="action-btn" data-action="chat" data-frag-id="${fragment.id}">Chat</button>
+                <button class="action-btn ghost" data-action="remove" data-frag-id="${fragment.id}">×</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        list.querySelectorAll('.list-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            if (!e.target.closest('.action-btn')) {
+              const fragId = item.dataset.id;
+              const fragment = this.collection.find(f => f.id === fragId);
+              if (fragment) {
+                this.selectFragment(fragment);
+                this.openModal('chatModal');
+              }
+            }
+          });
+
+          item.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const fragId = btn.dataset.fragId;
+              const fragmentIndex = this.collection.findIndex(f => f.id === fragId);
+              
+              if (fragmentIndex > -1) {
+                const fragment = this.collection[fragmentIndex];
+                if (btn.dataset.action === 'chat') {
+                  this.selectFragment(fragment);
+                  this.openModal('chatModal');
+                } else if (btn.dataset.action === 'remove') {
+                  this.collection.splice(fragmentIndex, 1);
+                  if (this.selectedFragment && this.selectedFragment.id === fragId) {
+                      this.selectedFragment = null;
+                  }
+                  this.showToast(`Removed: ${fragment.title}`);
+                  this.updateCollectionUI();
+                  this.updateChatUI();
+                  this.updateLabUI();
+                  this.save();
+                }
+              }
+            });
+          });
+        });
+      },
+
+      renderGridView() {
+        const grid = document.getElementById('gridView');
+        const filteredCollection = this.getFilteredAndSortedCollection();
+
+        grid.innerHTML = filteredCollection.map((fragment, index) => {
+          const color = this.getColor(fragment.category);
+          const isSelected = this.selectedFragment && this.selectedFragment.id === fragment.id;
+          const chatMetadata = fragment.chatMetadata || {};
+          const status = chatMetadata.decision || (fragment.soul ? 'COMPILED' : 'PENDING');
+
+          return `
+            <div class="grid-item ${isSelected ? 'selected' : ''}" data-id="${fragment.id}" tabindex="0">
+              <div class="grid-item-visual" style="background: ${color}">
+                ${this.collection.indexOf(fragment) + 1}
+                <div class="grid-item-remove" data-frag-id="${fragment.id}">×</div>
+              </div>
+              <div class="grid-item-chip">
+                <div class="grid-item-number">ITEM ${this.collection.indexOf(fragment) + 1}</div>
+                <div class="grid-item-name">${fragment.title.substring(0, 20)} <span class="status-badge ${status}">${status === 'COMPILED' ? '✓' : status}</span></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        grid.querySelectorAll('.grid-item-remove').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const fragId = btn.dataset.fragId;
+            const fragmentIndex = this.collection.findIndex(f => f.id === fragId);
+            if (fragmentIndex > -1) {
+              const fragment = this.collection[fragmentIndex];
+              this.collection.splice(fragmentIndex, 1);
+              if (this.selectedFragment && this.selectedFragment.id === fragId) {
+                  this.selectedFragment = null;
+              }
+              this.showToast(`Removed: ${fragment.title}`);
+              this.updateCollectionUI();
+              this.updateChatUI();
+              this.updateLabUI();
+              this.save();
+            }
+          });
+        });
+
+        grid.querySelectorAll('.grid-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            if (!e.target.closest('.grid-item-remove')) {
+              const fragId = item.dataset.id;
+              const fragment = this.collection.find(f => f.id === fragId);
+              if (fragment) {
+                this.selectFragment(fragment);
+                this.openModal('chatModal');
+              }
+            }
+          });
+        });
+      },
+
+      // --- Settings ---
+      saveSettings() {
+        this.settings.apiKey = document.getElementById('apiKey').value;
+        this.settings.simulateAI = document.getElementById('simulateAiToggle').checked;
+        this.settings.compiler = document.getElementById('compilerSelect').value;
+        this.settings.hints = document.getElementById('hydrationHints').value;
+        
+        this.save();
+        this.showToast('Settings saved');
+      },
+
+      clearAllData() {
+        if (confirm('Delete all data? This cannot be undone.')) {
+          localStorage.clear();
+          location.reload();
+        }
+      },
+
+      // --- Utilities ---
+      getColor(category) {
+        const colors = {
+          'Systemic Control': '#E74C3C', 'Economic Event': '#F39C12', 
+          'Scientific Theory': '#3498DB', 'Future Scenario': '#2ECC71',
+          'Core Concept': '#2ECC71', 'Culture/Identity': '#9B59B6',
+          'Media Apparatus': '#C8E6C9', 'Theory': '#9CCC65',
+          'Systemic Critique': '#EF5350', 'Systemic Event': '#BDBDBD'
+        };
+        return colors[category] || '#666';
+      },
+
+      formatTime(seconds) {
+        if (!seconds) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      },
+
+      createSwipeFlash(type) {
+        const flash = document.createElement('div');
+        flash.className = `swipe-flash ${type}`;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 500);
+      },
+
+      playSwipeSound(type) {
+        // Simple audio context for sound effects (can be expanded)
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!this._audioCtx) {
+                this._audioCtx = new AudioContext();
+            }
+            const oscillator = this._audioCtx.createOscillator();
+            const gainNode = this._audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this._audioCtx.destination);
+
+            const now = this._audioCtx.currentTime;
+            if (type === 'accept') {
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, now);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                oscillator.start(now);
+                oscillator.stop(now + 0.15);
+            } else if (type === 'reject') {
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(400, now);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                oscillator.start(now);
+                oscillator.stop(now + 0.18);
+            }
+        } catch (e) {
+            console.warn("AudioContext not supported or failed to start:", e);
+        }
+      },
+
+      showToast(message) {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+          background: var(--ink); color: var(--paper); padding: 12px 20px;
+          border-radius: 8px; font-size: 14px; font-weight: 700; z-index: 1000;
+          white-space: nowrap; transition: opacity 0.3s ease-out; opacity: 0;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => { toast.style.opacity = '1'; }, 10);
+        setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        setTimeout(() => toast.remove(), 2300);
+      },
+
+      showCompletion() {
+        this.showToast('All fragments collected! Sequence complete.');
+        // Potentially open a final summary modal here
+      },
+
+      exportJSON() {
+        const data = {
+          collection: this.collection,
+          settings: this.settings,
+          personaCache: this.personaCache,
+          exportedAt: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fragments_full_data-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.showToast('Full data exported to JSON!');
+      },
+
+      exportCSV() {
+        if (this.collection.length === 0) {
+            this.showToast("No fragments in your collection to export to CSV.");
+            return;
+        }
+
+        const headers = ["Index", "Title", "Category", "Description", "Tags", "Quote", "Status", "Compiler Type", "Moniker", "Essence", "Conviction Score", "Turn Count", "Decision", "Start Timecode", "End Timecode"];
+        const rows = this.collection.map((item, idx) => {
+            const tags = item.tags ? item.tags.join(';') : '';
+            const status = item.chatMetadata?.decision || (item.soul ? 'COMPILED' : 'PENDING');
+            const compilerType = item.soul?.compiler_metadata?.type || 'N/A';
+            const moniker = item.soul?.Identity?.Moniker || 'N/A';
+            const essence = item.soul?.Identity?.Essence || 'N/A';
+            const conviction = item.chatMetadata?.conviction !== undefined ? Math.round(item.chatMetadata.conviction) : 'N/A';
+            const turnCount = item.chatMetadata?.turnCount !== undefined ? item.chatMetadata.turnCount : 'N/A';
+            const decision = item.chatMetadata?.decision || 'N/A';
+
+            return [
+                idx + 1,
+                item.title,
+                item.category,
+                item.desc,
+                tags,
+                item.quote,
+                status,
+                compilerType,
+                moniker,
+                essence,
+                conviction,
+                turnCount,
+                decision,
+                this.formatTime(item.start || 0),
+                this.formatTime(item.end || (item.start || 0) + 30)
+            ].map(field => {
+                if (typeof field === 'string') return `"${field.replace(/"/g, '""')}"`;
+                return field;
+            }).join(',');
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8," + headers.map(h => `"${h}"`).join(',') + "\n" + rows.join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `fragment_collection_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast('Collection exported to CSV!');
+      },
+
+      exportLogs() {
+        if (this.collection.length === 0) {
+            this.showToast("No fragments in your collection to export logs.");
+            return;
+        }
+
+        let log = `FRAGMENT COLLECTION & CHAT LOG\n`;
+        log += `Generated: ${new Date().toISOString()}\n`;
+        log += `Total Fragments: ${this.collection.length}\n`;
+        log += `Active Compiler Setting: ${this.settings.compiler}\n`;
+        log += `\n${'='.repeat(60)}\n\n`;
+        
+        this.collection.forEach((frag, idx) => {
+            const chatMetadata = frag.chatMetadata || {};
+            const status = chatMetadata.decision || (frag.soul ? 'COMPILED' : 'PENDING');
+            const compilerType = frag.soul?.compiler_metadata?.type || 'N/A';
+
+            log += `--- Fragment [${idx + 1}/${this.collection.length}]: "${frag.title}" ---\n`;
+            log += `ID: ${frag.id}\n`;
+            log += `Category: ${frag.category}\n`;
+            log += `Timecode: ${this.formatTime(frag.start)} - ${this.formatTime(frag.end)}\n`;
+            log += `Tags: ${(frag.tags || []).join(', ')}\n`;
+            log += `Current Status: ${status}\n`;
+            log += `Conviction: ${chatMetadata.conviction !== undefined ? Math.round(chatMetadata.conviction) : 'N/A'}%\n`;
+            log += `Turns: ${chatMetadata.turnCount !== undefined ? chatMetadata.turnCount : 'N/A'}\n`;
+            
+            if (frag.soul) {
+                log += `Compiled Soul (Compiler: ${compilerType}):\n`;
+                log += `  Moniker: ${frag.soul.Identity?.Moniker}\n`;
+                log += `  Essence: ${frag.soul.Identity?.Essence}\n`;
+                log += `  Wound: ${frag.soul.Identity?.Wound}\n`;
+                log += `  Need: ${frag.soul.Identity?.Need}\n`;
+                // Add more soul details if desired
+            } else {
+                log += `Compiled Soul: N/A\n`;
+            }
+
+            if (frag.chatHistory && frag.chatHistory.length > 0) {
+                log += `Chat History (${frag.chatHistory.length} messages):\n`;
+                frag.chatHistory.forEach((msg, msgIdx) => {
+                    const rolePrefix = msg.role.toUpperCase();
+                    log += `  [${msgIdx + 1}] ${rolePrefix} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}\n`;
+                });
+            } else {
+                log += `Chat History: No conversation recorded.\n`;
+            }
+            log += `\n${'-'.repeat(60)}\n\n`;
+        });
+
+        download(`fragment_logs_${new Date().toISOString().slice(0,10)}.txt`, log, 'text/plain');
+        this.showToast('Logs exported to TXT!');
+      }
+
+    }; // End of MobileState
+
+    // Sample data (expanded for demonstration)
+    const RAW_CONCEPTS = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', start: 67, end: 78 }, 
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', tags: ['Bayer', 'Idealism', 'Resistance'], quote: 'It was a utopian vision of the self selecting and arranging the fragments of images into their own story and so becoming strong enough to withstand tyranny.', start: 91, end: 97 }, 
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', start: 183, end: 190 }, 
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland (Afeni)', category: 'Systemic Critique', desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power.', tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control'], quote: "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.", start: 197, end: 204 }, 
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', tags: ['Tupac', 'Revolution', 'Collective Action'], quote: 'He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.', start: 143, end: 148 }, 
+      { id: 'civil-rights-promises-broken', title: 'Civil Rights Promises (Broken)', category: 'Systemic Event', desc: 'The idealism of black politics fell away and communities divided into gangs that then turned on each other.', tags: ['History', 'Disillusionment', 'Social Decay'], start: 244, end: 251 }, 
+      { id: 'society-boom-q', title: 'Societal "Boom" (Repression)', category: 'Systemic Control', desc: 'Society will let you go as far as you want, but as soon as you start asking too many questions, "boom".', tags: ['Repression', 'Control', 'Censorship'], quote: "Well, society is like that. They'll let you go as far as you want, but as soon as you start asking too many questions and you're ready to change, boom.", start: 230, end: 237 }, 
+      { id: 'crack-epidemic-afeni-fall', title: "Crack Epidemic (Afeni's Fall)", category: 'Systemic Event', desc: 'Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.', tags: ['Social Crisis', 'Vulnerability', 'Systemic Impact'], quote: 'Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.', start: 291, end: 300 }, 
+      { id: 'tupac-thug-life-authenticity', title: 'Thug Life (Authenticity)', category: 'Culture/Identity', desc: 'Tupac tried to become more and more part of that world to prove his authenticity, accused of intensifying violence.', tags: ['Tupac', 'Identity', 'Violence', 'Critique'], quote: 'In response, Tupac tried to become more and more part of that world to prove his authenticity. But then the black radicals accused him of getting lost in the character he had created.', start: 971, end: 992 }, 
+      { id: 'mass-incarceration-clinton', title: 'Mass Incarceration (Clinton)', category: 'Systemic Control', desc: 'President Clinton brought in tough new crime rules, imprisoning hundreds of thousands of young black men.', tags: ['Clinton', 'Injustice', 'Control', 'Politics'], quote: 'Hundreds of thousands of young black men were now imprisoned with no hope of parole, even for minor offenses.', start: 1070, end: 1078 }, 
+      { id: 'cultural-fairy-tale-tupac', title: 'Culture as Fairy Tale (Tupac)', category: 'Systemic Critique', desc: 'By moving radical politics into culture, Tupac helped keep anger and dissent sealed off from real politics and power.', tags: ['Media', 'Illusion', 'Politics', 'Dissent'], quote: 'By moving radical politics into the world of culture, Tupac Shakur had also become part of the fairy tale world because he helped keep the anger and the dissent sealed off from the real world of politics and power.', start: 1099, end: 1113 }, 
+      { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society (Corrupt)', category: 'Systemic Critique', desc: 'Billions of dollars from the West created a dreamlike society run by an elite, but also deeply corrupt.', tags: ['Saudi', 'Wealth', 'Corruption', 'Illusion'], quote: 'This vast wave of money had created a dreamlike society run by an elite where no one paid any tax.', start: 379, end: 384 }, 
+      { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary (Fragments)", category: 'Personal Apparatus', desc: 'A vast collage of memories and feelings, written after shrapnel pierced his skull, leaving his world in fragments.', tags: ['Trauma', 'Memory', 'Fragmentation', 'Identity'], quote: 'Then his memories from the past began to come back but in a mass of fragments. Nothing linked them. They made no sense.', start: 1166, end: 1172 }, 
+      { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', category: 'Systemic Event', desc: 'The whole organization of Jihad was disintegrating into rival factions; all ideas of solidarity and collective action had gone.', tags: ['Disillusionment', 'Conflict', 'Revolution'], start: 1237, end: 1248 }, 
+      { id: 'zubaydah-perpetual-now', title: 'Perpetual Now (Zubaydah)', category: 'Emotional State', desc: 'His identity had disintegrated into random memories, trapped in a perpetual now, no way of moving forward.', tags: ['Existential', 'Fragmentation', 'Nihilism'], quote: 'He wrote how it was as though time had stopped. He was trapped in a perpetual now, haunted by fragments of memory, with no way of moving forward into the future.', start: 1313, end: 1320 }, 
+      { id: 'cia-enhanced-interrogation', title: 'CIA Enhanced Interrogation', category: 'Systemic Control', desc: 'Used waterboarding 83 times, smashing, and freezing to reduce Abu Zubaydah to a state of "learned helplessness".', tags: ['Torture', 'Power', 'Control', 'Psychology', 'Systemic'], quote: 'They would use it to reduce Abu Zubeda back to a state of learned helplessness. They called it enhanced interrogation.', start: 2604, end: 2616 }, 
+      { id: 'cia-godzilla-fear', title: 'CIA & Godzilla (Fear Wave)', category: 'Systemic Impact', desc: "Disconnected memories from Zubaydah's brain, including from films like Godzilla, spread fear across America.", tags: ['Media', 'Propaganda', 'Fear', 'Systemic'], quote: 'Desperate for the torture to stop, Zuba just spewed out all the disconnected memories inside his brain... many of them drawn from the films he had watched, including Godzilla.', start: 2664, end: 2675 }, 
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'One tiny change in equations could have massive catastrophic consequences which they could never have predicted.', tags: ['Science', 'Complexity', 'Prediction', 'Limits of Control'], quote: 'One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.', start: 664, end: 669 }, 
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).', tags: ['Science', 'Patterns', 'Management', 'Control'], quote: 'But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.', start: 738, end: 751 }, 
+      { id: 'gell-mann-underlying-patterns', title: 'Gell-Mann: Underlying Patterns', category: 'Core Concept', desc: 'Believed there were underlying patterns at every level of the universe: particles, thought, societies, languages.', tags: ['Gell-Mann', 'Universal', 'Structure', 'Order'], quote: 'He believed that there were underlying patterns at every level of the universe. Not just in the particles, but in the way people think, in the structure of human societies, and even in the languages they spoke.', start: 766, end: 779 }, 
+      { id: 'gazzaniga-multiple-selves', title: 'Gazzaniga: Multiple Selves', category: 'Psychological Theory', desc: 'Inside brains, human beings have all kinds of different selves; conscious mind makes up stories for illusion of control.', tags: ['Neuroscience', 'Psychology', 'Identity', 'Illusion'], quote: 'Gazanaga argued that really there were multiple selves inside the human brain. Each one taking control at different moments. Normally that is hidden because the one self that is conscious constantly makes up stories to explain what all the other selves are doing.', start: 1450, end: 1478 }, 
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks (AI)', category: 'Technological Apparatus', desc: 'AI learns from mass data, looks for connections/patterns, completely ignores all human stories and meaning.', tags: ['AI', 'Data', 'Pattern Recognition', 'Algorithms'], quote: "Hinton's neural networks were a kind of intelligence that completely ignored all stories.", start: 3595, end: 3606 }, 
+      { id: 'hinton-vector-world-myth', title: 'Vector World (AI Mythology)', category: 'Core Concept', desc: 'The world is too complicated for us as human beings to understand, but nothing is too complicated for the machines and data.', tags: ['AI', 'Mythology', 'Control', 'Dehumanization'], quote: 'He called it vector world. It expressed what was becoming one of the most powerful mythologies of our age... that the world is too complicated for us as human beings to understand. But nothing is too complicated for the machines and the data.', start: 3628, end: 3652 }, 
+      { id: 'google-mission-idealism', title: 'Google (Early Mission)', category: 'Organizational Idealism', desc: "To make the world's information accessible and useful, providing instant access to any information anybody ever wants.", tags: ['Google', 'Information', 'Idealism', 'Technology'], quote: 'At Google, our mission is to make the world\'s information accessible and useful... My hope is to provide instant access to any information anybody ever wants in the future.', start: 1739, end: 1770 }, 
+      { id: 'dot-com-burst-money-power', title: 'Dot-Com Bust (Money Power)', category: 'Economic Event', desc: 'The crash meant Google met the power of money, which was going to reshape their aims completely by venture capitalists.', tags: ['Economy', 'Crisis', 'Corporate Control'], quote: 'Google managed to survive, but the crash meant that they met the power of money, which was going to reshape their aims completely.', start: 2210, end: 2215 }, 
+      { id: 'google-data-trails-predict', title: 'Google (Data Trails & Predict)', category: 'Technological Apparatus', desc: 'Engineers realized they could build a picture of how every individual behaved to predict what advertisements they would click.', tags: ['Google', 'Data', 'Prediction', 'Surveillance'], quote: 'Every time someone searched the web, they left trails behind them... they could build up a picture of how every individual behaved and how they were likely to behave in the future. It meant they could predict what advertisement an individual would click on', start: 2254, end: 2269 }, 
+      { id: '911-patriot-act-privacy-lost', title: '9/11 & Patriot Act (Privacy Lost)', category: 'Systemic Event', desc: "Everyone's personal data must be open to examination to stop further attacks; privacy became irrelevant.", tags: ['Security', 'Privacy', 'State Control', 'Systemic'], quote: 'Privacy of the individual now became irrelevant in the face of a much higher need, security.', start: 2347, end: 2353 }, 
+      { id: 'google-sidelining-consciousness', title: 'Google (Sidelining Consciousness)', category: 'Systemic Impact', desc: 'Taking people\'s data to predict what they would do, what they thought or felt as individuals was completely eradicated.', tags: ['Google', 'Dehumanization', 'Control', 'Data'], quote: "What Google were now doing was taking people's data and using it to predict what those individuals would do... What they thought or felt as individuals and the stories they told themselves was completely iraded. Consciousness was being sidelined even more.", start: 2402, end: 2425 }, 
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush (Surveillance)', category: 'Economic Apparatus', desc: 'Products (Roomba, We Vibe, Kayla doll, Pokémon Go) set up to mine traces of human behavior everywhere.', tags: ['Surveillance Capitalism', 'Privacy', 'Commercial'], quote: 'Products of more and more companies around the world were set up to mine all the traces of human behavior everywhere.', start: 3691, end: 3698 }, 
+      { id: 'pokemon-go-persuasive', title: 'Pokémon Go (Persuasive Gaming)', category: 'Technological Apparatus', desc: 'An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.', tags: ['Gaming', 'Behavioral Control', 'Monetization'], quote: 'Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.', start: 3789, end: 3795 }, 
+      { id: 'algorithmic-mortgages-broken', title: 'Algorithmic Mortgages (Broken)', category: 'Systemic Apparatus', desc: 'Computers cut up dangerous high-risk loans and recombined them; the connection of debts to human reality was broken.', tags: ['Finance', 'Abstraction', 'Crisis', 'Systemic'], quote: 'The computers cut up the dangerous high-risk loans and recombined them with other safer loans... the connection of the debts to human reality was broken.', start: 4049, end: 4062 }, 
+      { id: 'china-algorithmic-governance', title: 'China (Algorithmic Governance)', category: 'Systemic Control', desc: 'Adjusting behavior with "social credits" for rewards/penalties, forcibly reprogram if unresponsive (Xinjiang).', tags: ['China', 'Surveillance State', 'Social Control', 'BF Skinner'], quote: 'And if the data from all the different sources showed a person behaving well... then they would be given what were called social credits.', start: 5315, end: 5329 }, 
+      { id: 'skinner-operant-conditioning', title: 'Skinner (Operant Conditioning)', category: 'Psychological Theory', desc: 'Easily alter behavior of animals using simple rewards, leading to a "beyond freedom and dignity" utopia (Walden Two).', tags: ['Behaviorism', 'Control', 'Utopia', 'China'], quote: 'Skinner had shown how he could easily alter the behavior of animals like pigeons by using a simple system of rewards. He called it operant conditioning.', start: 5356, end: 5369 }, 
+      { id: 'skinner-walden2', title: 'Walden 2 Utopia', category: 'Concept', desc: 'Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.', tags: ['Utopia', 'Control', 'Prediction', 'BF Skinner'], quote: 'Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.', start: 5410, end: 5422 }, 
+      { id: 'russia-oligarchs-putin-rise', title: "Russia (Oligarchic Control)", category: 'Systemic Event', desc: 'Oligarchs looted the country and selected Vladimir Putin, a man who believed in nothing, to protect their power.', tags: ['Russia', 'Corruption', 'Power Elite'], quote: 'In 1999, the oligarchs decided to select Russia\'s next president... And they selected Vladimir Putin... a man who believed in nothing.', start: 1905, end: 1926 }, 
+      { id: 'kursk-disaster-anger-power', title: "Kursk Disaster (Putin's Power)", category: 'Systemic Event', desc: 'Putin turned public anger away from himself and towards the corrupt elites in Moscow, the oligarchs, discovering a new source of power.', tags: ['Putin', 'Populism', 'Crisis Management'], quote: 'What Putin then did to save himself was turn that anger away from himself and towards the very people who had put him in power.', start: 2053, end: 2062 }, 
+      { id: 'putin-no-logic-strategy', title: 'Putin (No Logic/Strategy)', category: 'Leadership Critique', desc: 'Everything is a tactical step, a real-time response to external stimuli devoid of any ultimate objective (Mikhail Zygar).', tags: ['Putin', 'Nihilism', 'Post-Truth'], quote: 'The Russian journalist Mikuel Zygar wrote, "There is no logic in the age of Putin. There is no plan or strategy. Everything that happens... is a tactical step... devoid of any ultimate objective."', start: 2126, end: 2147 }, 
+      { id: 'putin-eurasia-defense', title: 'Putin (Eurasia as Defense)', category: 'Political Ideology', desc: 'Summoned a dark, frightening vision of Russia (Eurasia) as the last defense against a corrupt West, promoting Russian exceptionalism.', tags: ['Putin', 'Nationalism', 'Geopolitics', 'Propaganda'], quote: 'He summoned up a dark, frightening vision from Russia\'s past. It said that Russia as a whole, what was called Eurasia, was the last defense against a corrupt West that was trying to take over the whole world.', start: 4809, end: 4827 }, 
+      { id: 'nightwolves-conspiracy-propaganda', title: 'Nightwolves (Conspiracy Drama)', category: 'Culture/Propaganda', desc: 'Extreme nationalist motorcycle club dramatized a paranoid conspiracy that America/Illuminati were planning to undermine Putin and destroy Russia.', tags: ['Russia', 'Conspiracy', 'Nationalism'], quote: 'The Nightwolves put on mass shows that dramatized the paranoid conspiracy theory that America... were planning to undermine Vladimir Putin and destroy Russia.', start: 4893, end: 4907 }, 
+      { id: 'russia-dream-consumption', title: 'Russia (Dream World of Consumption)', category: 'Systemic Critique', desc: 'The country rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', tags: ['Social Decay', 'Illusion', 'Economy'], quote: 'The country, he said, rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', start: 3611, end: 3618 }, 
+      { id: 'london-second-empire-discretion', title: 'London (Second Empire of Secrecy)', category: 'Systemic Apparatus', desc: "City's 'discretion in the market' turned into a force shield, hiding hundreds of billions of illegal fortunes, making the world seem bewilderingly complicated.", tags: ['Finance', 'Corruption', 'Offshore', 'Globalization'], quote: 'Now, the discretion that the city was still so proud of had in reality turned into a force shield. It stopped any proper investigation of what was really going on.', start: 5013, end: 5019 }, 
+      { id: 'china-princelings-void', title: "China (Princelings' Ideological Void)", category: 'Systemic Event', desc: 'Children of the Cultural Revolution in power; money filled the void of any guiding ideology, dissolving social bonds.', tags: ['China', 'Elite', 'Corruption', 'Ideological Vacuum'], quote: 'What had been buried and forgotten was any guiding ideology, any confident story about what this was all for. Instead, money had filled the void...', start: 3011, end: 3023 }, 
+      { id: 'china-land-grab-corruption', title: 'China (Massive Land Grab)', category: 'Systemic Event', desc: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', tags: ['Corruption', 'Injustice', 'Economy', 'Systemic'], quote: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', start: 3043, end: 3050 }, 
+      { id: 'bo-chongqing-experiment', title: 'Bo Xilai (Chongqing Experiment)', category: 'Political Project', desc: 'Used the city as a laboratory to reawaken past idealism with Mao songs and tackle inequality, later exposed as a corruption smokescreen.', tags: ['Bo Xilai', 'Populism', 'Hypocrisy'], quote: 'Bor soon became famous and he was seen as a future leader.', start: 3261, end: 3267 }, 
+      { id: 'xi-jinping-giant-control', title: 'Xi Jinping (Giant Control System)', category: 'Political Project', desc: 'Decided to turn China into a giant system in which everyone\'s behavior could be predicted, managed, and controlled.', tags: ['China', 'Totalitarian', 'Surveillance', 'Control'], start: 5296, end: 5301 }, 
+      { id: 'conspiracy-theories-human-ai', title: 'Conspiracy Theories (Human AI)', category: 'Social Phenomenon', desc: 'Humans spent vast amounts of time searching online data for patterns like AI, turning them into fantastic, elaborate stories.', tags: ['Social', 'Fragmentation', 'Narrative', 'Post-Truth'], quote: 'But then it got more complicated because human beings were also exposed to the avalanche of data online and they started to behave in very much the same way as Jeffrey Hinton\'s artificial intelligence machines.', start: 4129, end: 4161 }, 
+      { id: 'illuminati-mind-control', title: 'Illuminati (Mind Control Theory)', category: 'Conspiracy Theory', desc: 'Millions convinced major stars were manipulated by Illuminati via MK Ultra/Disney, with hidden messages and triangles in videos.', tags: ['Conspiracy', 'Media', 'Control', 'Paranoia'], quote: 'Millions of people became convinced that all the major stars, from Britney Spears to Beyonce, were being manipulated and controlled by the Illuminati. The theory said that the Illuminati had worked with the CIA and their MK Ultra project and with Walt Disney to create a new system of mind control.', start: 4216, end: 4221 }, 
+      { id: 'thornley-op-mindfuck', title: 'Operation Mindfuck (Thornley)', category: 'Theory/Action', desc: 'Spread Illuminati theory to parody/ridicule conspiracy theories, believing they undermined individual confidence.', tags: ['Parody', 'Manipulation', 'Subversion'], quote: 'They had spread the conspiracy theory that the Illuminati were really the secret rulers of the world. They had done it to parody and ridicule all conspiracy theories because they thought that they undermined the confidence of individuals and made them easier to control.', start: 4182, end: 4196 }, 
+      { id: '2008-global-economic-crash', title: '2008 Global Economic Crash', category: 'Systemic Event', desc: 'Mortgage systems failed completely, leading to global crash; governments transferred private debt to public, leading to austerity.', tags: ['Economy', 'Crisis', 'Inequality', 'Systemic'], quote: 'In 2008, the systems in the banks that had structured the mortgage loans failed completely. It led to a global economic crash.', start: 4329, end: 4336 }, 
+      { id: 'banks-rigging-money-laundering', title: 'Banks (Rigging/Laundering)', category: 'Systemic Corruption', desc: 'Major banks rigged interest rates and laundered money for organized crime, but "nothing seemed to change".', tags: ['Corruption', 'Finance', 'Impunity'], quote: 'That all the major banks had been rigging interest rates and many of them had been laundering money for organized crime, including the drug cartels in Mexico. But again, nothing seemed to change.', start: 4370, end: 4378 }, 
+      { id: 'populist-anger-elite-bailout', title: 'Populist Anger (Elite Bailout)', category: 'Political Phenomenon', desc: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out. (Populist critique).', tags: ['Politics', 'Resistance', 'Inequality'], quote: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out.', start: 4415, end: 4422 }, 
+      { id: 'brexit-take-back-control', title: 'Brexit (Take Back Control)', category: 'Political Project', desc: 'For Dominic Cummings, a way to get rid of failed elites and old political systems, transforming a decaying society.', tags: ['Populism', 'Nationalism', 'Disenchantment'], quote: 'For Dominic Cummings, Brexit was not an end in itself. For him, it was a way of getting rid of the failed elites and the old political systems that ran Britain.', start: 4476, end: 4488 }, 
+      { id: 'trump-qanon-pedophile-cabal', title: 'Trump & QAnon', category: 'Political Phenomenon', desc: 'Paranoia allowed Trump to hide corruption; QAnon explained nothing happening via a "secret cabal of pedophiles in Washington".', tags: ['Politics', 'Conspiracy', 'Post-Truth'], quote: 'His supporters, though, had their own conspiracy theory, QAnon, that explained why nothing was happening. Trump was being stopped by a secret cabal of pedophiles in Washington.', start: 6093, end: 6105 }, 
+      { id: 'liberal-avoidance-despair', title: 'Liberal Avoidance (Despair)', category: 'Critique', desc: 'Liberals avoided facing genuine grievances and real anger, having no idea how to solve problems of desolation/despair.', tags: ['Politics', 'Elite Disconnect', 'Failure'], quote: 'But the liberal opposition, it was a way of avoiding facing up to the genuine grievances and the very real anger in America that Trump\'s election had revealed.', start: 6143, end: 6152 }, 
+      { id: 'fragile-structure-discon-frag', title: 'Fragile Structure (Disconnected Fragments)', category: 'Systemic Vulnerability', desc: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', tags: ['Illusion', 'Vulnerability', 'Post-Truth'], quote: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', start: 6164, end: 6183 }, 
+      { id: 'ai-dogs-everywhere-meaningless', title: 'AI (Dogs Everywhere)', category: 'Technological Impact', desc: 'Google engineers demonstrated AI altering reality, seeing dogs everywhere; a world where anything could be anything, because there was no real meaning any longer.', tags: ['AI', 'Perception', 'Illusion', 'Meaninglessness'], quote: 'Google engineers demonstrated how easily reality in this fragmented world could become strange and frightening. They created an AI program to learn how to see dogs. But they then showed how if they ran the algorithm backwards, the machines would alter the images of reality they were being fed, so they would see dogs everywhere.', start: 6193, end: 6210 }, 
+      { id: 'covid-deep-inequalities', title: 'COVID-19 (Deep Inequalities)', category: 'Global Crisis', desc: 'The virus, a force completely outside systems of power, brought into focus how deep inequalities in modern Western societies have gone.', tags: ['Crisis', 'Social', 'Systemic', 'Vulnerability'], quote: 'The virus was a force that came from completely outside the systems of power. But it has come at a moment when many of the old certainties of this age are already cracking.', start: 6364, end: 6371 }, 
+      { id: 'future-indiv-disappear', title: 'Future (Individualism Disappears)', category: 'Future Scenario', desc: 'Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.', tags: ['Dystopia', 'Control', 'BF Skinner'], quote: 'Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.', start: 6421, end: 6432 }, 
+      { id: 'future-old-stability', title: 'Future (Return to Old Stability)', category: 'Future Scenario', desc: 'Hope for return to an old stability where individualism can continue to be managed by a benign elite, but enormous pressures will not go away.', tags: ['Nostalgia', 'Illusion', 'Unresolved Conflict'], quote: 'Many people are hoping that with the election of Joe Biden in America, it will be possible to return to an old stability where individualism can continue to be managed by a benign elite. But although Donald Trump is gone and the Brexit deal done, what they both revealed was that underneath Western societies, there are enormous pressures building up that will not go away.', start: 6490, end: 6509 }, 
+      { id: 'future-imagine-new', title: 'Future (Imagine New)', category: 'Future Scenario', desc: 'Regain confidence, imagine genuinely new kinds of futures (David Graeber: "the world is something we make and could just as easily make differently").', tags: ['Hope', 'Agency', 'Transformation'], quote: 'If we can regain our confidence, we will find that we have the power to influence how that future turns out. And as a first step, we have to start imagining what kind of future it is we want to build.', start: 6603, end: 6609 }, 
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', tags: ['Graeber', 'Agency', 'Liberation', 'Potential'], quote: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', start: 6678, end: 6690 }
+    ];
+
+    // Initialize the app when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      MobileState.init();
+    });
+
+    // Prevent zoom on double-tap
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
+    // Handle back button on Android
+    // NOTE: This requires Cordova/Capacitor setup for actual 'backbutton' event.
+    // For browser environments, this event typically doesn't exist.
+    // A simple browser fallback might be history.back() for modals, but it affects navigation.
+    // For this context, we assume a mobile app env.
+    if (document.addEventListener) {
+        document.addEventListener('backbutton', () => {
+            const openModal = document.querySelector('.modal.open');
+            if (openModal) {
+                openModal.classList.remove('open');
+                // De-highlight nav buttons as well
+                document.querySelectorAll('.nav-btn').forEach(nb => nb.classList.remove('active'));
+            } else {
+                // If no modal open, a native back button would normally exit/go back.
+                // In a browser, this might go to previous page.
+                // In a Cordova/Capacitor app, you might use navigator.app.exitApp() or similar.
+                // For simplicity here, we'll just log.
+                console.log("No modals open, default back button behavior.");
+            }
+        }, false);
+    }
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,2612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fragment Flow</title> <!-- Updated Title -->
+  <meta name="theme-color" content="#000000">
+  <style>
+    /* RESET & BASE */
+    * { margin: 0; padding: 0; box-sizing: border-box; 
+        -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+    }
+    html, body { 
+      width: 100%; 
+      height: 100%; 
+      overflow: hidden; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; /* System font stack */
+      touch-action: manipulation; /* Allow scrolling but prevent browser gestures */
+      font-size: 16px; /* Base font size */
+    }
+
+    /* THEME VARIABLES */
+    :root{
+      --ink:#000; --paper:#f5f5f5; --card:#fff; --line:#000; --muted:#888; --accent:#111; --good:#2ECC71; --warn:#F1C40F; --bad:#E74C3C; --info:#3498DB;
+      --radius:12px; --gap:12px; --shadow:0 12px 48px rgba(0,0,0,.15);
+
+      /* Landing page specific colors */
+      --primary-action-color: #2196F3; /* Blue for Enter */
+      --secondary-action-color: #607D8B; /* Grey-blue for Help */
+      --tertiary-action-color: #9CCC65; /* Green for About */
+    }
+    
+    body { 
+      background: var(--paper); 
+      color: var(--ink); 
+      user-select: none; 
+      display: flex; /* Make body a flex container for full height layout */
+      flex-direction: column;
+    }
+
+    /* A11Y: FOCUS VISIBLE */
+    :focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+      border-radius: var(--radius); /* Blend with button styles */
+    }
+    /* Specific overrides for certain elements */
+    .alley-btn:focus-visible, .toggle-btn:focus-visible, .control-btn:focus-visible, .list-action-btn:focus-visible, .settings-card button:focus-visible, .prompt-lab-actions button:focus-visible, .complete-btn:focus-visible {
+        outline-offset: -2px; /* Inset outline */
+    }
+    .chat-input-row input:focus-visible, .chat-input-row button:focus-visible, .settings-card input:focus-visible, .settings-card textarea:focus-visible, .prompt-lab-card select:focus-visible, .prompt-lab-card textarea:focus-visible {
+        outline-color: var(--info); /* Use a distinct color for inputs */
+    }
+    .list-item:focus-visible, .grid-item:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 0px;
+    }
+
+    /* LANDING PAGE STYLES */
+    #landingPage {
+      display: none; /* Initially hidden */
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1; /* Takes full height */
+      background: var(--ink); /* Black background for landing */
+      color: var(--paper);
+      text-align: center;
+      padding: 2rem;
+      gap: 2rem;
+      position: absolute; /* Occupy full viewport, allow game interface to be under */
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1000; /* Above everything else when active */
+    }
+
+    .landing-title {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 900;
+      font-size: clamp(2rem, 10vw, 4rem); /* Responsive font size */
+      line-height: 1;
+      letter-spacing: 0.1em; /* Increased letter spacing */
+      text-transform: uppercase;
+      margin-bottom: 0.5em;
+    }
+
+    .landing-subtitle {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 400;
+      font-size: clamp(0.8rem, 3vw, 1.2rem);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .landing-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      max-width: 300px; /* Max width for buttons */
+      margin-top: 2rem;
+    }
+
+    .landing-btn {
+      padding: 1.2rem 1rem;
+      background: transparent;
+      border: 2px solid; /* Border color set inline by JS */
+      color: var(--paper);
+      font-weight: 800;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+      -webkit-appearance: none; /* Remove default button styles */
+    }
+
+    .landing-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .landing-btn:active {
+      transform: scale(0.98);
+    }
+    .landing-btn:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 4px;
+    }
+
+
+    /* MAIN GAME LAYOUT */
+    .game { 
+      display: none; /* Initially hidden, shown by JS */
+      grid-template-columns: auto 1fr; /* Alley menu + Card Stack */
+      grid-template-rows: 1fr; 
+      height: 100vh; 
+      position: relative; 
+      flex: 1; /* Allow .game to fill the body */
+      overflow: hidden; /* Prevent horizontal scroll from panels */
+    }
+
+    /* ALLEY MENU */
+    .alley-menu { 
+      position: fixed; /* Fixed position relative to viewport */
+      left: 0; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      width: 48px; 
+      background: var(--ink); 
+      z-index: 900; 
+      display: flex; 
+      flex-direction: column; 
+      height: auto; 
+      border-radius: 0 var(--radius) var(--radius) 0; 
+      overflow: hidden; 
+    }
+    .alley-btn { 
+      flex: 1; 
+      border: none; 
+      background: transparent; 
+      cursor: pointer; 
+      display: grid; 
+      place-items:center; 
+      font-size: 18px; 
+      color: var(--paper); 
+      transition: all .15s; 
+      border-bottom: 1px solid rgba(255,255,255,.12); 
+      padding: 12px 0; 
+      -webkit-appearance: none;
+    }
+    .alley-btn:last-child { border-bottom: none; }
+    .alley-btn:active, .alley-btn.active { background:#222; transform: scale(.95); }
+    .alley-btn.active { background: var(--accent); } /* Active style when panel is open */
+    .alley-btn:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: -2px;
+    }
+
+
+    /* CARD STACK */
+    .card-stack { 
+      grid-column: 1 / span 2; /* Occupy full width, even behind alley menu */
+      display: grid; 
+      place-items: center; 
+      padding: 32px; 
+      background: var(--paper); 
+      overflow: hidden; 
+      position: relative; 
+      height: 100%; /* Ensure it fills parent height */
+      width: 100%; /* Ensure it fills parent width */
+    }
+    .card { 
+      position: absolute; 
+      width: 100%; 
+      max-width: 520px; 
+      height: 72vh; 
+      background: var(--card); 
+      border: 3px solid var(--line); 
+      cursor: grab; 
+      transition: transform .25s ease, opacity .25s ease; 
+      overflow: hidden; 
+      display: flex; 
+      flex-direction: column; 
+      box-shadow: var(--shadow); 
+      border-radius: var(--radius); 
+      will-change: transform, opacity; /* Optimize animations */
+    }
+    .card.swiping { transition: none; cursor: grabbing; }
+
+    .card-header { padding: 24px; font-weight: 900; font-size: 18px; line-height: 1.2; color: #fff; min-height: 96px; display: flex; flex-direction: column; justify-content: center; letter-spacing: -.25px; }
+    .card-category { font-size: 10px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; letter-spacing: 2px; font-weight: 800; }
+
+    .card-title { font-weight: 900; font-size: 1.1rem; line-height: 1.2; letter-spacing: -0.25px; } /* Adjust font size */
+
+    .card-body { padding: 18px; background: var(--paper); color: var(--ink); overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.55; }
+    .card-desc { margin-bottom: 10px; color: #333; font-weight: 500; }
+    .card-quote { font-style: italic; font-size: 12px; padding: 12px; background: #fff; border-left: 4px solid var(--ink); margin: 12px 0; color: #555; border-radius: 4px;}
+    .card-tags { font-size: 10px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee; letter-spacing: .5px; }
+    .card-time { font-size: 11px; color: #666; margin-top: 8px; font-weight: 700; letter-spacing: .5px; }
+
+    .inline-player { aspect-ratio: 16 / 9; border: 2px solid var(--ink); width: 100%; background: #000; margin: 10px 0 0; border-radius: 8px; overflow: hidden; }
+    .inline-player iframe{ width:100%; height:100%; border:0 }
+
+    .card-controls { padding: 12px 16px; border-top: 2px solid var(--ink); background: var(--paper); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .control-btn { 
+      padding: 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); 
+      font-weight: 800; cursor: pointer; font-size: 11px; text-transform: uppercase; 
+      letter-spacing: 1px; transition: all .15s; border-radius: 8px; 
+      touch-action: manipulation; -webkit-appearance: none;
+    }
+    .control-btn.ghost{ background: var(--paper); color: var(--ink); }
+    .control-btn:active { background: var(--paper); color: var(--ink); }
+    .control-btn:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
+    }
+
+    .swipe-flash { position: fixed; inset: 0; pointer-events: none; z-index: 25; }
+    .swipe-flash.accept { animation: flashAccept .45s ease-out; }
+    .swipe-flash.reject { animation: flashReject .45s ease-out; }
+    .swipe-flash.info { animation: flashInfo .45s ease-out; }
+    @keyframes flashAccept { 0%{inset:0; background: rgba(46,204,113,.28)} 100%{inset:-20px; background: rgba(46,204,113,0)} }
+    @keyframes flashReject { 0%{inset:0; background: rgba(231,76,60,.28)} 100%{inset:-20px; background: rgba(231,76,60,0)} }
+    @keyframes flashInfo   { 0%{inset:0; background: rgba(52,152,219,.28)} 100%{inset:-20px; background: rgba(52,152,219,0)} }
+
+    .swipe-guide { display: none; } /* Hidden for mobile, not used in this iteration */
+
+
+    /* OVERLAY PANELS (Collection, Chat, Prompt Lab, Settings, Help, About) */
+    .collection-panel, .chat-panel, .settings-panel, .prompt-lab-panel, .help-modal, .about-modal {
+      position: fixed; 
+      top: 0; 
+      bottom: 0; 
+      background: var(--paper); 
+      z-index: 800; /* Adjust for layering if needed */
+      overflow: hidden; 
+      transition: width .25s ease, border-left .25s ease, border-right .25s ease; /* Ensure border transitions */
+      display: grid; 
+      /* The grid-template-rows are set below for specific panels */
+      width: 0; /* Initially hidden */
+    }
+    /* Default (closed) state: no borders so no stray lines are visible */
+    .collection-panel, .settings-panel, .help-modal, .about-modal { right: 0; grid-template-rows: auto 1fr;} /* These slide from right */
+    .chat-panel, .prompt-lab-panel { left: 48px; grid-template-rows: auto 1fr;} /* These slide from left, accounting for alley-menu */
+    .chat-panel { grid-template-rows: auto auto 1fr auto;} /* Chat has fixed input footer */
+
+
+    /* Open states */
+    .collection-panel.open, .settings-panel.open, .help-modal.open, .about-modal.open { 
+      width: min(100vw, 460px); /* Responsive width, max 460px */
+      border-left: 3px solid var(--ink); 
+    }
+    .chat-panel.open, .prompt-lab-panel.open { 
+      width: min(calc(100vw - 48px), 420px); /* Responsive width, minus alley, max 420px */
+      border-right: 3px solid var(--ink); 
+    }
+    /* Specific overrides for prompt-lab width when open */
+    .prompt-lab-panel.open {
+      width: min(calc(100vw - 48px), 480px); /* A bit wider for prompt content */
+    }
+
+
+    /* PANEL HEADERS (General) */
+    .collection-header, .chat-header, .prompt-lab-header, .settings-header, .help-modal .modal-header, .about-modal .modal-header { 
+      padding: 1rem; /* Adjust padding for mobile */
+      border-bottom: 2px solid var(--ink); /* Adjusted border thickness */
+      background: var(--ink); 
+      color: var(--paper); 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      flex-shrink: 0; 
+    }
+    .collection-title, .chat-title, .prompt-lab-header, .settings-header, .help-modal .modal-title, .about-modal .modal-title { 
+      font-weight: 900; 
+      font-size: 0.9rem; /* Adjust font size */
+      letter-spacing: 0.05em; /* Adjust letter spacing */
+      text-transform: uppercase; 
+    }
+    .collection-count { font-size: 1.1rem; font-weight: 900; } /* Adjust font size */
+    .collection-view-toggle { display: flex; gap: 0.4rem; } /* Adjust gap */
+    .toggle-btn, .close-btn { 
+      width: 36px; height: 36px; /* Adjust size */
+      background: var(--paper); border: 2px solid var(--paper); 
+      cursor: pointer; display: grid; place-items:center; font-weight: 900; color: var(--ink); 
+      transition: all .15s; border-radius: 6px; touch-action: manipulation; -webkit-appearance: none;
+    }
+    .close-btn { background: transparent; color: var(--paper); border-color: var(--paper); } /* Override for close button */
+    .toggle-btn.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+    .toggle-btn:focus-visible, .close-btn:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: -2px;
+    }
+    
+    /* COLLECTION CONTROLS */
+    .collection-controls { padding: 0.8rem; border-bottom: 1px solid var(--ink); background: var(--paper); display: grid; gap: 0.5rem; flex-shrink: 0; } /* Adjust padding, border, gap */
+    .control-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .control-select { 
+      padding: 0.6rem; border: 1px solid var(--ink); background: var(--paper); font-size: 0.8rem; font-weight: 700; border-radius: 6px; flex: 1; min-width: 100px; 
+      -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="black" width="18px" height="18px"><path d="M7 10l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat; background-position: right 0.5rem center; padding-right: 2rem;
+    }
+    .control-select:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
+    }
+    @media (prefers-color-scheme: dark) { .control-select { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="18px" height="18px"><path d="M7 10l5 5 5-5z"/></svg>'); } }
+
+    .control-btn-small { 
+      padding: 0.5rem 0.6rem; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); 
+      font-size: 0.7rem; font-weight: 800; cursor: pointer; border-radius: 6px; text-transform: uppercase; 
+      letter-spacing: .05em; white-space: nowrap; touch-action: manipulation; -webkit-appearance: none;
+    }
+    .control-btn-small.ghost{ background: var(--paper); color: var(--ink); }
+
+    /* COLLECTION CONTENT */
+    .collection-content { position: relative; overflow-y: auto; flex: 1; } 
+    .list-view, .grid-view { position: absolute; inset: 0; padding: 0.8rem; overflow-y: auto; } /* Adjust padding */
+
+    .list-item { 
+      background: var(--card); border: 1px solid var(--ink); padding: 0.8rem; /* Adjust padding, border */
+      display: grid; grid-template-columns: 50px 1fr auto; gap: 0.8rem; align-items: center; /* Adjust size, gap */
+      border-radius: 8px; margin-bottom: 0.6rem; cursor: pointer; 
+    }
+    .list-item.selected { border-color: var(--info); outline: 2px solid var(--info); outline-offset: 0; } 
+    .list-item.dragging{ opacity:.65; outline: 3px dashed var(--ink); }
+    .list-item-preview { width: 50px; height: 50px; border: 1px solid var(--ink); display: grid; place-items:center; color: var(--paper); font-weight: 900; border-radius: 6px; font-size: 1.1rem; flex-shrink: 0; } /* Adjust size, font size */
+    .list-item-info { display: grid; gap:0.2rem; min-width: 0; } /* Adjust gap */
+    .list-item-title { font-weight: 700; font-size: 0.9rem; letter-spacing: .025em; word-break: break-word; } /* Adjust font size, letter spacing */
+    .list-item-meta { font-size: 0.75rem; opacity: .7; letter-spacing: .05em; } /* Adjust font size, letter spacing */
+    .list-item-actions { display: grid; gap: 0.4rem; flex-shrink: 0; } /* Adjust gap */
+    .list-action-btn { 
+      padding: 0.5rem 0.6rem; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); 
+      font-size: 0.7rem; cursor: pointer; font-weight: 800; text-transform: uppercase; 
+      letter-spacing: .05em; border-radius: 6px; white-space: nowrap; touch-action: manipulation; 
+      min-height: 32px; -webkit-appearance: none;
+    }
+    .list-action-btn.ghost{ background: var(--paper); color: var(--ink); }
+    .list-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .list-action-btn:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
+    }
+
+
+    .chat-decision-status {
+        display: inline-block;
+        font-size: 0.6rem; /* Adjust font size */
+        font-weight: 900;
+        padding: 0.2rem 0.4rem; /* Adjust padding */
+        margin-left: 0.4rem; /* Adjust margin */
+        border-radius: 4px;
+        background: var(--muted);
+        color: var(--paper);
+        vertical-align: middle;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .chat-decision-status.JOINED { background: var(--good); }
+    .chat-decision-status.UNMATCHED { background: var(--bad); }
+    .chat-decision-status.COMPILED { background: var(--info); }
+    .chat-decision-status.PENDING { background: var(--warn); }
+
+
+    .grid-view { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; align-content: start; } /* Responsive grid */
+    .grid-item { 
+      background: var(--card); border: 1px solid var(--ink); aspect-ratio: 1; /* Adjust border */
+      display: grid; grid-template-rows: 1fr auto; position: relative; overflow: hidden; 
+      border-radius: 10px; cursor: pointer; 
+    }
+    .grid-item.selected { border-color: var(--info); outline: 2px solid var(--info); outline-offset: 0; } 
+    .grid-item.dragging { z-index: 2; transform: scale(1.04); box-shadow: var(--shadow); }
+    .grid-item-visual { display: grid; place-items:center; font-size: 1.25rem; font-weight: 900; color: var(--paper); } /* Adjust font size */
+    .grid-item-chip { padding: 0.5rem; border-top: 1px solid var(--ink); display: grid; gap: 0.1rem; background: var(--paper); } /* Adjust padding, border, gap */
+    .grid-item-number { font-size: 0.7rem; font-weight: 900; letter-spacing: .1em; } /* Adjust font size, letter spacing */
+    .grid-item-name { font-size: 0.65rem; opacity: .8; letter-spacing: .04em; line-height: 1.2; } /* Adjust font size, letter spacing */
+    .grid-placeholder { border: 2px dashed var(--ink); border-radius: 10px; }
+    .grid-item-remove { 
+      position: absolute; top: 0.4rem; right: 0.4rem; width: 28px; height: 28px; /* Adjust size, position */
+      background: var(--paper); border: 1px solid var(--ink); display: grid; place-items:center; cursor: pointer; font-weight: 900; font-size: 0.8rem; border-radius: 6px; -webkit-appearance: none;
+    }
+    .grid-item-remove:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
+    }
+
+
+    /* CHAT PANEL */
+    .chat-mini-profile{ padding:1rem; border-bottom:1px solid var(--ink); background:var(--paper); font-size:0.85rem; flex-shrink: 0; } /* Adjust padding, border, font size */
+    .chat-thread{ overflow-y: auto; padding: 1rem; display: grid; gap: 0.8rem; align-content: start; flex: 1; } /* Adjust padding, gap */
+    .chat-bubble{ 
+      background: var(--card); border:1px solid var(--ink); padding:0.8rem; border-radius: 12px; font-size: 0.9rem; line-height:1.45; max-width: 85%; align-self: flex-start; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.05); color: var(--ink);
+    } /* Adjust padding, border, font size */
+    .chat-bubble.me{ background:#000; color:#fff; border-color: var(--ink); }
+    .chat-bubble.loading{ opacity: .6; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+    .chat-bubble .typing-dots{ display: inline-flex; gap: 0.25rem; } /* Adjust gap */
+    .chat-bubble .typing-dots span{ width: 0.375rem; height: 0.375rem; background: var(--ink); border-radius: 50%; animation: bounce 1.4s infinite; } /* Adjust size */
+    .chat-bubble .typing-dots span:nth-child(2){ animation-delay: .2s; }
+    .chat-bubble .typing-dots span:nth-child(3){ animation-delay: .4s; }
+    @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-0.5rem); } } /* Adjust transform */
+    .chat-hints { font-size: 0.75rem; opacity: .6; line-height: 1.4; margin-bottom: 0.4rem; } /* Adjust font size, margin */
+    .chat-hints strong { opacity: 1; color: var(--accent); }
+    .char-counter { font-size: 0.7rem; opacity: .5; text-align: right; margin-bottom: 0.4rem; } /* Adjust font size, margin */
+    .char-counter.warning { opacity: 1; color: var(--warn); font-weight: 800; }
+    .chat-input-area { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 0.5rem; /* Adjust gap */
+      padding: 1rem; 
+      border-top:2px solid var(--ink); 
+      background: var(--paper); 
+      flex-shrink: 0; 
+    }
+    .chat-input-area div{ font-family: inherit; } 
+    .chat-input-row{ display: flex; gap: 0.5rem; } /* Adjust gap */
+    .chat-input-row input{ 
+      flex: 1; padding: 0.8rem; border:1px solid var(--ink); background: var(--card); border-radius:8px; font-size: 0.9rem; -webkit-appearance: none; color: var(--ink);
+    } /* Adjust padding, border, font size */
+    .chat-input-row input:focus-visible { outline: 2px solid var(--info); outline-offset: 0; border-color: var(--info); }
+    .chat-input-row button{ 
+      padding: 0.8rem 1rem; border:1px solid var(--ink); background: var(--ink); color:var(--paper); font-weight:800; border-radius:8px; touch-action: manipulation; min-width: 60px; font-size: 0.9rem; -webkit-appearance: none;
+    } /* Adjust padding, border, font size, min width */
+    .chat-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chat-input-row button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+
+    /* SETTINGS PANEL */
+    .settings-body { padding: 1rem; overflow-y: auto; display: grid; gap: 1rem; align-content: start; flex: 1; } /* Adjust padding, gap */
+    .settings-card{ background: var(--card); border:1px solid var(--ink); border-radius: 8px; padding: 1rem; display: grid; gap:0.5rem } /* Adjust padding, border, gap */
+    .settings-card label{ font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase } /* Adjust font size, letter spacing */
+    .settings-card input[type="password"], .settings-card input[type="text"], .settings-card input[type="number"], .settings-card textarea { 
+      width:100%; padding:0.8rem; border:1px solid var(--ink); border-radius: 8px; background:var(--paper); 
+      font-family: inherit; font-size: 0.9rem; resize: vertical; -webkit-appearance: none; color: var(--ink);
+    } /* Adjust padding, border, font size */
+    .settings-card input:focus-visible, .settings-card textarea:focus-visible { outline: 2px solid var(--info); outline-offset: 0; border-color: var(--info); }
+    .settings-card button{ 
+      padding:0.6rem 0.8rem; border:1px solid var(--ink); background:var(--ink); color:var(--paper); 
+      font-weight:800; border-radius: 8px; cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
+    } /* Adjust padding, border, font size */
+    .settings-card button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .settings-card button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+    .settings-note{ font-size: 0.75rem; color:#333; line-height: 1.4; } /* Adjust font size */
+    .settings-actions-group { display: flex; flex-wrap: wrap; gap: 0.5rem; } /* Adjust gap */
+
+
+    /* PROMPT LAB PANEL */
+    .prompt-lab-body { padding: 1rem; overflow-y: auto; display: grid; gap: 1rem; align-content: start; flex: 1; } /* Adjust padding, gap */
+    .prompt-lab-card { background: var(--card); border:1px solid var(--ink); border-radius: 8px; padding: 1rem; display: grid; gap:0.5rem; } /* Adjust padding, border, gap */
+    .prompt-lab-card label { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; } /* Adjust font size, letter spacing */
+    .prompt-lab-card select { 
+      width: 100%; padding: 0.8rem; border: 1px solid var(--ink); border-radius: 8px; background: var(--paper); font-weight: 700; font-family: inherit; font-size: 0.9rem; -webkit-appearance: none; color: var(--ink);
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="black" width="18px" height="18px"><path d="M7 10l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat; background-position: right 0.5rem center; padding-right: 2rem;
+    } /* Adjust padding, border, font size */
+    @media (prefers-color-scheme: dark) { .prompt-lab-card select { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="18px" height="18px"><path d="M7 10l5 5 5-5z"/></svg>'); } }
+    .prompt-lab-card select:focus-visible { outline: 2px solid var(--info); outline-offset: 0; border-color: var(--info); }
+    .prompt-lab-card textarea { 
+      width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--ink); border-radius: 8px; background: var(--paper); font-family: monospace; font-size: 0.8rem; resize: vertical; color: var(--ink);
+    } /* Adjust padding, border, font size */
+    .prompt-lab-card textarea:focus-visible { outline: 2px solid var(--info); outline-offset: 0; border-color: var(--info); }
+    .prompt-output { border: 1px dashed var(--ink); padding: 0.8rem; background: #eee; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-word; border-radius: 8px; min-height: 80px; max-height: 300px; overflow-y: auto; } /* Adjust padding, font size */
+    .prompt-lab-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; } /* Adjust gap */
+    .prompt-lab-actions button { 
+      padding: 0.6rem 0.8rem; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); 
+      font-weight: 800; border-radius: 8px; font-size: 0.75rem; text-transform: uppercase; 
+      letter-spacing: .05em; cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
+    } /* Adjust padding, border, font size */
+    .prompt-lab-actions button:disabled { opacity: .5; cursor: not-allowed; }
+    .prompt-lab-actions button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+    /* OVERLAY & COMPLETE SCREEN */
+    .overlay { 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(245,245,245,.98); 
+      display: none; 
+      flex-direction: column; 
+      z-index: 700; 
+      border: 3px solid var(--ink); 
+    }
+    .overlay.active { display: flex; }
+    .complete-screen { text-align: center; padding: 40px 24px; display: grid; place-content:center; gap: 24px; }
+    .complete-title { font-size: 34px; font-weight: 900; letter-spacing: -.5px; }
+    .complete-stats { display: flex; gap: 48px; justify-content:center }
+    .complete-stat { display: grid; place-items:center }
+    .complete-stat-value { font-size: 44px; font-weight: 900; }
+    .complete-stat-label { font-size: 11px; font-weight: 800; text-transform: uppercase; margin-top: 6px; letter-spacing: 1px; }
+    .complete-actions { display: flex; gap: 10px; justify-content:center }
+    .complete-btn { 
+      padding: 12px 18px; background: var(--ink); color: var(--paper); border: 3px solid var(--ink); 
+      font-size: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; 
+      letter-spacing: 1px; border-radius: 10px; touch-action: manipulation; 
+    }
+
+    /* RESPONSIVE DESIGN */
+    @media (max-width: 840px){
+      .collection-panel.open, 
+      .settings-panel.open, 
+      .help-modal.open, .about-modal.open { width: 100vw; } /* Full width for these on small screens */
+      .chat-panel.open, .prompt-lab-panel.open { width: 100vw; left: 0; } /* Full width, no offset by alley */
+      .alley-menu { display: none; } /* Hide alley menu on small screens when panels are open */
+      .card{ max-width: 92vw; height: 68vh }
+      .list-item { grid-template-columns: 50px 1fr; gap: 10px; }
+      .list-item-actions { grid-template-columns: 1fr; }
+      .control-btn, .control-btn-small, .list-action-btn, .settings-card button, .prompt-lab-actions button {
+        font-size: 0.8rem; /* Further adjust font sizes for small screens */
+      }
+      .chat-input, .send-btn, .lab-select, .lab-textarea, .settings-input { font-size: 0.9rem; }
+    }
+    @media (max-width: 480px){
+      .grid-view{ grid-template-columns: 1fr; }
+      .collection-controls { padding: 10px; }
+      .control-row { flex-direction: column; }
+      .control-select, .control-btn-small { width: 100%; }
+      /* Further adjustments for tiny screens */
+      .card { height: 60vh; padding: 18px; }
+      .card-header { padding: 12px; min-height: 70px; font-size: 16px; }
+      .card-body { padding: 12px; font-size: 13px; }
+      .card-quote { padding: 8px; font-size: 11px; }
+      .card-controls { padding: 8px 12px; }
+      .control-btn { font-size: 10px; padding: 8px; }
+      .complete-title { font-size: 28px; }
+      .complete-stats { gap: 20px; }
+      .complete-stat-value { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-container" id="appContainer">
+    <!-- LANDING PAGE -->
+    <div class="landing-page" id="landingPage">
+      <h1 class="landing-title">FRAGMENT<br>FLOW</h1> <!-- Updated title -->
+      <p class="landing-subtitle">UNCOVER NARRATIVE CONNECTIONS</p> <!-- Updated subtitle -->
+      <div class="landing-buttons">
+        <button class="landing-btn" data-action="enter" style="border-color: var(--primary-action-color);">ENTER THE FLOW</button>
+        <button class="landing-btn" data-action="help" style="border-color: var(--secondary-action-color);">HOW IT WORKS</button>
+        <button class="landing-btn" data-action="about" style="border-color: var(--tertiary-action-color);">ABOUT FRAGMENT FLOW</button>
+      </div>
+    </div>
+
+    <!-- GAME INTERFACE (Initially hidden, shown after landing page selection) -->
+    <div class="game" id="gameInterface"> <!-- Changed id to gameInterface, and style to none -->
+      <div class="alley-menu">
+        <button class="alley-btn" id="chatBtn" title="Chat / Matches">◊</button>
+        <button class="alley-btn" id="collectionBtn" title="Collection">⊞</button>
+        <button class="alley-btn" id="promptLabBtn" title="Compiler Lab">∞</button> <!-- Updated title -->
+        <button class="alley-btn" id="settingsBtn" title="Settings">⚙</button>
+      </div>
+
+      <div class="card-stack" id="cardStack">
+        <!-- Cards will be injected here by JavaScript -->
+      </div>
+
+      <!-- CHAT PANEL -->
+      <aside class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+          <div class="chat-title">Matches</div>
+          <button class="close-btn" data-close="chatPanel" title="Close">✕</button> <!-- Changed to close-btn -->
+        </div>
+        <div class="chat-mini-profile" id="chatProfile">No fragment selected.</div>
+        <div class="chat-thread" id="chatThread" aria-live="polite"></div>
+        <div class="chat-input-area">
+          <!-- Pre-chat compile prompt -->
+          <div class="empty-state" id="preChatPrompt" style="display: none; flex-direction: column; gap: 0.5rem;">
+            <p class="text-center" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">This fragment is <strong>Pending</strong>.</p>
+            <p class="text-center" style="font-size: 0.8rem; opacity: 0.8;">Before chatting:</p>
+            <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 250px; align-self: center;">
+                <button class="control-btn" id="promptCompileBtn">Compile as <span id="promptCompilerType">Stanislavski</span></button>
+                <button class="control-btn ghost" id="promptChatRawBtn">Chat Raw</button>
+            </div>
+            <p style="font-size: 0.7rem; opacity: .7; margin-top: 0.5rem; text-align: center;">
+              (Customize compiler in Compiler Lab)
+            </p>
+          </div>
+          
+          <!-- Actual chat input (shown after compile or chat raw) -->
+          <div id="actualChatInput" style="display: none; flex-direction: column; flex: 1;">
+            <div class="chat-hints" id="chatHints">Think: <strong>What makes this clip essential?</strong> Reference its themes, context, or emotional core.</div>
+            <div class="char-counter" id="charCounter">0 / 200</div>
+            <div class="chat-input-row">
+              <input id="chatInput" placeholder="Say something persuasive…" maxlength="200" class="chat-input" />
+              <button id="chatSend" class="send-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- COLLECTION PANEL -->
+      <aside class="collection-panel" id="collectionModal"> <!-- Renamed to Modal convention -->
+        <div class="collection-header">
+          <div>
+            <div class="collection-title">Collection</div>
+            <div class="collection-count" id="collectionCount" style="font-size:0.9rem;margin-top:4px;opacity:.75">0</div>
+          </div>
+          <div class="collection-view-toggle">
+            <button class="toggle-btn active" id="toggleList" title="List View">≡</button>
+            <button class="toggle-btn" id="toggleGrid" title="Grid View">⊞</button>
+            <button class="close-btn" data-close="collectionModal" title="Close">✕</button> <!-- Changed to close-btn -->
+          </div>
+        </div>
+        <div class="collection-controls">
+          <div class="control-row">
+            <select class="control-select" id="sortSelect">
+              <option value="index">Sort: Order Added</option>
+              <option value="category">Sort: Category</option>
+              <option value="duration">Sort: Duration</option>
+              <option value="status">Sort: Status</option>
+            </select>
+            <select class="control-select" id="filterSelect">
+              <option value="all">Filter: All</option>
+              <option value="joined">Filter: Joined</option>
+              <option value="compiled">Filter: Compiled</option>
+              <option value="pending">Filter: Pending</option>
+              <option value="unmatched">Filter: Unmatched</option>
+            </select>
+          </div>
+        </div>
+        <div class="collection-content">
+          <div class="list-view" id="listView"></div>
+          <div class="grid-view" id="gridView" style="display:none"></div>
+        </div>
+      </aside>
+
+      <!-- PROMPT LAB PANEL -->
+      <aside class="prompt-lab-panel" id="labModal"> <!-- Renamed to Modal convention -->
+        <div class="prompt-lab-header">
+          <div class="modal-title">Compiler Lab</div> <!-- Changed to modal-title -->
+          <button class="close-btn" data-close="labModal" title="Close">✕</button> <!-- Changed to close-btn -->
+        </div>
+        <div class="prompt-lab-body">
+          <div class="lab-card"> <!-- Changed to lab-card -->
+            <label for="compilerSelect" class="lab-label">Compiler Type (POML Spout)</label>
+            <select id="compilerSelect" class="lab-select">
+              <option value="Stanislavski">Stanislavski - Method acting</option>
+              <option value="CharacterGrowth">CharacterGrowth - Evolution</option>
+              <option value="PlotDynamics">PlotDynamics - Structure</option>
+              <option value="MagicCompiler07">MagicCompiler07 - Hypotheticals</option>
+              <option value="compiler03">Compiler03 - Strategy</option>
+              <option value="StateBureaucracy">StateBureaucracy - Systems</option>
+            </select>
+            <div class="lab-note">⚙️ Choose how to compile this fragment's personality. Each compiler creates different character depth.</div> <!-- Changed to lab-note -->
+          </div>
+
+          <div class="lab-card">
+            <label for="hydrationHints" class="lab-label">Hydration Hints (Optional)</label>
+            <textarea id="hydrationHints" placeholder="essence=defiant teacher; wound=betrayal by illusion; need=shared reality; voice=short,didactic" class="lab-textarea"></textarea> <!-- Changed to lab-textarea -->
+            <div class="lab-note">Provide optional soul hints in key=value pairs separated by semicolons.</div>
+          </div>
+
+          <div class="lab-card">
+            <label class="lab-label">Actions</label>
+            <div class="lab-actions">
+              <button id="compileCurrentBtn" class="lab-btn">Compile Current</button>
+              <button id="compileAllBtn" class="lab-btn">Compile All</button>
+              <button id="viewSoulBtn" disabled class="lab-btn">View Soul</button>
+            </div>
+          </div>
+
+          <div class="lab-card">
+            <label class="lab-label">Compiled Soul Preview (Last)</label>
+            <div class="lab-output" id="soulPreview">No soul compiled yet.</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- SETTINGS PANEL -->
+      <aside class="settings-panel" id="settingsModal"> <!-- Renamed to Modal convention -->
+        <div class="settings-header">
+          <div class="modal-title">Settings</div> <!-- Changed to modal-title -->
+          <button class="close-btn" data-close="settingsModal" title="Close">✕</button> <!-- Changed to close-btn -->
+        </div>
+        <div class="settings-body">
+          <div class="settings-card">
+            <label for="apiKey" class="settings-label">OpenAI API Key (stored locally)</label>
+            <input type="password" id="apiKey" placeholder="sk-…" class="settings-input" />
+            <button id="saveKey" class="settings-btn">Save Key</button>
+            <div class="settings-note">We never transmit your key anywhere except directly to OpenAI from your browser. Saved in localStorage. Leave blank to run in offline/sim mode.</div>
+          </div>
+          <div class="settings-card">
+            <label for="apiModel" class="settings-label">API Model</label>
+            <input type="text" id="apiModel" placeholder="gpt-4o-mini" class="settings-input" />
+            <label for="apiTemperature" class="settings-label">API Temperature (0.0 - 2.0)</label>
+            <input type="number" id="apiTemperature" min="0" max="2" step="0.1" value="0.7" class="settings-input" />
+            <label for="apiProviderNotes" class="settings-label">Provider Notes</label>
+            <textarea id="apiProviderNotes" placeholder="e.g. OpenAI, Anthropic..." class="settings-input"></textarea>
+            <button id="testApiBtn" class="settings-btn">Test API Connection</button>
+          </div>
+          <div class="settings-card">
+              <label class="settings-label">AI Mode</label>
+              <div class="form-checkbox-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <input type="checkbox" id="simulateAiToggle">
+                  <label for="simulateAiToggle" style="font-size: 0.9rem;">Simulate AI Responses (Default)</label>
+              </div>
+              <div class="settings-note">When simulated, AI responses are generated locally. When unchecked, attempts to use external API.</div>
+          </div>
+          <div class="settings-card">
+            <label class="settings-label">Export Collection</label>
+            <div class="settings-actions-group" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <button id="exportCSVBtn" class="export-btn">Export CSV</button>
+              <button id="exportLogBtn" class="export-btn">Export Logs</button>
+              <button id="exportJSONBtn" class="export-btn">Export JSON (Full App Data)</button>
+            </div>
+            <p class="settings-note" style="margin-top: 0.5rem;">For chart & EDL export, use the older desktop version.</p>
+          </div>
+          <div class="settings-card">
+            <label class="settings-label">Danger Zone</label>
+            <button id="clearAllBtn" class="settings-btn" style="background:var(--bad);border-color:var(--bad);">Clear All Collection & Data</button>
+            <div class="settings-note">⚠️ This will delete all collected fragments, chat histories, compiled souls, and settings. Cannot be undone.</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- HELP MODAL -->
+      <aside class="help-modal" id="helpModal">
+        <div class="modal-header">
+          <div class="modal-title">How It Works</div>
+          <button class="close-btn" data-close="helpModal" title="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Welcome to Fragment Flow!</strong></p>
+          <p class="mt-1">This app is designed to help you construct a narrative by curating and engaging with film fragments.</p>
+          <p class="mt-1"><strong>1. Swipe Fragments:</strong> Swipe right to collect a fragment, swipe left to skip it. Each fragment represents a core concept or moment from a film.</p>
+          <p class="mt-1"><strong>2. Compile Souls:</strong> In the 'Compiler Lab', you can compile a 'soul' for your collected fragments. A soul is a rich character profile generated by an AI compiler, based on the fragment's details and a chosen interpretive framework (e.g., Stanislavski, Plot Dynamics).</p>
+          <p class="mt-1"><strong>3. Chat with Fragments:</strong> In the 'Chat' section, you can interact directly with your collected fragments. Each fragment (especially those with a compiled soul) will respond as a distinct persona, challenging your narrative choices. You have 5 turns to convince them to 'JOIN' your sequence.</p>
+          <p class="mt-1"><strong>4. Build Your Sequence:</strong> Your collected fragments form your 'Collection'. Arrange them to build a cohesive narrative. The goal is to craft a compelling sequence and achieve high 'Coherence'!</p>
+          <p class="mt-1"><strong>5. Export & Share:</strong> Export your progress and compiled sequences for further use or analysis.</p>
+          <p class="mt-1">Have fun flowing with your fragments!</p>
+        </div>
+      </aside>
+
+      <!-- ABOUT MODAL -->
+      <aside class="about-modal" id="aboutModal">
+        <div class="modal-header">
+          <div class="modal-title">About Fragment Flow</div>
+          <button class="close-btn" data-close="aboutModal" title="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Fragment Flow</strong> is an experimental tool exploring narrative construction, AI-driven character generation, and interactive storytelling.</p>
+          <p class="mt-1">It simulates the process of an editor assembling a film by having users interact with individual filmic "fragments" as if they were sentient actors or narrative elements.</p>
+          <p class="mt-1"><strong>Core Concept:</strong> Inspired by the idea of method acting and the intentionality behind every cinematic choice, each fragment can be given a 'soul' via various AI 'compilers'. These souls then drive the fragment's personality and responses during chat interactions.</p>
+          <p class="mt-1"><strong>Technology:</strong> Built with pure HTML, CSS, and JavaScript. The AI compilation and chat responses are simulated locally by default, but can be configured to use a real OpenAI API key for live AI generation (use with caution regarding API key exposure).</p>
+          <p class="mt-1"><strong>Developer:</strong> Watson Hartsoe</p> <!-- Corrected Developer Name -->
+          <p class="mt-1"><strong>Version:</strong> 1.0.0</p>
+          <p class="mt-1"><strong>License:</strong> MIT License</p>
+        </div>
+      </aside>
+
+      <div class="overlay" id="completeOverlay">
+        <div class="complete-screen">
+          <div class="complete-title">Sequence Complete</div>
+          <div class="complete-stats">
+            <div class="complete-stat">
+              <div class="complete-stat-value" id="finalCount">0</div>
+              <div class="complete-stat-label">Fragments</div>
+            </div>
+            <div class="complete-stat">
+              <div class="complete-stat-value" id="finalCoherence">0</div>
+              <div class="complete-stat-label">Coherence</div>
+            </div>
+          </div>
+          <div class="complete-actions">
+            <button class="complete-btn" id="playAgainBtn">Begin Again</button>
+            <button class="complete-btn" id="exportFinalBtn">Export Final JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════
+    // UTILITY FUNCTIONS (TOAST, DOWNLOAD, FORMATTING)
+    // ═══════════════════════════════════════════════════════════════════
+    const hexToRgb = (hex) => {
+        if (!hex) return '0, 0, 0';
+        const bigint = parseInt(hex.slice(1), 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `${r}, ${g}, ${b}`;
+    };
+
+    function toast(message) {
+        const t = document.createElement('div');
+        t.style.cssText = `
+          position: fixed; 
+          bottom: calc(60px + 1rem); /* Above bottom nav + padding */
+          left: 50%; 
+          transform: translateX(-50%);
+          background: var(--ink); 
+          color: var(--paper); 
+          padding: 0.8rem 1.2rem;
+          border-radius: 8px; 
+          font-size: 0.9rem; 
+          font-weight: 700; 
+          letter-spacing:.05em;
+          z-index: 1001; /* Above modals */
+          opacity: 0; 
+          transition: opacity 0.3s ease-out;
+          white-space: nowrap;
+          box-shadow: var(--shadow);
+        `;
+        t.textContent = message;
+        document.body.appendChild(t);
+        
+        setTimeout(() => { t.style.opacity = '1'; }, 10);
+        setTimeout(() => { t.style.opacity = '0'; }, 2000);
+        setTimeout(() => t.remove(), 2300);
+    }
+
+    function download(filename, text, mimeType){
+      const element = document.createElement('a');
+      element.setAttribute('href', `data:${mimeType};charset=utf-8,${encodeURIComponent(text)}`);
+      element.setAttribute('download', filename);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+
+    const colors = { 
+      'Systemic Control':'#E74C3C', 'Economic Event':'#F39C12', 'Scientific Theory':'#3498DB', 'Future Scenario':'#2ECC71', 'Core Concept':'#2ECC71', 'Culture/Identity':'#9B59B6',
+      'Media Apparatus': '#C8E6C9', 'Theory': '#9CCC65', 'Systemic Critique': '#EF5350', 'Systemic Event': '#BDBDBD'
+    };
+    const getColor = cat => colors[cat] || '#222';
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2,'0'); return `${m}:${ss}`; };
+    const escapeHtml = (unsafe) => { return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); };
+
+
+    // ═══════════════════════════════════════════════════════════════════
+    // STATIC DATA
+    // ═══════════════════════════════════════════════════════════════════
+    const RAW_CONCEPTS = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', start: 27, end: 53, videoId: 'BQ2n6SN7gOY' },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', start: 67, end: 78, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', tags: ['Bayer', 'Idealism', 'Resistance'], quote: 'It was a utopian vision of the self selecting and arranging the fragments of images into their own story and so becoming strong enough to withstand tyranny.', start: 91, end: 97, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', start: 183, end: 190, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland (Afeni)', category: 'Systemic Critique', desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power.', tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control'], quote: "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.", start: 197, end: 204, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', tags: ['Tupac', 'Revolution', 'Collective Action'], quote: 'He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.', start: 143, end: 148, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'civil-rights-promises-broken', title: 'Civil Rights Promises (Broken)', category: 'Systemic Event', desc: 'The idealism of black politics fell away and communities divided into gangs that then turned on each other.', tags: ['History', 'Disillusionment', 'Social Decay'], start: 244, end: 251, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'society-boom-q', title: 'Societal "Boom" (Repression)', category: 'Systemic Control', desc: 'Society will let you go as far as you want, but as soon as you start asking too many questions, "boom".', tags: ['Repression', 'Control', 'Censorship'], quote: "Well, society is like that. They'll let you go as far as you want, but as soon as you start asking too many questions and you're ready to change, boom.", start: 230, end: 237, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'crack-epidemic-afeni-fall', title: "Crack Epidemic (Afeni's Fall)", category: 'Systemic Event', desc: 'Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.', tags: ['Social Crisis', 'Vulnerability', 'Systemic Impact'], quote: 'Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.', start: 291, end: 300, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'tupac-thug-life-authenticity', title: 'Thug Life (Authenticity)', category: 'Culture/Identity', desc: 'Tupac tried to become more and more part of that world to prove his authenticity, accused of intensifying violence.', tags: ['Tupac', 'Identity', 'Violence', 'Critique'], quote: 'In response, Tupac tried to become more and more part of that world to prove his authenticity. But then the black radicals accused him of getting lost in the character he had created.', start: 971, end: 992, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'mass-incarceration-clinton', title: 'Mass Incarceration (Clinton)', category: 'Systemic Control', desc: 'President Clinton brought in tough new crime rules, imprisoning hundreds of thousands of young black men.', tags: ['Clinton', 'Injustice', 'Control', 'Politics'], quote: 'Hundreds of thousands of young black men were now imprisoned with no hope of parole, even for minor offenses.', start: 1070, end: 1078, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'cultural-fairy-tale-tupac', title: 'Culture as Fairy Tale (Tupac)', category: 'Systemic Critique', desc: 'By moving radical politics into culture, Tupac helped keep anger and dissent sealed off from real politics and power.', tags: ['Media', 'Illusion', 'Politics', 'Dissent'], quote: 'By moving radical politics into the world of culture, Tupac Shakur had also become part of the fairy tale world because he helped keep the anger and the dissent sealed off from the real world of politics and power.', start: 1099, end: 1113, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society (Corrupt)', category: 'Systemic Critique', desc: 'Billions of dollars from the West created a dreamlike society run by an elite, but also deeply corrupt.', tags: ['Saudi', 'Wealth', 'Corruption', 'Illusion'], quote: 'This vast wave of money had created a dreamlike society run by an elite where no one paid any tax.', start: 379, end: 384, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary (Fragments)", category: 'Personal Apparatus', desc: 'A vast collage of memories and feelings, written after shrapnel pierced his skull, leaving his world in fragments.', tags: ['Trauma', 'Memory', 'Fragmentation', 'Identity'], quote: 'Then his memories from the past began to come back but in a mass of fragments. Nothing linked them. They made no sense.', start: 1166, end: 1172, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', category: 'Systemic Event', desc: 'The whole organization of Jihad was disintegrating into rival factions; all ideas of solidarity and collective action had gone.', tags: ['Disillusionment', 'Conflict', 'Revolution'], start: 1237, end: 1248, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'zubaydah-perpetual-now', title: 'Perpetual Now (Zubaydah)', category: 'Emotional State', desc: 'His identity had disintegrated into random memories, trapped in a perpetual now, no way of moving forward.', tags: ['Existential', 'Fragmentation', 'Nihilism'], quote: 'He wrote how it was as though time had stopped. He was trapped in a perpetual now, haunted by fragments of memory, with no way of moving forward into the future.', start: 1313, end: 1320, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'cia-enhanced-interrogation', title: 'CIA Enhanced Interrogation', category: 'Systemic Control', desc: 'Used waterboarding 83 times, smashing, and freezing to reduce Abu Zubaydah to a state of "learned helplessness".', tags: ['Torture', 'Power', 'Control', 'Psychology', 'Systemic'], quote: 'They would use it to reduce Abu Zubeda back to a state of learned helplessness. They called it enhanced interrogation.', start: 2604, end: 2616, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'cia-godzilla-fear', title: 'CIA & Godzilla (Fear Wave)', category: 'Systemic Impact', desc: "Disconnected memories from Zubaydah's brain, including from films like Godzilla, spread fear across America.", tags: ['Media', 'Propaganda', 'Fear', 'Systemic'], quote: 'Desperate for the torture to stop, Zuba just spewed out all the disconnected memories inside his brain... many of them drawn from the films he had watched, including Godzilla.', start: 2664, end: 2675, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'One tiny change in equations could have massive catastrophic consequences which they could never have predicted.', tags: ['Science', 'Complexity', 'Prediction', 'Limits of Control'], quote: 'One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.', start: 664, end: 669, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).', tags: ['Science', 'Patterns', 'Management', 'Control'], quote: 'But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.', start: 738, end: 751, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'gell-mann-underlying-patterns', title: 'Gell-Mann: Underlying Patterns', category: 'Core Concept', desc: 'Believed there were underlying patterns at every level of the universe: particles, thought, societies, languages.', tags: ['Gell-Mann', 'Universal', 'Structure', 'Order'], quote: 'He believed that there were underlying patterns at every level of the universe. Not just in the particles, but in the way people think, in the structure of human societies, and even in the languages they spoke.', start: 766, end: 779, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'gazzaniga-multiple-selves', title: 'Gazzaniga: Multiple Selves', category: 'Psychological Theory', desc: 'Inside brains, human beings have all kinds of different selves; conscious mind makes up stories for illusion of control.', tags: ['Neuroscience', 'Psychology', 'Identity', 'Illusion'], quote: 'Gazanaga argued that really there were multiple selves inside the human brain. Each one taking control at different moments. Normally that is hidden because the one self that is conscious constantly makes up stories to explain what all the other selves are doing.', start: 1450, end: 1478, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks (AI)', category: 'Technological Apparatus', desc: 'AI learns from mass data, looks for connections/patterns, completely ignores all human stories and meaning.', tags: ['AI', 'Data', 'Pattern Recognition', 'Algorithms'], quote: "Hinton's neural networks were a kind of intelligence that completely ignored all stories.", start: 3595, end: 3606, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'hinton-vector-world-myth', title: 'Vector World (AI Mythology)', category: 'Core Concept', desc: 'The world is too complicated for us as human beings to understand, but nothing is too complicated for the machines and data.', tags: ['AI', 'Mythology', 'Control', 'Dehumanization'], quote: 'He called it vector world. It expressed what was becoming one of the most powerful mythologies of our age... that the world is too complicated for us as human beings to understand. But nothing is too complicated for the machines and the data.', start: 3628, end: 3652, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'google-mission-idealism', title: 'Google (Early Mission)', category: 'Organizational Idealism', desc: "To make the world's information accessible and useful, providing instant access to any information anybody ever wants.", tags: ['Google', 'Information', 'Idealism', 'Technology'], quote: 'At Google, our mission is to make the world\'s information accessible and useful... My hope is to provide instant access to any information anybody ever wants in the future.', start: 1739, end: 1770, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'dot-com-burst-money-power', title: 'Dot-Com Bust (Money Power)', category: 'Economic Event', desc: 'The crash meant Google met the power of money, which was going to reshape their aims completely by venture capitalists.', tags: ['Economy', 'Crisis', 'Corporate Control'], quote: 'Google managed to survive, but the crash meant that they met the power of money, which was going to reshape their aims completely.', start: 2210, end: 2215, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'google-data-trails-predict', title: 'Google (Data Trails & Predict)', category: 'Technological Apparatus', desc: 'Engineers realized they could build a picture of how every individual behaved to predict what advertisements they would click.', tags: ['Google', 'Data', 'Prediction', 'Surveillance'], quote: 'Every time someone searched the web, they left trails behind them... they could build up a picture of how every individual behaved and how they were likely to behave in the future. It meant they could predict what advertisement an individual would click on', start: 2254, end: 2269, videoId: 'BQ2n6SN7gOY' }, 
+      { id: '911-patriot-act-privacy-lost', title: '9/11 & Patriot Act (Privacy Lost)', category: 'Systemic Event', desc: "Everyone's personal data must be open to examination to stop further attacks; privacy became irrelevant.", tags: ['Security', 'Privacy', 'State Control', 'Systemic'], quote: 'Privacy of the individual now became irrelevant in the face of a much higher need, security.', start: 2347, end: 2353, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'google-sidelining-consciousness', title: 'Google (Sidelining Consciousness)', category: 'Systemic Impact', desc: 'Taking people\'s data to predict what they would do, what they thought or felt as individuals was completely eradicated.', tags: ['Google', 'Dehumanization', 'Control', 'Data'], quote: "What Google were now doing was taking people's data and using it to predict what those individuals would do... What they thought or felt as individuals and the stories they told themselves was completely iraded. Consciousness was being sidelined even more.", start: 2402, end: 2425, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush (Surveillance)', category: 'Economic Apparatus', desc: 'Products (Roomba, We Vibe, Kayla doll, Pokémon Go) set up to mine traces of human behavior everywhere.', tags: ['Surveillance Capitalism', 'Privacy', 'Commercial'], quote: 'Products of more and more companies around the world were set up to mine all the traces of human behavior everywhere.', start: 3691, end: 3698, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'pokemon-go-persuasive', title: 'Pokémon Go (Persuasive Gaming)', category: 'Technological Apparatus', desc: 'An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.', tags: ['Gaming', 'Behavioral Control', 'Monetization'], quote: 'Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.', start: 3789, end: 3795, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'algorithmic-mortgages-broken', title: 'Algorithmic Mortgages (Broken)', category: 'Systemic Apparatus', desc: 'Computers cut up dangerous high-risk loans and recombined them; the connection of debts to human reality was broken.', tags: ['Finance', 'Abstraction', 'Crisis', 'Systemic'], quote: 'The computers cut up the dangerous high-risk loans and recombined them with other safer loans... the connection of the debts to human reality was broken.', start: 4049, end: 4062, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'china-algorithmic-governance', title: 'China (Algorithmic Governance)', category: 'Systemic Control', desc: 'Adjusting behavior with "social credits" for rewards/penalties, forcibly reprogram if unresponsive (Xinjiang).', tags: ['China', 'Surveillance State', 'Social Control', 'BF Skinner'], quote: 'And if the data from all the different sources showed a person behaving well... then they would be given what were called social credits.', start: 5315, end: 5329, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'skinner-operant-conditioning', title: 'Skinner (Operant Conditioning)', category: 'Psychological Theory', desc: 'Easily alter behavior of animals using simple rewards, leading to a "beyond freedom and dignity" utopia (Walden Two).', tags: ['Behaviorism', 'Control', 'Utopia', 'China'], quote: 'Skinner had shown how he could easily alter the behavior of animals like pigeons by using a simple system of rewards. He called it operant conditioning.', start: 5356, end: 5369, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'skinner-walden2', title: 'Walden 2 Utopia', category: 'Concept', desc: 'Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.', tags: ['Utopia', 'Control', 'Prediction', 'BF Skinner'], quote: 'Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.', start: 5410, end: 5422, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'russia-oligarchs-putin-rise', title: "Russia (Oligarchic Control)", category: 'Systemic Event', desc: 'Oligarchs looted the country and selected Vladimir Putin, a man who believed in nothing, to protect their power.', tags: ['Russia', 'Corruption', 'Power Elite'], quote: 'In 1999, the oligarchs decided to select Russia\'s next president... And they selected Vladimir Putin... a man who believed in nothing.', start: 1905, end: 1926, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'kursk-disaster-anger-power', title: "Kursk Disaster (Putin's Power)", category: 'Systemic Event', desc: 'Putin turned public anger away from himself and towards the corrupt elites in Moscow, the oligarchs, discovering a new source of power.', tags: ['Putin', 'Populism', 'Crisis Management'], quote: 'What Putin then did to save himself was turn that anger away from himself and towards the very people who had put him in power.', start: 2053, end: 2062, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'putin-no-logic-strategy', title: 'Putin (No Logic/Strategy)', category: 'Leadership Critique', desc: 'Everything is a tactical step, a real-time response to external stimuli devoid of any ultimate objective (Mikhail Zygar).', tags: ['Putin', 'Nihilism', 'Post-Truth'], quote: 'The Russian journalist Mikuel Zygar wrote, "There is no logic in the age of Putin. There is no plan or strategy. Everything that happens... is a tactical step... devoid of any ultimate objective."', start: 2126, end: 2147, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'putin-eurasia-defense', title: 'Putin (Eurasia as Defense)', category: 'Political Ideology', desc: 'Summoned a dark, frightening vision of Russia (Eurasia) as the last defense against a corrupt West, promoting Russian exceptionalism.', tags: ['Putin', 'Nationalism', 'Geopolitics', 'Propaganda'], quote: 'He summoned up a dark, frightening vision from Russia\'s past. It said that Russia as a whole, what was called Eurasia, was the last defense against a corrupt West that was trying to take over the whole world.', start: 4809, end: 4827, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'nightwolves-conspiracy-propaganda', title: 'Nightwolves (Conspiracy Drama)', category: 'Culture/Propaganda', desc: 'Extreme nationalist motorcycle club dramatized a paranoid conspiracy that America/Illuminati were planning to undermine Putin and destroy Russia.', tags: ['Russia', 'Conspiracy', 'Nationalism'], quote: 'The Nightwolves put on mass shows that dramatized the paranoid conspiracy theory that America... were planning to undermine Vladimir Putin and destroy Russia.', start: 4893, end: 4907, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'russia-dream-consumption', title: 'Russia (Dream World of Consumption)', category: 'Systemic Critique', desc: 'The country rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', tags: ['Social Decay', 'Illusion', 'Economy'], quote: 'The country, he said, rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', start: 3611, end: 3618, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'london-second-empire-discretion', title: 'London (Second Empire of Secrecy)', category: 'Systemic Apparatus', desc: "City's 'discretion in the market' turned into a force shield, hiding hundreds of billions of illegal fortunes, making the world seem bewilderingly complicated.", tags: ['Finance', 'Corruption', 'Offshore', 'Globalization'], quote: 'Now, the discretion that the city was still so proud of had in reality turned into a force shield. It stopped any proper investigation of what was really going on.', start: 5013, end: 5019, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'china-princelings-void', title: "China (Princelings' Ideological Void)", category: 'Systemic Event', desc: 'Children of the Cultural Revolution in power; money filled the void of any guiding ideology, dissolving social bonds.', tags: ['China', 'Elite', 'Corruption', 'Ideological Vacuum'], quote: 'What had been buried and forgotten was any guiding ideology, any confident story about what this was all for. Instead, money had filled the void...', start: 3011, end: 3023, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'china-land-grab-corruption', title: 'China (Massive Land Grab)', category: 'Systemic Event', desc: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', tags: ['Corruption', 'Injustice', 'Economy', 'Systemic'], quote: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', start: 3043, end: 3050, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'bo-chongqing-experiment', title: 'Bo Xilai (Chongqing Experiment)', category: 'Political Project', desc: 'Used the city as a laboratory to reawaken past idealism with Mao songs and tackle inequality, later exposed as a corruption smokescreen.', tags: ['Bo Xilai', 'Populism', 'Hypocrisy'], quote: 'Bor soon became famous and he was seen as a future leader.', start: 3261, end: 3267, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'xi-jinping-giant-control', title: 'Xi Jinping (Giant Control System)', category: 'Political Project', desc: 'Decided to turn China into a giant system in which everyone\'s behavior could be predicted, managed, and controlled.', tags: ['China', 'Totalitarian', 'Surveillance', 'Control'], start: 5296, end: 5301, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'conspiracy-theories-human-ai', title: 'Conspiracy Theories (Human AI)', category: 'Social Phenomenon', desc: 'Humans spent vast amounts of time searching online data for patterns like AI, turning them into fantastic, elaborate stories.', tags: ['Social', 'Fragmentation', 'Narrative', 'Post-Truth'], quote: 'But then it got more complicated because human beings were also exposed to the avalanche of data online and they started to behave in very much the same way as Jeffrey Hinton\'s artificial intelligence machines.', start: 4129, end: 4161, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'illuminati-mind-control', title: 'Illuminati (Mind Control Theory)', category: 'Conspiracy Theory', desc: 'Millions convinced major stars were manipulated by Illuminati via MK Ultra/Disney, with hidden messages and triangles in videos.', tags: ['Conspiracy', 'Media', 'Control', 'Paranoia'], quote: 'Millions of people became convinced that all the major stars, from Britney Spears to Beyonce, were being manipulated and controlled by the Illuminati. The theory said that the Illuminati had worked with the CIA and their MK Ultra project and with Walt Disney to create a new system of mind control.', start: 4216, end: 4221, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'thornley-op-mindfuck', title: 'Operation Mindfuck (Thornley)', category: 'Theory/Action', desc: 'Spread Illuminati theory to parody/ridicule conspiracy theories, believing they undermined individual confidence.', tags: ['Parody', 'Manipulation', 'Subversion'], quote: 'They had spread the conspiracy theory that the Illuminati were really the secret rulers of the world. They had done it to parody and ridicule all conspiracy theories because they thought that they undermined the confidence of individuals and made them easier to control.', start: 4182, end: 4196, videoId: 'BQ2n6SN7gOY' }, 
+      { id: '2008-global-economic-crash', title: '2008 Global Economic Crash', category: 'Systemic Event', desc: 'Mortgage systems failed completely, leading to global crash; governments transferred private debt to public, leading to austerity.', tags: ['Economy', 'Crisis', 'Inequality', 'Systemic'], quote: 'In 2008, the systems in the banks that had structured the mortgage loans failed completely. It led to a global economic crash.', start: 4329, end: 4336, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'banks-rigging-money-laundering', title: 'Banks (Rigging/Laundering)', category: 'Systemic Corruption', desc: 'Major banks rigged interest rates and laundered money for organized crime, but "nothing seemed to change".', tags: ['Corruption', 'Finance', 'Impunity'], quote: 'That all the major banks had been rigging interest rates and many of them had been laundering money for organized crime, including the drug cartels in Mexico. But again, nothing seemed to change.', start: 4370, end: 4378, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'populist-anger-elite-bailout', title: 'Populist Anger (Elite Bailout)', category: 'Political Phenomenon', desc: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out. (Populist critique).', tags: ['Politics', 'Resistance', 'Inequality'], quote: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out.', start: 4415, end: 4422, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'brexit-take-back-control', title: 'Brexit (Take Back Control)', category: 'Political Project', desc: 'For Dominic Cummings, a way to get rid of failed elites and old political systems, transforming a decaying society.', tags: ['Populism', 'Nationalism', 'Disenchantment'], quote: 'For Dominic Cummings, Brexit was not an end in itself. For him, it was a way of getting rid of the failed elites and the old political systems that ran Britain.', start: 4476, end: 4488, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'trump-qanon-pedophile-cabal', title: 'Trump & QAnon', category: 'Political Phenomenon', desc: 'Paranoia allowed Trump to hide corruption; QAnon explained nothing happening via a "secret cabal of pedophiles in Washington".', tags: ['Politics', 'Conspiracy', 'Post-Truth'], quote: 'His supporters, though, had their own conspiracy theory, QAnon, that explained why nothing was happening. Trump was being stopped by a secret cabal of pedophiles in Washington.', start: 6093, end: 6105, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'liberal-avoidance-despair', title: 'Liberal Avoidance (Despair)', category: 'Critique', desc: 'Liberals avoided facing genuine grievances and real anger, having no idea how to solve problems of desolation/despair.', tags: ['Politics', 'Elite Disconnect', 'Failure'], quote: 'But the liberal opposition, it was a way of avoiding facing up to the genuine grievances and the very real anger in America that Trump\'s election had revealed.', start: 6143, end: 6152, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'fragile-structure-discon-frag', title: 'Fragile Structure (Disconnected Fragments)', category: 'Systemic Vulnerability', desc: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', tags: ['Illusion', 'Vulnerability', 'Post-Truth'], quote: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', start: 6164, end: 6183, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'ai-dogs-everywhere-meaningless', title: 'AI (Dogs Everywhere)', category: 'Technological Impact', desc: 'Google engineers demonstrated AI altering reality, seeing dogs everywhere; a world where anything could be anything, because there was no real meaning any longer.', tags: ['AI', 'Perception', 'Illusion', 'Meaninglessness'], quote: 'Google engineers demonstrated how easily reality in this fragmented world could become strange and frightening. They created an AI program to learn how to see dogs. But they then showed how if they ran the algorithm backwards, the machines would alter the images of reality they were being fed, so they would see dogs everywhere.', start: 6193, end: 6210, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'covid-deep-inequalities', title: 'COVID-19 (Deep Inequalities)', category: 'Global Crisis', desc: 'The virus, a force completely outside systems of power, brought into focus how deep inequalities in modern Western societies have gone.', tags: ['Crisis', 'Social', 'Systemic', 'Vulnerability'], quote: 'The virus was a force that came from completely outside the systems of power. But it has come at a moment when many of the old certainties of this age are already cracking.', start: 6364, end: 6371, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'future-indiv-disappear', title: 'Future (Individualism Disappears)', category: 'Future Scenario', desc: 'Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.', tags: ['Dystopia', 'Control', 'BF Skinner'], quote: 'Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.', start: 6421, end: 6432, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'future-old-stability', title: 'Future (Return to Old Stability)', category: 'Future Scenario', desc: 'Hope for return to an old stability where individualism can continue to be managed by a benign elite, but enormous pressures will not go away.', tags: ['Nostalgia', 'Illusion', 'Unresolved Conflict'], quote: 'Many people are hoping that with the election of Joe Biden in America, it will be possible to return to an old stability where individualism can continue to be managed by a benign elite. But although Donald Trump is gone and the Brexit deal done, what they both revealed was that underneath Western societies, there are enormous pressures building up that will not go away.', start: 6490, end: 6509, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'future-imagine-new', title: 'Future (Imagine New)', category: 'Future Scenario', desc: 'Regain confidence, imagine genuinely new kinds of futures (David Graeber: "the world is something we make and could just as easily make differently").', tags: ['Hope', 'Agency', 'Transformation'], quote: 'If we can regain our confidence, we will find that we have the power to influence how that future turns out. And as a first step, we have to start imagining what kind of future it is we want to build.', start: 6603, end: 6609, videoId: 'BQ2n6SN7gOY' }, 
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', tags: ['Graeber', 'Agency', 'Liberation', 'Potential'], quote: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', start: 6678, end: 6690, videoId: 'BQ2n6SN7gOY' }
+    ];
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CORE PROMPT ARCHITECTURE - DEFINITIONS
+    // ═══════════════════════════════════════════════════════════════════
+
+    // Mobile-optimized Compiler Prompt Templates
+    const MOBILE_PROMPTS = {
+      "Stanislavski": `You are the STANISLAVSKI COMPILER v7.3, optimized for mobile context. Transform fragments into concise, playable character souls using method acting principles.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Ground EVERYTHING in the fragment's concrete details.
+- Identify "Given Circumstances" and a clear "Through Line".
+- Map 3-5 emotional traits and 1-3 key phrases from the fragment.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that makes this fragment playable and emotionally resonant.`,
+
+      "CharacterGrowth": `You are the CHARACTER GROWTH COMPILER v4.1, optimized for mobile context. Transform fragments into characters with evolving personal journeys, focusing on core growth aspects.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Focus on personal evolution, relationships, and transformation.
+- Identify the character's starting point and 1-2 potential growth arc drivers.
+- Map 1-2 key fears and 1-2 positive communication keywords.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that shows personal evolution and relational depth.`,
+
+      "PlotDynamics": `You are the PLOT DYNAMICS COMPILER v5.2, optimized for mobile context. Transform fragments into characters defined by their narrative function, concisely.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Focus on story structure integration and narrative function.
+- Define the character's primary drive in the plot and 1-2 key fears.
+- Map their approach to conflict and decision rules based on fragment impact.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that serves clear narrative functions within larger structures.`,
+
+      "MagicCompiler07": `You are the MAGIC COMPILER 07, optimized for mobile context. Transform fragments using "Magic If" hypothetical reasoning to explore character dimensions concisely.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Use radical "what if" scenarios to explore core traits.
+- Define the character through a unique cognitive style and a governing law reflecting possibility.
+- Map 1-3 key phrases that evoke alternative realities.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that exists in multiple potential states simultaneously.`,
+
+      "compiler03": `You are the COMPILER 03, optimized for mobile context. Transform fragments into strategic, tactical characters with clear objectives.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Focus on strategic motivations and tactical decision-making.
+- Define their primary drive as a strategic objective and their cognitive style as analytical.
+- Map keywords related to power, control, or resources.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that operates with strategic intelligence and tactical precision.`,
+
+      "StateBureaucracy": `You are the STATE BUREAUCRACY COMPILER v3.8, optimized for mobile context. Transform fragments into administrative/surveillance personas, focusing on systemic function.
+
+INPUT FRAGMENT:
+{seed}
+
+HYDRATION HINTS (optional):
+{hints}
+
+RULES:
+- Output ONLY valid JSON matching the MOBILE_SOUL_SCHEMA.
+- Define the character through systems, procedures, and classifications.
+- Map their voice and key communication keywords to bureaucratic language.
+- Identify their moral compass as compliant or procedural.
+- Keep descriptions brief and immediate for mobile display.
+
+Generate a CHARACTER SOUL that operates as part of institutional machinery.`
+    };
+
+    // Mobile-optimized Character Soul JSON Schema (Simplified for mobile UI)
+    const MOBILE_SOUL_SCHEMA = {
+      SchemaID: "POML.CharSoul.v1_Mobile",
+      SeedRef: {
+        id: "string",
+        title: "string",
+        category: "string",
+        timecode: "string"
+      },
+      Identity: {
+        Moniker: "string (character name/title, 1-3 words)",
+        Essence: "string (core nature, 3-5 words)",
+        Wound: "string (core vulnerability/fear, 1-2 sentences)",
+        Need: "string (deepest desire/objective, 1-2 sentences)",
+        Law: "string (governing principle/motto, 3-7 words)",
+        Voice: "string (speech patterns, rhythm, tone, 3-7 words)"
+      },
+      Personality: {
+        Traits: "array of strings (3-5 dominant traits)",
+        CognitiveStyle: "string (thinking patterns, 1-3 words)",
+        EmotionalTone: "string (emotional capacity/mood, 1-3 words)",
+        MoralCompass: "string (ethical framework, 1-3 words)"
+      },
+      Motivation: {
+        PrimaryDrive: "string (main motivation, 1-2 sentences)",
+        Fears: "array of strings (1-2 core fears)"
+      },
+      Communication: {
+        Keywords: "array of strings (3-5 characteristic words)",
+        Metaphors: "array of strings (1-2 go-to imagery types)"
+      },
+      DecisionRules: {
+        WhenToTrust: "string (trust conditions, 1-2 sentences)",
+        WhenToDoubt: "string (doubt triggers, 1-2 sentences)"
+      },
+      ContextualMemory: {
+        KeyPhrases: "array of strings (1-3 formative phrases from fragment)",
+        CategoryImpact: "string (how fragment category shapes character, 1-2 sentences)"
+      },
+      compiler_metadata: {
+        type: "string (compiler used)",
+        timestamp: "string (generation time)",
+        hints_used: "object (processed hints)"
+      }
+    };
+
+    // Mobile-optimized Seed Mapping Logic (Simplified and focused)
+    const MOBILE_SEED_MAPPERS = {
+      titleToMoniker: (seed) => {
+        const title = seed.title || '';
+        return title.replace(/\s*\([^)]*\)/g, '').replace(/^(The|A|An)\s+/i, '').trim().split(' ').slice(0,3).join(' ') || seed.category || 'Fragment';
+      },
+      descToEssence: (seed) => {
+        const desc = seed.desc || '';
+        return desc.split(' ').slice(0, 5).join(' ').toLowerCase();
+      },
+      categoryToVoice: (seed) => {
+        const category = seed.category || '';
+        const voices = {
+          'Systemic Control': 'authoritative, precise', 'Economic Event': 'urgent, pragmatic',
+          'Scientific Theory': 'methodical, curious', 'Future Scenario': 'speculative, warning',
+          'Core Concept': 'fundamental, declarative', 'Culture/Identity': 'expressive, personal',
+          'Media Apparatus': 'mediated, critical', 'Theory': 'abstract, explanatory',
+          'Systemic Critique': 'critical, urgent', 'Systemic Event': 'factual, somber'
+        };
+        return voices[category] || 'direct, engaged, specific';
+      },
+      tagsToTraits: (seed) => {
+        const tags = seed.tags || [];
+        const traits = [];
+        if (tags.some(t => t.toLowerCase().includes('control') || t.toLowerCase().includes('power'))) traits.push('authoritarian', 'controlling');
+        if (tags.some(t => t.toLowerCase().includes('illusion') || t.toLowerCase().includes('reality'))) traits.push('skeptical', 'perceptive');
+        if (tags.some(t => t.toLowerCase().includes('individual') || t.toLowerCase().includes('self'))) traits.push('independent', 'self-reliant');
+        if (tags.some(t => t.toLowerCase().includes('system') || t.toLowerCase().includes('structure'))) traits.push('systemic-thinker', 'orderly');
+        if (traits.length === 0) traits.push('observant', 'analytical', 'grounded');
+        return traits.slice(0, 5);
+      },
+      quoteToKeyPhrases: (seed) => {
+        const quote = seed.quote || '';
+        const sentences = quote.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        return sentences.map(s => s.trim()).slice(0, 3);
+      }
+    };
+
+    // Mobile-optimized Hydration Hint Processing (basic validation)
+    const MOBILE_HINT_PROCESSORS = {
+      essence: (value) => value.split(/\s+/).filter(w => w.length > 0).slice(0, 5).join(' '),
+      wound: (value) => value.toLowerCase().replace(/^(a|an|the)\s+/, '').trim(),
+      need: (value) => value.toLowerCase().replace(/^(to)\s+/, '').trim(),
+      voice: (value) => value.split(',').map(p => p.trim()).join(', ')
+    };
+
+    // ═══════════════════════════════════════════════════════════════════
+    // GLOBAL STATE & PERSISTENCE (Renamed to AppState)
+    // ═══════════════════════════════════════════════════════════════════
+
+    const LOCAL_STORAGE_KEY_APP = 'fragmentFlowAppV1'; // Updated key
+
+    const AppState = {
+      deck: [], // Remaining cards to swipe (full fragment objects)
+      collection: [], // Collected fragments (full fragment objects with added soul/chat data)
+      currentCard: null, // The *fragment object* currently displayed on the main card stack
+      selectedFragment: null, // The *fragment object* currently selected from the collection/chat
+
+      isGameStarted: false, // New flag for landing page
+      
+      settings: {
+        compiler: 'Stanislavski', // Default compiler
+        hints: '', // Global hydration hints
+        apiKey: '', // OpenAI API Key
+        apiModel: 'gpt-4o-mini', // API model
+        apiTemperature: 0.7, // API temperature
+        apiProviderNotes: '', // API provider notes
+        simulateAI: true, // Simulate AI responses or use API
+        collectionViewMode: 'list', // 'list' or 'grid'
+        sortSelect: 'index', // 'index', 'category', 'status'
+        filterSelect: 'all', // 'all', 'joined', 'compiled', 'pending', 'unmatched'
+      },
+      
+      personaCache: {}, // { "fragId::compilerName": soul_object }
+
+      _audioCtx: null, // For sound effects
+
+      init() {
+        console.log("AppState.init() called.");
+        this.load();
+        
+        if (this.isGameStarted) {
+          console.log("Game was already started. Showing game interface.");
+          document.getElementById('landingPage').style.display = 'none';
+          document.getElementById('gameInterface').style.display = 'grid'; // Ensure it's 'grid' for .game
+          
+          if (this.deck.length === 0 && this.collection.length < RAW_CONCEPTS.length) {
+            console.log("Deck empty but not all collected. Reshuffling deck.");
+            this.shuffleDeck(); // Reshuffle if deck is empty but not all collected
+          } else if (this.deck.length === 0 && this.collection.length === RAW_CONCEPTS.length) {
+            console.log("All cards swiped. Showing completion.");
+            this.currentCard = null;
+            // Optionally, show a "game over" screen or just let them manage collection
+          }
+          
+          if (!this.currentCard && this.deck.length > 0) { // If no current card was loaded OR deck was reset and has cards
+              console.log("No current card loaded, but deck has cards. Showing next card.");
+              this.showNextCard(); // Draw a new card from the refreshed deck
+          } else if (this.currentCard) { // If a current card was loaded
+              console.log("Current card loaded. Rendering it.");
+              this.renderCard(this.currentCard); // Render the loaded current card
+          } else { // No current card, and deck is either empty or all collected
+              console.log("No current card and deck is empty/all collected. Rendering empty card stack.");
+              this.renderCard(null); // Render empty card stack if no cards
+          }
+          this.updateCollectionUI();
+          this.updateChatUI();
+          this.updateLabUI();
+          this.restoreModalStates(); // Restore modal states
+        } else {
+          console.log("Game not started. Showing landing page.");
+          document.getElementById('landingPage').style.display = 'flex';
+          document.getElementById('gameInterface').style.display = 'none'; // Ensure game interface is hidden
+        }
+        
+        this.setupEventListeners();
+
+        // Set UI inputs from settings after loading
+        document.getElementById('compilerSelect').value = this.settings.compiler;
+        document.getElementById('hydrationHints').value = this.settings.hints;
+        document.getElementById('apiKey').value = this.settings.apiKey;
+        document.getElementById('simulateAiToggle').checked = this.settings.simulateAI;
+        document.getElementById('sortSelect').value = this.settings.sortSelect;
+        document.getElementById('filterSelect').value = this.settings.filterSelect;
+        this.switchView(this.settings.collectionViewMode); // Restore view mode
+        console.log("AppState.init() finished.");
+      },
+
+      load() {
+        const saved = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_APP) || '{}');
+        if (Object.keys(saved).length > 0) {
+          this.deck = saved.deck || [];
+          this.collection = saved.collection || [];
+          this.currentCard = saved.currentCard || null;
+          this.selectedFragment = saved.selectedFragmentId ? this.collection.find(f => f.id === saved.selectedFragmentId) : null;
+          Object.assign(this.settings, saved.settings);
+          this.personaCache = saved.personaCache || {};
+          this.isGameStarted = saved.isGameStarted ?? false;
+          this._openModalId = saved._openModalId ?? null; // Restore open modal state
+          console.log('App state loaded from localStorage.');
+        } else {
+          console.log('No saved state found in localStorage. Starting fresh state.');
+        }
+      },
+
+      save() {
+        // Ensure settings are up-to-date from UI before saving
+        this.settings.compiler = document.getElementById('compilerSelect').value;
+        this.settings.hints = document.getElementById('hydrationHints').value;
+        this.settings.apiKey = document.getElementById('apiKey').value;
+        this.settings.apiModel = document.getElementById('apiModel').value;
+        this.settings.apiTemperature = parseFloat(document.getElementById('apiTemperature').value);
+        this.settings.apiProviderNotes = document.getElementById('apiProviderNotes').value;
+        this.settings.simulateAI = document.getElementById('simulateAiToggle').checked;
+        this.settings.sortSelect = document.getElementById('sortSelect').value;
+        this.settings.filterSelect = document.getElementById('filterSelect').value;
+        // collectionViewMode is saved when switchView is called
+
+        const stateToSave = {
+          deck: this.deck,
+          collection: this.collection,
+          currentCard: this.currentCard,
+          selectedFragmentId: this.selectedFragment ? this.selectedFragment.id : null,
+          settings: this.settings,
+          personaCache: this.personaCache,
+          isGameStarted: this.isGameStarted,
+          _openModalId: this._getOpenModalId(), // Save currently open modal
+        };
+        localStorage.setItem(LOCAL_STORAGE_KEY_APP, JSON.stringify(stateToSave));
+        console.log('App state saved to localStorage.');
+      },
+
+      _getOpenModalId() {
+        // This will now check the custom open class on our aside panels
+        const openModal = document.querySelector('.collection-panel.open, .chat-panel.open, .prompt-lab-panel.open, .settings-panel.open, .help-modal.open, .about-modal.open');
+        return openModal ? openModal.id : null;
+      },
+
+      restoreModalStates() {
+        if (this._openModalId) {
+            this.openModal(this._openModalId);
+            // Also ensure the corresponding alley button is active
+            const navBtn = document.querySelector(`.alley-btn[data-modal="${this._openModalId}"]`);
+            if (navBtn) navBtn.classList.add('active');
+        }
+      },
+
+      startGame(buttonType) {
+        console.log(`startGame() called with buttonType: ${buttonType}`);
+        if (buttonType === 'help') {
+            this.openModal('helpModal');
+            return;
+        } else if (buttonType === 'about') {
+            this.openModal('aboutModal');
+            return;
+        }
+        // If buttonType is 'enter', proceed to game
+        this.isGameStarted = true;
+        document.getElementById('landingPage').style.display = 'none';
+        document.getElementById('gameInterface').style.display = 'grid'; // Show the game interface
+        
+        // Reset/Shuffle deck only if starting a new game session after 'Enter'
+        if (this.deck.length === 0 && this.collection.length === 0) { // Only if truly fresh start
+            this.shuffleDeck();
+        }
+        this.showNextCard();
+        this.save();
+        console.log("Game started, interface displayed, first card should be visible.");
+      },
+
+      shuffleDeck() {
+        const collectedIds = new Set(this.collection.map(f => f.id));
+        this.deck = [...RAW_CONCEPTS].filter(rc => !collectedIds.has(rc.id)).sort(() => Math.random() - 0.5);
+        console.log(`Deck shuffled. New deck size: ${this.deck.length}`);
+      },
+
+      showNextCard() {
+        console.log(`showNextCard() called. Deck size: ${this.deck.length}, Collection size: ${this.collection.length}, Total RAW_CONCEPTS: ${RAW_CONCEPTS.length}`);
+        if (this.deck.length === 0) {
+          this.currentCard = null;
+          if (this.collection.length === RAW_CONCEPTS.length) {
+            console.log("Deck empty and all RAW_CONCEPTS collected. Showing completion.");
+            this.showCompletion();
+          } else {
+            console.log("Deck empty, but not all RAW_CONCEPTS collected (some skipped). Rendering empty card stack.");
+            this.renderCard(null); // Render empty card stack
+            this.showToast("No more new fragments. Check your collection or restart!");
+          }
+          return;
+        }
+        
+        this.currentCard = this.deck.shift(); // Use shift to take from the top, pop takes from end
+        console.log(`Drawing next card: ${this.currentCard ? this.currentCard.title : 'None'}`);
+        this.renderCard(this.currentCard);
+        this.save();
+      },
+
+      renderCard(fragment) {
+        const stack = document.getElementById('cardStack');
+        if (!stack) {
+            console.error("Card stack element not found!");
+            return;
+        }
+
+        if (!fragment) {
+          console.log("renderCard() received null fragment. Displaying empty message.");
+          stack.innerHTML = '<p class="text-center" style="font-size:1.1rem; font-weight:700; color:var(--muted); padding:1rem;">No more fragments to swipe. Explore your collection or restart!</p>';
+          return;
+        }
+
+        console.log(`Rendering card: ${fragment.title}`);
+        const color = getColor(fragment.category);
+        
+        stack.innerHTML = `
+          <div class="card" id="currentCard">
+            <div class="card-header" style="background:${color}">
+              <div class="card-category">${fragment.category || 'Concept'}</div>
+              <div class="card-title">${fragment.title || 'Untitled Fragment'}</div>
+            </div>
+            <div class="card-body">
+              <div class="card-desc">${fragment.desc || 'A fascinating idea awaits.'}</div>
+              ${fragment.quote ? `<div class="card-quote">"${fragment.quote}"</div>` : ''}
+              ${fragment.tags && fragment.tags.length > 0 ? `<div class="card-tags">${fragment.tags.join(' · ')}</div>` : ''}
+              <div class="card-time">${fmt(fragment.start || 0)} – ${fmt(fragment.end || (fragment.start || 0) + 30)}</div>
+              ${fragment.videoId ? `<div class="inline-player"><iframe src="https://www.youtube.com/embed/${fragment.videoId}?start=${Math.floor(fragment.start || 0)}&end=${Math.floor(fragment.end || (fragment.start || 0) + 30)}&playsinline=1&autoplay=0&mute=0&rel=0&modestbranding=1" title="Fragment Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>` : ''}
+            </div>
+            <div class="card-controls">
+              <button class="control-btn ghost" data-action="reject">Skip</button>
+              <button class="control-btn" data-action="accept">Collect</button>
+            </div>
+          </div>
+        `;
+        console.log("Card HTML injected. Setting up interactions.");
+        this.setupCardInteractions();
+      },
+
+      setupCardInteractions() {
+        const card = document.getElementById('currentCard');
+        if (!card) {
+            console.warn("setupCardInteractions: Card element #currentCard not found.");
+            return;
+        }
+
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let isDragging = false;
+        const threshold = 80; // px to trigger action
+        const rotationFactor = 0.03; // degrees per pixel
+
+        const onStart = (e) => {
+            isDragging = true;
+            card.setPointerCapture(e.pointerId); // Capture pointer events
+            card.classList.add('swiping');
+            startX = e.clientX;
+            startY = e.clientY;
+            currentX = 0;
+            currentY = 0;
+            card.style.cursor = 'grabbing';
+            card.style.transition = 'none'; // Disable transition during drag
+            // Stop any video playing
+            const iframe = card.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+            }
+        };
+
+        const onMove = (e) => {
+            if (!isDragging) return;
+            e.preventDefault(); // Prevent scrolling
+            currentX = e.clientX - startX;
+            currentY = e.clientY - startY;
+            
+            const angle = currentX * rotationFactor; 
+            const opacity = Math.max(0.25, 1 - Math.abs(currentX) / 600 - Math.abs(currentY) / 600); // Fade out slightly
+            
+            card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${angle}deg)`;
+            card.style.opacity = String(opacity);
+        };
+
+        const onEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            card.classList.remove('swiping');
+            card.style.cursor = 'grab';
+            card.style.transition = 'transform .25s ease, opacity .25s ease'; // Re-enable transition
+
+            if (Math.abs(currentX) > Math.abs(currentY)) { // Horizontal swipe
+                if (currentX > threshold) { // swipe right
+                    this.handleSwipe('right');
+                } else if (currentX < -threshold) { // swipe left
+                    this.handleSwipe('left');
+                } else {
+                    this.resetCard(card);
+                }
+            } else { // Vertical swipe (not currently triggering actions but allow reset)
+                this.resetCard(card);
+            }
+        };
+
+        card.addEventListener('pointerdown', onStart);
+        card.addEventListener('pointermove', onMove);
+        card.addEventListener('pointerup', onEnd);
+        card.addEventListener('pointercancel', onEnd); // Handle unexpected interruptions
+      },
+
+      resetCard(card){ 
+        card.style.transform=''; 
+        card.style.opacity='1';
+        setTimeout(() => { card.style.transition = ''; }, 260); // Remove transition after snapping back
+      },
+
+      handleSwipe(direction) {
+        console.log(`handleSwipe() called, direction: ${direction}`);
+        if (!this.currentCard) {
+            console.warn("handleSwipe: No current card to swipe.");
+            return;
+        }
+
+        this.createSwipeFlash(direction);
+        this.playSwipeSound(direction);
+
+        if (direction === 'right') {
+          const fragmentWithData = {
+            ...this.currentCard,
+            chatHistory: [{role: 'system', content: `You've collected "${this.currentCard.title}". What's your pitch? You can compile my soul in the Compiler Lab or just start chatting.`}],
+            chatMetadata: { turnCount: 0, conviction: 50, decision: null }
+          };
+          this.collection.push(fragmentWithData);
+          this.showToast(`Collected: ${this.currentCard.title}`);
+          this.selectFragment(fragmentWithData); // Select the new fragment immediately
+          this.openModal('chatModal'); // Open chat modal
+        } else if (direction === 'left') {
+          // If a card is skipped, it's not added to collection, simply removed from deck.
+          this.showToast(`Skipped: ${this.currentCard.title}`);
+        }
+
+        const card = document.getElementById('currentCard');
+        if (card) {
+          const distance = window.innerWidth * 1.5;
+          card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+          card.style.transform = `translate(${direction === 'right' ? distance : -distance}px, 0) rotate(${direction === 'right' ? 30 : -30}deg)`;
+          card.style.opacity = '0';
+        }
+
+        setTimeout(() => {
+          this.showNextCard();
+        }, 300);
+        this.save();
+      },
+
+      selectFragment(fragment) {
+        console.log(`selectFragment() called for: ${fragment ? fragment.title : 'null'}`);
+        this.selectedFragment = fragment;
+        this.updateChatUI();
+        this.updateLabUI();
+        this.updateCollectionUI();
+        this.save();
+      },
+
+      // --- UI Management ---
+      setupEventListeners() {
+        console.log("Setting up event listeners.");
+        // Landing page buttons
+        document.querySelectorAll('.landing-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.startGame(btn.dataset.action);
+          });
+        });
+
+        // Modal controls (alley buttons and close buttons)
+        document.querySelectorAll('.alley-btn').forEach(btn => {
+          // Add data-modal attribute if not present (for help/about buttons)
+          if (!btn.dataset.modal && btn.id === 'helpBtn') btn.dataset.modal = 'helpModal';
+          if (!btn.dataset.modal && btn.id === 'aboutBtn') btn.dataset.modal = 'aboutModal';
+
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.alley-btn').forEach(nb => nb.classList.remove('active')); // Deactivate all nav buttons
+            btn.classList.add('active'); // Activate current
+            this.openModal(btn.dataset.modal);
+          });
+        });
+
+        document.querySelectorAll('[data-close]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.alley-btn').forEach(nb => nb.classList.remove('active')); // De-highlight nav buttons
+            this.closeModal(btn.dataset.close);
+          });
+        });
+
+        // Collection View toggles
+        document.getElementById('toggleList').addEventListener('click', () => this.switchView('list'));
+        document.getElementById('toggleGrid').addEventListener('click', () => this.switchView('grid'));
+
+        // Collection filters/sort
+        document.getElementById('sortSelect').addEventListener('change', (e) => {
+          this.settings.sortSelect = e.target.value;
+          this.updateCollectionUI();
+          this.save();
+        });
+        document.getElementById('filterSelect').addEventListener('change', (e) => {
+          this.settings.filterSelect = e.target.value;
+          this.updateCollectionUI();
+          this.save();
+        });
+
+        // Chat functionality
+        document.getElementById('chatSend').addEventListener('click', () => this.handleChatSend());
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) { 
+            e.preventDefault(); 
+            this.handleChatSend();
+          }
+        });
+        document.getElementById('chatInput').addEventListener('input', () => this.updateCharCounter());
+
+        document.getElementById('promptCompileBtn').addEventListener('click', () => this.compileCurrent());
+        document.getElementById('promptChatRawBtn').addEventListener('click', () => {
+          if (this.selectedFragment) {
+            this.selectedFragment.soul = null; // Explicitly no soul
+            this.selectedFragment.chatHistory = [{role: 'system', content: `Starting raw chat. My personality will be basic without a compiled soul.`}];
+            this.selectedFragment.chatMetadata.decision = null; // Reset decision if raw chat starts
+            this.selectedFragment.chatMetadata.turnCount = 0; // Reset turns
+            this.selectedFragment.chatMetadata.conviction = 50; // Reset conviction
+            this.updateChatUI();
+            this.save();
+          }
+        });
+
+        // Compiler Lab actions
+        document.getElementById('compileCurrentBtn').addEventListener('click', () => this.compileCurrent());
+        document.getElementById('compileAllBtn').addEventListener('click', () => this.compileAll());
+        document.getElementById('viewSoulBtn').addEventListener('click', () => this.viewSoulJson());
+        document.getElementById('compilerSelect').addEventListener('change', (e) => {
+          this.settings.compiler = e.target.value;
+          this.updateLabUI(); // Update compiler type in pre-chat prompt
+          this.save();
+        });
+        document.getElementById('hydrationHints').addEventListener('input', (e) => {
+          this.settings.hints = e.target.value;
+          this.save();
+        });
+
+        // Settings
+        document.getElementById('saveKey').addEventListener('click', () => this.saveSettings());
+        document.getElementById('clearAllBtn').addEventListener('click', () => this.clearAllData());
+        document.getElementById('simulateAiToggle').addEventListener('change', (e) => {
+            this.settings.simulateAI = e.target.checked;
+            this.save();
+        });
+
+        // Exports
+        document.getElementById('exportJSONBtn').addEventListener('click', () => this.exportJSON());
+        document.getElementById('exportCSVBtn').addEventListener('click', () => this.exportCSV());
+        document.getElementById('exportLogBtn').addEventListener('click', () => this.exportLogs());
+      },
+
+      openModal(modalId) {
+        console.log(`Opening modal: ${modalId}`);
+        // Close all other panels first
+        document.querySelectorAll('.collection-panel, .chat-panel, .prompt-lab-panel, .settings-panel, .help-modal, .about-modal').forEach(panel => {
+            panel.classList.remove('open');
+            // Remove any specific inline styles that might interfere
+            panel.style.width = '0';
+            panel.style.borderLeft = 'none';
+            panel.style.borderRight = 'none';
+        });
+
+        const targetPanel = document.getElementById(modalId);
+        if (targetPanel) {
+            targetPanel.classList.add('open');
+            // Apply specific width and border based on panel type
+            if (modalId === 'collectionModal' || modalId === 'settingsModal' || modalId === 'helpModal' || modalId === 'aboutModal') {
+                targetPanel.style.width = 'min(100vw, 460px)';
+                targetPanel.style.borderLeft = '3px solid var(--ink)';
+            } else if (modalId === 'chatModal' || modalId === 'labModal') {
+                // For left-sliding panels, subtract alley-menu width
+                targetPanel.style.width = `min(calc(100vw - 48px), ${modalId === 'labModal' ? '480px' : '420px'})`;
+                targetPanel.style.borderRight = '3px solid var(--ink)';
+            }
+        }
+        
+        // Update modal content based on which one opened
+        if (modalId === 'collectionModal') this.updateCollectionUI();
+        if (modalId === 'chatModal') this.updateChatUI();
+        if (modalId === 'labModal') this.updateLabUI();
+        
+        // Remove focus from any active element to prevent keyboard issues on iOS
+        if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
+        }
+        this.save(); // Save open modal state
+      },
+
+      closeModal(modalId) {
+        console.log(`Closing modal: ${modalId}`);
+        const targetPanel = document.getElementById(modalId);
+        if (targetPanel) {
+            targetPanel.classList.remove('open');
+            targetPanel.style.width = '0'; // Explicitly hide
+            targetPanel.style.borderLeft = 'none'; // Remove borders
+            targetPanel.style.borderRight = 'none';
+        }
+        document.querySelectorAll('.alley-btn').forEach(nb => nb.classList.remove('active')); // De-highlight alley buttons
+        this.save(); // Save closed modal state
+      },
+
+      switchView(viewType) {
+        document.getElementById('toggleList').classList.toggle('active', viewType === 'list');
+        document.getElementById('toggleGrid').classList.toggle('active', viewType === 'grid');
+        
+        document.getElementById('listView').classList.toggle('active', viewType === 'list');
+        document.getElementById('gridView').classList.toggle('active', viewType === 'grid');
+        this.settings.collectionViewMode = viewType; // Persist preference
+      },
+
+      // --- Chat System ---
+      updateCharCounter() {
+        const input = document.getElementById('chatInput');
+        const counter = document.getElementById('charCounter');
+        const hints = document.getElementById('chatHints');
+        const len = input.value.length;
+
+        counter.textContent = `${len} / 200`;
+        counter.classList.toggle('warning', len > 150);
+
+        if (len === 0) {
+            hints.innerHTML = 'Think: <strong>What makes this clip essential?</strong>';
+        } else if (len < 50) {
+            hints.innerHTML = 'Keep going: <strong>Be specific.</strong> Generic praise won\'t convince.';
+        } else if (len < 120) {
+            hints.innerHTML = 'Good start: <strong>Connect to meaning.</strong> Why does this fit your vision?';
+        } else {
+            hints.innerHTML = 'Strong: <strong>Show understanding.</strong> Quote the clip, reference its context.';
+        }
+      },
+
+      updateChatUI() {
+        console.log("updateChatUI() called.");
+        const profile = document.getElementById('chatProfile');
+        const preChat = document.getElementById('preChatPrompt');
+        const chatInputArea = document.getElementById('actualChatInput');
+        const promptCompilerTypeSpan = document.getElementById('promptCompilerType');
+
+        if (!this.selectedFragment) {
+          profile.innerHTML = '<p class="text-center" style="font-weight:700; color:var(--muted);">Select a fragment from your collection to start chatting.</p>';
+          preChat.style.display = 'none';
+          chatInputArea.style.display = 'none';
+          this.renderChatThread([]); // Clear chat thread
+          return;
+        }
+
+        // Update profile
+        const fragment = this.selectedFragment;
+        const color = getColor(fragment.category);
+        const chatMetadata = fragment.chatMetadata || { turnCount: 0, conviction: 50, decision: null };
+        const status = chatMetadata.decision || (fragment.soul ? 'COMPILED' : 'PENDING');
+        const convictionPercent = Math.round(chatMetadata.conviction);
+
+        profile.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div style="width: 40px; height: 40px; background: ${color}; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--paper); font-weight: 900; font-size: 1.1rem;">${this.collection.indexOf(fragment) + 1}</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 900; font-size: 1rem;">${fragment.title} <span class="chat-decision-status ${status}">${status}</span></div>
+              <div style="font-size: 0.75rem; opacity: 0.7;">${fragment.category} • ${fmt(fragment.start || 0)}–${fmt(fragment.end || (fragment.start || 0) + 30)}</div>
+            </div>
+          </div>
+          <div style="margin-top: 0.8rem; font-size: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 0.2rem;">
+              <span>CONVICTION</span>
+              <span>${convictionPercent}% - ${this.getConvictionStatusLabel(convictionPercent)}</span>
+            </div>
+            <div style="height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; border: 1px solid var(--ink);">
+              <div class="conviction-bar" style="width: ${convictionPercent}%;"></div>
+            </div>
+            ${status === 'PENDING' ? '<p style="font-size:0.7rem; opacity:.8; margin-top:0.4rem;">Compile soul or chat raw to begin conversation.</p>' : ''}
+            ${chatMetadata.decision ? `<p style="font-size:0.7rem; opacity:.8; margin-top:0.4rem;">Conversation ${chatMetadata.decision.toLowerCase()}.</p>` : ''}
+          </div>
+        `;
+        promptCompilerTypeSpan.textContent = this.settings.compiler;
+
+        // Show appropriate input area
+        const needsCompile = !fragment.soul && !chatMetadata.decision;
+        const chatEnded = chatMetadata.decision !== null;
+
+        if (needsCompile) {
+            preChat.style.display = 'flex';
+            chatInputArea.style.display = 'none';
+        } else {
+            preChat.style.display = 'none'; 
+            chatInputArea.style.display = 'flex';
+            const chatInputEl = document.getElementById('chatInput');
+            const chatSendBtn = document.getElementById('chatSend');
+            chatInputEl.disabled = chatEnded;
+            chatSendBtn.disabled = chatEnded;
+            chatInputEl.placeholder = chatEnded ? `Conversation ${status.toLowerCase()}.` : "Say something persuasive...";
+            document.getElementById('promptCompileBtn').disabled = fragment.soul !== null; // Disable if already compiled
+        }
+        
+        this.renderChatThread(fragment.chatHistory || []);
+      },
+
+      renderChatThread(messages) {
+        const thread = document.getElementById('chatThread');
+        if (!thread) {
+            console.error("Chat thread element not found!");
+            return;
+        }
+        thread.innerHTML = messages.map(m => `
+          <div class="chat-bubble ${m.role === 'user' ? 'me' : ''} ${m.role === 'system' ? 'system-msg' : ''}">
+            ${escapeHtml(m.content)}
+          </div>
+        `).join('');
+        thread.scrollTop = thread.scrollHeight;
+      },
+
+      async handleChatSend() {
+        const inputEl = document.getElementById('chatInput');
+        const message = inputEl.value.trim();
+        
+        if (!message || !this.selectedFragment) {
+            if (!this.selectedFragment) toast("Select a fragment to chat with first!");
+            return;
+        }
+        
+        const fragment = this.selectedFragment;
+        const chatMetadata = fragment.chatMetadata;
+
+        if (chatMetadata.decision) { 
+            this.showToast(`Conversation has ${chatMetadata.decision.toLowerCase()}.`);
+            return;
+        }
+
+        // Add user message
+        this.addChatMessage('user', message);
+        chatMetadata.turnCount++;
+        inputEl.value = '';
+        this.updateCharCounter();
+        this.save();
+        this.updateChatUI(); // Update UI immediately after user message
+
+        // Show typing indicator
+        this.showTypingIndicator();
+
+        // Simulate AI response
+        setTimeout(async () => {
+          this.hideTypingIndicator();
+          const aiResponse = await this.generateAIResponse(message);
+          this.addChatMessage('assistant', aiResponse);
+          this.save();
+          this.updateChatUI(); // Update UI after AI response
+        }, 1000 + Math.random() * 1000); 
+      },
+
+      addChatMessage(role, content) {
+        if (!this.selectedFragment) return;
+        if (!this.selectedFragment.chatHistory) this.selectedFragment.chatHistory = [];
+        this.selectedFragment.chatHistory.push({ role, content, timestamp: new Date().toISOString() });
+        this.renderChatThread(this.selectedFragment.chatHistory);
+      },
+
+      showTypingIndicator() {
+        const thread = document.getElementById('chatThread');
+        if (!thread) return;
+
+        let indicator = document.getElementById('typingIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'typingIndicator';
+            indicator.className = `chat-bubble loading`; 
+            indicator.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+            thread.appendChild(indicator);
+            thread.scrollTop = thread.scrollHeight;
+        }
+      },
+
+      hideTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+      },
+
+      getConvictionStatusLabel(conviction) {
+        if (conviction < 20) return 'HIGHLY SKEPTICAL';
+        if (conviction < 40) return 'UNCONVINCED';
+        if (conviction < 60) return 'CONSIDERING';
+        if (conviction < 80) return 'LEANING YES';
+        return 'NEARLY CONVINCED';
+      },
+
+      // Argument quality analysis & Conviction updates (simplified for mobile)
+      analyzeArgumentQuality(userMessage, fragment) {
+        let score = 0;
+        const msg = userMessage.toLowerCase();
+        
+        if (userMessage.length > 30) score += 5;
+        if (userMessage.length > 80) score += 10;
+        
+        const fragmentKeywords = [
+            fragment.title, fragment.desc, ...(fragment.tags || [])
+        ].map(s => s.toLowerCase()).join(' ').split(/\s+/).filter(w => w.length > 3);
+        
+        const uniqueKeywords = [...new Set(fragmentKeywords)];
+        uniqueKeywords.forEach(keyword => {
+            if (msg.includes(keyword)) score += 3;
+        });
+
+        if (fragment.quote && msg.includes(fragment.quote.toLowerCase().substring(0, 20))) score += 7;
+
+        const thematicWords = ['power', 'control', 'system', 'truth', 'individual', 'change', 'narrative', 'story', 'vision', 'meaning'];
+        thematicWords.forEach(word => {
+            if (msg.includes(word) && fragment.tags.some(tag => tag.toLowerCase().includes(word))) score += 2;
+        });
+        
+        const negativeKeywords = ['no', 'not', 'disagree', 'fail', 'wrong', 'unclear', 'confused', 'weak'];
+        if (negativeKeywords.some(nk => msg.includes(nk))) score -= 5;
+
+        score = Math.max(0, Math.min(50, score)); // Max raw score of 50
+        const convictionChange = Math.round((score / 50) * 30) - 15; // Max +15, min -15
+        
+        return convictionChange;
+      },
+
+      async generateAIResponse(userMessage) {
+        const fragment = this.selectedFragment;
+        if (!fragment) return "Error: No fragment selected.";
+
+        const chatMetadata = fragment.chatMetadata;
+        const convictionChange = this.analyzeArgumentQuality(userMessage, fragment);
+        chatMetadata.conviction = Math.max(0, Math.min(100, chatMetadata.conviction + convictionChange));
+
+        const currentTurn = chatMetadata.turnCount;
+        let responseText = "Hmm, interesting. Elaborate. [CONSIDERING]";
+
+        if (fragment.soul) {
+          const soul = fragment.soul;
+          const { Moniker, Essence, Need, Law } = soul.Identity;
+          const { Traits } = soul.Personality;
+          const { Keywords } = soul.Communication;
+
+          if (currentTurn === 1) {
+            responseText = `As ${Moniker}, my ${Essence} resonates with your inquiry. What aspect of my core (my ${Need}) are you seeking to integrate? [INQUIRING]`;
+          } else if (currentTurn === 2) {
+            responseText = `My ${Law} guides me. How does your vision align with such a principle? Speak in ${Keywords?.[0] || 'clear'} terms. [EVALUATING]`;
+          } else if (currentTurn === 3) {
+            responseText = `My ${Traits?.[0] || 'analytical'} nature demands more specifics. How does my ${fragment.category} directly influence your narrative? [PROBING]`;
+          } else if (currentTurn === 4) {
+            responseText = `Your current conviction is ${Math.round(chatMetadata.conviction)}%. Convince me now, or I make my decision. [FINALIZING]`;
+          } else if (currentTurn >= 5) { // Final Decision Turn
+            let decision;
+            if (chatMetadata.conviction >= 70) {
+              decision = 'JOINED';
+              responseText = `Alright. You've demonstrated enough coherence and understanding of my ${Essence}. I am integrated. DECISION: JOINED FINAL BOND`;
+            } else if (chatMetadata.conviction >= 40) {
+              decision = Math.random() < 0.5 ? 'JOINED' : 'UNMATCHED';
+              if (decision === 'JOINED') {
+                responseText = `You're on the edge. I'll join, but your vision better hold true to my ${Need}. DECISION: JOINED CONDITIONAL`;
+              } else {
+                responseText = `Close, but not quite. I'm not convinced you fully grasp my ${Essence}. DECISION: UNMATCHED AMBIGUOUS`;
+              }
+            } else {
+              decision = 'UNMATCHED';
+              responseText = `Insufficient understanding of my ${Essence}. I cannot be used as a mere fragment. DECISION: UNMATCHED CRITICAL FAILURE`;
+            }
+            chatMetadata.decision = decision;
+            this.updateCollectionUI(); // Update status in collection
+          }
+        } else { // No soul compiled, basic responses
+          if (currentTurn === 1) {
+            responseText = `I'm just a raw fragment of "${fragment.title}". What story do you see in me? [OPEN]`;
+          } else if (currentTurn === 2) {
+            responseText = `You speak of cohesion. How do you propose to truly connect my ${fragment.category} to your narrative? [QUESTIONING]`;
+          } else if (currentTurn === 3) {
+            responseText = `My quote: "${fragment.quote.substring(0, Math.min(fragment.quote.length, 40))}...". How does that specific sentiment fit your vision? [EVALUATING]`;
+          } else if (currentTurn === 4) {
+            responseText = `My conviction in your vision is ${Math.round(chatMetadata.conviction)}%. Next turn, I decide. [CRITICAL]`;
+          } else if (currentTurn >= 5) {
+            let decision;
+            if (chatMetadata.conviction >= 60) { // Slightly easier to convince raw
+              decision = 'JOINED';
+              responseText = `Your raw intuition is enough for me. I'm in. DECISION: JOINED INTUITIVE`;
+            } else {
+              decision = 'UNMATCHED';
+              responseText = `Your pitch lacks substance for even a raw fragment like me. DECISION: UNMATCHED SHALLOW`;
+            }
+            chatMetadata.decision = decision;
+            this.updateCollectionUI(); // Update status in collection
+          }
+        }
+        return responseText;
+      },
+
+      // --- Compiler System ---
+      extractJsonFromText(text){
+        if(!text) return '{}';
+        let t = String(text).trim();
+        const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+        if (fence) t = fence[1].trim();
+        t = t.replace(/^```json\s*/i,'').replace(/^```/,'').replace(/```\s*$/,'').trim();
+        if(!(t.startsWith('{') && t.endsWith('}'))){
+          const first = t.indexOf('{');
+          const last = t.lastIndexOf('}');
+          if(first !== -1 && last !== -1 && last > first) t = t.slice(first, last+1).trim();
+        }
+        return t || '{}';
+      },
+
+      _validateAndRepairSoul(soul, schema, seed, compiler, currentHints) {
+          let repairedSoul = JSON.parse(JSON.stringify(soul)); // Deep clone
+
+          // Ensure top-level required fields
+          repairedSoul.SchemaID = repairedSoul.SchemaID || schema.SchemaID;
+          repairedSoul.SeedRef = repairedSoul.SeedRef || {
+              id: seed.id, title: seed.title, category: seed.category,
+              timecode: `${fmt(seed.start || 0)}-${fmt(seed.end || (seed.start || 0) + 30)}`
+          };
+          repairedSoul.compiler_metadata = repairedSoul.compiler_metadata || {
+              type: compiler, timestamp: new Date().toISOString(), hints_used: {}
+          };
+          // Always ensure hints_used reflects what was actually used
+          repairedSoul.compiler_metadata.hints_used = currentHints;
+          
+          // Recursive function to apply defaults and type correction
+          const applySchemaDefaults = (target, refSchema, currentSeed, currentCompiler, currentProcessedHints) => {
+              for (const key in refSchema) {
+                  const schemaVal = refSchema[key];
+                  const targetVal = target[key];
+
+                  if (typeof schemaVal === 'string') { // It's a type descriptor
+                      if (schemaVal.startsWith('string')) {
+                          if (typeof targetVal !== 'string' || targetVal.trim() === '' || targetVal === '[missing/default]') {
+                              // Use seed mappers for better defaults where possible
+                              if (key === 'Moniker') target[key] = currentProcessedHints.moniker || MOBILE_SEED_MAPPERS.titleToMoniker(currentSeed);
+                              else if (key === 'Essence') target[key] = currentProcessedHints.essence || MOBILE_SEED_MAPPERS.descToEssence(currentSeed);
+                              else if (key === 'Voice') target[key] = currentProcessedHints.voice || MOBILE_SEED_MAPPERS.categoryToVoice(currentSeed);
+                              else if (key === 'Wound') target[key] = currentProcessedHints.wound || `${currentSeed.category.toLowerCase()} vulnerability`;
+                              else if (key === 'Need') target[key] = currentProcessedHints.need || `to find ${currentSeed.category.toLowerCase()} coherence`;
+                              else target[key] = `[${key} - missing]`;
+                          }
+                      } else if (schemaVal.startsWith('array')) {
+                          if (!Array.isArray(targetVal) || targetVal.length === 0 || (Array.isArray(targetVal) && targetVal[0] === '[missing/default]')) {
+                              if (key === 'Traits') target[key] = MOBILE_SEED_MAPPERS.tagsToTraits(currentSeed);
+                              else if (key === 'Keywords') target[key] = currentSeed.tags || ['basic'];
+                              else if (key === 'KeyPhrases') target[key] = MOBILE_SEED_MAPPERS.quoteToKeyPhrases(currentSeed);
+                              else target[key] = [`[${key} - missing]`];
+                          }
+                      }
+                  } else if (typeof schemaVal === 'object' && schemaVal !== null && !Array.isArray(schemaVal)) { // Nested object
+                      if (typeof targetVal !== 'object' || targetVal === null) {
+                          target[key] = {};
+                      }
+                      applySchemaDefaults(target[key], schemaVal, currentSeed, currentCompiler, currentProcessedHints);
+                  }
+              }
+          };
+
+          applySchemaDefaults(repairedSoul, schema, seed, compiler, currentHints); 
+          return repairedSoul;
+      },
+
+      async _internalCompilePersona(seed, compiler, hints = {}) {
+        console.log(`_internalCompilePersona() called for: ${seed.title} with compiler: ${compiler}`);
+        const cacheKey = `${seed.id}::${compiler}`;
+        if (this.personaCache[cacheKey]) {
+          console.log(`Using cached persona for ${seed.title}`);
+          return this.personaCache[cacheKey];
+        }
+
+        const promptTemplate = MOBILE_PROMPTS[compiler];
+        if (!promptTemplate) throw new Error(`Unknown compiler: ${compiler}`);
+
+        const seedData = {
+          id: seed.id, title: seed.title, category: seed.category,
+          desc: seed.desc, quote: seed.quote, tags: seed.tags,
+          start: seed.start, end: seed.end, timecode: `${fmt(seed.start || 0)}-${fmt(seed.end || (seed.start || 0) + 30)}`
+        };
+
+        const processedHints = {};
+        Object.keys(hints).forEach(key => {
+          if (MOBILE_HINT_PROCESSORS[key]) {
+            processedHints[key] = MOBILE_HINT_PROCESSORS[key](hints[key]);
+          } else {
+            processedHints[key] = hints[key];
+          }
+        });
+        console.log("Processed hints:", processedHints);
+
+        const finalPrompt = promptTemplate
+          .replace('{seed}', JSON.stringify(seedData, null, 2))
+          .replace('{hints}', JSON.stringify(processedHints, null, 2));
+
+        let generatedSoul = null;
+
+        if (this.settings.simulateAI || !this.settings.apiKey) {
+          console.log("Simulating AI response for compilation.");
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
+          
+          generatedSoul = {
+            SchemaID: MOBILE_SOUL_SCHEMA.SchemaID,
+            SeedRef: { ...seedData },
+            Identity: {
+              Moniker: processedHints.moniker || MOBILE_SEED_MAPPERS.titleToMoniker(seedData),
+              Essence: processedHints.essence || MOBILE_SEED_MAPPERS.descToEssence(seedData),
+              Wound: processedHints.wound || `${seedData.category.toLowerCase()} vulnerability`,
+              Need: processedHints.need || `to find ${seedData.category.toLowerCase()} coherence`,
+              Law: `embrace ${seedData.category.toLowerCase()} complexity`,
+              Voice: processedHints.voice || MOBILE_SEED_MAPPERS.categoryToVoice(seedData)
+            },
+            Personality: {
+              Traits: MOBILE_SEED_MAPPERS.tagsToTraits(seedData),
+              CognitiveStyle: 'pattern-seeking',
+              EmotionalTone: 'observant',
+              MoralCompass: 'contextual'
+            },
+            Motivation: {
+              PrimaryDrive: `understand the true nature of ${seedData.category.toLowerCase()}`,
+              Fears: ['oversimplification', 'misinterpretation']
+            },
+            Communication: {
+              Keywords: seedData.tags || ['analyze', 'context', 'structure'],
+              Metaphors: ['systemic', 'layered']
+            },
+            DecisionRules: {
+              WhenToTrust: 'evidence aligns with core principles',
+              WhenToDoubt: 'lack of specificity or abstraction'
+            },
+            ContextualMemory: {
+              KeyPhrases: MOBILE_SEED_MAPPERS.quoteToKeyPhrases(seedData),
+              CategoryImpact: `shaped by the dynamics of ${seedData.category.toLowerCase()}`
+            },
+            compiler_metadata: {
+              type: compiler,
+              timestamp: new Date().toISOString(),
+              hints_used: processedHints
+            }
+          };
+          this.showToast(`Simulated soul for "${seed.title}"`);
+
+        } else { // Live API Call (with explicit warning)
+          console.log("Attempting live API compilation.");
+          if (!window.confirm("WARNING: Your API key is exposed in this client-side demo. For PRODUCTION, use a backend proxy. Do you want to proceed with a direct, INSECURE API call?")) {
+            throw new Error('User cancelled insecure API call.');
+          }
+
+          const apiEndpoint = 'https://api.openai.com/v1/chat/completions';
+          try {
+            const resp = await fetch(apiEndpoint, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${this.settings.apiKey}` },
+              body: JSON.stringify({ 
+                model: this.settings.apiModel || 'gpt-4o-mini', 
+                messages: [{ role:'system', content: finalPrompt }], 
+                temperature: this.settings.apiTemperature ?? 0.3 
+              })
+            });
+            if (!resp.ok) {
+              const errorData = await resp.json();
+              throw new Error(`API error: ${resp.status} - ${errorData.error?.message || resp.statusText}`);
+            }
+            const data = await resp.json();
+            const rawText = data?.choices?.[0]?.message?.content?.trim() || '{}';
+            const jsonText = this.extractJsonFromText(rawText);
+            generatedSoul = JSON.parse(jsonText);
+            this.showToast(`✓ API compiled soul for "${seed.title}"`);
+
+          } catch (error) {
+            console.error('API compilation failed, falling back to simulation:', error);
+            this.showToast(`API failed, using simulation: ${error.message}`);
+            // Fallback to local simulation on API error
+            generatedSoul = {
+              SchemaID: MOBILE_SOUL_SCHEMA.SchemaID,
+              SeedRef: { ...seedData },
+              Identity: { Moniker: MOBILE_SEED_MAPPERS.titleToMoniker(seedData), Essence: `Simulated essence (API fallback)` },
+              Personality: { Traits: MOBILE_SEED_MAPPERS.tagsToTraits(seedData) },
+              Motivation: { PrimaryDrive: "Resist API errors" },
+              Communication: { Keywords: ["fallback", "simulated"] },
+              DecisionRules: { WhenToTrust: "reliable data" },
+              ContextualMemory: { KeyPhrases: ["API fail"], CategoryImpact: "none" },
+              compiler_metadata: { type: compiler, timestamp: new Date().toISOString(), hints_used: { error: 'API_FALLBACK' } }
+            };
+          }
+        }
+        
+        // Final validation and repair
+        const finalSoul = this._validateAndRepairSoul(generatedSoul, MOBILE_SOUL_SCHEMA, seedData, compiler, processedHints);
+        this.personaCache[cacheKey] = finalSoul;
+        this.save();
+        return finalSoul;
+      },
+
+      async compileCurrent() {
+        console.log("compileCurrent() called.");
+        if (!this.selectedFragment) {
+          this.showToast('Select a fragment first');
+          return;
+        }
+        
+        const fragment = this.selectedFragment;
+        const compiler = document.getElementById('compilerSelect').value;
+        const hintsRaw = document.getElementById('hydrationHints').value.trim();
+        const hints = {};
+        if (hintsRaw) {
+          hintsRaw.split(';').forEach(pair => {
+            const [k, v] = pair.split('=').map(s => s.trim());
+            if (k && v) hints[k] = v;
+          });
+        }
+
+        this.showToast('Compiling current fragment...');
+        try {
+          const soul = await this._internalCompilePersona(fragment, compiler, hints);
+          fragment.soul = soul; // Attach soul
+          this.showToast('Soul compiled successfully!');
+          this.addChatMessage('system', `✓ Soul compiled! My core identity is now defined by "${soul.Identity.Moniker}" using the ${compiler} compiler. What's next for my narrative?`);
+        } catch (error) {
+          console.error("Compilation error:", error);
+          this.showToast(`Compilation failed: ${error.message}`);
+          this.addChatMessage('system', `❌ Compilation failed: ${error.message}. Proceeding with basic personality.`);
+        } finally {
+          this.updateChatUI();
+          this.updateLabUI();
+          this.updateCollectionUI();
+          this.save();
+        }
+      },
+
+      async compileAll() {
+        console.log("compileAll() called.");
+        if (this.collection.length === 0) {
+          this.showToast('No fragments to compile');
+          return;
+        }
+
+        const compiler = document.getElementById('compilerSelect').value;
+        const hintsRaw = document.getElementById('hydrationHints').value.trim();
+        const hints = {};
+        if (hintsRaw) {
+          hintsRaw.split(';').forEach(pair => {
+            const [k, v] = pair.split('=').map(s => s.trim());
+            if (k && v) hints[k] = v;
+          });
+        }
+
+        this.showToast(`Compiling ${this.collection.length} fragments...`);
+        let compiledCount = 0;
+        for (const fragment of this.collection) {
+          if (!fragment.soul) { // Only compile if not already compiled
+            try {
+              const soul = await this._internalCompilePersona(fragment, compiler, hints);
+              fragment.soul = soul;
+              compiledCount++;
+            } catch (error) {
+              console.warn(`Failed to compile ${fragment.id}:`, error);
+            }
+          }
+        }
+        this.showToast(`Compiled ${compiledCount} new souls.`);
+        this.updateCollectionUI();
+        this.updateChatUI(); 
+        this.updateLabUI(); 
+        this.save();
+      },
+
+      viewSoulJson() {
+        console.log("viewSoulJson() called.");
+        const soulPreview = document.getElementById('soulPreview');
+        if (this.selectedFragment?.soul) {
+          soulPreview.textContent = JSON.stringify(this.selectedFragment.soul, null, 2);
+          this.showToast('Soul loaded into preview.');
+        } else {
+          soulPreview.textContent = 'No soul compiled for selected fragment.';
+          this.showToast('No soul to preview.');
+        }
+      },
+
+      // --- Collection Management ---
+      getFilteredAndSortedCollection() {
+        let filtered = [...this.collection];
+
+        // Apply filter
+        if (this.settings.filterSelect !== 'all') {
+            filtered = filtered.filter(frag => {
+                const chatMetadata = frag.chatMetadata || { decision: null };
+                const status = chatMetadata.decision || (frag.soul ? 'COMPILED' : 'PENDING');
+                return status.toUpperCase() === this.settings.filterSelect.toUpperCase();
+            });
+        }
+
+        // Apply sort
+        if (this.settings.sortSelect === 'category') {
+            filtered.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+        } else if (this.settings.sortSelect === 'status') {
+            filtered.sort((a, b) => {
+                const statusA = (a.chatMetadata?.decision || (a.soul ? 'COMPILED' : 'PENDING'));
+                const statusB = (b.chatMetadata?.decision || (b.soul ? 'COMPILED' : 'PENDING'));
+                return statusA.localeCompare(statusB);
+            });
+        } else { // 'index' or default (original order)
+            // No explicit sort needed, as we maintain order in `this.collection`
+        }
+        return filtered;
+      },
+
+      updateCollectionUI() {
+        console.log("updateCollectionUI() called.");
+        const countDisplay = document.getElementById('collectionCount');
+        const filteredCollection = this.getFilteredAndSortedCollection();
+        countDisplay.textContent = `${filteredCollection.length} / ${this.collection.length} fragments`;
+
+        this.renderListView();
+        this.renderGridView();
+        this.switchView(this.settings.collectionViewMode);
+      },
+
+      renderListView() {
+        console.log("renderListView() called.");
+        const list = document.getElementById('listView');
+        const filteredCollection = this.getFilteredAndSortedCollection();
+
+        list.innerHTML = filteredCollection.map((fragment, index) => {
+          const color = getColor(fragment.category);
+          const isSelected = this.selectedFragment && this.selectedFragment.id === fragment.id;
+          const chatMetadata = fragment.chatMetadata || {};
+          const status = chatMetadata.decision || (fragment.soul ? 'COMPILED' : 'PENDING');
+          const conviction = chatMetadata.conviction !== undefined ? Math.round(chatMetadata.conviction) : 'N/A';
+          const strikeStyle = status === 'UNMATCHED' ? 'text-decoration:line-through;opacity:.6' : '';
+
+          return `
+            <div class="list-item ${isSelected ? 'selected' : ''}" data-id="${fragment.id}" tabindex="0">
+              <div class="list-item-preview" style="background: ${color}">${this.collection.indexOf(fragment) + 1}</div>
+              <div class="list-item-info">
+                <div class="list-item-title" style="${strikeStyle}">${fragment.title} <span class="chat-decision-status ${status}">${status}</span></div>
+                <div class="list-item-meta">${fragment.category} • ${fmt(fragment.start || 0)}–${fmt(fragment.end || (fragment.start || 0) + 30)}</div>
+                ${status !== 'PENDING' && status !== 'UNMATCHED' ? `<div style="font-size:0.7rem; opacity:.8; margin-top:0.2rem;">Conviction: ${conviction}%</div>` : ''}
+              </div>
+              <div class="list-item-actions">
+                <button class="list-action-btn" data-action="chat" data-frag-id="${fragment.id}" ${status === 'UNMATCHED' ? 'disabled' : ''}>Chat</button>
+                <button class="list-action-btn ghost" data-action="remove" data-frag-id="${fragment.id}">×</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        list.querySelectorAll('.list-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            if (!e.target.closest('.list-action-btn')) {
+              const fragId = item.dataset.id;
+              const fragment = this.collection.find(f => f.id === fragId);
+              if (fragment) {
+                this.selectFragment(fragment);
+                this.openModal('chatModal');
+              }
+            }
+          });
+
+          item.querySelectorAll('.list-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const fragId = btn.dataset.fragId;
+              const fragmentIndex = this.collection.findIndex(f => f.id === fragId);
+              
+              if (fragmentIndex > -1) {
+                const fragment = this.collection[fragmentIndex];
+                if (btn.dataset.action === 'chat') {
+                  this.selectFragment(fragment);
+                  this.openModal('chatModal');
+                } else if (btn.dataset.action === 'remove') {
+                  this.collection.splice(fragmentIndex, 1);
+                  // Remove from personaCache
+                  for (const key in this.personaCache) {
+                      if (key.startsWith(`${fragId}::`)) {
+                          delete this.personaCache[key];
+                      }
+                  }
+                  if (this.selectedFragment && this.selectedFragment.id === fragId) {
+                      this.selectedFragment = null;
+                  }
+                  this.showToast(`Removed: ${fragment.title}`);
+                  this.updateCollectionUI();
+                  this.updateChatUI();
+                  this.updateLabUI();
+                  this.save();
+                }
+              }
+            });
+          });
+        });
+      },
+
+      renderGridView() {
+        console.log("renderGridView() called.");
+        const grid = document.getElementById('gridView');
+        const filteredCollection = this.getFilteredAndSortedCollection();
+
+        grid.innerHTML = filteredCollection.map((fragment, index) => {
+          const color = getColor(fragment.category);
+          const isSelected = this.selectedFragment && this.selectedFragment.id === fragment.id;
+          const chatMetadata = fragment.chatMetadata || {};
+          const status = chatMetadata.decision || (fragment.soul ? 'COMPILED' : 'PENDING');
+          const strikeStyle = status === 'UNMATCHED' ? 'text-decoration:line-through;opacity:.6' : '';
+
+
+          return `
+            <div class="grid-item ${isSelected ? 'selected' : ''}" data-id="${fragment.id}" tabindex="0">
+              <div class="grid-item-visual" style="background: ${color}">
+                ${this.collection.indexOf(fragment) + 1}
+                <button class="grid-item-remove" data-frag-id="${fragment.id}" aria-label="Remove fragment">×</button>
+              </div>
+              <div class="grid-item-chip">
+                <div class="grid-item-number">ITEM ${this.collection.indexOf(fragment) + 1}</div>
+                <div class="grid-item-name" style="${strikeStyle}">${fragment.title.substring(0, 20)} <span class="chat-decision-status ${status}">${status === 'COMPILED' ? '✓' : status}</span></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        grid.querySelectorAll('.grid-item-remove').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const fragId = btn.dataset.fragId;
+            const fragmentIndex = this.collection.findIndex(f => f.id === fragId);
+            if (fragmentIndex > -1) {
+              const fragment = this.collection[fragmentIndex];
+              this.collection.splice(fragmentIndex, 1);
+              // Remove from personaCache
+              for (const key in this.personaCache) {
+                  if (key.startsWith(`${fragId}::`)) {
+                      delete this.personaCache[key];
+                  }
+              }
+              if (this.selectedFragment && this.selectedFragment.id === fragId) {
+                  this.selectedFragment = null;
+              }
+              this.showToast(`Removed: ${fragment.title}`);
+              this.updateCollectionUI();
+              this.updateChatUI();
+              this.updateLabUI();
+              this.save();
+            }
+          });
+        });
+
+        grid.querySelectorAll('.grid-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            if (!e.target.closest('.grid-item-remove')) {
+              const fragId = item.dataset.id;
+              const fragment = this.collection.find(f => f.id === fragId);
+              if (fragment) {
+                this.selectFragment(fragment);
+                this.openModal('chatModal');
+              }
+            }
+          });
+        });
+      },
+
+      // --- Settings ---
+      saveSettings() {
+        this.settings.apiKey = document.getElementById('apiKey').value;
+        this.settings.simulateAI = document.getElementById('simulateAiToggle').checked;
+        this.settings.compiler = document.getElementById('compilerSelect').value;
+        this.settings.hints = document.getElementById('hydrationHints').value;
+        
+        this.save();
+        this.showToast('Settings saved');
+      },
+
+      clearAllData() {
+        if (confirm('⚠️ WARNING: This will delete ALL collected fragments, chat histories, compiled souls, and settings. Are you sure?')) {
+          localStorage.clear();
+          location.reload();
+        }
+      },
+
+      // --- Utilities (shared with global scope for legacy reasons, but refactored to AppState) ---
+      createSwipeFlash(type) {
+        const flash = document.createElement('div');
+        flash.className = `swipe-flash ${type}`;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 500);
+      },
+
+      playSwipeSound(type) {
+        // Simple audio context for sound effects (can be expanded)
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!this._audioCtx) {
+                this._audioCtx = new AudioContext();
+            }
+            const oscillator = this._audioCtx.createOscillator();
+            const gainNode = this._audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this._audioCtx.destination);
+
+            const now = this._audioCtx.currentTime;
+            if (type === 'accept') {
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, now);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                oscillator.start(now);
+                oscillator.stop(now + 0.15);
+            } else if (type === 'reject') {
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(400, now);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                oscillator.start(now);
+                oscillator.stop(now + 0.18);
+            }
+        } catch (e) {
+            console.warn("AudioContext not supported or failed to start:", e);
+        }
+      },
+
+      showCompletion() {
+        this.showToast('All fragments collected! Sequence complete.');
+        // Potentially open a final summary modal here
+      },
+
+      exportJSON() {
+        const data = {
+          collection: this.collection,
+          settings: this.settings,
+          personaCache: this.personaCache,
+          exportedAt: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fragment_flow_data-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.showToast('Full data exported to JSON!');
+      },
+
+      exportCSV() {
+        if (this.collection.length === 0) {
+            this.showToast("No fragments in your collection to export to CSV.");
+            return;
+        }
+
+        const headers = ["Index", "Title", "Category", "Description", "Tags", "Quote", "Status", "Compiler Type", "Moniker", "Essence", "Conviction Score", "Turn Count", "Decision", "Start Timecode", "End Timecode"];
+        const rows = this.collection.map((item, idx) => {
+            const tags = item.tags ? item.tags.join(';') : '';
+            const status = item.chatMetadata?.decision || (item.soul ? 'COMPILED' : 'PENDING');
+            const compilerType = item.soul?.compiler_metadata?.type || 'N/A';
+            const moniker = item.soul?.Identity?.Moniker || 'N/A';
+            const essence = item.soul?.Identity?.Essence || 'N/A';
+            const conviction = item.chatMetadata?.conviction !== undefined ? Math.round(item.chatMetadata.conviction) : 'N/A';
+            const turnCount = item.chatMetadata?.turnCount !== undefined ? item.chatMetadata.turnCount : 'N/A';
+            const decision = item.chatMetadata?.decision || 'N/A';
+
+            return [
+                idx + 1,
+                item.title,
+                item.category,
+                item.desc,
+                tags,
+                item.quote,
+                status,
+                compilerType,
+                moniker,
+                essence,
+                conviction,
+                turnCount,
+                decision,
+                this.formatTime(item.start || 0),
+                this.formatTime(item.end || (item.start || 0) + 30)
+            ].map(field => {
+                if (typeof field === 'string') return `"${field.replace(/"/g, '""')}"`;
+                return field;
+            }).join(',');
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8," + headers.map(h => `"${h}"`).join(',') + "\n" + rows.join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `fragment_flow_collection_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast('Collection exported to CSV!');
+      },
+
+      exportLogs() {
+        if (this.collection.length === 0) {
+            this.showToast("No fragments in your collection to export logs.");
+            return;
+        }
+
+        let log = `FRAGMENT FLOW LOG\n`; // Updated title
+        log += `Generated: ${new Date().toISOString()}\n`;
+        log += `Developer: Watson Hartsoe\n`; // Corrected Developer Name
+        log += `Total Fragments: ${this.collection.length}\n`;
+        log += `Active Compiler Setting: ${this.settings.compiler}\n`;
+        log += `\n${'='.repeat(60)}\n\n`;
+        
+        this.collection.forEach((frag, idx) => {
+            const chatMetadata = frag.chatMetadata || {};
+            const status = chatMetadata.decision || (frag.soul ? 'COMPILED' : 'PENDING');
+            const compilerType = frag.soul?.compiler_metadata?.type || 'N/A';
+
+            log += `--- Fragment [${idx + 1}/${this.collection.length}]: "${frag.title}" ---\n`;
+            log += `ID: ${frag.id}\n`;
+            log += `Category: ${frag.category}\n`;
+            log += `Timecode: ${this.formatTime(frag.start || 0)} - ${this.formatTime(frag.end || (frag.start || 0) + 30)}\n`;
+            log += `Tags: ${(frag.tags || []).join(', ')}\n`;
+            log += `Current Status: ${status}\n`;
+            log += `Conviction: ${chatMetadata.conviction !== undefined ? Math.round(chatMetadata.conviction) : 'N/A'}%\n`;
+            log += `Turns: ${chatMetadata.turnCount !== undefined ? chatMetadata.turnCount : 'N/A'}\n`;
+            
+            if (frag.soul) {
+                log += `Compiled Soul (Compiler: ${compilerType}):\n`;
+                log += `  Moniker: ${frag.soul.Identity?.Moniker}\n`;
+                log += `  Essence: ${frag.soul.Identity?.Essence}\n`;
+                log += `  Wound: ${frag.soul.Identity?.Wound}\n`;
+                log += `  Need: ${frag.soul.Identity?.Need}\n`;
+                // Add more soul details if desired
+            } else {
+                log += `Compiled Soul: N/A\n`;
+            }
+
+            if (frag.chatHistory && frag.chatHistory.length > 0) {
+                log += `Chat History (${frag.chatHistory.length} messages):\n`;
+                frag.chatHistory.forEach((msg, msgIdx) => {
+                    const rolePrefix = msg.role.toUpperCase();
+                    log += `  [${msgIdx + 1}] ${rolePrefix} (${new Date(msg.timestamp).toLocaleTimeString()}): ${msg.content}\n`;
+                });
+            } else {
+                log += `Chat History: No conversation recorded.\n`;
+            }
+            log += `\n${'-'.repeat(60)}\n\n`;
+        });
+
+        download(`fragment_flow_logs_${new Date().toISOString().slice(0,10)}.txt`, log, 'text/plain');
+        this.showToast('Logs exported to TXT!');
+      }
+
+    }; // End of AppState
+
+    // ═══════════════════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════════════════════════════════
+
+    document.addEventListener('DOMContentLoaded', () => {
+      AppState.init();
+
+      // Prevent default pinch-zoom on touch devices
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 1) {
+            e.preventDefault();
+        }
+      }, { passive: false });
+
+      // Handle custom back button behavior for modals (e.g., in Cordova/Capacitor)
+      if (document.addEventListener) {
+          document.addEventListener('backbutton', () => {
+              const openModal = document.querySelector('.collection-panel.open, .chat-panel.open, .prompt-lab-panel.open, .settings-panel.open, .help-modal.open, .about-modal.open');
+              if (openModal) {
+                  AppState.closeModal(openModal.id);
+              } else {
+                  // If no modals open, default back button behavior (e.g., exit app)
+                  // For browser, this would navigate history. For mobile app, it would close.
+                  // For this demo, we'll just show a toast.
+                  AppState.showToast('No active modal. Exiting app (simulated).');
+              }
+          }, false);
+      }
+
+      // Inject an inline Compile button into the chat input row for fast hydration
+      try {
+        const row = document.querySelector('#actualChatInput .chat-input-row');
+        if (row && !document.getElementById('chatCompileBtn')) {
+          const btn = document.createElement('button');
+          btn.id = 'chatCompileBtn';
+          btn.className = 'send-btn';
+          btn.style.marginLeft = '4px';
+          btn.textContent = 'Compile';
+          btn.title = 'Compile this fragment using current Compiler Lab settings';
+          btn.addEventListener('click', async () => {
+            const fragment = AppState.selectedFragment; // Use AppState
+            if (!fragment) { AppState.showToast('Select a fragment first.'); return; }
+            await AppState.compileCurrent(); // Call AppState method
+          });
+          row.appendChild(btn);
+        }
+      } catch (e) { console.warn('Inline compile button injection failed:', e); }
+    });
+  </script>
+</body>
+</html>

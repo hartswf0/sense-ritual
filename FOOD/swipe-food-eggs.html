@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Story Swiper EGGS - Conviction System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      position: relative;
+    }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    /* Swiper Section */
+    .swiper-container {
+      height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card:active {
+      cursor: grabbing;
+    }
+
+    .card.swiping {
+      transition: none;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-color {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .card-category {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .card-quote {
+      font-style: italic;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+      padding-left: 12px;
+      border-left: 3px solid #ddd;
+      margin-bottom: 16px;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      color: #666;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #eee;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .swipe-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #ccc;
+      pointer-events: none;
+    }
+
+    /* Collection Section */
+    .collection-list {
+      max-height: 500px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .collection-item {
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      border-left: 4px solid #999;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .collection-item:hover {
+      background: #fff;
+      border-left-color: #000;
+      transform: translateX(-4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .collection-item.active {
+      background: #2ECC71;
+      color: #000;
+      border-left-color: #000;
+      border-left-width: 6px;
+      font-weight: 600;
+      box-shadow: 0 2px 12px rgba(46, 204, 113, 0.3);
+    }
+
+    .collection-item.active .collection-item-num {
+      color: #000;
+    }
+
+    .collection-item.active .status-badge {
+      background: #000;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .collection-item-num {
+      font-weight: 600;
+      color: #999;
+      min-width: 20px;
+    }
+
+    .collection-item-title {
+      color: #333;
+      font-weight: 500;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      font-size: 9px;
+      font-weight: 700;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+
+    .status-badge.pending { background: #F1C40F; color: #000; }
+    .status-badge.compiled { background: #3498DB; color: #fff; }
+    .status-badge.joined { background: #2ECC71; color: #fff; }
+    .status-badge.unmatched { background: #E74C3C; color: #fff; }
+
+    /* 🧈 BUTTER: Chat Panel Styles */
+    .chat-panel {
+      position: fixed;
+      left: -420px;
+      top: 0;
+      bottom: 0;
+      width: 400px;
+      background: white;
+      border-right: 2px solid #000;
+      box-shadow: 4px 0 12px rgba(0,0,0,0.1);
+      transition: left 0.3s ease;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-panel.open {
+      left: 0;
+    }
+
+    .chat-header {
+      background: #000;
+      color: white;
+      padding: 16px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #000;
+    }
+
+    .chat-close {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+    }
+
+    .chat-fragment-info {
+      padding: 16px;
+      border-bottom: 2px solid #eee;
+      background: #f9f9f9;
+    }
+
+    .chat-fragment-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .chat-fragment-meta {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background: #fafafa;
+    }
+
+    .chat-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+      font-size: 13px;
+    }
+
+    .chat-input-area {
+      padding: 16px;
+      border-top: 2px solid #eee;
+      background: white;
+    }
+
+    .chat-input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .chat-input {
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .chat-send {
+      padding: 10px 20px;
+      background: #000;
+      color: white;
+      border: 2px solid #000;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .chat-send:hover {
+      background: #333;
+    }
+
+    .chat-toggle {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 12px 16px;
+      background: #000;
+      color: white;
+      border: 2px solid #000;
+      border-radius: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      font-family: inherit;
+    }
+
+    .chat-toggle:hover {
+      background: #333;
+    }
+
+    .chat-toggle.active {
+      background: #2ECC71;
+      border-color: #2ECC71;
+    }
+
+    .collection-empty {
+      text-align: center;
+      color: #999;
+      padding: 32px 16px;
+      font-size: 13px;
+    }
+
+    .stats {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #eee;
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* Scrollbar */
+    .collection-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .collection-list::-webkit-scrollbar-track {
+      background: #f0f0f0;
+      border-radius: 3px;
+    }
+
+    .collection-list::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    .collection-list::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+  </style>
+</head>
+<body>
+  <!-- BACON: Chat Toggle Button -->
+  <button class="chat-toggle" id="chatToggle" title="Toggle Chat">CHAT</button>
+
+  <!-- BACON: Chat Panel -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-header">
+      <span>NEGOTIATE</span>
+      <button class="chat-close" id="chatClose">X</button>
+    </div>
+    <div class="chat-fragment-info" id="chatFragmentInfo">
+      <div class="chat-fragment-title">No fragment selected</div>
+      <div class="chat-fragment-meta">Select a fragment from collection to start chatting</div>
+      <div class="conviction-bar" style="margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;font-weight:700;">CONVICTION</span>
+          <span id="convictionPercent" style="font-size:10px;font-weight:700;">0% - HIGHLY SKEPTICAL</span>
+        </div>
+        <div style="height:16px;background:#ddd;border:2px solid #000;overflow:hidden;">
+          <div id="convictionFill" style="height:100%;width:0%;background:linear-gradient(90deg,#E74C3C 0%,#F1C40F 50%,#2ECC71 100%);transition:width 0.3s ease;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-empty">
+        [SELECT A FRAGMENT FROM COLLECTION TO BEGIN]
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <div style="margin-bottom:8px;padding:8px;background:#f9f9f9;border-radius:4px;">
+        <label style="font-size:10px;font-weight:700;display:block;margin-bottom:4px;">COMPILER</label>
+        <select id="compilerSelect" style="width:100%;padding:6px;font-size:11px;border:2px solid #ddd;">
+          <option value="Stanislavski">Stanislavski - Method acting</option>
+          <option value="CharacterGrowth">CharacterGrowth - Personal evolution</option>
+          <option value="PlotDynamics">PlotDynamics - Story structure</option>
+        </select>
+        <button id="compileBtn" style="width:100%;margin-top:6px;padding:8px;background:#3498DB;color:white;border:2px solid #3498DB;font-weight:700;font-size:11px;cursor:pointer;border-radius:4px;">COMPILE SOUL</button>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div id="charCounter" style="font-size:10px;text-align:right;opacity:0.5;margin-bottom:4px;">0 / 200</div>
+        <div id="chatHints" style="font-size:10px;line-height:1.4;padding:8px;background:#f0f0f0;margin-bottom:8px;border-left:3px solid #999;">
+          THINK: What makes this clip essential? Reference its themes, context, or emotional core.
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Type your argument..." maxlength="200">
+        <button class="chat-send" id="chatSend">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Swiper Section -->
+    <div class="section">
+      <h2>Card Swiper</h2>
+      <div class="swiper-container">
+        <div class="card" id="current-card" data-fragment-id="">
+          <div>
+            <div class="card-category" id="card-category"></div>
+            <div class="card-header">
+              <div class="card-color" id="card-color"></div>
+              <div class="card-title" id="card-title"></div>
+            </div>
+            <div class="card-desc" id="card-desc"></div>
+            <div class="card-quote" id="card-quote"></div>
+            <div class="card-tags" id="card-tags"></div>
+          </div>
+          <div class="card-footer">
+            <span id="card-position">1 / 74</span>
+            <span>← Swipe right to add →</span>
+          </div>
+        </div>
+        <div class="swipe-hint">SWIPE LEFT: SKIP | SWIPE RIGHT: COLLECT</div>
+      </div>
+    </div>
+
+    <!-- Collection Section -->
+    <div class="section">
+      <h2>Your Story Collection</h2>
+      <div class="collection-list" id="collection-list">
+        <div class="collection-empty">No cards added yet. Swipe right to begin!</div>
+      </div>
+      <div class="stats">
+        <strong id="collection-count">0</strong> cards collected
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Raw concepts data
+    const rawConcepts = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', color: '#C8E6C9', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', color: '#AED581', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', start: 67, end: 78 }, 
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', color: '#9CCC65', tags: ['Bayer', 'Idealism', 'Resistance'], quote: 'It was a utopian vision of the self selecting and arranging the fragments of images into their own story and so becoming strong enough to withstand tyranny.', start: 91, end: 97 }, 
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', color: '#EF5350', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', start: 183, end: 190 },
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland (Afeni)', category: 'Systemic Critique', desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power.', color: '#FFCDD2', tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control'], quote: "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.", start: 197, end: 204 },
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', color: '#F44336', tags: ['Tupac', 'Revolution', 'Collective Action'], quote: 'He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.', start: 143, end: 148 },
+      { id: 'civil-rights-promises-broken', title: 'Civil Rights Promises (Broken)', category: 'Systemic Event', desc: 'The idealism of black politics fell away and communities divided into gangs that then turned on each other.', color: '#BDBDBD', tags: ['History', 'Disillusionment', 'Social Decay'], quote: 'By the 1980s, it was clear that the promises of the civil rights movement had not been kept in America and the idealism of black politics fell away and the communities divided into gangs that then turned on each other.', start: 244, end: 251 },
+      { id: 'society-boom-q', title: 'Societal "Boom" (Repression)', category: 'Systemic Control', desc: 'Society will let you go as far as you want, but as soon as you start asking too many questions, "boom".', color: '#616161', tags: ['Repression', 'Control', 'Censorship'], quote: "Well, society is like that. They'll let you go as far as you want, but as soon as you start asking too many questions and you're ready to change, boom.", start: 230, end: 237 },
+      { id: 'crack-epidemic-afeni-fall', title: "Crack Epidemic (Afeni's Fall)", category: 'Systemic Event', desc: 'Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.', color: '#424242', tags: ['Social Crisis', 'Vulnerability', 'Systemic Impact'], quote: 'Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.', start: 291, end: 300 },
+      { id: 'tupac-thug-life-authenticity', title: 'Thug Life (Authenticity)', category: 'Culture/Identity', desc: 'Tupac tried to become more and more part of that world to prove his authenticity, accused of intensifying violence.', color: '#FF7043', tags: ['Tupac', 'Identity', 'Violence', 'Critique'], quote: 'In response, Tupac tried to become more and more part of that world to prove his authenticity. But then the black radicals accused him of getting lost in the character he had created.', start: 971, end: 992 },
+    ];
+
+    // 🧀 CHEESE: localStorage wrapper
+    const store = {
+      get story() { 
+        const saved = localStorage.getItem('story');
+        return saved ? JSON.parse(saved) : [];
+      },
+      set story(value) { 
+        localStorage.setItem('story', JSON.stringify(value));
+      },
+      get chats() {
+        const saved = localStorage.getItem('chats');
+        return saved ? JSON.parse(saved) : {};
+      },
+      set chats(value) {
+        localStorage.setItem('chats', JSON.stringify(value));
+      },
+      get personas() {
+        const saved = localStorage.getItem('personas');
+        return saved ? JSON.parse(saved) : {};
+      },
+      set personas(value) {
+        localStorage.setItem('personas', JSON.stringify(value));
+      }
+    };
+
+    // Application state
+    const state = {
+      currentIndex: 0,
+      story: store.story,  // 🧀 Load from localStorage
+      currentChatItem: null
+    };
+
+    /**
+     * Creates a collectedItem wrapper around a fragment
+     * This is the new data model for tracking collection state
+     */
+    function createCollectedItem(fragment) {
+      return {
+        instanceId: Date.now().toString(36) + Math.random().toString(36).substr(2),
+        fragment: fragment,  // Reference to raw fragment data
+        fragmentId: fragment.id,
+        status: 'PENDING',  // PENDING → COMPILED → JOINED/UNMATCHED
+        addedAt: Date.now(),
+        compiler: null,  // Will be set when compiled
+        conviction: 0  // 0-100, tracks argument quality
+      };
+    }
+
+    // DOM elements
+    const currentCardEl = document.getElementById('current-card');
+    const collectionListEl = document.getElementById('collection-list');
+    const collectionCountEl = document.getElementById('collection-count');
+
+    function renderCard(index) {
+      const fragment = rawConcepts[index];
+      
+      // Store fragment ID in data attribute
+      currentCardEl.setAttribute('data-fragment-id', fragment.id);
+      
+      // Render card content
+      document.getElementById('card-category').textContent = fragment.category;
+      document.getElementById('card-title').textContent = fragment.title;
+      document.getElementById('card-desc').textContent = fragment.desc;
+      document.getElementById('card-quote').textContent = `"${fragment.quote}"`;
+      document.getElementById('card-color').style.backgroundColor = fragment.color;
+      document.getElementById('card-position').textContent = `${index + 1} / ${rawConcepts.length}`;
+      
+      // Render tags
+      const tagsEl = document.getElementById('card-tags');
+      tagsEl.innerHTML = fragment.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+      
+      // Reset card position
+      currentCardEl.style.transform = 'translateX(0) rotateZ(0deg)';
+      currentCardEl.classList.remove('swiping');
+      
+      console.log(`[RENDER] Card: "${fragment.title}" (ID: ${fragment.id})`);
+    }
+
+    function addToStory() {
+      const fragmentId = currentCardEl.getAttribute('data-fragment-id');
+      const fragment = rawConcepts.find(f => f.id === fragmentId);
+      
+      console.log(`[ADD TO STORY] Fragment: "${fragment.title}" (ID: ${fragment.id})`);
+      
+      // 🥖 BREAD: Wrap fragment in collectedItem
+      const collectedItem = createCollectedItem(fragment);
+      console.log(`[COLLECTED ITEM] Created with instanceId: ${collectedItem.instanceId}, status: ${collectedItem.status}`);
+      
+      // Add collectedItem to story (not raw fragment)
+      state.story.push(collectedItem);
+      
+      // 🧀 CHEESE: Save to localStorage
+      store.story = state.story;
+      console.log(`[🧀 SAVED] Story saved to localStorage`);
+      
+      // Log story state
+      console.log(`[STORY STATE] ${state.story.map(item => `"${item.fragment.title}" (${item.status})`).join(', ')}`);
+      console.log('story array:', state.story);
+      
+      // Update collection UI
+      renderCollection();
+      
+      // Move to next card
+      if (state.currentIndex < rawConcepts.length - 1) {
+        state.currentIndex++;
+        renderCard(state.currentIndex);
+      } else {
+        console.log('Reached end of cards');
+      }
+    }
+
+    function renderCollection() {
+      if (state.story.length === 0) {
+        collectionListEl.innerHTML = '<div class="collection-empty">No cards added yet. Swipe right to begin!</div>';
+        collectionCountEl.textContent = '0';
+        return;
+      }
+      
+      // 🥖 BREAD: Render collectedItems with status badges
+      collectionListEl.innerHTML = state.story
+        .map((item, i) => {
+          const statusClass = item.status.toLowerCase();
+          const isActive = state.currentChatItem?.instanceId === item.instanceId;
+          return `
+            <div class="collection-item ${isActive ? 'active' : ''}" 
+                 data-instance-id="${item.instanceId}"
+                 onclick="openChatForItem('${item.instanceId}')">
+              <div class="collection-item-num">${i + 1}.</div>
+              <div class="collection-item-title">
+                ${item.fragment.title}
+                <span class="status-badge ${statusClass}">${item.status}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+      
+      collectionCountEl.textContent = state.story.length;
+      
+      console.log(`[RENDER COLLECTION] Rendered ${state.story.length} items`);
+    }
+
+    // Touch and mouse tracking
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let touchStartY = 0;
+    let isDragging = false;
+
+    currentCardEl.addEventListener('mousedown', e => {
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      isDragging = true;
+      currentCardEl.classList.add('swiping');
+    });
+
+    currentCardEl.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isDragging = true;
+      currentCardEl.classList.add('swiping');
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      
+      const deltaX = e.clientX - touchStartX;
+      const deltaY = e.clientY - touchStartY;
+      
+      // Only track horizontal swipe
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        const rotation = deltaX * 0.1;
+        currentCardEl.style.transform = `translateX(${deltaX}px) rotateZ(${rotation}deg)`;
+      }
+    });
+
+    document.addEventListener('touchmove', e => {
+      if (!isDragging) return;
+      
+      const deltaX = e.touches[0].clientX - touchStartX;
+      const deltaY = e.touches[0].clientY - touchStartY;
+      
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        const rotation = deltaX * 0.1;
+        currentCardEl.style.transform = `translateX(${deltaX}px) rotateZ(${rotation}deg)`;
+      }
+    });
+
+    document.addEventListener('mouseup', e => {
+      if (!isDragging) return;
+      isDragging = false;
+      
+      const deltaX = e.clientX - touchStartX;
+      const threshold = 100;
+      
+      if (deltaX > threshold) {
+        console.log(`[SWIPE] Swiped right by ${deltaX}px`);
+        addToStory();
+      } else if (deltaX < -threshold) {
+        // 🧀🕳️ SWISS-CHEESE: Swipe left to skip
+        console.log(`[SWIPE] Swiped left by ${Math.abs(deltaX)}px - SKIP`);
+        currentCardEl.style.transform = 'translateX(-100vw) rotateZ(-20deg)';
+        currentCardEl.style.opacity = '0';
+        setTimeout(() => {
+          if (state.currentIndex < rawConcepts.length - 1) {
+            state.currentIndex++;
+            renderCard(state.currentIndex);
+          }
+        }, 250);
+      } else {
+        // Reset card
+        currentCardEl.style.transform = 'translateX(0) rotateZ(0deg)';
+        currentCardEl.classList.remove('swiping');
+      }
+    });
+
+    document.addEventListener('touchend', e => {
+      if (!isDragging) return;
+      isDragging = false;
+      
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      const threshold = 100;
+      
+      if (deltaX > threshold) {
+        console.log(`[SWIPE] Swiped right by ${deltaX}px`);
+        addToStory();
+      } else if (deltaX < -threshold) {
+        // 🧀🕳️ SWISS-CHEESE: Swipe left to skip
+        console.log(`[SWIPE] Swiped left by ${Math.abs(deltaX)}px - SKIP`);
+        currentCardEl.style.transform = 'translateX(-100vw) rotateZ(-20deg)';
+        currentCardEl.style.opacity = '0';
+        setTimeout(() => {
+          if (state.currentIndex < rawConcepts.length - 1) {
+            state.currentIndex++;
+            renderCard(state.currentIndex);
+          }
+        }, 250);
+      } else {
+        currentCardEl.style.transform = 'translateX(0) rotateZ(0deg)';
+        currentCardEl.classList.remove('swiping');
+      }
+    });
+
+    // 🍎🧈 APPLE-BUTTER: Open chat for specific item
+    window.openChatForItem = function(instanceId) {
+      console.log(`[OPEN CHAT] For instanceId: ${instanceId}`);
+      
+      // Find the collectedItem
+      const item = state.story.find(i => i.instanceId === instanceId);
+      if (!item) {
+        console.error(`[OPEN CHAT] Item not found: ${instanceId}`);
+        return;
+      }
+      
+      console.log(`[OPEN CHAT] Found item: "${item.fragment.title}"`);
+      
+      // Set as current chat item
+      state.currentChatItem = item;
+      
+      // Update chat header with fragment info
+      const chatFragmentInfo = document.getElementById('chatFragmentInfo');
+      chatFragmentInfo.innerHTML = `
+        <div class="chat-fragment-title">${item.fragment.title}</div>
+        <div class="chat-fragment-meta">
+          ${item.fragment.category} · Status: ${item.status} · Conviction: ${item.conviction}%
+        </div>
+      `;
+      
+      // EGGS FIX: Always ensure chat panel opens
+      if (!chatPanel.classList.contains('open')) {
+        chatPanel.classList.add('open');
+        chatToggle.classList.add('active');
+        console.log('[CHAT PANEL] Forced open');
+      }
+      
+      // Re-render collection to show active state
+      renderCollection();
+      
+      console.log(`[OPEN CHAT] Chat opened for "${item.fragment.title}"`);
+      
+      // BACON: Render messages for this fragment
+      renderMessages();
+      
+      // SWISS-CHEESE: Enable/disable compile button based on compilation status
+      const compileBtn = document.getElementById('compileBtn');
+      const compilerSelect = document.getElementById('compilerSelect');
+      if (item.compiler) {
+        compileBtn.textContent = 'COMPILED';
+        compileBtn.style.background = '#2ECC71';
+        compileBtn.disabled = true;
+        compilerSelect.value = item.compiler;
+        compilerSelect.disabled = true;
+      } else {
+        compileBtn.textContent = 'COMPILE SOUL';
+        compileBtn.style.background = '#3498DB';
+        compileBtn.disabled = false;
+        compilerSelect.disabled = false;
+      }
+    };
+
+    // 🧈 BUTTER: Chat Panel Toggle
+    const chatPanel = document.getElementById('chatPanel');
+    const chatToggle = document.getElementById('chatToggle');
+    const chatClose = document.getElementById('chatClose');
+
+    function toggleChat() {
+      const isOpen = chatPanel.classList.toggle('open');
+      chatToggle.classList.toggle('active', isOpen);
+      console.log(`[CHAT PANEL] ${isOpen ? 'Opened' : 'Closed'}`);
+    }
+
+    chatToggle.addEventListener('click', toggleChat);
+    chatClose.addEventListener('click', toggleChat);
+
+    // Close chat when clicking outside
+    document.addEventListener('click', (e) => {
+      if (chatPanel.classList.contains('open') && 
+          !chatPanel.contains(e.target) && 
+          e.target !== chatToggle) {
+        toggleChat();
+      }
+    });
+
+    // 🧀 CHEESE: Initialize from localStorage
+    function initializeApp() {
+      // Load story from localStorage
+      if (state.story.length > 0) {
+        console.log(`[🧀 LOADED] Restored ${state.story.length} items from localStorage`);
+        renderCollection();
+        
+        // Update currentIndex to skip already-swiped cards
+        const swipedIds = new Set(state.story.map(item => item.fragmentId));
+        while (state.currentIndex < rawConcepts.length && swipedIds.has(rawConcepts[state.currentIndex].id)) {
+          state.currentIndex++;
+        }
+      }
+      
+      // Render current card
+      if (state.currentIndex < rawConcepts.length) {
+        renderCard(state.currentIndex);
+      } else {
+        console.log('[🧀] All cards have been seen!');
+      }
+      
+      console.log('🧀 CHEESE: Persistence initialized');
+    }
+    
+    // 🧀🕳️ SWISS-CHEESE: Compile button handler
+    document.getElementById('compileBtn').addEventListener('click', async function() {
+      if (!state.currentChatItem) {
+        alert('No fragment selected');
+        return;
+      }
+      
+      const compiler = document.getElementById('compilerSelect').value;
+      const item = state.currentChatItem;
+      
+      console.log(`[COMPILE] Starting compilation for "${item.fragment.title}" with ${compiler}`);
+      
+      this.textContent = 'COMPILING...';
+      this.disabled = true;
+      
+      // Simulate compilation (in real version, this would call OpenAI)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Update item
+      item.compiler = compiler;
+      item.status = 'COMPILED';
+      
+      // Create mock persona
+      const soulKey = `${item.fragmentId}::${compiler}`;
+      const persona = {
+        SchemaID: 'POML.CharSoul.v1',
+        CompilerFingerprint: { name: compiler, version: '1.0' },
+        Identity: {
+          Moniker: item.fragment.title,
+          Essence: item.fragment.desc,
+          Voice: 'Direct, challenging',
+          ZeroContextGoal: `Convince the filmmaker that "${item.fragment.title}" is essential to their story.`
+        }
+      };
+      
+      // Save persona and updated story
+      const personas = store.personas;
+      personas[soulKey] = persona;
+      store.personas = personas;
+      store.story = state.story;
+      
+      console.log(`[COMPILE] ✓ Compiled "${item.fragment.title}" with ${compiler}`);
+      console.log(`[COMPILE] Soul key: ${soulKey}`);
+      
+      // Update UI
+      this.textContent = 'COMPILED';
+      this.style.background = '#2ECC71';
+      document.getElementById('compilerSelect').disabled = true;
+      
+      // Update collection to show COMPILED status
+      renderCollection();
+      
+      // Update chat header
+      document.getElementById('chatFragmentInfo').innerHTML = `
+        <div class="chat-fragment-title">${item.fragment.title}</div>
+        <div class="chat-fragment-meta">
+          ${item.fragment.category} · Status: ${item.status} · Conviction: ${item.conviction}%
+        </div>
+      `;
+    });
+    
+    initializeApp();
+    // BACON: Message handling
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    const chatMessages = document.getElementById('chatMessages');
+    
+    function sendMessage() {
+      if (!state.currentChatItem) {
+        alert('No fragment selected');
+        return;
+      }
+      
+      const content = chatInput.value.trim();
+      if (!content) return;
+      
+      console.log(`[MESSAGE] User to "${state.currentChatItem.fragment.title}": ${content}`);
+      
+      // Get or create chat data
+      const chats = store.chats;
+      const chatKey = state.currentChatItem.instanceId;
+      if (!chats[chatKey]) {
+        chats[chatKey] = { messages: [], turnCount: 0 };
+      }
+      
+      // EGGS: Analyze argument quality
+      const analysis = analyzeArgument(content);
+      console.log(`[ANALYSIS] Score: ${analysis.score}, Quality: ${analysis.quality}, Conviction change: ${analysis.convictionChange}`);
+      
+      // Update conviction
+      const currentConviction = state.currentChatItem.conviction || 0;
+      const newConviction = Math.max(0, Math.min(100, currentConviction + analysis.convictionChange));
+      state.currentChatItem.conviction = newConviction;
+      
+      console.log(`[CONVICTION] ${currentConviction}% -> ${newConviction}%`);
+      
+      // Add user message
+      chats[chatKey].messages.push({
+        role: 'user',
+        content: content,
+        timestamp: Date.now(),
+        analysis: analysis,
+        convictionBefore: currentConviction,
+        convictionAfter: newConviction
+      });
+      chats[chatKey].turnCount++;
+      
+      // Update UI
+      updateConvictionBar(newConviction);
+      updateHints(newConviction);
+      store.story = state.story;
+      
+      // Clear input
+      chatInput.value = '';
+      
+      // Render messages
+      renderMessages();
+      
+      // Simulate AI response after 1 second
+      setTimeout(() => {
+        const responses = [
+          "Interesting. But can you be more specific about how I fit your narrative arc?",
+          "You're making progress. Tell me about the thematic connections you see.",
+          "I need to understand the broader context. What comes before and after me?",
+          "You're convincing me. Explain how I serve your film's central argument.",
+          "Alright. You've made your case. I'm joining your story."
+        ];
+        
+        const turnCount = chats[chatKey].turnCount;
+        const response = responses[Math.min(turnCount - 1, responses.length - 1)];
+        
+        chats[chatKey].messages.push({
+          role: 'assistant',
+          content: response,
+          timestamp: Date.now()
+        });
+        
+        // EGGS: Check if fragment is convinced based on conviction + turns
+        const conviction = state.currentChatItem.conviction || 0;
+        if (turnCount >= 5 && conviction >= 60) {
+          state.currentChatItem.status = 'JOINED';
+          chats[chatKey].messages.push({
+            role: 'system',
+            content: '[JOINED] This fragment has agreed to join your film.',
+            timestamp: Date.now()
+          });
+          store.story = state.story;
+          renderCollection();
+        } else if (turnCount >= 5 && conviction < 30) {
+          state.currentChatItem.status = 'UNMATCHED';
+          chats[chatKey].messages.push({
+            role: 'system',
+            content: '[UNMATCHED] This fragment remains unconvinced and declines to join.',
+            timestamp: Date.now()
+          });
+          // Remove from collection
+          const idx = state.story.findIndex(i => i.instanceId === state.currentChatItem.instanceId);
+          if (idx > -1) {
+            state.story.splice(idx, 1);
+          }
+          store.story = state.story;
+          renderCollection();
+          // Close chat since item is removed
+          if (chatPanel.classList.contains('open')) {
+            chatPanel.classList.remove('open');
+            chatToggle.classList.remove('active');
+          }
+        }
+        
+        store.chats = chats;
+        renderMessages();
+        
+        console.log(`[MESSAGE] "${state.currentChatItem.fragment.title}" response: ${response}`);
+      }, 1000);
+      
+      store.chats = chats;
+    }
+    
+    function renderMessages() {
+      if (!state.currentChatItem) {
+        chatMessages.innerHTML = '<div class="chat-empty">[SELECT A FRAGMENT FROM COLLECTION TO BEGIN]</div>';
+        return;
+      }
+      
+      const chats = store.chats;
+      const chatKey = state.currentChatItem.instanceId;
+      const chatData = chats[chatKey];
+      
+      if (!chatData || chatData.messages.length === 0) {
+        chatMessages.innerHTML = '<div class="chat-empty">[START THE NEGOTIATION - TYPE YOUR FIRST ARGUMENT]</div>';
+        return;
+      }
+      
+      chatMessages.innerHTML = chatData.messages.map(msg => {
+        if (msg.role === 'system') {
+          return `
+            <div class="chat-message" style="background:#f0f0f0;border:2px dashed #999;align-self:center;text-align:center;font-size:11px;font-weight:700;">
+              ${msg.content}
+            </div>
+          `;
+        }
+        const roleClass = msg.role === 'user' ? 'me' : '';
+        const roleLabel = msg.role === 'user' ? 'YOU' : state.currentChatItem.fragment.title.toUpperCase();
+        return `
+          <div class="chat-message ${roleClass}">
+            <div style="font-size:9px;font-weight:700;margin-bottom:4px;opacity:0.6;">${roleLabel}</div>
+            <div>${msg.content}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // EGGS: Update conviction bar
+      if (state.currentChatItem) {
+        updateConvictionBar(state.currentChatItem.conviction || 0);
+        updateHints(state.currentChatItem.conviction || 0);
+      }
+      
+      // Scroll to bottom
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    chatSend.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+    
+    // EGGS: Conviction system
+    function analyzeArgument(text) {
+      let score = 0;
+      const len = text.length;
+      
+      // Length analysis
+      if (len > 50) score += 15;
+      else if (len > 30) score += 10;
+      else if (len > 10) score += 5;
+      
+      // Specificity (quotes, names)
+      if (text.includes('"') || text.includes("'")) score += 12;
+      
+      // Thematic keywords
+      const keywords = ['power', 'control', 'system', 'narrative', 'truth', 'reality', 'individual', 'collective', 'society', 'resistance', 'theme', 'context', 'sequence', 'structure', 'ideology', 'representation'];
+      keywords.forEach(word => {
+        if (text.toLowerCase().includes(word)) score += 5;
+      });
+      
+      // Analytical phrases
+      const phrases = ['because', 'therefore', 'shows that', 'demonstrates', 'reveals', 'connects to', 'relates to', 'establishes', 'represents', 'articulates'];
+      phrases.forEach(phrase => {
+        if (text.toLowerCase().includes(phrase)) score += 8;
+      });
+      
+      // Cap at 100 and convert to conviction change (-20 to +40)
+      const convictionChange = Math.max(-20, Math.min(40, score - 30));
+      
+      return {
+        score,
+        convictionChange,
+        quality: score < 20 ? 'weak' : score < 50 ? 'decent' : score < 80 ? 'strong' : 'excellent'
+      };
+    }
+    
+    function updateConvictionBar(conviction) {
+      const bar = document.getElementById('convictionFill');
+      const percent = document.getElementById('convictionPercent');
+      
+      if (bar && percent) {
+        bar.style.width = `${conviction}%`;
+        
+        let status = '';
+        if (conviction < 20) status = 'HIGHLY SKEPTICAL';
+        else if (conviction < 40) status = 'UNCONVINCED';
+        else if (conviction < 60) status = 'CONSIDERING';
+        else if (conviction < 80) status = 'LEANING YES';
+        else status = 'NEARLY CONVINCED';
+        
+        percent.textContent = `${Math.round(conviction)}% - ${status}`;
+      }
+    }
+    
+    function updateHints(conviction) {
+      const hints = document.getElementById('chatHints');
+      if (!hints) return;
+      
+      if (conviction < 20) {
+        hints.innerHTML = 'TOO VAGUE: Be more specific about themes, context, or narrative function. Use analytical language.';
+        hints.style.borderLeftColor = '#E74C3C';
+      } else if (conviction < 40) {
+        hints.innerHTML = 'IMPROVING: Good start. Now connect to broader themes or explain the structural role.';
+        hints.style.borderLeftColor = '#F39C12';
+      } else if (conviction < 60) {
+        hints.innerHTML = 'SOLID: You\'re making the case. Add more depth about relationships to other clips or your central argument.';
+        hints.style.borderLeftColor = '#F1C40F';
+      } else if (conviction < 80) {
+        hints.innerHTML = 'STRONG: Excellent reasoning. One more turn with clear vision should convince.';
+        hints.style.borderLeftColor = '#2ECC71';
+      } else {
+        hints.innerHTML = 'COMPELLING: Your arguments are persuasive. This clip is nearly convinced to join.';
+        hints.style.borderLeftColor = '#27AE60';
+      }
+    }
+    
+    // Character counter
+    chatInput.addEventListener('input', () => {
+      const len = chatInput.value.length;
+      const counter = document.getElementById('charCounter');
+      if (counter) {
+        counter.textContent = `${len} / 200`;
+        if (len > 150) {
+          counter.style.opacity = '1';
+          counter.style.color = len >= 200 ? '#E74C3C' : '#F39C12';
+        } else {
+          counter.style.opacity = '0.5';
+          counter.style.color = '#000';
+        }
+      }
+    });
+    
+    console.log('EGGS: Conviction system initialized');
+  </script>
+</body>
+</html>

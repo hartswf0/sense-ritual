@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final Screen</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 20px 40px;
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            margin: 10px;
+            text-transform: uppercase;
+        }
+        
+        button:hover {
+            background: #00cc00;
+        }
+        
+        .info {
+            margin: 30px 0;
+            opacity: 0.7;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 TEST FINAL SCREEN</h1>
+    
+    <div class="info">
+        This test page loads sample film data into the final screen viewer.
+        Use this to test the film player, export options, and mobile responsiveness.
+    </div>
+    
+    <button onclick="loadTestFilm()">LOAD TEST FILM</button>
+    <button onclick="loadLargeFilm()">LOAD LARGE FILM (15 beats)</button>
+    <button onclick="clearData()">CLEAR SAVED DATA</button>
+    
+    <script>
+        function loadTestFilm() {
+            const testData = {
+                title: 'Fragments of Control',
+                logline: 'An exploration of systemic power through fragmented narratives and technological apparatus',
+                color: '#4A90E2',
+                score: 1450,
+                stats: {
+                    base: 450,
+                    sharedClips: 4,
+                    connections: 3,
+                    dominantCategory: 'Systemic Control',
+                    dominance: 68
+                },
+                beats: [
+                    {
+                        name: 'Opening Image',
+                        syntagma: 'DS',
+                        clips: [
+                            { 
+                                id: 'family-of-man',
+                                icon: '◯', 
+                                title: 'Family of Man (Central Vision)', 
+                                duration: 26, 
+                                start: 27, 
+                                end: 53,
+                                category: 'Core Concept',
+                                desc: 'Herbert Bayer created a modernist vision at MoMA in 1955: a world of free, rational individuals who would make their own stories from photographs and live in a rational, ordered world.',
+                                quote: 'At its center was the individual. And the individual would make their own story out of the photographs. They would be free, rational and stable.',
+                                tags: ['Bayer', 'Agency', 'Self-determination', 'Modernism', 'Individual'],
+                                color: '#4A90E2'
+                            },
+                            { 
+                                id: 'individual-self',
+                                icon: '◐', 
+                                title: 'Individual Self (Central)', 
+                                duration: 11, 
+                                start: 67, 
+                                end: 78,
+                                category: 'Core Concept',
+                                desc: 'At the center of that world is the individual self, making their own story out of photographs. The promise of autonomy and rational choice.',
+                                quote: 'The individual would make their own story out of the photographs.',
+                                tags: ['Individual', 'Agency', 'Autonomy', 'Bayer'],
+                                color: '#AED581'
+                            }
+                        ]
+                    },
+                    {
+                        name: 'Theme Stated',
+                        syntagma: 'SC',
+                        clips: [
+                            { 
+                                id: 'unreal-fairyland',
+                                icon: '◑', 
+                                title: 'Unreal Fairyland (Afeni)', 
+                                duration: 7, 
+                                start: 197, 
+                                end: 204,
+                                category: 'Systemic Critique',
+                                desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power. Afeni Shakur\'s critique of the illusion we\'re taught to believe in.',
+                                quote: 'We\'re not being taught to deal with the world as it is. We\'re being taught to deal with this fairyland, which we\'re not even living in anymore.',
+                                tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control', 'Power'],
+                                color: '#FFCDD2'
+                            }
+                        ]
+                    },
+                    {
+                        name: 'Catalyst',
+                        syntagma: 'PS',
+                        clips: [
+                            { 
+                                id: 'crack-epidemic',
+                                icon: '◓', 
+                                title: 'Crack Epidemic (Afeni\'s Fall)', 
+                                duration: 9, 
+                                start: 291, 
+                                end: 300,
+                                category: 'Systemic Event',
+                                desc: 'Crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone. A systemic crisis that destroyed families and communities.',
+                                quote: 'Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.',
+                                tags: ['Social Crisis', 'Vulnerability', 'Systemic Impact', 'Afeni', 'Tupac', 'Drugs'],
+                                color: '#424242'
+                            }
+                        ]
+                    }
+                ],
+                metadata: {
+                    totalBeats: 3,
+                    totalShots: 4,
+                    totalDuration: 53
+                }
+            };
+            
+            localStorage.setItem('matrixEditorFilm', JSON.stringify(testData));
+            window.open('matrix-final-screen.html', '_blank');
+        }
+        
+        function loadLargeFilm() {
+            const beats = [];
+            const beatNames = [
+                'Opening Image', 'Theme Stated', 'Set-Up', 'Catalyst', 'Debate',
+                'Break into Two', 'B Story', 'Fun and Games', 'Midpoint',
+                'Bad Guys Close In', 'All Is Lost', 'Dark Night of the Soul',
+                'Break into Three', 'Finale', 'Final Image'
+            ];
+            
+            const clips = [
+                { icon: '◯', title: 'Family of Man', start: 27, end: 53 },
+                { icon: '◐', title: 'Individual Self', start: 67, end: 78 },
+                { icon: '◑', title: 'Unreal Fairyland', start: 197, end: 204 },
+                { icon: '◒', title: 'Grand Stories', start: 143, end: 148 },
+                { icon: '◓', title: 'Societal Boom', start: 230, end: 237 },
+                { icon: '◔', title: 'Crack Epidemic', start: 291, end: 300 },
+                { icon: '◕', title: 'Mass Incarceration', start: 1070, end: 1078 },
+                { icon: '◖', title: 'Saudi Dream', start: 379, end: 384 }
+            ];
+            
+            let totalShots = 0;
+            let totalDuration = 0;
+            
+            beatNames.forEach((name, idx) => {
+                const numClips = Math.floor(Math.random() * 3) + 2;
+                const beatClips = [];
+                
+                for (let i = 0; i < numClips; i++) {
+                    const clip = clips[Math.floor(Math.random() * clips.length)];
+                    const duration = clip.end - clip.start;
+                    beatClips.push({
+                        icon: clip.icon,
+                        title: clip.title,
+                        duration,
+                        start: clip.start,
+                        end: clip.end,
+                        category: 'Systemic Control'
+                    });
+                    totalDuration += duration;
+                    totalShots++;
+                }
+                
+                beats.push({
+                    name,
+                    syntagma: ['DS', 'SC', 'PS', 'BS'][Math.floor(Math.random() * 4)],
+                    clips: beatClips
+                });
+            });
+            
+            const largeData = {
+                title: 'Can\'t Get You Out of My Head: Reassembled',
+                logline: 'A comprehensive re-edit of Adam Curtis\'s documentary exploring power, individualism, and the chaos of modern life',
+                color: '#E24A4A',
+                score: 2850,
+                stats: {
+                    base: 1200,
+                    sharedClips: 12,
+                    connections: 7,
+                    dominantCategory: 'Systemic Control',
+                    dominance: 72
+                },
+                beats,
+                metadata: {
+                    totalBeats: beats.length,
+                    totalShots,
+                    totalDuration
+                }
+            };
+            
+            localStorage.setItem('matrixEditorFilm', JSON.stringify(largeData));
+            window.open('matrix-final-screen.html', '_blank');
+        }
+        
+        function clearData() {
+            localStorage.removeItem('matrixEditorFilm');
+            alert('Saved film data cleared!');
+        }
+    </script>
+</body>
+</html>

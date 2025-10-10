@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Complete File Manifest — Sense Ritual</title>
+  <meta name="description" content="Complete manifest of all HTML files organized by category and folder" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #fff; 
+      color: #000;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+
+    .header {
+      margin-bottom: 80px;
+      padding-bottom: 40px;
+      border-bottom: 4px solid #000;
+    }
+
+    .headline {
+      font-size: clamp(2.5rem, 10vw, 5rem);
+      font-weight: 900;
+      letter-spacing: -3px;
+      margin-bottom: 16px;
+      line-height: 0.9;
+      text-transform: uppercase;
+    }
+
+    .subhead {
+      font-size: clamp(0.85rem, 2.5vw, 1rem);
+      font-weight: 400;
+      color: #000;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      max-width: 700px;
+    }
+
+    .tag-line {
+      font-size: clamp(0.7rem, 2vw, 0.8rem);
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: 700;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+      padding: 24px;
+      background: #f5f5f5;
+      border: 2px solid #000;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 900;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #666;
+    }
+
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-size: clamp(0.9rem, 3vw, 1.1rem);
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-left: 4px solid #000;
+      padding-left: 12px;
+    }
+
+    .section-desc {
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      padding-left: 16px;
+    }
+
+    .folder-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 4px 8px;
+      background: #000;
+      color: #fff;
+      margin-left: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .file-list {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .file-item {
+      background: #fff;
+      border: 2px solid #000;
+      padding: 16px 20px;
+      text-decoration: none;
+      color: #000;
+      transition: all 0.15s;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 16px;
+      align-items: center;
+      touch-action: manipulation;
+    }
+
+    .file-item:hover, .file-item:active {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
+
+    .file-number {
+      width: 32px;
+      height: 32px;
+      background: #000;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .file-item:hover .file-number, .file-item:active .file-number {
+      background: #fff;
+      color: #000;
+    }
+
+    .file-name {
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    .file-size {
+      font-size: 0.7rem;
+      color: #666;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    .file-item:hover .file-size, .file-item:active .file-size {
+      color: #ccc;
+    }
+
+    .warning-note {
+      font-size: clamp(0.7rem, 2vw, 0.75rem);
+      color: #999;
+      padding: 12px 16px;
+      border-left: 4px solid #999;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .nav-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .action-btn {
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      padding: 16px;
+      text-decoration: none;
+      font-weight: 900;
+      text-align: center;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover, .action-btn:active {
+      background: #fff;
+      color: #000;
+    }
+
+    .footer {
+      font-size: 0.85rem;
+      color: #999;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 2px solid #eee;
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 40px 16px; }
+      .header { margin-bottom: 40px; padding-bottom: 30px; }
+      .section { margin-bottom: 40px; }
+      .file-item { padding: 12px 16px; grid-template-columns: auto 1fr; }
+      .file-size { display: none; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="headline">File Manifest</h1>
+      <p class="subhead">Complete index of all HTML files in the Sense Ritual repository, organized by category and folder structure</p>
+      <p class="tag-line">All Files / All Folders / Complete Navigation</p>
+      
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-number">53</span>
+          <span class="stat-label">Total Files</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">8</span>
+          <span class="stat-label">Categories</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">18</span>
+          <span class="stat-label">Food & Stone</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">35</span>
+          <span class="stat-label">Root Files</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <a href="index.html" class="action-btn">← Main Index</a>
+      <a href="matrix-editor.html" class="action-btn">Matrix Editor</a>
+      <a href="swiper-so.html" class="action-btn">Fragment Swiper</a>
+      <a href="prompt-lab.html" class="action-btn">Prompt Lab</a>
+    </div>
+
+    <!-- CORE PRODUCTION TOOLS -->
+    <div class="section">
+      <h2 class="section-title">Core Production Tools</h2>
+      <p class="section-desc">Primary working tools for narrative assembly and film generation</p>
+      
+      <div class="file-list">
+        <a href="matrix-editor.html" class="file-item">
+          <div class="file-number">01</div>
+          <div class="file-name">matrix-editor.html</div>
+          <div class="file-size">143 KB</div>
+        </a>
+        <a href="swiper-so.html" class="file-item">
+          <div class="file-number">02</div>
+          <div class="file-name">swiper-so.html</div>
+          <div class="file-size">80 KB</div>
+        </a>
+        <a href="swiper-sogo-fixed.html" class="file-item">
+          <div class="file-number">03</div>
+          <div class="file-name">swiper-sogo-fixed.html</div>
+          <div class="file-size">94 KB</div>
+        </a>
+        <a href="prompt-lab.html" class="file-item">
+          <div class="file-number">04</div>
+          <div class="file-name">prompt-lab.html</div>
+          <div class="file-size">21 KB</div>
+        </a>
+        <a href="matrix-final-screen.html" class="file-item">
+          <div class="file-number">05</div>
+          <div class="file-name">matrix-final-screen.html</div>
+          <div class="file-size">43 KB</div>
+        </a>
+        <a href="test-final-screen.html" class="file-item">
+          <div class="file-number">06</div>
+          <div class="file-name">test-final-screen.html</div>
+          <div class="file-size">10 KB</div>
+        </a>
+        <a href="chain-collector.html" class="file-item">
+          <div class="file-number">07</div>
+          <div class="file-name">chain-collector.html</div>
+          <div class="file-size">115 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- FOOD COLLECTION -->
+    <div class="section">
+      <h2 class="section-title">Food Collection <span class="folder-badge">FOOD/</span></h2>
+      <p class="section-desc">Swipe interfaces exploring food items as progression system elements</p>
+      
+      <div class="file-list">
+        <a href="FOOD/swipe-food.html" class="file-item">
+          <div class="file-number">08</div>
+          <div class="file-name">swipe-food.html</div>
+          <div class="file-size">15 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-eggs.html" class="file-item">
+          <div class="file-number">09</div>
+          <div class="file-name">swipe-food-eggs.html</div>
+          <div class="file-size">40 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-bacon.html" class="file-item">
+          <div class="file-number">10</div>
+          <div class="file-name">swipe-food-bacon.html</div>
+          <div class="file-size">33 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-swiss-cheese.html" class="file-item">
+          <div class="file-number">11</div>
+          <div class="file-name">swipe-food-swiss-cheese.html</div>
+          <div class="file-size">30 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-cheese.html" class="file-item">
+          <div class="file-number">12</div>
+          <div class="file-name">swipe-food-cheese.html</div>
+          <div class="file-size">25 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-apple-butter.html" class="file-item">
+          <div class="file-number">13</div>
+          <div class="file-name">swipe-food-apple-butter.html</div>
+          <div class="file-size">24 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-butter.html" class="file-item">
+          <div class="file-number">14</div>
+          <div class="file-name">swipe-food-butter.html</div>
+          <div class="file-size">21 KB</div>
+        </a>
+        <a href="FOOD/swipe-food-bread.html" class="file-item">
+          <div class="file-number">15</div>
+          <div class="file-name">swipe-food-bread.html</div>
+          <div class="file-size">17 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- STONE COLLECTION -->
+    <div class="section">
+      <h2 class="section-title">Stone Collection <span class="folder-badge">STONE/</span></h2>
+      <p class="section-desc">Geological fragments and quartz progression as material exploration</p>
+      
+      <div class="file-list">
+        <a href="STONE/swipe-quartz-frag-05.html" class="file-item">
+          <div class="file-number">16</div>
+          <div class="file-name">swipe-quartz-frag-05.html</div>
+          <div class="file-size">128 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz-frag-04.html" class="file-item">
+          <div class="file-number">17</div>
+          <div class="file-name">swipe-quartz-frag-04.html</div>
+          <div class="file-size">119 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz-frag-03.html" class="file-item">
+          <div class="file-number">18</div>
+          <div class="file-name">swipe-quartz-frag-03.html</div>
+          <div class="file-size">117 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz-frag-02.html" class="file-item">
+          <div class="file-number">19</div>
+          <div class="file-name">swipe-quartz-frag-02.html</div>
+          <div class="file-size">116 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz-frag.html" class="file-item">
+          <div class="file-number">20</div>
+          <div class="file-name">swipe-quartz-frag.html</div>
+          <div class="file-size">110 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz-crystal.html" class="file-item">
+          <div class="file-number">21</div>
+          <div class="file-name">swipe-quartz-crystal.html</div>
+          <div class="file-size">66 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz-hardened.html" class="file-item">
+          <div class="file-number">22</div>
+          <div class="file-name">swipe-quartz-hardened.html</div>
+          <div class="file-size">58 KB</div>
+        </a>
+        <a href="STONE/swipe-quartz.html" class="file-item">
+          <div class="file-number">23</div>
+          <div class="file-name">swipe-quartz.html</div>
+          <div class="file-size">47 KB</div>
+        </a>
+        <a href="STONE/swipe-granite.html" class="file-item">
+          <div class="file-number">24</div>
+          <div class="file-name">swipe-granite.html</div>
+          <div class="file-size">40 KB</div>
+        </a>
+        <a href="STONE/swipe-gravel.html" class="file-item">
+          <div class="file-number">25</div>
+          <div class="file-name">swipe-gravel.html</div>
+          <div class="file-size">28 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ANALYSIS & VISUALIZATION -->
+    <div class="section">
+      <h2 class="section-title">Analysis & Visualization</h2>
+      <p class="section-desc">Tools for exploring narrative patterns, transclusions, and conceptual relationships</p>
+      
+      <div class="file-list">
+        <a href="class-analysis.html" class="file-item">
+          <div class="file-number">26</div>
+          <div class="file-name">class-analysis.html</div>
+          <div class="file-size">18 KB</div>
+        </a>
+        <a href="a3.html" class="file-item">
+          <div class="file-number">27</div>
+          <div class="file-name">a3.html</div>
+          <div class="file-size">77 KB</div>
+        </a>
+        <a href="a2.html" class="file-item">
+          <div class="file-number">28</div>
+          <div class="file-name">a2.html</div>
+          <div class="file-size">34 KB</div>
+        </a>
+        <a href="a1.html" class="file-item">
+          <div class="file-number">29</div>
+          <div class="file-name">a1.html</div>
+          <div class="file-size">23 KB</div>
+        </a>
+        <a href="a0.html" class="file-item">
+          <div class="file-number">30</div>
+          <div class="file-name">a0.html</div>
+          <div class="file-size">11 KB</div>
+        </a>
+        <a href="b1.html" class="file-item">
+          <div class="file-number">31</div>
+          <div class="file-name">b1.html</div>
+          <div class="file-size">23 KB</div>
+        </a>
+        <a href="conflux-engine.html" class="file-item">
+          <div class="file-number">32</div>
+          <div class="file-name">conflux-engine.html</div>
+          <div class="file-size">72 KB</div>
+        </a>
+        <a href="conflux.html" class="file-item">
+          <div class="file-number">33</div>
+          <div class="file-name">conflux.html</div>
+          <div class="file-size">38 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- NARRATIVE ASSEMBLY TOOLS -->
+    <div class="section">
+      <h2 class="section-title">Narrative Assembly Tools</h2>
+      <p class="section-desc">Experimental interfaces for story construction and fragment organization</p>
+      
+      <div class="file-list">
+        <a href="story-game.html" class="file-item">
+          <div class="file-number">34</div>
+          <div class="file-name">story-game.html</div>
+          <div class="file-size">22 KB</div>
+        </a>
+        <a href="fragment-branches.html" class="file-item">
+          <div class="file-number">35</div>
+          <div class="file-name">fragment-branches.html</div>
+          <div class="file-size">17 KB</div>
+        </a>
+        <a href="narrative-defense.html" class="file-item">
+          <div class="file-number">36</div>
+          <div class="file-name">narrative-defense.html</div>
+          <div class="file-size">38 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- SWIPER PROTOTYPES & TESTS -->
+    <div class="section">
+      <h2 class="section-title">Swiper Prototypes & Tests</h2>
+      <div class="warning-note">Development versions and test files. Many are superseded by swiper-so.html</div>
+      
+      <div class="file-list">
+        <a href="swiper-foo.html" class="file-item">
+          <div class="file-number">37</div>
+          <div class="file-name">swiper-foo.html</div>
+          <div class="file-size">98 KB</div>
+        </a>
+        <a href="swiper-llll.html" class="file-item">
+          <div class="file-number">38</div>
+          <div class="file-name">swiper-llll.html</div>
+          <div class="file-size">99 KB</div>
+        </a>
+        <a href="swiper-sogo.html" class="file-item">
+          <div class="file-number">39</div>
+          <div class="file-name">swiper-sogo.html</div>
+          <div class="file-size">97 KB</div>
+        </a>
+        <a href="swiper-lololo.html" class="file-item">
+          <div class="file-number">40</div>
+          <div class="file-name">swiper-lololo.html</div>
+          <div class="file-size">88 KB</div>
+        </a>
+        <a href="swiper-lolo.html" class="file-item">
+          <div class="file-number">41</div>
+          <div class="file-name">swiper-lolo.html</div>
+          <div class="file-size">84 KB</div>
+        </a>
+        <a href="swiper-lo.html" class="file-item">
+          <div class="file-number">42</div>
+          <div class="file-name">swiper-lo.html</div>
+          <div class="file-size">48 KB</div>
+        </a>
+        <a href="swiper-minimal-test.html" class="file-item">
+          <div class="file-number">43</div>
+          <div class="file-name">swiper-minimal-test.html</div>
+          <div class="file-size">42 KB</div>
+        </a>
+        <a href="swiper-mo.html" class="file-item">
+          <div class="file-number">44</div>
+          <div class="file-name">swiper-mo.html</div>
+          <div class="file-size">42 KB</div>
+        </a>
+        <a href="swiper-no.html" class="file-item">
+          <div class="file-number">45</div>
+          <div class="file-name">swiper-no.html</div>
+          <div class="file-size">36 KB</div>
+        </a>
+        <a href="swiper-demo-basic.html" class="file-item">
+          <div class="file-number">46</div>
+          <div class="file-name">swiper-demo-basic.html</div>
+          <div class="file-size">23 KB</div>
+        </a>
+        <a href="swipe.html" class="file-item">
+          <div class="file-number">47</div>
+          <div class="file-name">swipe.html</div>
+          <div class="file-size">20 KB</div>
+        </a>
+        <a href="swipe-vert.html" class="file-item">
+          <div class="file-number">48</div>
+          <div class="file-name">swipe-vert.html</div>
+          <div class="file-size">19 KB</div>
+        </a>
+        <a href="swiper-test-closure.html" class="file-item">
+          <div class="file-number">49</div>
+          <div class="file-name">swiper-test-closure.html</div>
+          <div class="file-size">4 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- TRAILS / CINEMATIC EXPERIMENTS -->
+    <div class="section">
+      <h2 class="section-title">Trails / Cinematic Experiments</h2>
+      <p class="section-desc">Saul Bass–inspired decks exploring navigation patterns and visual storytelling</p>
+      
+      <div class="file-list">
+        <a href="trails_before_links_act_2_→_3_→_4_visual_deck_visualization_first.html" class="file-item">
+          <div class="file-number">50</div>
+          <div class="file-name">trails_before_links_act_2_→_3_→_4_visual_deck_visualization_first.html</div>
+          <div class="file-size">41 KB</div>
+        </a>
+        <a href="trails_before_links_saul_bass_film_html (2).html" class="file-item">
+          <div class="file-number">51</div>
+          <div class="file-name">trails_before_links_saul_bass_film_html (2).html</div>
+          <div class="file-size">22 KB</div>
+        </a>
+        <a href="trails_before_links_saul_bass_film_html.html" class="file-item">
+          <div class="file-number">52</div>
+          <div class="file-name">trails_before_links_saul_bass_film_html.html</div>
+          <div class="file-size">20 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="section">
+      <h2 class="section-title">Navigation & Index</h2>
+      <p class="section-desc">Landing pages and file manifests</p>
+      
+      <div class="file-list">
+        <a href="index.html" class="file-item">
+          <div class="file-number">53</div>
+          <div class="file-name">index.html</div>
+          <div class="file-size">11 KB</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="footer">
+      Sense Ritual File Manifest / 53 HTML files across 8 categories / Generated 2025-10-10
+    </div>
+  </div>
+</body>
+</html>

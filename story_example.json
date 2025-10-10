@@ -1,0 +1,94 @@
+{
+  "title": "Fragments of Control: A Documentary",
+  "selected": [
+    {
+      "id": "family-of-man",
+      "title": "Family of Man",
+      "category": "Core Concept",
+      "desc": "Herbert Bayer's modernist vision: a world of free individuals making their own story from photographs.",
+      "quote": "The individual would make their own story out of the photographs.",
+      "tags": [
+        "Bayer",
+        "Agency",
+        "Self-determination"
+      ],
+      "start": 27,
+      "end": 53,
+      "color": "#4A90E2"
+    },
+    {
+      "id": "individual-self",
+      "title": "Individual Self",
+      "category": "Core Concept",
+      "desc": "At the center of that world is the individual self, making their own story.",
+      "quote": "At the center is the individual self.",
+      "tags": [
+        "Individual",
+        "Agency"
+      ],
+      "start": 67,
+      "end": 78,
+      "color": "#4A90E2"
+    },
+    {
+      "id": "unreal-fairyland",
+      "title": "Unreal Fairyland",
+      "category": "Systemic Critique",
+      "desc": "The world most Americans lived in concealed the harsh reality of power.",
+      "quote": "We're not being taught to deal with the world as it is.",
+      "tags": [
+        "Afeni",
+        "Illusion",
+        "Control"
+      ],
+      "start": 197,
+      "end": 204,
+      "color": "#E24A4A"
+    },
+    {
+      "id": "crack-epidemic",
+      "title": "Crack Epidemic",
+      "category": "Systemic Event",
+      "desc": "Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.",
+      "quote": "Then crack swept through the black communities of America.",
+      "tags": [
+        "Social Crisis",
+        "Vulnerability",
+        "Systemic Impact"
+      ],
+      "start": 291,
+      "end": 300,
+      "color": "#424242"
+    }
+  ],
+  "timestamp": "2025-10-10T16:42:41.299Z",
+  "author": "Matrix Editor Player",
+  "version": "1.0",
+  "gameplay": {
+    "score": 1450,
+    "stats": {
+      "base": 450,
+      "sharedClips": 4,
+      "connections": 3,
+      "dominantCategory": "Systemic Control",
+      "dominance": 68
+    },
+    "beats": [
+      {
+        "name": "Opening Image",
+        "syntagma": "DS",
+        "clipCount": 2
+      },
+      {
+        "name": "Theme Stated",
+        "syntagma": "SC",
+        "clipCount": 1
+      },
+      {
+        "name": "Catalyst",
+        "syntagma": "PS",
+        "clipCount": 1
+      }
+    ]
+  }
+}

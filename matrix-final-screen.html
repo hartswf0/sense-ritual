@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Your Film - Matrix Editor</title>
+    <meta property="og:type" content="video.movie">
+    <meta property="og:title" id="ogTitle" content="Documentary Film - Matrix Editor">
+    <meta property="og:description" id="ogDesc" content="A documentary assembled through interactive gameplay">
+    <meta property="og:image" content="https://img.youtube.com/vi/BQ2n6SN7gOY/maxresdefault.jpg">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Minimal Header */
+        .hero {
+            padding: 40px 20px 20px;
+            background: #000;
+            position: relative;
+            border-bottom: 2px solid #333;
+        }
+        
+        .film-title {
+            font-size: clamp(28px, 6vw, 48px);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+            line-height: 1.2;
+            max-width: 900px;
+        }
+        
+        .film-logline {
+            font-size: clamp(13px, 2.5vw, 16px);
+            opacity: 0.6;
+            max-width: 700px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        
+        .film-meta {
+            display: flex;
+            gap: 20px;
+            font-size: clamp(11px, 2vw, 13px);
+            opacity: 0.5;
+            flex-wrap: wrap;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .score-display {
+            margin-top: 30px;
+            padding: 30px;
+            border: 2px solid;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .score-main {
+            font-size: clamp(48px, 10vw, 96px);
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        
+        .score-label {
+            font-size: clamp(12px, 2.5vw, 14px);
+            opacity: 0.5;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+        
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
+            text-align: left;
+        }
+        
+        .score-item {
+            font-size: 12px;
+        }
+        
+        .score-item-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .score-item-label {
+            opacity: 0.5;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .back-btn:hover {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+        
+        /* Sections */
+        .section {
+            background: #0a0a0a;
+            border-top: 1px solid #222;
+            margin: 0;
+            padding: 30px 24px;
+        }
+        
+        .section-title {
+            font-size: clamp(14px, 3vw, 18px);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        
+        /* View Mode Tabs */
+        .view-modes {
+            display: flex;
+            gap: 0;
+            margin-bottom: 30px;
+            border: 1px solid #333;
+        }
+        
+        .view-mode-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            border-right: 1px solid #333;
+            color: #666;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        
+        .view-mode-btn:last-child {
+            border-right: none;
+        }
+        
+        .view-mode-btn.active {
+            background: #fff;
+            color: #000;
+        }
+        
+        .view-mode-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+        
+        /* Film Player */
+        .film-player {
+            background: #000;
+            border: 1px solid #333;
+            margin: 0 auto 30px;
+            max-width: 900px;
+        }
+        
+        .player-video {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border: none;
+        }
+        
+        .player-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 16px;
+            background: #0a0a0a;
+            border-top: 1px solid #222;
+        }
+        
+        .player-info {
+            text-align: center;
+            font-size: clamp(11px, 2.5vw, 13px);
+            opacity: 0.6;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Visual Beat Timeline */
+        .timeline {
+            padding: 20px 0;
+        }
+        
+        .beat-lane {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid;
+            padding: 20px;
+            margin: 16px 0;
+            position: relative;
+        }
+        
+        .beat-header {
+            font-weight: 700;
+            margin-bottom: 16px;
+            font-size: clamp(14px, 3vw, 18px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .beat-number {
+            opacity: 0.5;
+            font-size: 0.8em;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .beat-clips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 0;
+        }
+        
+        /* Enhanced Clip Cards */
+        .clip-mini {
+            min-width: 120px;
+            background: #000;
+            border: 1px solid #333;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .clip-mini:hover {
+            background: #111;
+            border-color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
+        }
+        
+        .clip-mini::before {
+            content: attr(data-clip-number);
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .clip-icon {
+            font-size: 28px;
+            margin: 8px 0;
+            text-align: center;
+        }
+        
+        .clip-title {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            line-height: 1.2;
+            min-height: 30px;
+        }
+        
+        .clip-duration {
+            font-size: 10px;
+            opacity: 0.6;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .clip-category {
+            font-size: 9px;
+            opacity: 0.4;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        
+        /* Buttons */
+        button {
+            background: #fff;
+            color: #000;
+            border: 1px solid #fff;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: clamp(11px, 2.5vw, 14px);
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        button:hover {
+            background: #000;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.secondary {
+            background: transparent;
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        button.secondary:hover {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        button.play-btn {
+            padding: 16px 40px;
+            font-size: clamp(14px, 3vw, 18px);
+            background: #fff;
+            color: #000;
+        }
+        
+        button.copied::after {
+            content: 'COPIED';
+            position: absolute;
+            inset: 0;
+            background: #fff;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeOut 1.5s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; }
+        }
+        
+        /* Mosaic Grid */
+        .mosaic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2px;
+            background: #222;
+            padding: 2px;
+        }
+        
+        .mosaic-item {
+            aspect-ratio: 16/9;
+            background: #000;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .mosaic-item iframe {
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .mosaic-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .mosaic-item:hover .mosaic-overlay {
+            opacity: 1;
+        }
+        
+        .mosaic-number {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .mosaic-title {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .mosaic-duration {
+            font-size: 10px;
+            opacity: 0.7;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Title Sequence Graphics */
+        .title-sequence {
+            padding: 40px 20px;
+            background: #000;
+        }
+        
+        .beat-group {
+            margin-bottom: 60px;
+        }
+        
+        .beat-group-header {
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid;
+        }
+        
+        .beat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        
+        .title-card {
+            border: 2px solid;
+            padding: 24px;
+            text-align: left;
+            animation: fadeIn 0.6s ease-out forwards;
+            animation-delay: calc(var(--card-index) * 0.08s);
+            opacity: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background: rgba(255,255,255,0.02);
+        }
+        
+        .title-card:hover {
+            transform: translateY(-4px);
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .title-card-number {
+            font-size: 12px;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+            opacity: 0.4;
+            margin-bottom: 12px;
+        }
+        
+        .title-card-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .title-card-text {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+        
+        .title-card-desc {
+            font-size: 12px;
+            line-height: 1.5;
+            opacity: 0.7;
+            margin-bottom: 12px;
+        }
+        
+        .title-card-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            opacity: 0.5;
+            font-family: 'Courier New', monospace;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .title-card-category {
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        /* View Mode Content Areas */
+        .view-content {
+            display: none;
+        }
+        
+        .view-content.active {
+            display: block;
+        }
+        
+        .code-preview {
+            background: #000;
+            border: 1px solid #333;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+            -webkit-overflow-scrolling: touch;
+            user-select: all;
+        }
+        
+        .export-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .export-grid button {
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+            
+            .header {
+                padding: 20px 12px;
+            }
+            
+            .section {
+                padding: 16px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .export-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero" id="filmColor">
+        <button class="back-btn" onclick="goBack()">Back</button>
+        
+        <div class="film-title" id="heroTitle">YOUR FILM</div>
+        <div class="film-logline" id="heroLogline">A documentary assembled through interactive narrative construction</div>
+        
+        <div class="film-meta">
+            <span id="metaBeats">0 beats</span>
+            <span>·</span>
+            <span id="metaShots">0 shots</span>
+            <span>·</span>
+            <span id="metaDuration">0:00</span>
+        </div>
+        
+        <div class="score-display" id="scoreDisplay">
+            <div class="score-main" id="scoreMain">0</div>
+            <div class="score-label">Narrative Coherence</div>
+            <div class="score-breakdown" id="scoreBreakdown"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- View Film Section -->
+        <div class="section">
+            <div class="section-title">VIEW FILM</div>
+            
+            <div class="view-modes">
+                <button class="view-mode-btn active" onclick="switchView('linear')">Linear</button>
+                <button class="view-mode-btn" onclick="switchView('mosaic')">Mosaic</button>
+                <button class="view-mode-btn" onclick="switchView('title')">Title Sequence</button>
+            </div>
+            
+            <!-- Linear View -->
+            <div class="view-content active" id="linearView">
+                <div class="film-player">
+                    <iframe id="filmPlayer" class="player-video" frameborder="0" 
+                        allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    <div class="player-controls">
+                        <button onclick="playFilm()" class="play-btn">Play Film</button>
+                        <button onclick="stopFilm()" class="secondary">Stop</button>
+                        <button onclick="playPrevious()" class="secondary">Prev</button>
+                        <button onclick="playNext()" class="secondary">Next</button>
+                    </div>
+                    <div class="player-info" id="playerInfo">Ready to play</div>
+                </div>
+                
+                <div class="timeline" id="beatTimeline"></div>
+            </div>
+            
+            <!-- Mosaic View -->
+            <div class="view-content" id="mosaicView">
+                <div class="mosaic-grid" id="mosaicGrid"></div>
+            </div>
+            
+            <!-- Title Sequence View -->
+            <div class="view-content" id="titleView">
+                <div class="title-sequence" id="titleSequence"></div>
+            </div>
+        </div>
+        
+        <!-- Export Section -->
+        <div class="section">
+            <div class="section-title">EXPORT</div>
+            <div class="export-grid">
+                <button id="copyPromptsBtn" onclick="copyPrompts()">Copy Shot List</button>
+                <button onclick="downloadStorymap()">Download Script</button>
+                <button onclick="downloadOTI()">Download Story (a3 Format)</button>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.02); border: 1px solid #333;">
+                <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">SHAREABLE ARTIFACT</div>
+                <div style="font-size: 11px; opacity: 0.6; line-height: 1.6;">
+                    Switch to <strong>Title Sequence</strong> view above for a visual poster-style layout. 
+                    Screenshot or print that view to share your film visually. 
+                    The downloaded Story JSON is compatible with a3.html viewer.
+                </div>
+            </div>
+            
+            <div id="promptPreview" class="code-preview" style="display: none; border-color: #333; margin-top: 20px;"></div>
+        </div>
+    </div>
+    
+    <script>
+        const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+        let filmData = null;
+        let currentClipIndex = 0;
+        let allClips = [];
+        
+        // Load film data from localStorage or URL parameter
+        function loadFilmData() {
+            // Try to get from localStorage first
+            const stored = localStorage.getItem('matrixEditorFilm');
+            if (stored) {
+                filmData = JSON.parse(stored);
+                renderFilm();
+                return;
+            }
+            
+            // Otherwise show sample data
+            loadSampleData();
+        }
+        
+        function loadSampleData() {
+            filmData = {
+                title: 'Sample Documentary',
+                logline: 'A test film showcasing the Matrix Editor final screen capabilities with full metadata',
+                color: '#4A90E2',
+                score: 1250,
+                stats: {
+                    base: 450,
+                    sharedClips: 3,
+                    connections: 2,
+                    dominantCategory: 'Systemic Control',
+                    dominance: 65
+                },
+                beats: [
+                    {
+                        name: 'Opening Image',
+                        syntagma: 'DS',
+                        clips: [
+                            { 
+                                id: 'family-of-man',
+                                icon: '◯', 
+                                title: 'Family of Man (Central Vision)', 
+                                duration: 26, 
+                                start: 27, 
+                                end: 53,
+                                category: 'Core Concept',
+                                desc: 'Herbert Bayer created a modernist vision at MoMA in 1955: a world of free, rational individuals.',
+                                quote: 'At its center was the individual. And the individual would make their own story out of the photographs.',
+                                tags: ['Bayer', 'Agency', 'Self-determination', 'Modernism'],
+                                color: '#4A90E2'
+                            },
+                            { 
+                                id: 'individual-self',
+                                icon: '◐', 
+                                title: 'Individual Self (Central)', 
+                                duration: 11, 
+                                start: 67, 
+                                end: 78,
+                                category: 'Core Concept',
+                                desc: 'At the center of that world is the individual self, making their own story.',
+                                quote: 'The individual would make their own story out of the photographs.',
+                                tags: ['Individual', 'Agency', 'Autonomy'],
+                                color: '#AED581'
+                            }
+                        ]
+                    },
+                    {
+                        name: 'Theme Stated',
+                        syntagma: 'SC',
+                        clips: [
+                            { 
+                                id: 'unreal-fairyland',
+                                icon: '◑', 
+                                title: 'Unreal Fairyland (Afeni)', 
+                                duration: 7, 
+                                start: 197, 
+                                end: 204,
+                                category: 'Systemic Critique',
+                                desc: 'The world most Americans lived in concealed the harsh reality of power.',
+                                quote: 'We\'re not being taught to deal with the world as it is. We\'re being taught to deal with this fairyland.',
+                                tags: ['Afeni', 'Illusion', 'Control', 'Power'],
+                                color: '#FFCDD2'
+                            }
+                        ]
+                    }
+                ],
+                metadata: {
+                    totalBeats: 2,
+                    totalShots: 3,
+                    totalDuration: 44
+                }
+            };
+            renderFilm();
+        }
+        
+        function renderFilm() {
+            // Update page title and meta tags
+            const title = filmData.title || 'Documentary Film';
+            document.title = title + ' - Matrix Editor';
+            document.getElementById('pageTitle').textContent = title;
+            document.getElementById('ogTitle').content = title;
+            
+            // Update hero section
+            document.getElementById('heroTitle').textContent = title;
+            document.getElementById('heroLogline').textContent = filmData.logline || 'A documentary assembled through interactive narrative construction';
+            document.getElementById('scoreMain').textContent = filmData.score;
+            document.getElementById('metaBeats').textContent = `${filmData.metadata.totalBeats} beats`;
+            document.getElementById('metaShots').textContent = `${filmData.metadata.totalShots} shots`;
+            document.getElementById('metaDuration').textContent = formatDuration(filmData.metadata.totalDuration);
+            
+            // Set color theme if available
+            const themeColor = filmData.color || '#fff';
+            document.getElementById('filmColor').style.color = themeColor;
+            document.getElementById('scoreDisplay').style.borderColor = themeColor;
+            
+            // Render score breakdown
+            const scoreBreakdownHTML = `
+                <div class="score-item">
+                    <div class="score-item-value">${filmData.stats.base}</div>
+                    <div class="score-item-label">Base</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-item-value">${filmData.stats.sharedClips}</div>
+                    <div class="score-item-label">Shared</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-item-value">${filmData.stats.connections}</div>
+                    <div class="score-item-label">Links</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-item-value">${filmData.stats.dominance}%</div>
+                    <div class="score-item-label">${filmData.stats.dominantCategory}</div>
+                </div>
+            `;
+            document.getElementById('scoreBreakdown').innerHTML = scoreBreakdownHTML;
+            
+            // Render visual timeline
+            let globalClipNumber = 1;
+            const timelineHTML = filmData.beats.map((beat, idx) => {
+                const beatDuration = beat.clips.reduce((sum, c) => sum + c.duration, 0);
+                const beatColor = filmData.color || '#fff';
+                
+                const clipsHTML = beat.clips.map((clip, clipIdx) => {
+                    const clipNum = globalClipNumber++;
+                    return `
+                        <div class="clip-mini" 
+                             onclick="playClip(${idx}, ${clipIdx})" 
+                             data-clip-number="${clipNum}"
+                             title="${clip.title} - ${clip.duration}s">
+                            <div class="clip-icon">${clip.icon}</div>
+                            <div class="clip-title">${clip.title}</div>
+                            <div class="clip-duration">${clip.duration}s</div>
+                            <div class="clip-category">${clip.category || ''}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="beat-lane" style="border-color: ${beatColor};">
+                        <div class="beat-header">
+                            <span>${beat.name}</span>
+                            <span class="beat-number">${beat.syntagma} · ${beatDuration}s · ${beat.clips.length} clips</span>
+                        </div>
+                        <div class="beat-clips">${clipsHTML}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('beatTimeline').innerHTML = timelineHTML;
+            
+            // Build flat clips array
+            allClips = [];
+            filmData.beats.forEach((beat, beatIdx) => {
+                beat.clips.forEach((clip, clipIdx) => {
+                    allClips.push({ ...clip, beatIdx, clipIdx, beatName: beat.name });
+                });
+            });
+            
+            document.getElementById('playerInfo').textContent = 
+                `Ready to play ${allClips.length} clips (${formatDuration(filmData.metadata.totalDuration)})`;
+                
+            // Render other views
+            renderMosaicView();
+            renderTitleSequence();
+        }
+        
+        function switchView(mode) {
+            // Update buttons
+            document.querySelectorAll('.view-mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Switch content
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.getElementById(mode + 'View').classList.add('active');
+        }
+        
+        function renderMosaicView() {
+            const themeColor = filmData.color || '#fff';
+            const mosaicHTML = allClips.map((clip, idx) => `
+                <div class="mosaic-item" onclick="playClipDirect(${idx})" style="border-color: ${themeColor};">
+                    <div class="mosaic-number">${idx + 1}</div>
+                    <iframe src="https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${clip.start}&end=${clip.end}&controls=0&modestbranding=1&mute=1" frameborder="0"></iframe>
+                    <div class="mosaic-overlay">
+                        <div class="mosaic-title">${clip.title}</div>
+                        <div class="mosaic-duration">${clip.duration}s · ${clip.beatName}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('mosaicGrid').innerHTML = mosaicHTML;
+        }
+        
+        function renderTitleSequence() {
+            console.log('=== RENDERING TITLE SEQUENCE ===');
+            console.log('filmData.beats:', filmData.beats);
+            
+            const themeColor = filmData.color || '#fff';
+            let html = '';
+            let globalIdx = 0;
+            
+            filmData.beats.forEach((beat, beatIdx) => {
+                console.log(`Beat ${beatIdx}:`, beat.name, 'clips:', beat.clips.length);
+                
+                html += `<div class="beat-group">`;
+                html += `<div class="beat-group-header" style="border-color: ${themeColor};">`;
+                html += `BEAT ${beatIdx + 1}: ${beat.name.toUpperCase()}`;
+                html += `<span style="opacity: 0.5; font-size: 14px; margin-left: 16px;">${beat.syntagma}</span>`;
+                html += `</div>`;
+                html += `<div class="beat-cards">`;
+                
+                beat.clips.forEach((clip, clipIdx) => {
+                    console.log(`  Clip ${clipIdx}:`, {
+                        title: clip.title,
+                        hasDesc: !!clip.desc,
+                        hasQuote: !!clip.quote,
+                        hasTags: !!clip.tags,
+                        tags: clip.tags
+                    });
+                    
+                    const cardColor = clip.color || themeColor;
+                    const tagsHTML = clip.tags && clip.tags.length > 0 
+                        ? `<div style="font-size: 10px; opacity: 0.4; margin-top: 8px;">${clip.tags.join(' · ')}</div>` 
+                        : '';
+                    const quoteHTML = clip.quote 
+                        ? `<div style="font-size: 11px; opacity: 0.6; font-style: italic; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">"${clip.quote}"</div>` 
+                        : '';
+                    
+                    html += `
+                        <div class="title-card" 
+                             style="--card-index: ${globalIdx}; border-color: ${cardColor};"
+                             onclick="playClipDirect(${globalIdx})">
+                            <div class="title-card-number">SHOT ${globalIdx + 1}</div>
+                            <div class="title-card-icon">${clip.icon}</div>
+                            <div class="title-card-text">${clip.title}</div>
+                            ${clip.desc ? `<div class="title-card-desc">${clip.desc}</div>` : ''}
+                            ${quoteHTML}
+                            <div class="title-card-meta">
+                                <span>${clip.duration}s</span>
+                                ${clip.category ? `<span class="title-card-category">${clip.category}</span>` : ''}
+                            </div>
+                            ${tagsHTML}
+                        </div>
+                    `;
+                    globalIdx++;
+                });
+                
+                html += `</div></div>`;
+            });
+            
+            console.log('Generated HTML length:', html.length);
+            document.getElementById('titleSequence').innerHTML = html;
+            console.log('=== TITLE SEQUENCE RENDERED ===');
+        }
+        
+        function playClipDirect(index) {
+            currentClipIndex = index;
+            
+            // Switch to linear view and play
+            document.querySelectorAll('.view-mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.view-mode-btn').classList.add('active');
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.getElementById('linearView').classList.add('active');
+            
+            playCurrentClip();
+        }
+        
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+        
+        function goBack() {
+            if (window.opener && !window.opener.closed) {
+                window.close();
+            } else {
+                window.location.href = 'matrix-editor.html';
+            }
+        }
+        
+        function shareFilm() {
+            const url = window.location.href;
+            if (navigator.share) {
+                navigator.share({
+                    title: filmData.title || 'My Documentary Film',
+                    text: filmData.logline || 'Check out my film assembled in Matrix Editor',
+                    url: url
+                }).catch(() => copyToClipboard(url));
+            } else {
+                copyToClipboard(url);
+                alert('Link copied to clipboard!');
+            }
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+        }
+        
+        function playFilm() {
+            currentClipIndex = 0;
+            playCurrentClip();
+        }
+        
+        function playCurrentClip() {
+            if (currentClipIndex >= allClips.length) {
+                document.getElementById('playerInfo').textContent = 'Film complete!';
+                document.getElementById('filmPlayer').src = '';
+                return;
+            }
+            
+            const clip = allClips[currentClipIndex];
+            const origin = encodeURIComponent(location.origin);
+            const iframe = document.getElementById('filmPlayer');
+            iframe.src = `https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${clip.start}&end=${clip.end}&controls=1&modestbranding=1&fs=1&autoplay=1&origin=${origin}`;
+            
+            document.getElementById('playerInfo').textContent = 
+                `Playing ${currentClipIndex + 1}/${allClips.length}: ${clip.title} (${clip.duration}s) from Beat: ${clip.beatName}`;
+            
+            // Auto-advance
+            const duration = clip.duration * 1000;
+            setTimeout(() => {
+                currentClipIndex++;
+                playCurrentClip();
+            }, duration + 1500);
+        }
+        
+        function stopFilm() {
+            document.getElementById('filmPlayer').src = '';
+            document.getElementById('playerInfo').textContent = `Stopped at clip ${currentClipIndex + 1}/${allClips.length}`;
+        }
+        
+        function playNext() {
+            if (currentClipIndex < allClips.length - 1) {
+                currentClipIndex++;
+                playCurrentClip();
+            }
+        }
+        
+        function playPrevious() {
+            if (currentClipIndex > 0) {
+                currentClipIndex--;
+                playCurrentClip();
+            }
+        }
+        
+        function playClip(beatIdx, clipIdx) {
+            // Find the clip in allClips array
+            currentClipIndex = allClips.findIndex(c => c.beatIdx === beatIdx && c.clipIdx === clipIdx);
+            playCurrentClip();
+        }
+        
+        function copyPrompts() {
+            let shotList = `${filmData.title}\n`;
+            shotList += `${filmData.logline}\n`;
+            shotList += `\n${'='.repeat(60)}\n\n`;
+            
+            let shotNumber = 1;
+            filmData.beats.forEach((beat, beatIdx) => {
+                shotList += `BEAT ${beatIdx + 1}: ${beat.name.toUpperCase()}\n`;
+                shotList += `Syntagma: ${beat.syntagma}\n`;
+                shotList += `${'-'.repeat(60)}\n\n`;
+                
+                beat.clips.forEach((clip, clipIdx) => {
+                    shotList += `Shot ${shotNumber}: ${clip.title}\n`;
+                    shotList += `  Icon: ${clip.icon}\n`;
+                    shotList += `  Duration: ${clip.duration}s\n`;
+                    shotList += `  Timecode: ${formatTimecode(clip.start)} → ${formatTimecode(clip.end)}\n`;
+                    if (clip.category) shotList += `  Category: ${clip.category}\n`;
+                    if (clip.desc) shotList += `  Description: ${clip.desc}\n`;
+                    if (clip.quote) shotList += `  Quote: "${clip.quote}"\n`;
+                    if (clip.tags && clip.tags.length > 0) shotList += `  Tags: ${clip.tags.join(', ')}\n`;
+                    if (clip.color) shotList += `  Color: ${clip.color}\n`;
+                    if (clip.id) shotList += `  ID: ${clip.id}\n`;
+                    shotList += `\n`;
+                    shotNumber++;
+                });
+                
+                shotList += `\n`;
+            });
+            
+            shotList += `${'='.repeat(60)}\n`;
+            shotList += `Total: ${allClips.length} shots · ${formatDuration(filmData.metadata.totalDuration)}\n`;
+            shotList += `Coherence Score: ${filmData.score}\n`;
+            
+            navigator.clipboard.writeText(shotList).then(() => {
+                const btn = document.getElementById('copyPromptsBtn');
+                btn.classList.add('copied');
+                setTimeout(() => btn.classList.remove('copied'), 1500);
+                
+                document.getElementById('promptPreview').style.display = 'block';
+                document.getElementById('promptPreview').textContent = shotList;
+            });
+        }
+        
+        // Convert beats structure to a3.html compatible format
+        function convertToA3Format() {
+            const selected = [];
+            
+            filmData.beats.forEach((beat, beatIdx) => {
+                beat.clips.forEach((clip, clipIdx) => {
+                    selected.push({
+                        id: clip.id || `${beat.name.toLowerCase().replace(/\s+/g, '-')}-${clipIdx}`,
+                        title: clip.title,
+                        category: clip.category || 'Core Concept',
+                        desc: clip.desc || '',
+                        quote: clip.quote || clip.desc || '',
+                        tags: clip.tags || [beat.name, beat.syntagma],
+                        start: clip.start,
+                        end: clip.end,
+                        color: clip.color || filmData.color || '#fff'
+                    });
+                });
+            });
+            
+            return {
+                title: filmData.title || 'My Story',
+                selected: selected,
+                timestamp: new Date().toISOString(),
+                author: 'Matrix Editor Player',
+                version: '1.0',
+                gameplay: {
+                    score: filmData.score,
+                    stats: filmData.stats,
+                    beats: filmData.beats.map(b => ({
+                        name: b.name,
+                        syntagma: b.syntagma,
+                        clipCount: b.clips.length
+                    }))
+                }
+            };
+        }
+        
+        function downloadOTI() {
+            const a3Compatible = convertToA3Format();
+            const filename = `${sanitizeFilename(filmData.title)}_story.json`;
+            downloadFile(JSON.stringify(a3Compatible, null, 2), filename, 'application/json');
+        }
+        
+        function downloadStorymap() {
+            let storymap = `# ${filmData.title}\n\n${filmData.logline}\n\n`;
+            storymap += `Coherence Score: ${filmData.score}\n`;
+            storymap += `Runtime: ${formatDuration(filmData.metadata.totalDuration)} (${filmData.metadata.totalShots} shots)\n\n`;
+            storymap += `${'='.repeat(60)}\n\n`;
+            
+            let shotNumber = 1;
+            filmData.beats.forEach((beat, idx) => {
+                storymap += `## BEAT ${idx + 1}: ${beat.name}\n\n`;
+                storymap += `**Syntagma:** ${beat.syntagma}\n`;
+                storymap += `**Duration:** ${beat.clips.reduce((s, c) => s + c.duration, 0)}s\n`;
+                storymap += `**Shots:** ${beat.clips.length}\n\n`;
+                
+                beat.clips.forEach((clip, clipIdx) => {
+                    storymap += `### Shot ${shotNumber}: ${clip.title}\n\n`;
+                    storymap += `- Icon: ${clip.icon}\n`;
+                    storymap += `- Duration: ${clip.duration}s\n`;
+                    storymap += `- Timecode: ${formatTimecode(clip.start)} → ${formatTimecode(clip.end)}\n`;
+                    if (clip.category) storymap += `- Category: ${clip.category}\n`;
+                    if (clip.desc) storymap += `- Description: ${clip.desc}\n`;
+                    if (clip.quote) storymap += `- Quote: _"${clip.quote}"_\n`;
+                    if (clip.tags && clip.tags.length > 0) storymap += `- Tags: ${clip.tags.join(', ')}\n`;
+                    if (clip.color) storymap += `- Color: ${clip.color}\n`;
+                    storymap += `\n`;
+                    shotNumber++;
+                });
+                
+                storymap += `---\n\n`;
+            });
+            
+            downloadFile(storymap, `${sanitizeFilename(filmData.title)}_script.md`, 'text/markdown');
+        }
+        
+        function formatTimecode(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            const f = Math.floor((seconds % 1) * 30);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+        }
+        
+        function sanitizeFilename(str) {
+            return str.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+        }
+        
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Initialize
+        loadFilmData();
+    </script>
+</body>
+</html>

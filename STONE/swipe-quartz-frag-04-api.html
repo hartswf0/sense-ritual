@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fragment — Swipe · Compile · Chat (API)</title>
+  <meta name="theme-color" content="#000000">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Helvetica Neue', Arial, system-ui, -apple-system, sans-serif; }
+    body { background: #f5f5f5; color: #000; touch-action: none; user-select: none; display: flex; flex-direction: column; }
+
+    :root{ --ink:#000; --paper:#f5f5f5; --card:#fff; --line:#000; --muted:#888; --accent:#111; --good:#2ECC71; --warn:#F1C40F; --bad:#E74C3C; --info:#3498DB; --radius:12px; --gap:12px; --shadow:0 12px 48px rgba(0,0,0,.15); }
+
+    .game { display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr; height: 100vh; position: relative; flex: 1; overflow: hidden; }
+    .alley-menu { position: fixed; left: 0; top: 50%; transform: translateY(-50%); width: 48px; background: var(--ink); border-right: 2px solid var(--line); z-index: 900; display: flex; flex-direction: column; height: auto; border-radius: 0 var(--radius) var(--radius) 0; overflow: hidden; }
+    .alley-btn { flex: 1; border: none; background: transparent; cursor: pointer; display: grid; place-items:center; font-size: 18px; color: var(--paper); transition: all .15s; border-bottom: 1px solid rgba(255,255,255,.12); padding: 12px 0; }
+    .alley-btn:last-child { border-bottom: none; }
+    .alley-btn:active, .alley-btn.active { background:#222; transform: scale(.95); }
+    .alley-btn.active { background: var(--accent); }
+
+    .card-stack { grid-column: 1 / span 2; display: grid; place-items: center; padding: 32px; background: var(--paper); overflow: hidden; position: relative; height: 100%; width: 100%; }
+    .card { position: absolute; width: 100%; max-width: 520px; height: 72vh; background: var(--card); border: 3px solid var(--line); cursor: grab; transition: transform .25s ease, opacity .25s ease; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); border-radius: var(--radius); will-change: transform, opacity; }
+    .card.swiping { transition: none; cursor: grabbing; }
+    .card-header { padding: 24px; font-weight: 900; font-size: 18px; line-height: 1.2; color: #fff; min-height: 96px; display: flex; flex-direction: column; justify-content: center; letter-spacing: -.25px; }
+    .card-category { font-size: 10px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; letter-spacing: 2px; font-weight: 800; }
+    .card-body { padding: 18px; background: var(--paper); color: var(--ink); overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.55; }
+    .card-desc { margin-bottom: 10px; color: #333; font-weight: 500; }
+    .card-quote { font-style: italic; font-size: 12px; padding: 12px; background: #fff; border-left: 4px solid var(--ink); margin: 12px 0; color: #555; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee; letter-spacing: .5px; }
+    .card-time { font-size: 11px; color: #666; margin-top: 8px; font-weight: 700; letter-spacing: .5px; }
+    .inline-player { aspect-ratio: 16 / 9; border: 2px solid var(--ink); width: 100%; background: #000; margin: 10px 0 0; border-radius: 8px; overflow: hidden; }
+    .inline-player iframe{ width:100%; height:100%; border:0 }
+
+    .card-controls { padding: 12px 16px; border-top: 2px solid var(--ink); background: var(--paper); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .control-btn { padding: 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font-weight: 800; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; border-radius: 8px; }
+    .control-btn.ghost{ background: var(--paper); color: var(--ink); }
+
+    .swipe-flash { position: fixed; inset: 0; pointer-events: none; z-index: 25; }
+    .swipe-flash.accept { animation: flashAccept .45s ease-out; }
+    .swipe-flash.reject { animation: flashReject .45s ease-out; }
+    .swipe-flash.info { animation: flashInfo .45s ease-out; }
+    @keyframes flashAccept { 0%{inset:0; background: rgba(46,204,113,.28)} 100%{inset:-20px; background: rgba(46,204,113,0)} }
+    @keyframes flashReject { 0%{inset:0; background: rgba(231,76,60,.28)} 100%{inset:-20px; background: rgba(231,76,60,0)} }
+    @keyframes flashInfo   { 0%{inset:0; background: rgba(52,152,219,.28)} 100%{inset:-20px; background: rgba(52,152,219,0)} }
+
+    .swipe-guide { position: absolute; display: flex; gap: 2px; font-weight: 900; font-size: 12px; text-transform: uppercase; opacity: 0; letter-spacing: 1px; pointer-events: none; z-index: 5; transition: opacity .15s; }
+    .swipe-guide.right { top: 50%; right: 40px; transform: translateY(-50%); }
+    .swipe-guide.left  { top: 50%; left:  40px; transform: translateY(-50%); }
+    .swipe-guide.up    { top: 60px; left: 50%; transform: translateX(-50%); }
+    .swipe-guide.down  { bottom: 110px; left: 50%; transform: translateX(-50%); }
+
+    .collection-panel, .chat-panel, .settings-panel, .prompt-lab-panel { position: fixed; top: 0; bottom: 0; background: var(--paper); z-index: 800; overflow: hidden; transition: width .25s ease; display: grid; width: 0; }
+    .collection-panel { right: 0; border-left: 3px solid var(--ink); grid-template-rows: auto auto 1fr;}
+    .chat-panel       { left: 48px; border-right: 3px solid var(--ink); grid-template-rows: auto auto 1fr auto;}
+    .prompt-lab-panel { left: 48px; border-right: 3px solid var(--ink); grid-template-rows: auto 1fr;}
+    .settings-panel   { right: 0; border-left: 3px solid var(--ink); grid-template-rows: auto 1fr;}
+
+    .collection-panel.open { width: 460px; }
+    .chat-panel.open       { width: 420px; }
+    .prompt-lab-panel.open { width: 520px; }
+    .settings-panel.open   { width: 420px; }
+
+    .collection-header, .chat-header, .prompt-lab-header, .settings-header { padding: 18px; border-bottom: 3px solid var(--ink); background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: space-between; }
+    .collection-title, .chat-title { font-weight: 900; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+
+    .chat-mini-profile{ padding:12px; border-bottom:2px solid var(--ink); background:var(--paper); font-size:11px; }
+    .chat-thread{ overflow: auto; padding: 12px; display: grid; gap: 8px; align-content: start; }
+    .chat-bubble{ background: var(--card); border:2px solid var(--ink); padding:10px; border-radius: 8px; font-size: 13px; line-height:1.45 }
+    .chat-bubble.me{ background:#000; color:#fff }
+
+    .chat-input-area { display: grid; grid-template-rows: auto auto 1fr; gap: 4px; padding: 12px; border-top:3px solid var(--ink); background: var(--paper); }
+    .chat-input-row{ display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .chat-input-row input{ padding: 10px; border:2px solid var(--ink); background: var(--card); border-radius:8px; width: 100%; }
+    .chat-input-row button{ padding: 10px 12px; border:2px solid var(--ink); background: var(--ink); color:var(--paper); font-weight:800; border-radius:8px; }
+
+    .collection-controls { padding: 12px; border-bottom: 2px solid var(--ink); background: var(--paper); display: grid; gap: 8px; }
+    .control-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .control-select { padding: 8px; border: 2px solid var(--ink); background: var(--paper); font-size: 10px; font-weight: 700; border-radius: 6px; flex: 1; min-width: 100px; }
+
+    .prompt-lab-body { padding: 12px; overflow-y: auto; display: grid; gap: 12px; }
+    .prompt-lab-card { background: var(--card); border:2px solid var(--ink); border-radius: 8px; padding: 12px; display: grid; gap:8px; }
+    .prompt-lab-card label { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .prompt-lab-card select, .prompt-lab-card textarea, .settings-body input, .settings-body textarea { width: 100%; padding: 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); font-size: 11px; }
+
+    @media (max-width: 840px){
+      .collection-panel.open{ width: 100vw }
+      .chat-panel.open{ width: 85vw }
+      .settings-panel.open{ width: 90vw }
+      .prompt-lab-panel.open{ width: 95vw; }
+      .card{ max-width: 92vw; height: 68vh }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="alley-menu">
+      <button class="alley-btn" id="chatBtn" title="Chat / Matches">◊</button>
+      <button class="alley-btn" id="collectionBtn" title="Collection">⊞</button>
+      <button class="alley-btn" id="promptLabBtn" title="Prompt Lab / Compiler">∞</button>
+      <button class="alley-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+
+    <div class="card-stack" id="cardStack"></div>
+
+    <aside class="chat-panel" id="chatPanel">
+      <div class="chat-header"><div class="chat-title">Matches</div><div style="font-weight:900">◊</div></div>
+      <div class="chat-mini-profile" id="chatProfile">No fragment selected.</div>
+      <div class="chat-thread" id="chatThread" aria-live="polite"></div>
+      <div class="chat-input-area">
+        <div class="chat-hints" id="chatHints">Think: <strong>What makes this clip essential?</strong> Reference its themes, context, or emotional core.</div>
+        <div class="char-counter" id="charCounter">0 / 200</div>
+        <div class="chat-input-row">
+          <input id="chatInput" placeholder="Say something persuasive…" maxlength="200" />
+          <button id="chatSend">Send</button>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="collection-panel" id="collectionPanel">
+      <div class="collection-header">
+        <div><div class="collection-title">Collection</div><div class="collection-count" id="collectionCount" style="font-size:12px;margin-top:4px;opacity:.75">0</div></div>
+        <div class="collection-view-toggle"><button class="toggle-btn active" id="toggleList" title="List">≡</button><button class="toggle-btn" id="toggleGrid" title="Grid">⊞</button></div>
+      </div>
+      <div class="collection-controls">
+        <div class="control-row">
+          <select class="control-select" id="sortSelect"><option value="index">Sort: Order Added</option><option value="category">Sort: Category</option><option value="duration">Sort: Duration</option><option value="status">Sort: Status</option></select>
+          <select class="control-select" id="filterSelect"><option value="all">Filter: All</option><option value="joined">Filter: Joined</option><option value="compiled">Filter: Compiled</option><option value="pending">Filter: Pending</option><option value="unmatched">Filter: Unmatched</option></select>
+        </div>
+      </div>
+      <div class="collection-content"><div class="list-view" id="listView"></div><div class="grid-view" id="gridView" style="display:none"></div></div>
+    </aside>
+
+    <aside class="prompt-lab-panel" id="promptLabPanel">
+      <div class="prompt-lab-header">Compiler Lab</div>
+      <div class="prompt-lab-body">
+        <div class="prompt-lab-card">
+          <label for="compilerSelect">Compiler (POML Spout)</label>
+          <select id="compilerSelect">
+            <option value="Stanislavski">Stanislavski</option>
+            <option value="CharacterGrowth">CharacterGrowth</option>
+            <option value="PlotDynamics">PlotDynamics</option>
+            <option value="MagicCompiler07">MagicCompiler07</option>
+            <option value="compiler03">Compiler03</option>
+            <option value="StateBureaucracy">StateBureaucracy</option>
+          </select>
+        </div>
+        <div class="prompt-lab-card">
+          <label for="hydrationHints">Hydration Hints (Optional)</label>
+          <textarea id="hydrationHints" placeholder="essence=defiant teacher; wound=betrayal; need=shared reality; voice=short,didactic"></textarea>
+        </div>
+        <div class="prompt-lab-card">
+          <label>Actions</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="compileCurrentBtn">Compile Current Fragment</button>
+            <button id="compileAllBtn">Compile All Collected</button>
+            <button id="viewSoulBtn" disabled>View Compiled Soul JSON</button>
+          </div>
+        </div>
+        <div class="prompt-lab-card">
+          <label>Compiled Soul Preview (Last)</label>
+          <div class="prompt-output" id="soulPreview">No soul compiled yet.</div>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="settings-panel" id="settingsPanel">
+      <div class="settings-header">Settings</div>
+      <div class="settings-body" style="padding:12px; display:grid; gap:12px; overflow:auto">
+        <div class="prompt-lab-card">
+          <label>AI Mode</label>
+          <select id="aiMode">
+            <option value="simulate">Simulate (offline)</option>
+            <option value="openai">Direct OpenAI</option>
+            <option value="proxy">Custom Proxy</option>
+          </select>
+          <div class="settings-note" style="font-size:11px;color:#333">For production, use a proxy endpoint you control to avoid exposing API keys and to solve CORS.</div>
+        </div>
+        <div class="prompt-lab-card" id="openaiSettings">
+          <label for="apiKey">OpenAI API Key</label>
+          <input type="password" id="apiKey" placeholder="sk-…" />
+          <label for="apiModel">Model</label>
+          <input type="text" id="apiModel" placeholder="gpt-4o-mini" />
+          <label for="apiTemperature">Temperature</label>
+          <input type="number" id="apiTemperature" min="0" max="2" step="0.1" value="0.7" />
+        </div>
+        <div class="prompt-lab-card" id="proxySettings">
+          <label for="proxyUrl">Proxy URL (POST)</label>
+          <input type="text" id="proxyUrl" placeholder="/api/chat" />
+          <div class="settings-note" style="font-size:11px;color:#333">Expected body: { model, messages, temperature }. Should return OpenAI-compatible JSON.</div>
+        </div>
+        <div class="prompt-lab-card">
+          <button id="testApiBtn">Test API Connection</button>
+          <div class="settings-note" style="font-size:11px;color:#333">Saves settings locally. This app will fall back to simulation on error.</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="overlay" id="completeOverlay"><div class="complete-screen"><div class="complete-title">Sequence Complete</div><div class="complete-actions"><button class="complete-btn" id="playAgainBtn">Begin Again</button><button class="complete-btn" id="exportFinalBtn">Export</button></div></div></div>
+  </div>
+
+  <script>
+    // Utils
+    function toast(m){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 15px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:.5px;z-index:9999;opacity:0;transition:opacity .3s, transform .3s';t.textContent=m;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='1';t.style.transform='translateX(-50%) translateY(-10px)';},10);setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(10px)';},2200);setTimeout(()=>t.remove(),2600)}
+    const fmt = s=>{const m=Math.floor(s/60);const ss=String(Math.floor(s%60)).padStart(2,'0');return `${m}:${ss}`};
+    const getColor = c=>({'Systemic Control':'#E74C3C','Economic Event':'#F39C12','Scientific Theory':'#3498DB','Future Scenario':'#2ECC71','Core Concept':'#2ECC71','Culture/Identity':'#9B59B6','Media Apparatus':'#C8E6C9','Theory':'#9CCC65','Systemic Critique':'#EF5350','Systemic Event':'#BDBDBD'})[c]||'#222';
+
+    // Minimal sample data
+    const rawConcepts=[
+      { id:'demo-01', title:'Vector World (AI Mythology)', category:'Core Concept', desc:'Machines over meaning.', color:'#0097A7', tags:['AI','Mythology','Control'], quote:'The world is too complicated for us... but not for the machines.', start:3628, end:3652 },
+      { id:'demo-02', title:'Graeber (World We Make)', category:'Core Concept', desc:'Agency and redesign.', color:'#4CAF50', tags:['Graeber','Agency'], quote:'The world is something we make...', start:6678, end:6690 }
+    ];
+
+    // State
+    const LOCAL_STORAGE_KEY='frag04api_state_v1';
+    const state={
+      deck:[...rawConcepts], story:[], swiped:new Set(), current:null, selected:null,
+      aiMode:'simulate', apiKey:'', apiModel:'gpt-4o-mini', apiTemperature:0.7, proxyUrl:'/api/chat',
+      personaCache:{}
+    };
+
+    // Persistence
+    function save(){const toSave={story:state.story, swiped:[...state.swiped], aiMode:state.aiMode, apiKey:state.apiKey, apiModel:state.apiModel, apiTemperature:state.apiTemperature, proxyUrl:state.proxyUrl, personaCache:state.personaCache}; localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(toSave));}
+    function load(){try{const s=JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)||'{}');Object.assign(state,{story:s.story||[], swiped:new Set(s.swiped||[]), aiMode:s.aiMode||'simulate', apiKey:s.apiKey||'', apiModel:s.apiModel||'gpt-4o-mini', apiTemperature:s.apiTemperature??0.7, proxyUrl:s.proxyUrl||'/api/chat', personaCache:s.personaCache||{}});}catch(e){}}
+
+    // Settings UI sync
+    function syncSettingsToUI(){document.getElementById('aiMode').value=state.aiMode;document.getElementById('apiKey').value=state.apiKey;document.getElementById('apiModel').value=state.apiModel;document.getElementById('apiTemperature').value=state.apiTemperature;document.getElementById('proxyUrl').value=state.proxyUrl;toggleSettingsVisibility();}
+    function toggleSettingsVisibility(){const mode=document.getElementById('aiMode').value;document.getElementById('openaiSettings').style.display=mode==='openai'?'grid':'none';document.getElementById('proxySettings').style.display=mode==='proxy'?'grid':'none';}
+
+    // Central API call with backoff and modes
+    async function callChatAPI({messages, model, temperature}){
+      const mode=state.aiMode;
+      if(mode==='simulate' || (!state.apiKey && mode==='openai')){ // simulate
+        return { content: simulateAssistant(messages) };
+      }
+      const body=JSON.stringify({ model, messages, temperature });
+      const headers={'Content-Type':'application/json'};
+      let url='', extraHeaders={};
+      if(mode==='openai') { url='https://api.openai.com/v1/chat/completions'; extraHeaders={ 'Authorization':`Bearer ${state.apiKey}` }; }
+      if(mode==='proxy') { url=state.proxyUrl; }
+      const finalHeaders={...headers, ...extraHeaders};
+
+      let attempt=0, lastErr=null;
+      while(attempt<3){
+        try{
+          const resp=await fetch(url,{ method:'POST', headers:finalHeaders, body });
+          if(resp.status===429||resp.status>=500){ throw new Error(`Upstream ${resp.status}`); }
+          if(!resp.ok){ const errTxt=await resp.text(); throw new Error(`HTTP ${resp.status}: ${errTxt.slice(0,200)}`); }
+          const data=await resp.json();
+          const text=data?.choices?.[0]?.message?.content?.trim() || '(No response)';
+          return { content:text };
+        }catch(e){ lastErr=e; attempt++; await new Promise(r=>setTimeout(r, 400*attempt)); }
+      }
+      toast(`API error, using simulation: ${lastErr?.message||'Unknown'}`);
+      return { content: simulateAssistant(messages) };
+    }
+
+    function simulateAssistant(messages){
+      const user=messages.filter(m=>m.role==='user').slice(-1)[0]?.content||'';
+      if(/decision/i.test(user)) return 'DECISION: JOIN FILM OPTIMISTIC ALIGNMENT';
+      return 'Give me a concrete beat before and after me, and name the thematic bridge. TWO WORD MOOD';
+    }
+
+    // Persona compile (soul)
+    async function compilePersona(seed, compiler, hints){
+      const cacheKey=`${seed.id}::${compiler}`; if(state.personaCache[cacheKey]) return state.personaCache[cacheKey];
+      const system=`You are a Character Compiler. Output one compact JSON. Keep it playable and specific.`;
+      const user=`Seed:${JSON.stringify(seed)}\nCompiler:${compiler}\nHints:${JSON.stringify(hints||{})}`;
+      const { content }=await callChatAPI({ model: state.apiModel, temperature: state.apiTemperature, messages:[{role:'system',content:system},{role:'user',content:user}]});
+      let text=content.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+      try{ const soul=JSON.parse(text); state.personaCache[cacheKey]=soul; save(); return soul; }catch(e){ const soul={ Identity:{ Moniker: seed.title, Essence: 'Simulated essence' }, Changelog:[{v:'sim', edit:'fallback'}] }; state.personaCache[cacheKey]=soul; save(); return soul; }
+    }
+
+    // UI logic
+    function buildEmbed(c){ const videoId='BQ2n6SN7gOY'; const start=Math.floor(c.start||0); const end=Math.floor(c.end||start+30); return `https://www.youtube.com/embed/${videoId}?start=${start}&end=${end}&playsinline=1&autoplay=1&mute=0&rel=0&modestbranding=1`; }
+    function renderCard(f){ const stack=document.getElementById('cardStack'); stack.innerHTML=''; const color=getColor(f.category); const el=document.createElement('div'); el.className='card'; el.innerHTML=`
+      <div class="card-header" style="background:${color}">
+        <div class="card-category">${f.category||'Concept'}</div>
+        <div>${f.title||'Untitled'}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-desc">${f.desc||''}</div>
+        ${f.quote?`<div class='card-quote'>"${f.quote}"</div>`:''}
+        ${f.tags?`<div class='card-tags'>${f.tags.join(' · ')}</div>`:''}
+        <div class="card-time">${fmt(f.start||0)} – ${fmt(f.end||(f.start||0)+30)}</div>
+        <div class="inline-player"><iframe src="${buildEmbed(f)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+      </div>
+      <div class="card-controls">
+        <button class="control-btn" id="collectBtn">Collect</button>
+        <button class="control-btn ghost" id="chatBtn2">Chat</button>
+      </div>`;
+      stack.appendChild(el);
+      document.getElementById('collectBtn').onclick=()=>collect(f);
+      document.getElementById('chatBtn2').onclick=()=>{ selectFragment(f); togglePanel('chatPanel'); };
+    }
+
+    function showNext(){ if(state.deck.length===0){ toast('No more cards'); return; } state.current=state.deck.shift(); renderCard(state.current); save(); }
+    function collect(f){ state.story.push({...f}); state.swiped.add(f.id); toast('Collected'); selectFragment(f); togglePanel('chatPanel'); save(); showNext(); }
+
+    // Collection
+    function updateCollection(){ document.getElementById('collectionCount').textContent=`${state.story.length}`; const list=document.getElementById('listView'); list.innerHTML=state.story.map((f,i)=>`<div style="background:#fff;border:2px solid #000;border-radius:8px;padding:10px;display:grid;grid-template-columns:50px 1fr auto;gap:8px;align-items:center">
+      <div style="width:50px;height:50px;background:${getColor(f.category)};border:2px solid #000;border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:900">${i+1}</div>
+      <div><div style="font-weight:800;font-size:12px">${f.title}</div><div style="font-size:10px;opacity:.7">${f.category} · ${fmt(f.start)}–${fmt(f.end)}</div></div>
+      <div style="display:grid;gap:6px"><button data-act="chat" data-id="${f.id}">Chat</button><button data-act="remove" data-id="${f.id}">×</button></div>
+    </div>`).join('');
+      list.querySelectorAll('button').forEach(b=>b.onclick=(e)=>{const id=e.target.getAttribute('data-id'); const f=state.story.find(x=>x.id===id); const act=e.target.getAttribute('data-act'); if(act==='chat'){ selectFragment(f); togglePanel('chatPanel'); } else { const idx=state.story.findIndex(x=>x.id===id); if(idx>-1){ state.story.splice(idx,1); save(); updateCollection(); } }});
+    }
+
+    // Panels
+    const panels={ chatPanel: document.getElementById('chatPanel'), collectionPanel: document.getElementById('collectionPanel'), promptLabPanel: document.getElementById('promptLabPanel'), settingsPanel: document.getElementById('settingsPanel') };
+    function closeAll(){ Object.values(panels).forEach(p=>p.classList.remove('open')); document.querySelectorAll('.alley-btn').forEach(b=>b.classList.remove('active')); }
+    function togglePanel(key){ const el=panels[key]; const was=el.classList.contains('open'); closeAll(); if(!was){ el.classList.add('open'); } if(key==='collectionPanel') updateCollection(); if(key==='chatPanel') renderChatThread(); if(key==='promptLabPanel') updatePromptLabState(state.selected); if(key==='settingsPanel') syncSettingsToUI(); }
+    document.getElementById('chatBtn').onclick=()=>togglePanel('chatPanel');
+    document.getElementById('collectionBtn').onclick=()=>togglePanel('collectionPanel');
+    document.getElementById('promptLabBtn').onclick=()=>togglePanel('promptLabPanel');
+    document.getElementById('settingsBtn').onclick=()=>togglePanel('settingsPanel');
+
+    // Chat
+    function threadKey(f){ return f?`frag:${f.id}`:'frag:none'; }
+    function getChats(){ return JSON.parse(localStorage.getItem('fragment_chats')||'{}'); }
+    function setChats(all){ localStorage.setItem('fragment_chats', JSON.stringify(all)); }
+    function getChatData(f){ const k=threadKey(f); const all=getChats(); if(!all[k]) all[k]={ messages:[], turnCount:0, decision:null, conviction:50 }; setChats(all); return all[k]; }
+    function setChatData(f,data){ const k=threadKey(f); const all=getChats(); all[k]=data; setChats(all); }
+    function selectFragment(f){ state.selected=state.story.find(x=>x.id===f.id) || f; renderChatProfile(); renderChatThread(); save(); }
+
+    function renderChatProfile(){ const f=state.selected; const el=document.getElementById('chatProfile'); if(!f){ el.textContent='No fragment selected.'; return;} const color=getColor(f.category); el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:32px;height:32px;background:${color};border:2px solid var(--ink);border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px">${(state.story.indexOf(f)+1)||'?'}</div><strong style="flex:1">${f.title}</strong></div><div style="opacity:.7;font-size:10px">${f.category} · ${fmt(f.start)}–${fmt(f.end)}</div>`; }
+
+    async function handleSend(){ const f=state.selected; if(!f) return; const input=document.getElementById('chatInput'); const text=input.value.trim(); if(!text) return; const d=getChatData(f); d.messages.push({role:'user',content:text}); d.turnCount++; setChatData(f,d); input.value=''; renderChatThread();
+      // Build prompt
+      const sys=`You are "${f.title}" — a sentient film fragment. Be terse, specific, playable. 2–4 sentences.`;
+      const msgs=[{role:'system',content:sys}, ...d.messages.map(m=>({role:m.role, content:m.content}))];
+      // Loading bubble
+      pushAssistant('…');
+      try{
+        const { content }=await callChatAPI({messages:msgs, model:state.apiModel, temperature:state.apiTemperature});
+        replaceLastAssistant(content);
+      }catch(e){ replaceLastAssistant(`(error) ${e.message}`); }
+    }
+
+    function pushAssistant(text){ const t=document.getElementById('chatThread'); const b=document.createElement('div'); b.className='chat-bubble'; b.dataset.loading='1'; b.textContent=text; t.appendChild(b); t.scrollTop=t.scrollHeight; }
+    function replaceLastAssistant(text){ const t=document.getElementById('chatThread'); const b=[...t.querySelectorAll('.chat-bubble')].slice(-1)[0]; if(b&&b.dataset.loading){ b.dataset.loading='0'; b.textContent=text; } }
+    function renderChatThread(){ const f=state.selected; const t=document.getElementById('chatThread'); if(!f){ t.innerHTML=''; return;} const d=getChatData(f); t.innerHTML=d.messages.map(m=>`<div class="chat-bubble ${m.role==='user'?'me':''}">${m.content.replace(/[<>&]/g,'')}</div>`).join(''); t.scrollTop=t.scrollHeight; }
+
+    document.getElementById('chatSend').onclick=handleSend;
+    document.getElementById('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); handleSend(); }});
+
+    // Prompt Lab
+    function updatePromptLabState(fragment){ const viewSoulBtn=document.getElementById('viewSoulBtn'); const soulPreview=document.getElementById('soulPreview'); if(!fragment){ viewSoulBtn.disabled=true; soulPreview.textContent='No fragment selected.'; return;} const compiler=document.getElementById('compilerSelect').value; const cacheKey=`${fragment.id}::${compiler}`; const soul=state.personaCache[cacheKey]; if(soul){ viewSoulBtn.disabled=false; soulPreview.textContent=JSON.stringify(soul,null,2);} else { viewSoulBtn.disabled=true; soulPreview.textContent=`No compiled soul for "${fragment.title}" (${compiler}).`; } }
+    document.getElementById('compileCurrentBtn').onclick=async()=>{ const f=state.selected; if(!f){ toast('Select a fragment from Collection.'); return;} const compiler=document.getElementById('compilerSelect').value; const hintsRaw=document.getElementById('hydrationHints').value.trim(); const hints={}; if(hintsRaw){ hintsRaw.split(';').forEach(p=>{ const [k,v]=(p||'').split('=').map(s=>s.trim()); if(k&&v) hints[k]=v; }); }
+      toast(`Compiling soul with ${compiler}…`); const soul=await compilePersona(f, compiler, hints); f.soul=soul; updatePromptLabState(f); save(); };
+
+    // Settings handlers
+    document.getElementById('aiMode').onchange=(e)=>{ state.aiMode=e.target.value; toggleSettingsVisibility(); save(); };
+    document.getElementById('apiKey').oninput=e=>{ state.apiKey=e.target.value; save(); };
+    document.getElementById('apiModel').oninput=e=>{ state.apiModel=e.target.value; save(); };
+    document.getElementById('apiTemperature').oninput=e=>{ state.apiTemperature=parseFloat(e.target.value||'0.7'); save(); };
+    document.getElementById('proxyUrl').oninput=e=>{ state.proxyUrl=e.target.value; save(); };
+    document.getElementById('testApiBtn').onclick=async()=>{ try{ const {content}=await callChatAPI({ model:state.apiModel, temperature:0.1, messages:[{role:'system',content:'You are a healthcheck.'},{role:'user',content:'Reply with OK'}]}); toast(`Test: ${String(content).slice(0,40)}`);}catch(e){ toast(`Test failed: ${e.message}`);} };
+
+    // Init
+    function init(){ load(); syncSettingsToUI(); state.deck=state.deck.filter(x=>!state.swiped.has(x.id)); if(state.deck.length===0){ state.deck=[...rawConcepts]; } showNext(); }
+    init();
+  </script>
+</body>
+</html>

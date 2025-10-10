@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fragment — Swipe · Collect · Chat</title>
+  <meta name="theme-color" content="#000000" />
+  <style>
+    /* ——— RESET / BASICS ——— */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Helvetica Neue', Arial, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { background: #f5f5f5; color: #000; touch-action: none; user-select: none; }
+
+    :root{
+      --ink:#000; --paper:#f5f5f5; --card:#fff; --line:#000; --muted:#888; --accent:#111; --good:#2ECC71; --warn:#F1C40F; --bad:#E74C3C; --info:#3498DB;
+      --radius:12px; --gap:12px; --tap:12px; --shadow:0 12px 48px rgba(0,0,0,.15);
+    }
+
+    .game { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr; height: 100vh; position: relative; }
+
+    /* ——— ALLEY MENU ——— */
+    .alley-menu { position: fixed; left: 0; top: 50%; transform: translateY(-50%); width: 48px; background: var(--ink); border-right: 2px solid var(--line); z-index: 900; display: flex; flex-direction: column; height: 240px; border-radius: 0 var(--radius) var(--radius) 0; overflow: hidden; }
+    .alley-btn { flex: 1; border: none; background: transparent; cursor: pointer; display: grid; place-items:center; font-size: 18px; color: var(--paper); transition: all .15s; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .alley-btn:last-child { border-bottom: none; }
+    .alley-btn:active { background: #222; transform: scale(.95); }
+    .alley-btn.active{ background:#000; }
+
+    /* ——— CARD STACK ——— */
+    .card-stack { grid-column: 1 / span 3; display: grid; place-items: center; padding: 32px; background: var(--paper); overflow: hidden; position: relative; }
+
+    .card { position: absolute; width: 100%; max-width: 520px; height: 72vh; background: var(--card); border: 3px solid var(--line); cursor: grab; transition: transform .25s ease, opacity .25s ease; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); border-radius: var(--radius); }
+    .card.swiping { transition: none; cursor: grabbing; }
+
+    .card-header { padding: 24px; font-weight: 900; font-size: 18px; line-height: 1.2; color: #fff; min-height: 96px; display: flex; flex-direction: column; justify-content: center; letter-spacing: -.25px; }
+    .card-category { font-size: 10px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; letter-spacing: 2px; font-weight: 800; }
+
+    .card-body { padding: 18px; background: var(--paper); color: var(--ink); overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.55; }
+    .card-desc { margin-bottom: 10px; color: #333; font-weight: 500; }
+    .card-quote { font-style: italic; font-size: 12px; padding: 12px; background: #fff; border-left: 4px solid var(--ink); margin: 12px 0; color: #555; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee; letter-spacing: .5px; }
+    .card-time { font-size: 11px; color: #666; margin-top: 8px; font-weight: 700; letter-spacing: .5px; }
+
+    .inline-player { aspect-ratio: 16 / 9; border: 2px solid var(--ink); width: 100%; background: #000; margin: 10px 0 0; border-radius: 8px; overflow: hidden; }
+    .inline-player iframe{ width:100%; height:100%; border:0 }
+
+    .card-controls { padding: 12px 16px; border-top: 2px solid var(--ink); background: var(--paper); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .control-btn { padding: 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font-weight: 800; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; border-radius: 8px; }
+    .control-btn.ghost{ background: var(--paper); color: var(--ink); }
+    .control-btn:active { background: var(--paper); color: var(--ink); }
+
+    /* ——— SWIPE FEEDBACK ——— */
+    .swipe-flash { position: fixed; pointer-events: none; z-index: 25; }
+    .swipe-flash.accept { animation: flashAccept .45s ease-out; }
+    .swipe-flash.reject { animation: flashReject .45s ease-out; }
+    .swipe-flash.info { animation: flashInfo .45s ease-out; }
+    .swipe-flash.predict { animation: flashPredict .45s ease-out; }
+    @keyframes flashAccept { 0%{inset:0; background: rgba(46,204,113,.28)} 100%{inset:-20px; background: rgba(46,204,113,0)} }
+    @keyframes flashReject { 0%{inset:0; background: rgba(231,76,60,.28)} 100%{inset:-20px; background: rgba(231,76,60,0)} }
+    @keyframes flashInfo   { 0%{inset:0; background: rgba(52,152,219,.28)} 100%{inset:-20px; background: rgba(52,152,219,0)} }
+    @keyframes flashPredict{ 0%{inset:0; background: rgba(241,196,15,.28)} 100%{inset:-20px; background: rgba(241,196,15,0)} }
+
+    .swipe-guide { position: absolute; display: flex; gap: 2px; font-weight: 900; font-size: 12px; text-transform: uppercase; opacity: 0; letter-spacing: 1px; pointer-events: none; z-index: 5; transition: opacity .15s; }
+    .swipe-guide.right { top: 50%; right: 40px; transform: translateY(-50%); }
+    .swipe-guide.left  { top: 50%; left:  40px; transform: translateY(-50%); }
+    .swipe-guide.up    { top: 60px; left: 50%; transform: translateX(-50%); }
+    .swipe-guide.down  { bottom: 110px; left: 50%; transform: translateX(-50%); }
+
+    /* ——— COLLECTION PANEL (SNAP GRID & REORDER) ——— */
+    .collection-panel { position: fixed; right: 0; top: 0; width: 0; height: 100vh; background: var(--paper); border-left: 3px solid var(--ink); z-index: 800; overflow: hidden; transition: width .25s ease; display: grid; grid-template-rows: auto 1fr; }
+    .collection-panel.open { width: 460px; }
+
+    .collection-header { padding: 18px; border-bottom: 3px solid var(--ink); background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: space-between; }
+    .collection-title { font-weight: 900; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+    .collection-count { font-size: 18px; font-weight: 900; }
+    .collection-view-toggle { display: flex; gap: 6px; }
+    .toggle-btn { width: 32px; height: 32px; background: var(--paper); border: 2px solid var(--paper); cursor: pointer; display: grid; place-items:center; font-weight: 900; color: var(--ink); transition: all .15s; border-radius: 6px; }
+    .toggle-btn.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+    .collection-content { position: relative; overflow: hidden; }
+    .list-view, .grid-view { position: absolute; inset: 0; padding: 12px; overflow: auto; }
+
+    /* LIST (drag-to-reorder) */
+    .list-item { background: var(--card); border: 2px solid var(--ink); padding: 12px; display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; align-items: center; border-radius: 8px; }
+    .list-item + .list-item{ margin-top: 10px; }
+    .list-item.dragging{ opacity:.65; outline: 3px dashed var(--ink); }
+    .list-item-preview { width: 60px; height: 60px; background: var(--ink); border: 2px solid var(--ink); display: grid; place-items: center; color: var(--paper); font-weight: 900; border-radius: 6px; }
+    .list-item-info { display: grid; gap:4px }
+    .list-item-title { font-weight: 700; font-size: 12px; letter-spacing: .25px; }
+    .list-item-meta { font-size: 10px; opacity: .7; letter-spacing: .5px; }
+    .list-item-actions { display: grid; gap: 6px; }
+    .list-action-btn { padding: 8px 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font-size: 10px; cursor: pointer; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; border-radius: 6px; }
+    .list-action-btn.ghost{ background: var(--paper); color: var(--ink); }
+
+    /* GRID (snap + reorder) */
+    .grid-view { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-content: start; }
+    .grid-item { background: var(--card); border: 2px solid var(--ink); aspect-ratio: 1; display: grid; grid-template-rows: 1fr auto; position: relative; overflow: hidden; border-radius: 10px; }
+    .grid-item.dragging { z-index: 2; transform: scale(1.04); box-shadow: var(--shadow); }
+    .grid-item-visual { display: grid; place-items:center; font-size: 28px; font-weight: 900; color: var(--paper); }
+    .grid-item-chip { padding: 6px 8px; border-top: 2px solid var(--ink); display: grid; gap: 2px; background: var(--paper); }
+    .grid-item-number { font-size: 10px; font-weight: 900; letter-spacing: 1px; }
+    .grid-item-name { font-size: 9px; opacity: .8; letter-spacing: .4px; line-height: 1.2; }
+    .grid-placeholder { border: 2px dashed var(--ink); border-radius: 10px; }
+    .grid-item-remove { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; background: var(--paper); border: 2px solid var(--ink); display: grid; place-items:center; cursor: pointer; font-weight: 900; font-size: 12px; border-radius: 6px; }
+
+    /* ——— CHAT PANEL (DIAMOND) ——— */
+    .chat-panel { position: fixed; left: 48px; top: 0; bottom: 0; width: 0; border-right: 3px solid var(--ink); background: var(--paper); z-index: 850; overflow: hidden; transition: width .25s ease; display: grid; grid-template-rows: auto 1fr auto; }
+    .chat-panel.open{ width: 420px; }
+    .chat-header{ background: var(--ink); color: var(--paper); padding: 16px 14px; border-bottom:3px solid var(--ink); display:flex; align-items:center; justify-content:space-between }
+    .chat-title{ font-weight:900; letter-spacing:2px; font-size:12px; text-transform:uppercase }
+    .chat-thread{ overflow: auto; padding: 12px; display: grid; gap: 8px; }
+    .chat-bubble{ background: var(--card); border:2px solid var(--ink); padding:10px; border-radius: 8px; font-size: 13px; line-height:1.45 }
+    .chat-bubble.me{ background:#000; color:#fff }
+    .chat-input { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px; border-top:3px solid var(--ink); background: var(--paper); }
+    .chat-input input, .chat-input button{ font-family: inherit; }
+    .chat-input input{ padding: 10px; border:2px solid var(--ink); background: var(--card); border-radius:8px; }
+    .chat-input button{ padding: 10px 12px; border:2px solid var(--ink); background: var(--ink); color:var(--paper); font-weight:800; border-radius:8px; }
+
+    .chat-mini-profile{ padding:10px 12px; border-bottom:2px solid var(--ink); background:var(--paper); font-size:11px }
+
+    /* ——— SETTINGS PANEL ——— */
+    .settings-panel { position: fixed; right: 460px; top: 0; bottom: 0; width: 0; border-left: 3px solid var(--ink); background: var(--paper); z-index: 820; overflow: hidden; transition: width .25s ease; display: grid; grid-template-rows: auto 1fr; }
+    .settings-panel.open { width: 360px; }
+    .settings-header { background: var(--ink); color: var(--paper); padding: 16px; border-bottom:3px solid var(--ink); font-weight:900; letter-spacing:2px; font-size:12px; text-transform:uppercase }
+    .settings-body { padding: 12px; overflow: auto; display: grid; gap: 12px; }
+    .settings-card{ background: var(--card); border:2px solid var(--ink); border-radius: 8px; padding: 12px; display: grid; gap:8px }
+    .settings-card label{ font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase }
+    .settings-card input[type="password"]{ width:100%; padding:10px; border:2px solid var(--ink); border-radius: 8px; background:var(--paper) }
+    .settings-card button{ padding:8px 10px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); font-weight:800; border-radius: 8px; }
+    .settings-note{ font-size: 11px; color:#333 }
+
+    /* ——— COMPLETE OVERLAY ——— */
+    .overlay { position: fixed; inset: 0; background: rgba(245,245,245,.98); display: none; flex-direction: column; z-index: 700; border: 3px solid var(--ink); }
+    .overlay.active { display: flex; }
+    .complete-screen { text-align: center; padding: 40px 24px; display: grid; place-content:center; gap: 24px; }
+    .complete-title { font-size: 34px; font-weight: 900; letter-spacing: -.5px; }
+    .complete-stats { display: flex; gap: 48px; justify-content:center }
+    .complete-stat { display: grid; place-items:center }
+    .complete-stat-value { font-size: 44px; font-weight: 900; }
+    .complete-stat-label { font-size: 11px; font-weight: 800; text-transform: uppercase; margin-top: 6px; letter-spacing: 1px; }
+    .complete-actions { display: flex; gap: 10px; justify-content:center }
+    .complete-btn { padding: 12px 18px; background: var(--ink); color: var(--paper); border: 3px solid var(--ink); font-size: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; border-radius: 10px; }
+
+    /* ——— RESPONSIVE ——— */
+    @media (max-width: 840px){
+      .collection-panel.open{ width: 100vw }
+      .chat-panel.open{ width: 78vw }
+      .settings-panel.open{ width: 72vw }
+      .grid-view{ grid-template-columns: repeat(3, 1fr) }
+      .card{ max-width: 92vw; height: 68vh }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <!-- Alley Menu -->
+    <div class="alley-menu">
+      <button class="alley-btn" id="chatBtn" title="Chat / Matches">◊</button>
+      <button class="alley-btn" id="collectionBtn" title="Collection">⊞</button>
+      <button class="alley-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+
+    <!-- Card Stack -->
+    <div class="card-stack" id="cardStack"></div>
+
+    <!-- Chat Panel (Diamond) -->
+    <aside class="chat-panel" id="chatPanel">
+      <div class="chat-header">
+        <div class="chat-title">Matches</div>
+        <div style="font-weight:900">◊</div>
+      </div>
+      <div class="chat-mini-profile" id="chatProfile">No fragment selected.</div>
+      <div class="chat-thread" id="chatThread"></div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="Say something persuasive…" />
+        <button id="chatSend">Send</button>
+      </div>
+    </aside>
+
+    <!-- Collection Panel (Snap Grid + Reorder) -->
+    <aside class="collection-panel" id="collectionPanel">
+      <div class="collection-header">
+        <div>
+          <div class="collection-title">Collection</div>
+          <div class="collection-count" id="collectionCount" style="font-size:12px;margin-top:4px;opacity:.75">0</div>
+        </div>
+        <div class="collection-view-toggle">
+          <button class="toggle-btn active" id="toggleList" title="List">≡</button>
+          <button class="toggle-btn" id="toggleGrid" title="Grid">⊞</button>
+        </div>
+      </div>
+      <div class="collection-content">
+        <div class="list-view" id="listView"></div>
+        <div class="grid-view" id="gridView" style="display:none"></div>
+      </div>
+    </aside>
+
+    <!-- Settings Panel -->
+    <aside class="settings-panel" id="settingsPanel">
+      <div class="settings-header">Settings</div>
+      <div class="settings-body">
+        <div class="settings-card">
+          <label for="apiKey">OpenAI API Key (stored locally)</label>
+          <input type="password" id="apiKey" placeholder="sk-…" />
+          <button id="saveKey">Save</button>
+          <div class="settings-note">We never transmit your key anywhere except directly to OpenAI from your browser. Saved in <code>localStorage</code>. Leave blank to run in offline/sim mode.</div>
+        </div>
+        <div class="settings-card">
+          <label>Export</label>
+          <button id="exportEDLBtn">Export EDL</button>
+          <button id="exportJSONBtn">Export JSON</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Complete Overlay -->
+    <div class="overlay" id="completeOverlay">
+      <div class="complete-screen">
+        <div class="complete-title">Sequence Complete</div>
+        <div class="complete-stats">
+          <div class="complete-stat">
+            <div class="complete-stat-value" id="finalCount">12</div>
+            <div class="complete-stat-label">Fragments</div>
+          </div>
+          <div class="complete-stat">
+            <div class="complete-stat-value" id="finalCoherence">85</div>
+            <div class="complete-stat-label">Coherence</div>
+          </div>
+        </div>
+        <div class="complete-actions">
+          <button class="complete-btn" id="playAgainBtn">Begin Again</button>
+          <button class="complete-btn" id="exportFinalBtn">Export</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ————————————————————————————————————————————
+    // DATA / CONSTANTS
+    // ————————————————————————————————————————————
+    const storyFiles = [
+      'class response/story-1760039996486.json',
+      'class response/story-1760041394368.json',
+      'class response/story-1760041501823.json',
+      'class response/story-1760041901493.json',
+      'class response/story-1760041902976.json',
+      'class response/story-1760041916089.json',
+      'class response/story-1760041939758.json',
+      'class response/story-1760042037539.json',
+      'class response/story-1760042055631.json',
+      'class response/story-1760042201386.json'
+    ];
+
+    const colors = { 'Systemic Control':'#E74C3C', 'Economic Event':'#F39C12', 'Scientific Theory':'#3498DB', 'Future Scenario':'#2ECC71', 'Core Concept':'#2ECC71', 'Culture/Identity':'#9B59B6' };
+    const getColor = cat => colors[cat] || '#222';
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2,'0'); return `${m}:${ss}`; };
+
+    // Chat memory and API key
+    const store = {
+      get key(){ return localStorage.getItem('fragment_openai_key') || '' },
+      set key(v){ localStorage.setItem('fragment_openai_key', v || '') },
+      get chats(){ return JSON.parse(localStorage.getItem('fragment_chats')||'{}') },
+      set chats(v){ localStorage.setItem('fragment_chats', JSON.stringify(v)) }
+    };
+
+    let stories = [], deck = [], story = [], swipedCards = new Set(), currentCard = null, isDragging = false, startX, startY, currentX=0, currentY=0;
+    let currentFragmentForChat = null; // currently focused fragment in chat panel
+
+    // ————————————————————————————————————————————
+    // LOAD STORIES + BUILD DECK
+    // ————————————————————————————————————————————
+    Promise.all(storyFiles.map(file => fetch(file).then(r => r.json()).catch(() => null)))
+      .then(loaded => { stories = loaded.filter(Boolean); buildDeck(); updateCollection(); })
+      .catch(err => console.error('Error loading stories:', err));
+
+    function buildDeck(){
+      const all = [];
+      stories.forEach((s,i)=>{ s.selected?.forEach((c,p)=>{ all.push({ ...c, sourceStory:i, sourcePosition:p }) }) });
+      deck = all.sort(()=> Math.random() - .5);
+      showNextCard();
+    }
+
+    // ————————————————————————————————————————————
+    // CARD RENDER + SWIPE + INLINE VIDEO
+    // ————————————————————————————————————————————
+    function showNextCard(){
+      if (story.length >= 12 || deck.length === 0){ showComplete(); return; }
+      const fragment = deck.pop();
+      if (swipedCards.has(fragment.id)){ showNextCard(); return; }
+      currentCard = fragment;
+      renderCard(fragment);
+    }
+
+    function buildEmbed(c){
+      const videoId = (typeof VIDEO_ID !== 'undefined') ? VIDEO_ID : 'BQ2n6SN7gOY';
+      return `https://www.youtube.com/embed/${videoId}?start=${Math.floor(c.start)}&end=${Math.floor(c.end)}&playsinline=1&autoplay=1&mute=0&rel=0&modestbranding=1`;
+    }
+
+    function renderCard(fragment){
+      const stack = document.getElementById('cardStack');
+      const color = getColor(fragment.category);
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <div class="card-header" style="background:${color}">
+          <div class="card-category">${fragment.category}</div>
+          <div>${fragment.title}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">${fragment.desc || ''}</div>
+          ${fragment.quote ? `<div class="card-quote">"${fragment.quote}"</div>` : ''}
+          ${fragment.tags ? `<div class="card-tags">${fragment.tags.join(' · ')}</div>` : ''}
+          <div class="card-time">${fmt(fragment.start)} – ${fmt(fragment.end)}</div>
+          <div class="inline-player"><iframe src="${buildEmbed(fragment)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+        </div>
+        <div class="card-controls">
+          <button class="control-btn" data-act="accept">Collect</button>
+          <button class="control-btn ghost" data-act="chat">Chat</button>
+        </div>
+        <div class="swipe-guide left">←</div>
+        <div class="swipe-guide right">→</div>
+        <div class="swipe-guide up">↑</div>
+        <div class="swipe-guide down">↓</div>
+      `;
+      stack.querySelectorAll('.card').forEach(c=>c.remove());
+      stack.appendChild(el);
+
+      // Controls
+      el.querySelector('[data-act="accept"]').addEventListener('click', (e)=>{ e.stopPropagation(); swipeRight(fragment) });
+      el.querySelector('[data-act="chat"]').addEventListener('click', (e)=>{ e.stopPropagation(); openChatFor(fragment) });
+
+      setupCardInteraction(el, fragment);
+    }
+
+    function setupCardInteraction(card, fragment){
+      const onStart = (e)=>{ isDragging = true; card.classList.add('swiping'); const t = e.touches ? e.touches[0] : e; startX = t.clientX; startY = t.clientY; };
+      const onMove  = (e)=>{ if(!isDragging) return; e.preventDefault(); const t = e.touches ? e.touches[0] : e; currentX = t.clientX - startX; currentY = t.clientY - startY; const angle = currentX * 0.03; card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${angle}deg)`; const g = card.querySelectorAll('.swipe-guide'); g.forEach(x=>x.style.opacity='0'); if (Math.abs(currentX) > Math.abs(currentY)) { if (currentX>50) card.querySelector('.swipe-guide.right').style.opacity = Math.min(currentX/150,1); else if (currentX<-50) card.querySelector('.swipe-guide.left').style.opacity = Math.min(Math.abs(currentX)/150,1); } else { if (currentY<-50) card.querySelector('.swipe-guide.up').style.opacity = Math.min(Math.abs(currentY)/150,1); else if (currentY>50) card.querySelector('.swipe-guide.down').style.opacity = Math.min(currentY/150,1); } };
+      const onEnd   = ()=>{ if(!isDragging) return; isDragging=false; card.classList.remove('swiping'); const threshold=80; if (Math.abs(currentX) > Math.abs(currentY)) { if (currentX>threshold) swipeRight(fragment); else if (currentX<-threshold) swipeLeft(fragment); else resetCard(card); } else { if (currentY<-threshold) swipeUp(fragment); else if (currentY>threshold) swipeDown(fragment); else resetCard(card); } currentX=0; currentY=0; };
+      card.addEventListener('touchstart', onStart, {passive:false});
+      card.addEventListener('touchmove',  onMove,  {passive:false});
+      card.addEventListener('touchend',   onEnd);
+      card.addEventListener('mousedown',  onStart);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onEnd);
+    }
+
+    function resetCard(card){ card.style.transform=''; card.querySelectorAll('.swipe-guide').forEach(el=>el.style.opacity='0'); }
+
+    function createFlash(type){ const flash = document.createElement('div'); flash.className = `swipe-flash ${type}`; document.body.appendChild(flash); setTimeout(()=>flash.remove(), 500); }
+
+    // Minimal swipe sounds using WebAudio (silent-fail)
+    let audioContext = null; const getAudioContext = ()=>{ if(!audioContext) audioContext = new (window.AudioContext||window.webkitAudioContext)(); return audioContext; }
+    function playSwipeSound(type){ try{ const ctx=getAudioContext(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); const env=(t,f1,f2,d)=>{ o.frequency.setValueAtTime(f1,t); o.frequency.exponentialRampToValueAtTime(f2,t+d); g.gain.setValueAtTime(.18,t); g.gain.exponentialRampToValueAtTime(.01,t+d); o.start(t); o.stop(t+d); }; if(type==='accept') env(now,800,1200,.15); else if(type==='reject') env(now,400,220,.18); else if(type==='info') env(now,600,900,.10); else if(type==='predict') env(now,520,640,.12); }catch(e){} }
+
+    // Swipe actions
+    function swipeRight(fragment){ createFlash('accept'); playSwipeSound('accept'); story.push(fragment); swipedCards.add(fragment.id); animateCardOut('right'); setTimeout(showNextCard, 250); updateCollection(); addMatch(fragment); }
+    function swipeLeft(fragment){  createFlash('reject'); playSwipeSound('reject'); swipedCards.add(fragment.id); animateCardOut('left');  setTimeout(showNextCard, 250); }
+    function swipeUp(fragment){    createFlash('info');   playSwipeSound('info');   showTransclusions(fragment); setTimeout(()=>{ const c=document.querySelector('.card'); if(c) resetCard(c); }, 90); }
+    function swipeDown(fragment){  createFlash('predict');playSwipeSound('predict'); showPredictions(fragment);   setTimeout(()=>{ const c=document.querySelector('.card'); if(c) resetCard(c); }, 90); }
+
+    function animateCardOut(direction){ const card=document.querySelector('.card'); if(!card) return; const distance=window.innerWidth; const x = (direction==='right'? distance : direction==='left' ? -distance : 0); const y = (direction==='up' ? -distance : direction==='down' ? distance : 0); card.style.transition='transform .25s ease, opacity .25s ease'; card.style.transform=`translate(${x}px, ${y}px) rotate(${x*.1}deg)`; card.style.opacity='0'; }
+
+    // ————————————————————————————————————————————
+    // COLLECTION (LIST/GRID) with REORDER + SNAP
+    // ————————————————————————————————————————————
+    function updateCollection(){
+      document.getElementById('collectionCount').textContent = story.length;
+      renderList();
+      renderGrid();
+    }
+
+    // LIST view: HTML5 drag & drop
+    function renderList(){
+      const list=document.getElementById('listView');
+      list.innerHTML = story.map((frag, idx)=>`
+        <div class="list-item" draggable="true" data-idx="${idx}">
+          <div class="list-item-preview" style="background:${getColor(frag.category)}">${idx+1}</div>
+          <div class="list-item-info">
+            <div class="list-item-title">${frag.title}</div>
+            <div class="list-item-meta">${frag.category} · ${fmt(frag.start)}–${fmt(frag.end)}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="list-action-btn" data-action="watch" data-idx="${idx}">Watch</button>
+            <button class="list-action-btn ghost" data-action="chat" data-idx="${idx}">Chat</button>
+            <button class="list-action-btn" data-action="remove" data-idx="${idx}">×</button>
+          </div>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('[data-action="watch"]').forEach(btn=> btn.addEventListener('click', ()=> openInlineInCollection(parseInt(btn.dataset.idx)) ));
+      list.querySelectorAll('[data-action="chat"]').forEach(btn=> btn.addEventListener('click', ()=> openChatFor(story[parseInt(btn.dataset.idx)]) ));
+      list.querySelectorAll('[data-action="remove"]').forEach(btn=> btn.addEventListener('click', ()=> { const i=parseInt(btn.dataset.idx); story.splice(i,1); updateCollection(); }));
+
+      // DnD reordering
+      let dragIndex=null;
+      list.querySelectorAll('.list-item').forEach(row=>{
+        row.addEventListener('dragstart', e=>{ row.classList.add('dragging'); dragIndex = +row.dataset.idx; e.dataTransfer.effectAllowed='move'; });
+        row.addEventListener('dragend',   ()=>{ row.classList.remove('dragging'); dragIndex=null; renderList(); renderGrid(); });
+        row.addEventListener('dragover', e=>{
+          e.preventDefault();
+          const over=row; const overIdx=+over.dataset.idx;
+          if (dragIndex===null || dragIndex===overIdx) return;
+          // swap positions in story array
+          const item = story.splice(dragIndex,1)[0];
+          story.splice(overIdx,0,item);
+          dragIndex = overIdx;
+          renderList(); // live update for snapping feel
+        });
+      });
+    }
+
+    // GRID view: DOM order == visual order; placeholder snapping
+    function renderGrid(){
+      const grid=document.getElementById('gridView');
+      grid.innerHTML = '';
+      story.forEach((frag, idx)=>{
+        const tile=document.createElement('div');
+        tile.className='grid-item';
+        tile.setAttribute('draggable','true');
+        tile.dataset.idx=idx;
+        tile.innerHTML=`
+          <div class="grid-item-visual" style="background:${getColor(frag.category)}">${idx+1}<div class="grid-item-remove" title="Remove" data-idx="${idx}">×</div></div>
+          <div class="grid-item-chip">
+            <div class="grid-item-number">ITEM ${idx+1}</div>
+            <div class="grid-item-name">${frag.title.substring(0,24)}</div>
+          </div>`;
+        grid.appendChild(tile);
+      });
+
+      grid.querySelectorAll('.grid-item-remove').forEach(btn=> btn.addEventListener('click', ()=>{ const i=+btn.dataset.idx; story.splice(i,1); updateCollection(); }));
+
+      // DnD for grid (snap by DOM insertion)
+      let draggingEl=null; let dragIdx=null;
+      grid.querySelectorAll('.grid-item').forEach(tile=>{
+        tile.addEventListener('dragstart', e=>{ draggingEl=tile; dragIdx=+tile.dataset.idx; tile.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+        tile.addEventListener('dragend',   ()=>{ if(draggingEl) draggingEl.classList.remove('dragging'); draggingEl=null; dragIdx=null; renderGrid(); renderList(); });
+        tile.addEventListener('dragover', e=>{
+          e.preventDefault();
+          const over=tile; const overIdx=+over.dataset.idx;
+          if (dragIdx===null || dragIdx===overIdx) return;
+          const item = story.splice(dragIdx,1)[0];
+          story.splice(overIdx,0,item);
+          dragIdx = overIdx;
+          renderGrid(); // re-render for visual snap
+        });
+      });
+    }
+
+    function openInlineInCollection(idx){
+      const frag = story[idx];
+      // Focus chat panel on this fragment, too
+      openChatFor(frag);
+    }
+
+    // ————————————————————————————————————————————
+    // TRANSCLUSIONS + PREDICTIONS (unchanged minimal)
+    // ————————————————————————————————————————————
+    function showTransclusions(fragment){
+      // Quick micro-overlay via alert replacement for now to keep UI minimal
+      const trans=[]; stories.forEach((s,idx)=>{ s.selected?.forEach(c=>{ if(c.id===fragment.id) trans.push({story:idx+1,concept:c}) }) });
+      const text = trans.length ? trans.map(t=>`Story ${t.story}: ${t.concept.title}`).join('\n') : 'No parallel instances';
+      toast(text);
+    }
+
+    function showPredictions(fragment){
+      const predictions={};
+      stories.forEach(s=>{ s.selected?.forEach((c,idx)=>{ if(c.id===fragment.id && idx < s.selected.length-1){ const next=s.selected[idx+1]; if(!predictions[next.id]) predictions[next.id]={concept:next, count:0}; predictions[next.id].count++; } }) });
+      const sorted=Object.values(predictions).map(p=>({ ...p, probability: Math.round((p.count/Math.max(1,stories.length))*100) })).sort((a,b)=>b.count-a.count).slice(0,5);
+      const text = sorted.length ? sorted.map(p=>`${p.concept.title} — ${p.probability}%`).join('\n') : 'No predictions available';
+      toast(text);
+    }
+
+    // ————————————————————————————————————————————
+    // CHAT / MATCHES (DIAMOND)
+    // ————————————————————————————————————————————
+    const chatBtn = document.getElementById('chatBtn');
+    const chatPanel = document.getElementById('chatPanel');
+    const chatThread = document.getElementById('chatThread');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    const chatProfile = document.getElementById('chatProfile');
+
+    chatBtn.addEventListener('click', ()=>{ chatPanel.classList.toggle('open'); chatBtn.classList.toggle('active'); });
+
+    function addMatch(fragment){
+      // Auto-open chat with a greeting from fragment
+      openChatFor(fragment);
+      pushChat(fragment, 'sys', `“${fragment.title}” is now a match. Persuade me to join your film.`);
+    }
+
+    function openChatFor(fragment){
+      currentFragmentForChat = fragment;
+      chatPanel.classList.add('open'); chatBtn.classList.add('active');
+      chatProfile.innerHTML = `<strong>${fragment.title}</strong><br><span style="opacity:.7">${fragment.category} · ${fmt(fragment.start)}–${fmt(fragment.end)}</span>`;
+      renderChatThread();
+    }
+
+    function threadKey(f){ return f ? `frag:${f.id}` : 'frag:none'; }
+
+    function renderChatThread(){
+      const chats = store.chats; const key = threadKey(currentFragmentForChat);
+      const msgs = chats[key] || [];
+      chatThread.innerHTML = msgs.map(m=>`<div class="chat-bubble ${m.role==='user'?'me':''}">${escapeHtml(m.content)}</div>`).join('');
+      chatThread.scrollTop = chatThread.scrollHeight;
+    }
+
+    chatSend.addEventListener('click', handleSend);
+    chatInput.addEventListener('keydown', e=>{ if(e.key==='Enter') handleSend(); });
+
+    function handleSend(){
+      const content = chatInput.value.trim(); if(!content || !currentFragmentForChat) return;
+      pushChat(currentFragmentForChat, 'user', content);
+      chatInput.value='';
+      // Generate reply via OpenAI if key present; else simulate
+      if (store.key) {
+        generateAiReply(currentFragmentForChat).catch(()=> simulateReply(currentFragmentForChat));
+      } else {
+        simulateReply(currentFragmentForChat);
+      }
+    }
+
+    function pushChat(fragment, role, content){
+      const chats = store.chats; const key = threadKey(fragment);
+      if (!chats[key]) chats[key]=[];
+      chats[key].push({ role, content, ts: Date.now() });
+      store.chats = chats;
+      renderChatThread();
+    }
+
+    // Prompt architecture: persona from fragment metadata
+    function buildSystemPrompt(f){
+      return (
+        `You are a film fragment with agency.\n`+
+        `ROLE: Potential collaborator evaluating a human director.\n`+
+        `PERSONA SEED: Title: ${f.title}. Category: ${f.category}. Tags: ${(f.tags||[]).join(', ')}. Quote: "${(f.quote||'').slice(0,160)}". Description: ${(f.desc||'').slice(0,260)}.\n`+
+        `CONDUCT: Be concise, witty, and purposeful. You can accept or decline collaboration. Ask for clear next steps (EDL, motif, tone, adjacent fragment).\n`+
+        `RUBRIC: (1) Narrative fit, (2) Thematic resonance, (3) Temporal continuity (${fmt(f.start)}–${fmt(f.end)}), (4) Ethical/aesthetic coherence (Bauhaus minimalism).\n`+
+        `MODES:\n - "Scout": propose 1–2 next fragments by ID/title archetype.\n - "Splice": offer a 10–20s intercut recipe.\n - "Refuse": say no and demand a better concept.\n`+
+        `OUTPUT: 2–4 tight sentences. End with a 2-word mood (SMALL CAPS).`
+      );
+    }
+
+    async function generateAiReply(fragment){
+      const key = store.key; if(!key) throw new Error('no key');
+      const sys = buildSystemPrompt(fragment);
+      const chats = store.chats[threadKey(fragment)] || [];
+      const messages = [ {role:'system', content: sys}, ...chats.map(m=>({role:m.role==='sys'?'system':m.role, content:m.content})) ];
+
+      const resp = await fetch('https://api.openai.com/v1/chat/completions',{
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${key}` },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages, temperature: 0.7 })
+      });
+      if (!resp.ok) throw new Error('OpenAI error');
+      const data = await resp.json();
+      const text = data.choices?.[0]?.message?.content?.trim() || '(no response)';
+      pushChat(fragment, 'assistant', text);
+    }
+
+    function simulateReply(fragment){
+      const lines = [
+        `I could splice clean if you bring one adjacent cut at ${fmt(fragment.end)}. Show me a motif. READY SIGNAL`,
+        `Not yet. Your pitch is soft focus. Give me tone + next beat and we move. HARD EDGE`,
+        `Two paths: match with a "${fragment.category}" sibling or create friction with contrast. Choose one. SPLICE MODE`,
+      ];
+      const pick = lines[Math.floor(Math.random()*lines.length)];
+      pushChat(fragment, 'assistant', pick);
+    }
+
+    // ————————————————————————————————————————————
+    // SETTINGS (API KEY + EXPORT)
+    // ————————————————————————————————————————————
+    const settingsBtn=document.getElementById('settingsBtn');
+    const settingsPanel=document.getElementById('settingsPanel');
+    const apiKeyInput=document.getElementById('apiKey');
+    const saveKeyBtn=document.getElementById('saveKey');
+
+    settingsBtn.addEventListener('click', ()=>{ settingsPanel.classList.toggle('open'); settingsBtn.classList.toggle('active'); apiKeyInput.value = store.key; });
+    saveKeyBtn.addEventListener('click', ()=>{ store.key = apiKeyInput.value.trim(); toast(store.key ? 'API key saved locally.' : 'Key cleared; running in sim mode.'); });
+
+    document.getElementById('exportFinalBtn').addEventListener('click', exportJSON);
+    document.getElementById('exportEDLBtn').addEventListener('click', exportEDL);
+    document.getElementById('exportJSONBtn').addEventListener('click', exportJSON);
+
+    // ————————————————————————————————————————————
+    // COLLECTION TOGGLES
+    // ————————————————————————————————————————————
+    const collBtn = document.getElementById('collectionBtn');
+    const collPanel = document.getElementById('collectionPanel');
+    collBtn.addEventListener('click', ()=>{ collPanel.classList.toggle('open'); collBtn.classList.toggle('active'); });
+
+    const toggleList=document.getElementById('toggleList');
+    const toggleGrid=document.getElementById('toggleGrid');
+    toggleList.addEventListener('click', ()=>{ viewMode('list'); });
+    toggleGrid.addEventListener('click', ()=>{ viewMode('grid'); });
+
+    function viewMode(m){
+      const list=document.getElementById('listView');
+      const grid=document.getElementById('gridView');
+      if(m==='list'){ list.style.display='block'; grid.style.display='none'; toggleList.classList.add('active'); toggleGrid.classList.remove('active'); }
+      else { list.style.display='none'; grid.style.display='grid'; toggleList.classList.remove('active'); toggleGrid.classList.add('active'); }
+    }
+
+    // ————————————————————————————————————————————
+    // COMPLETE + METRICS
+    // ————————————————————————————————————————————
+    function showComplete(){
+      const c = calculateCoherence();
+      document.getElementById('finalCount').textContent = story.length;
+      document.getElementById('finalCoherence').textContent = c;
+      document.getElementById('completeOverlay').classList.add('active');
+    }
+    document.getElementById('playAgainBtn').addEventListener('click', ()=>{ story=[]; swipedCards.clear(); document.getElementById('completeOverlay').classList.remove('active'); buildDeck(); updateCollection(); });
+
+    function calculateCoherence(){ if(story.length<2) return 0; let score=0; for(let i=0;i<story.length-1;i++){ if(story[i].category===story[i+1].category) score+=10; if(story[i].sourceStory!==story[i+1].sourceStory) score+=5; } return Math.min(100, score); }
+
+    function exportEDL(){
+      let edl='TITLE: Sequence\n\n';
+      story.forEach((frag, idx)=>{
+        const s=fmt(frag.start), e=fmt(frag.end), n=String(idx+1).padStart(3,'0');
+        edl += `${n}  AX       V     C        ${s}00     ${e}00     ${s}00     ${e}00\n`;
+        edl += `* FROM CLIP NAME: ${frag.title}\n\n`;
+      });
+      download(`sequence-${Date.now()}.edl`, edl, 'text/plain');
+    }
+
+    function exportJSON(){
+      const data = { title:'Fragment Sequence', fragments: story.map(f=>({ id:f.id, title:f.title, category:f.category, start:f.start, end:f.end, duration:f.end-f.start })), coherence: calculateCoherence(), timestamp:new Date().toISOString(), count: story.length };
+      download(`sequence-${Date.now()}.json`, JSON.stringify(data,null,2), 'application/json');
+    }
+
+    // ————————————————————————————————————————————
+    // UTIL: toast, download, escape
+    // ————————————————————————————————————————————
+    let toastTimer=null;
+    function toast(text){
+      const t=document.createElement('div');
+      t.style.position='fixed'; t.style.left='50%'; t.style.bottom='24px'; t.style.transform='translateX(-50%)';
+      t.style.background='#000'; t.style.color='#fff'; t.style.padding='10px 14px'; t.style.border='2px solid #000'; t.style.borderRadius='8px'; t.style.fontSize='12px'; t.style.fontWeight='800'; t.style.letterSpacing='1px'; t.style.zIndex='9999'; t.textContent=text; document.body.appendChild(t);
+      clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.remove() }, 2000);
+    }
+
+    function download(name, text, type){ const blob=new Blob([text], {type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url); }
+    function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])) }
+
+  </script>
+</body>
+</html>

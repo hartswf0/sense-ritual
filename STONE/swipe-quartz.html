@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fragment Compiler</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --black: #000;
+      --white: #fff;
+      --grey-light: #f8f8f8;
+      --grey-mid: #e0e0e0;
+      --grey-dark: #1a1a1a;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 56px;
+      border-bottom: 1px solid var(--grey-mid);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      background: var(--white);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-meta {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--grey-dark);
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border-right: 1px solid var(--grey-mid);
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .stage-stack {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      height: 100%;
+      max-height: 520px;
+    }
+
+    .card {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: var(--white);
+      border: 1px solid var(--grey-mid);
+      padding: 36px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: grab;
+      touch-action: none;
+      transition: opacity var(--transition), transform 0.05s ease-out; /* Default transition */
+    }
+
+    .card.dragging {
+      transition: none; /* Disable transition when actively dragging */
+    }
+
+    .card-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-dark);
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--grey-dark);
+      margin-bottom: 16px;
+    }
+
+    .card-quote {
+      font-size: 11px;
+      font-style: italic;
+      line-height: 1.5;
+      color: var(--grey-dark);
+      margin-bottom: 20px;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 24px;
+    }
+
+    .tag {
+      font-size: 9px;
+      padding: 3px 6px;
+      border: 1px solid var(--grey-mid);
+      background: transparent;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--grey-dark);
+      border-top: 1px solid var(--grey-mid);
+      padding-top: 16px;
+    }
+
+    /* Panels container now holds two independent panels */
+    .panels {
+      display: flex;
+      flex-direction: row; /* Default to side-by-side on wider screens */
+      flex-shrink: 0;
+      overflow: hidden;
+      min-width: 0; /* Important for flex items */
+    }
+
+    /* Styling for individual panels */
+    .panel {
+      width: 340px; /* Fixed width for each panel on desktop */
+      background: var(--white);
+      border-left: 1px solid var(--grey-mid);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0; /* Prevents panels from shrinking below their width */
+    }
+
+    .panel-header {
+      height: 56px;
+      border-bottom: 1px solid var(--grey-mid);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+
+    .panel-tabs {
+      display: flex;
+      gap: 16px;
+    }
+
+    .panel-tab {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--grey-dark);
+      padding: 0;
+      transition: color var(--transition);
+    }
+
+    .panel-tab.active {
+      color: var(--black);
+    }
+
+    .panel-title { /* For static panel headers like Chat */
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: none; /* Hidden by default, activated by JS or tab */
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-content.active {
+      display: flex;
+    }
+
+    .collection-item {
+      padding: 14px;
+      border: 1px solid var(--grey-mid);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .collection-item:hover {
+      background: var(--grey-light);
+    }
+
+    .collection-item.dragging {
+      opacity: 0.5;
+    }
+
+    .collection-item.selected {
+        border-color: var(--black);
+        background: var(--grey-light);
+    }
+
+    .collection-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .collection-item-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .collection-item-meta {
+      font-size: 9px;
+      color: var(--grey-dark);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .status-dot.pending {
+      background: #ffa500; /* Orange */
+    }
+
+    .status-dot.compiled {
+      background: #0066ff; /* Blue */
+    }
+
+    .status-dot.chatting {
+      background: #00aa00; /* Green */
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--grey-mid);
+      background: var(--white);
+      cursor: pointer;
+      font-size: 9px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .action-btn:hover {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: var(--grey-dark);
+      font-size: 11px;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .compiler-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .compiler-btn {
+      padding: 10px;
+      border: 1px solid var(--grey-mid);
+      background: var(--white);
+      cursor: pointer;
+      font-size: 9px;
+      font-weight: 600;
+      transition: all var(--transition);
+    }
+
+    .compiler-btn.active {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
+
+    .compiler-btn:hover {
+      background: var(--grey-light);
+    }
+
+    .form-textarea {
+      padding: 10px;
+      border: 1px solid var(--grey-mid);
+      background: var(--white);
+      font-family: inherit;
+      font-size: 11px;
+      resize: none;
+      min-height: 70px;
+      transition: border-color var(--transition);
+    }
+    .form-input { /* Added for API Key field */
+      padding: 10px;
+      border: 1px solid var(--grey-mid);
+      background: var(--white);
+      font-family: inherit;
+      font-size: 11px;
+      transition: border-color var(--transition);
+    }
+
+
+    .form-textarea:focus, .form-input:focus {
+      outline: none;
+      border-color: var(--black);
+    }
+
+    .button {
+      padding: 10px 12px;
+      border: 1px solid var(--black);
+      background: var(--black);
+      color: var(--white);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center; /* For label-as-button import */
+    }
+
+    .button:hover {
+      background: var(--white);
+      color: var(--black);
+    }
+
+    .button-outline {
+      background: var(--white);
+      color: var(--black);
+    }
+
+    .button-outline:hover {
+      background: var(--black);
+      color: var(--white);
+    }
+
+    .chat-header {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--grey-mid);
+      margin-bottom: 12px;
+    }
+
+    .chat-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .chat-status {
+      font-size: 9px;
+      color: var(--grey-dark);
+    }
+
+    .chat-history {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .chat-message {
+      font-size: 11px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .chat-message.user {
+      align-self: flex-end;
+      max-width: 85%;
+      text-align: right;
+    }
+
+    .chat-message.ai {
+      align-self: flex-start;
+      max-width: 85%;
+      color: var(--grey-dark);
+    }
+
+    .ai-thinking {
+      font-size: 11px;
+      color: var(--grey-dark);
+      font-style: italic;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .chat-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .chat-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--grey-mid);
+      background: var(--white);
+      font-family: inherit;
+      font-size: 11px;
+      resize: none;
+      height: 70px;
+      transition: border-color var(--transition);
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--black);
+    }
+
+    .char-count {
+      font-size: 9px;
+      color: var(--grey-dark);
+      text-align: right;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 4px;
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .soul-preview {
+      border: 1px solid var(--grey-mid);
+      padding: 10px;
+      font-family: monospace;
+      font-size: 9px;
+      overflow-x: auto;
+      max-height: 120px;
+      overflow-y: auto;
+      background: var(--grey-light);
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--grey-mid);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--grey-dark);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .stage {
+        border-right: none;
+        flex: 0 0 auto; /* Occupy fixed height */
+        max-height: 300px;
+      }
+
+      .main {
+        flex-direction: column; /* Stack stage and panels vertically */
+      }
+
+      .panels {
+        flex-direction: column; /* Stack the two independent panels vertically */
+        min-height: 0;
+        flex: 1; /* Allow panels to take remaining height */
+      }
+
+      .panel {
+        width: 100%; /* Take full width */
+        border-left: none; /* No left border when stacked */
+        border-top: 1px solid var(--grey-mid); /* Add top border when stacked */
+        flex: 1; /* Make panels equally share space when stacked */
+        min-height: 0; /* Allow content to scroll */
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header {
+        padding: 0 16px;
+        height: 50px;
+      }
+
+      .stage {
+        padding: 16px;
+      }
+
+      .stage-stack {
+        max-width: 100%;
+      }
+
+      .card {
+        padding: 28px 20px;
+      }
+
+      .card-title {
+        font-size: 22px;
+      }
+
+      .panel-header {
+        padding: 0 16px;
+        height: 50px;
+      }
+
+      .panel-content {
+        padding: 16px;
+      }
+
+      .panel {
+        max-height: none;
+      }
+
+      .compiler-options {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="header-title">Fragment Compiler</div>
+      <div class="header-meta"><span id="header-count">0</span> items</div>
+    </div>
+
+    <div class="main">
+      <div class="stage">
+        <div class="stage-stack">
+          <div class="card" id="current-card">
+            <div>
+              <div class="card-label" id="card-label"></div>
+              <div class="card-title" id="card-title"></div>
+              <div class="card-desc" id="card-desc"></div>
+              <div class="card-quote" id="card-quote"></div>
+              <div class="card-tags" id="card-tags"></div>
+            </div>
+            <div class="card-footer">
+              <div><span id="card-index">1</span> / <span id="card-total">6</span></div>
+              <div id="card-status">Ready</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panels container now holds the two independent panels -->
+      <div class="panels">
+        <!-- Panel 1: Collection & Compile Tabs -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-tabs">
+              <button class="panel-tab active" data-panel="collection">Collection</button>
+              <button class="panel-tab" data-panel="compile">Compile</button>
+              <button class="panel-tab" data-panel="settings">Settings</button>
+            </div>
+          </div>
+
+          <div class="panel-content active" id="collection">
+            <div class="empty-state">
+              <div>No fragments</div>
+              <div style="font-size: 9px; color: var(--grey-dark);">Swipe right on cards</div>
+            </div>
+          </div>
+
+          <div class="panel-content" id="compile">
+            <div class="form-group">
+              <label class="form-label">Compiler Type</label>
+              <div class="compiler-options">
+                <button class="compiler-btn active" data-compiler="archetype">Archetype</button>
+                <button class="compiler-btn" data-compiler="psychological">Psychology</button>
+                <button class="compiler-btn" data-compiler="narrative">Narrative</button>
+                <button class="compiler-btn" data-compiler="quantum">Quantum</button>
+                <button class="compiler-btn" data-compiler="collective">Collective</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Hydration Hints</label>
+              <textarea class="form-textarea" id="hydration" placeholder="Add context to guide compilation..."></textarea>
+            </div>
+
+            <button class="button" id="compile-selected-btn">Compile Selected</button>
+            <button class="button button-outline" id="compile-all-btn">Compile All Pending</button>
+
+            <div class="form-group">
+              <label class="form-label">Soul Preview</label>
+              <div class="soul-preview" id="soul-preview">{ compiled souls appear here }</div>
+            </div>
+          </div>
+
+          <!-- NEW Settings Panel Content -->
+          <div class="panel-content" id="settings">
+            <div class="form-group">
+              <label class="form-label" for="api-key-input">API Key (e.g., OpenAI)</label>
+              <input type="password" class="form-input" id="api-key-input" placeholder="Enter your API key here">
+              <button class="button button-outline" id="save-api-key-btn">Save API Key</button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Data Management</label>
+              <button class="button" id="export-data-btn">Export Data</button>
+              <label for="import-file-input" class="button button-outline">Import Data</label>
+              <input type="file" id="import-file-input" accept=".json" style="display: none;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Project Information</label>
+              <p class="card-desc"><strong>Fragment Compiler v<span id="project-version">1.0</span></strong></p>
+              <p class="card-desc">A utility for compiling and chatting with conceptual fragments, developed for exploring structured thought and AI interaction patterns.</p>
+              <p class="card-desc">This is a client-side only application. API keys are stored locally in your browser and are not sent to any backend.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Always Visible Chat -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Chat</div>
+          </div>
+
+          <!-- The chat panel-content is always active, its internal divs will be shown/hidden -->
+          <div class="panel-content active" id="chat">
+            <!-- Pre-chat compile prompt -->
+            <div class="chat-compile-prompt" id="chat-compile-prompt" style="display: none;">
+              <div class="empty-state">
+                <p>This fragment is currently <strong>Pending</strong>.</p>
+                <p>Before chatting, you can:</p>
+                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 250px;">
+                    <button class="button" id="prompt-compile-btn">Compile as <span id="prompt-compiler-type">Archetype</span></button>
+                    <button class="button button-outline" id="prompt-chat-raw-btn">Chat Raw</button>
+                </div>
+                <p style="font-size: 9px; color: var(--grey-dark); margin-top: 10px;">
+                  (Use the "Compile" tab to customize compiler type and hydration hints.)
+                </p>
+              </div>
+            </div>
+
+            <!-- Actual Chat UI (will be shown after compile or chat raw) -->
+            <div id="chat-content-actual" style="display: none; flex: 1; flex-direction: column;">
+              <div class="chat-header">
+                <div class="chat-title" id="chat-title">Select a fragment</div>
+                <div class="chat-status" id="chat-status">—</div>
+              </div>
+              <div class="chat-history" id="chat-history"></div>
+              <div class="chat-input-area">
+                <textarea class="chat-input" id="chat-input" placeholder="Type to engage..." maxlength="500"></textarea>
+                <div class="char-count"><span id="chat-chars">0</span> / 500</div>
+                <button class="button" id="chat-send">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rawConcepts = [
+      { id: 'fom-1', title: 'Family of Man', category: 'Exhibition', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', tags: ['Bayer', '1950s', 'Humanism'], quote: 'We are all one world.' },
+      { id: 'bayer-self', title: 'Individual Self', category: 'Core Concept', desc: 'At the center is the individual self, making their own story.', tags: ['Bayer', 'Agency'], quote: 'The individual would make their own story.' },
+      { id: 'utopia', title: 'Utopian Vision', category: 'Theory', desc: 'Self-arranging fragments to withstand tyranny.', tags: ['Idealism'], quote: 'Strong enough to withstand tyranny.' },
+      { id: 'tupac', title: 'Grand Stories', category: 'Core Concept', desc: 'Believed in power to move people and inspire change.', tags: ['Revolution'], quote: 'Stories move people to change.' },
+      { id: 'gell-mann', title: 'Underlying Patterns', category: 'Theory', desc: 'Patterns at every level of the universe.', tags: ['Universal'], quote: 'Patterns in thought and societies.' },
+      { id: 'hinton', title: 'Neural Networks', category: 'AI', desc: 'AI learns from data, ignores all human stories.', tags: ['AI', 'Algorithms'], quote: 'Intelligence that ignored stories.' },
+    ];
+
+    const state = {
+      currentIndex: 0,
+      story: [], // Collected fragments
+      selectedItemId: null, // ID of the currently selected item in the collection/chat
+      selectedCompiler: 'archetype',
+      hydrationHints: '', // Added for persistence
+      apiKey: '', // New property for API key
+      draggedIndex: null, // For reordering collection items
+      isThinking: false, // For chat AI response
+      isCardDragging: false, // For card swipe
+      cardStartX: 0, // Initial X position of card drag
+      cardCurrentX: 0, // Current X position of card drag
+      cardTransitioning: false, // Prevents new drag during card animation
+      project: { // Project info
+          name: 'Fragment Compiler',
+          version: '1.0',
+          developer: 'Your Name/Org' // Optional
+      }
+    };
+
+    const SWIPE_THRESHOLD = 100; // Pixels to consider a swipe
+    const LOCAL_STORAGE_KEY = 'fragmentCompilerState';
+
+    function generateInstanceId() {
+      return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    function createCollectedItem(fragment) {
+      return {
+        instanceId: generateInstanceId(),
+        fragment,
+        status: 'PENDING', // PENDING, COMPILED, CHATTING
+        compiler: null,
+        soul: null,
+        chatHistory: [], // Store chat history per item
+        addedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+    }
+
+    function renderCard(index) {
+      const cardEl = document.getElementById('current-card');
+      if (rawConcepts.length === 0) {
+        document.getElementById('card-label').textContent = 'No Fragments';
+        document.getElementById('card-title').textContent = 'Add more concepts to rawConcepts array!';
+        document.getElementById('card-desc').textContent = '';
+        document.getElementById('card-quote').textContent = '';
+        document.getElementById('card-index').textContent = '0';
+        document.getElementById('card-total').textContent = '0';
+        document.getElementById('card-tags').innerHTML = '';
+        cardEl.style.display = 'none'; // Hide the card if no concepts
+        return;
+      }
+      cardEl.style.display = 'flex'; // Ensure card is visible
+
+      const frag = rawConcepts[index];
+      document.getElementById('card-label').textContent = frag.category;
+      document.getElementById('card-title').textContent = frag.title;
+      document.getElementById('card-desc').textContent = frag.desc;
+      document.getElementById('card-quote').textContent = frag.quote;
+      document.getElementById('card-index').textContent = index + 1;
+      document.getElementById('card-total').textContent = rawConcepts.length;
+      document.getElementById('card-tags').innerHTML = frag.tags.map(t => `<div class="tag">${t}</div>`).join('');
+    }
+
+    function addToStory(fragment) {
+      const item = createCollectedItem(fragment);
+      state.story.push(item);
+      state.selectedItemId = item.instanceId; // Automatically select the new item
+      updateCollection();
+      updateHeader();
+      updateChatForItem(); // Update chat/soul preview for the new item
+      switchPanelTab('collection'); // Ensure the collection view is visible
+      saveState(); // Persist state after adding
+      console.log(`[ADD] ${fragment.title}`);
+    }
+
+    function removeFromStory(instanceId) {
+      state.story = state.story.filter(i => i.instanceId !== instanceId);
+      if (state.selectedItemId === instanceId) {
+        state.selectedItemId = null;
+        clearChat(); // Clear chat if the removed item was selected
+      }
+      updateCollection();
+      updateHeader();
+      saveState(); // Persist state after removing
+    }
+
+    function updateCollection() {
+      const content = document.getElementById('collection');
+      
+      if (state.story.length === 0) {
+        content.innerHTML = '<div class="empty-state"><div>No fragments</div><div style="font-size: 9px; color: var(--grey-dark);">Swipe right on cards</div></div>';
+        return;
+      }
+
+      content.innerHTML = state.story.map((item, idx) => {
+        const statusLabel = item.status === 'PENDING' ? 'PENDING' : item.status === 'COMPILED' ? 'COMPILED' : 'CHATTING (RAW)';
+        const isSelected = item.instanceId === state.selectedItemId ? ' selected' : '';
+        return `
+          <div class="collection-item${isSelected}" draggable="true" data-id="${item.instanceId}" data-index="${idx}">
+            <div class="collection-item-info">
+              <div class="collection-item-title">${item.fragment.title}</div>
+              <div class="collection-item-meta">
+                <span class="status-dot ${item.status.toLowerCase().replace(' (raw)', '')}"></span>
+                <span>${statusLabel}</span> · ${item.addedAt}
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="action-btn" title="Chat" data-action="chat" data-id="${item.instanceId}">→</button>
+              <button class="action-btn" title="Delete" data-action="delete" data-id="${item.instanceId}">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.collection-item').forEach(itemEl => {
+        itemEl.addEventListener('click', (e) => {
+          if (e.target.closest('.item-actions')) return;
+          const id = itemEl.dataset.id;
+          if (state.selectedItemId !== id) {
+              state.selectedItemId = id;
+              updateCollection(); // Re-render to apply 'selected' class
+              updateChatForItem();
+          }
+        });
+
+        itemEl.querySelectorAll('.action-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'chat') {
+              state.selectedItemId = id;
+              updateCollection(); // Re-render to apply 'selected' class
+              updateChatForItem();
+            } else if (action === 'delete') {
+              removeFromStory(id);
+            }
+          });
+        });
+
+        itemEl.addEventListener('dragstart', (e) => {
+          state.draggedIndex = parseInt(itemEl.dataset.index);
+          itemEl.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        itemEl.addEventListener('dragend', () => {
+          itemEl.classList.remove('dragging');
+          state.draggedIndex = null;
+          saveState(); // Save state after reordering
+        });
+      });
+
+      content.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (state.draggedIndex === null) return;
+        
+        const targetItemEl = e.target.closest('.collection-item');
+        if (targetItemEl) {
+            const targetIndex = parseInt(targetItemEl.dataset.index);
+            const draggedItem = state.story[state.draggedIndex];
+
+            if (state.draggedIndex !== targetIndex) {
+                const newStory = [...state.story];
+                newStory.splice(state.draggedIndex, 1);
+                newStory.splice(targetIndex, 0, draggedItem);
+
+                state.story = newStory;
+                state.draggedIndex = targetIndex;
+
+                updateCollection();
+                const newlyDraggedEl = document.querySelector(`.collection-item[data-id="${draggedItem.instanceId}"]`);
+                if(newlyDraggedEl) newlyDraggedEl.classList.add('dragging');
+            }
+        }
+      });
+    }
+
+    function updateSoulPreview() {
+      const soulPreviewEl = document.getElementById('soul-preview');
+      const item = state.story.find(i => i.instanceId === state.selectedItemId);
+
+      if (item && item.soul) {
+        soulPreviewEl.textContent = JSON.stringify(item.soul, null, 2);
+      } else {
+        soulPreviewEl.textContent = '{ compiled souls appear here }';
+      }
+    }
+
+    function updateChatForItem() {
+      const item = state.story.find(i => i.instanceId === state.selectedItemId);
+      const chatPromptEl = document.getElementById('chat-compile-prompt');
+      const actualChatContentEl = document.getElementById('chat-content-actual');
+      const promptCompilerTypeEl = document.getElementById('prompt-compiler-type');
+
+      if (!item) {
+        clearChat();
+        return;
+      }
+
+      document.getElementById('chat-title').textContent = item.fragment.title;
+      document.getElementById('chat-status').textContent = item.status === 'COMPILED' ? 'COMPILED' : item.status === 'CHATTING' ? 'CHATTING (RAW)' : 'PENDING';
+      updateSoulPreview();
+
+      if (item.status === 'PENDING') {
+        chatPromptEl.style.display = 'flex';
+        actualChatContentEl.style.display = 'none';
+
+        promptCompilerTypeEl.textContent = state.selectedCompiler; // Show currently selected compiler
+
+        document.getElementById('chat-history').innerHTML = '';
+        document.getElementById('chat-input').value = '';
+        document.getElementById('chat-chars').textContent = '0';
+        document.getElementById('chat-send').disabled = true;
+
+      } else { // COMPILED or CHATTING
+        chatPromptEl.style.display = 'none';
+        actualChatContentEl.style.display = 'flex';
+
+        document.getElementById('chat-input').placeholder = 'Type to engage...';
+        document.getElementById('chat-send').disabled = false;
+
+        // Populate chat history for the selected item
+        const chatHistoryEl = document.getElementById('chat-history');
+        chatHistoryEl.innerHTML = item.chatHistory.map(entry => `
+            <div class="chat-message ${entry.sender}">${entry.message}</div>
+        `).join('');
+        chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+
+        document.getElementById('chat-input').value = '';
+        document.getElementById('chat-chars').textContent = '0';
+      }
+    }
+
+    function clearChat() {
+      document.getElementById('chat-title').textContent = 'Select a fragment';
+      document.getElementById('chat-status').textContent = '—';
+      document.getElementById('chat-history').innerHTML = '';
+      document.getElementById('chat-input').value = '';
+      document.getElementById('chat-chars').textContent = '0';
+      document.getElementById('chat-send').disabled = true;
+      document.getElementById('soul-preview').textContent = '{ compiled souls appear here }';
+      
+      document.getElementById('chat-compile-prompt').style.display = 'none';
+      document.getElementById('chat-content-actual').style.display = 'none';
+    }
+
+    function updateHeader() {
+      document.getElementById('header-count').textContent = state.story.length;
+    }
+
+    function showAiThinking() {
+      state.isThinking = true;
+      const history = document.getElementById('chat-history');
+      const thinkingEl = document.createElement('div');
+      thinkingEl.className = 'ai-thinking';
+      thinkingEl.id = 'ai-thinking';
+      thinkingEl.textContent = 'AI is thinking...';
+      history.appendChild(thinkingEl);
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function removeAiThinking() {
+      const el = document.getElementById('ai-thinking');
+      if (el) el.remove();
+      state.isThinking = false;
+    }
+
+    function switchPanelTab(tabName) {
+      document.getElementById('collection').classList.remove('active');
+      document.getElementById('compile').classList.remove('active');
+      document.getElementById('settings').classList.remove('active'); // Added for settings tab
+      
+      document.querySelector('.panels > .panel:first-child .panel-tab[data-panel="collection"]').classList.remove('active');
+      document.querySelector('.panels > .panel:first-child .panel-tab[data-panel="compile"]').classList.remove('active');
+      document.querySelector('.panels > .panel:first-child .panel-tab[data-panel="settings"]').classList.remove('active'); // Added for settings tab
+      
+      document.getElementById(tabName).classList.add('active');
+      document.querySelector(`.panels > .panel:first-child .panel-tab[data-panel="${tabName}"]`).classList.add('active');
+    }
+
+    function advanceCard(action = 'none') {
+      state.cardTransitioning = true;
+      const card = document.getElementById('current-card');
+
+      let targetX = 0;
+      if (action === 'add') {
+        targetX = '150%'; // Animate off to the right
+      } else if (action === 'skip') {
+        targetX = '-150%'; // Animate off to the left
+      }
+
+      card.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      card.style.transform = `translateX(${targetX})`;
+
+      card.addEventListener('transitionend', function handler() {
+        card.removeEventListener('transitionend', handler);
+        card.style.transition = 'none';
+
+        state.currentIndex = (state.currentIndex + 1) % rawConcepts.length;
+        renderCard(state.currentIndex);
+
+        card.style.transform = 'translateX(0)';
+        state.cardTransitioning = false;
+      });
+    }
+
+    // --- Persistence Functions ---
+    function saveState() {
+        try {
+            const stateToSave = {
+                story: state.story,
+                selectedCompiler: state.selectedCompiler,
+                hydrationHints: document.getElementById('hydration').value,
+                apiKey: state.apiKey, // Save API key
+                currentIndex: state.currentIndex, // Save current card index
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+            console.log("State saved to localStorage.");
+        } catch (error) {
+            console.error("Error saving state to localStorage:", error);
+        }
+    }
+
+    function loadState() {
+        try {
+            const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedState) {
+                const parsedState = JSON.parse(savedState);
+                state.story = parsedState.story || [];
+                state.selectedCompiler = parsedState.selectedCompiler || 'archetype';
+                state.hydrationHints = parsedState.hydrationHints || '';
+                state.apiKey = parsedState.apiKey || '';
+                state.currentIndex = parsedState.currentIndex || 0;
+
+                // Update UI elements from loaded state
+                document.getElementById('hydration').value = state.hydrationHints;
+                document.getElementById('api-key-input').value = state.apiKey;
+                
+                // Set active compiler button
+                document.querySelectorAll('.compiler-btn').forEach(btn => {
+                    if (btn.dataset.compiler === state.selectedCompiler) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                // Re-render other UI components based on loaded state
+                renderCard(state.currentIndex);
+                updateCollection();
+                updateHeader();
+                updateChatForItem(); // Important for chat panel state
+                console.log("State loaded from localStorage.");
+            }
+        } catch (error) {
+            console.error("Error loading state from localStorage:", error);
+            localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear potentially corrupted data
+        }
+    }
+
+    // --- Export/Import Functions ---
+    function exportData() {
+        const dataToExport = {
+            ...state,
+            hydrationHints: document.getElementById('hydration').value, // Ensure latest hints are included
+            // Exclude rawConcepts as it's static
+            rawConcepts: undefined, 
+            cardStartX: undefined, cardCurrentX: undefined, isCardDragging: undefined, cardTransitioning: undefined, draggedIndex: undefined, isThinking: undefined // Exclude transient UI state
+        };
+        const filename = `${state.project.name}_${new Date().toISOString().slice(0,10)}.json`;
+        const jsonStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Data exported successfully!');
+    }
+
+    function importData(file) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedState = JSON.parse(e.target.result);
+                // Carefully merge or replace state properties
+                state.story = importedState.story || [];
+                state.selectedCompiler = importedState.selectedCompiler || 'archetype';
+                state.hydrationHints = importedState.hydrationHints || '';
+                state.apiKey = importedState.apiKey || '';
+                state.currentIndex = importedState.currentIndex || 0;
+
+                // Update UI after import
+                document.getElementById('hydration').value = state.hydrationHints;
+                document.getElementById('api-key-input').value = state.apiKey;
+                
+                document.querySelectorAll('.compiler-btn').forEach(btn => {
+                    if (btn.dataset.compiler === state.selectedCompiler) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                renderCard(state.currentIndex);
+                updateCollection();
+                updateHeader();
+                updateChatForItem(); // Re-initialize chat view
+                saveState(); // Save the newly imported state
+                alert('Data imported successfully!');
+
+            } catch (error) {
+                console.error("Error parsing imported JSON:", error);
+                alert('Error importing data. Make sure the file is a valid JSON export.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set project info
+      document.getElementById('project-version').textContent = state.project.version;
+
+      loadState(); // Load state on startup
+
+      // Panel tabs for Collection/Compile/Settings
+      document.querySelectorAll('.panels > .panel:first-child .panel-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchPanelTab(btn.dataset.panel));
+      });
+
+      // Compiler selection
+      document.querySelectorAll('.compiler-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.compiler-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.selectedCompiler = btn.dataset.compiler;
+          if (document.getElementById('chat-compile-prompt').style.display !== 'none') {
+            document.getElementById('prompt-compiler-type').textContent = state.selectedCompiler;
+          }
+          saveState(); // Persist selected compiler
+        });
+      });
+
+      // Hydration hints input persistence
+      document.getElementById('hydration').addEventListener('input', () => {
+          state.hydrationHints = document.getElementById('hydration').value;
+          saveState();
+      });
+
+      // Compile Selected button (in Compile tab)
+      document.getElementById('compile-selected-btn').addEventListener('click', () => {
+        const item = state.story.find(i => i.instanceId === state.selectedItemId);
+        if (item) {
+          item.status = 'COMPILED';
+          item.compiler = state.selectedCompiler;
+          item.soul = { type: state.selectedCompiler, hints: state.hydrationHints, timestamp: new Date().toISOString() };
+          updateCollection();
+          if (state.selectedItemId === item.instanceId) {
+            updateChatForItem();
+          }
+          saveState();
+        } else {
+          alert('Please select a fragment from the collection to compile.');
+        }
+      });
+
+      // Compile All Pending button (in Compile tab)
+      document.getElementById('compile-all-btn').addEventListener('click', () => {
+        state.story.forEach(item => {
+          if (item.status === 'PENDING') {
+            item.status = 'COMPILED';
+            item.compiler = state.selectedCompiler;
+            item.soul = { type: state.selectedCompiler, hints: state.hydrationHints, timestamp: new Date().toISOString() };
+          }
+        });
+        updateCollection();
+        if (state.selectedItemId) {
+            const selectedItem = state.story.find(item => item.instanceId === state.selectedItemId);
+            if (selectedItem && selectedItem.status === 'COMPILED') {
+                updateChatForItem();
+            }
+        }
+        saveState();
+      });
+
+      // Chat input character count
+      document.getElementById('chat-input').addEventListener('input', (e) => {
+        const charCount = e.target.value.length;
+        document.getElementById('chat-chars').textContent = charCount;
+      });
+
+      // Chat send button
+      document.getElementById('chat-send').addEventListener('click', () => {
+        const msg = document.getElementById('chat-input').value.trim();
+        const selectedItem = state.story.find(i => i.instanceId === state.selectedItemId);
+
+        if (msg && selectedItem && !state.isThinking) {
+          const historyEl = document.getElementById('chat-history');
+          
+          const userMsgEl = document.createElement('div');
+          userMsgEl.className = 'chat-message user';
+          userMsgEl.textContent = msg;
+          historyEl.appendChild(userMsgEl);
+          selectedItem.chatHistory.push({ sender: 'user', message: msg }); // Save to item's chat history
+
+          document.getElementById('chat-input').value = '';
+          document.getElementById('chat-chars').textContent = '0';
+          historyEl.scrollTop = historyEl.scrollHeight;
+
+          showAiThinking();
+          setTimeout(() => {
+            removeAiThinking();
+            const aiMsgEl = document.createElement('div');
+            aiMsgEl.className = 'chat-message ai';
+
+            let aiResponseText = '';
+            if (selectedItem.status === 'COMPILED') {
+                aiResponseText = `I received your message concerning "${selectedItem.fragment.title}". My compiled soul (${selectedItem.compiler} type) acknowledges your input and is processing your request.`;
+            } else if (selectedItem.status === 'CHATTING') { // Raw chat
+                aiResponseText = `Understood. You're chatting raw with "${selectedItem.fragment.title}". I'll respond based on its core concept without deeper compilation context.`;
+            } else {
+                aiResponseText = `I'm not sure how to respond to "${selectedItem.fragment.title}" in its current 'Pending' state.`;
+            }
+
+            aiMsgEl.textContent = aiResponseText;
+            historyEl.appendChild(aiMsgEl);
+            selectedItem.chatHistory.push({ sender: 'ai', message: aiResponseText }); // Save to item's chat history
+            historyEl.scrollTop = historyEl.scrollHeight;
+            saveState(); // Save state after chat interaction
+          }, 1200);
+        }
+      });
+
+      // Event Listeners for pre-chat prompt buttons
+      document.getElementById('prompt-compile-btn').addEventListener('click', () => {
+          const item = state.story.find(i => i.instanceId === state.selectedItemId);
+          if (item) {
+              item.status = 'COMPILED';
+              item.compiler = state.selectedCompiler;
+              item.soul = {
+                  type: state.selectedCompiler,
+                  hints: state.hydrationHints,
+                  timestamp: new Date().toISOString()
+              };
+              updateCollection();
+              updateChatForItem();
+              saveState();
+          }
+      });
+
+      document.getElementById('prompt-chat-raw-btn').addEventListener('click', () => {
+          const item = state.story.find(i => i.instanceId === state.selectedItemId);
+          if (item) {
+              item.status = 'CHATTING';
+              item.compiler = 'RAW';
+              updateCollection();
+              updateChatForItem();
+              saveState();
+          }
+      });
+
+      // --- Settings Panel Event Listeners ---
+      document.getElementById('save-api-key-btn').addEventListener('click', () => {
+          state.apiKey = document.getElementById('api-key-input').value.trim();
+          saveState();
+          alert('API Key saved locally!');
+      });
+
+      document.getElementById('export-data-btn').addEventListener('click', exportData);
+
+      document.getElementById('import-file-input').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+              importData(file);
+          }
+          e.target.value = ''; // Clear file input for re-selection
+      });
+
+
+      // Card swipe logic
+      const card = document.getElementById('current-card');
+
+      const startDrag = (clientX) => {
+        if (state.cardTransitioning) return;
+        state.isCardDragging = true;
+        state.cardStartX = clientX;
+        state.cardCurrentX = clientX;
+        card.classList.add('dragging');
+        card.style.cursor = 'grabbing';
+      };
+
+      const duringDrag = (clientX) => {
+        if (!state.isCardDragging || state.cardTransitioning) return;
+        state.cardCurrentX = clientX;
+        const deltaX = state.cardCurrentX - state.cardStartX;
+        card.style.transform = `translateX(${deltaX}px)`;
+      };
+
+      const endDrag = () => {
+        if (!state.isCardDragging || state.cardTransitioning) return;
+        state.isCardDragging = false;
+        card.classList.remove('dragging');
+        card.style.cursor = 'grab';
+
+        const deltaX = state.cardCurrentX - state.cardStartX;
+
+        if (deltaX > SWIPE_THRESHOLD) {
+          addToStory(rawConcepts[state.currentIndex]);
+          advanceCard('add');
+        } else if (deltaX < -SWIPE_THRESHOLD) {
+          advanceCard('skip');
+        } else {
+          advanceCard('none');
+        }
+        state.cardStartX = 0;
+        state.cardCurrentX = 0;
+      };
+
+      // Mouse events for card swipe
+      card.addEventListener('mousedown', (e) => {
+          if (e.button === 0) startDrag(e.clientX);
+      });
+      document.addEventListener('mousemove', (e) => duringDrag(e.clientX));
+      document.addEventListener('mouseup', endDrag);
+      card.addEventListener('mouseleave', (e) => { 
+          if (state.isCardDragging) endDrag();
+      });
+
+      // Touch events for card swipe
+      card.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          startDrag(e.touches[0].clientX);
+      }, { passive: false });
+      document.addEventListener('touchmove', (e) => {
+          if (state.isCardDragging) e.preventDefault();
+          duringDrag(e.touches[0].clientX);
+      }, { passive: false });
+      document.addEventListener('touchend', endDrag);
+      document.addEventListener('touchcancel', endDrag);
+    });
+  </script>
+</body>
+</html>

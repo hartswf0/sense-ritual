@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fragment — Swipe · Compile · Chat</title>
+  <meta name="theme-color" content="#000000" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Helvetica Neue', Arial, system-ui, -apple-system, sans-serif; }
+    body { background: #f5f5f5; color: #000; touch-action: none; user-select: none; }
+
+    :root{
+      --ink:#000; --paper:#f5f5f5; --card:#fff; --line:#000; --muted:#888; --accent:#111; --good:#2ECC71; --warn:#F1C40F; --bad:#E74C3C; --info:#3498DB;
+      --radius:12px; --gap:12px; --shadow:0 12px 48px rgba(0,0,0,.15);
+      --chat-panel-width: 420px;
+      --prompt-lab-panel-width: 480px;
+    }
+
+    .game { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr; height: 100vh; position: relative; }
+
+    .alley-menu { position: fixed; left: 0; top: 50%; transform: translateY(-50%); width: 48px; background: var(--ink); border-right: 2px solid var(--line); z-index: 900; display: flex; flex-direction: column; height: auto; border-radius: 0 var(--radius) var(--radius) 0; overflow: hidden; }
+    .alley-btn { flex: 1; border: none; background: transparent; cursor: pointer; display: grid; place-items:center; font-size: 18px; color: var(--paper); transition: all .15s; border-bottom: 1px solid rgba(255,255,255,.12); padding: 12px 0; }
+    .alley-btn:last-child { border-bottom: none; }
+    .alley-btn:active { background: #222; transform: scale(.95); }
+    .alley-btn.active{ background:#000; }
+
+    .card-stack { grid-column: 1 / span 3; display: grid; place-items: center; padding: 32px; background: var(--paper); overflow: hidden; position: relative; }
+    .card { position: absolute; width: 100%; max-width: 520px; height: 72vh; background: var(--card); border: 3px solid var(--line); cursor: grab; transition: transform .25s ease, opacity .25s ease; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); border-radius: var(--radius); touch-action: pan-y; }
+    .card.swiping { transition: none; cursor: grabbing; }
+
+    .card-header { padding: 24px; font-weight: 900; font-size: 18px; line-height: 1.2; color: #fff; min-height: 96px; display: flex; flex-direction: column; justify-content: center; letter-spacing: -.25px; }
+    .card-category { font-size: 10px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; letter-spacing: 2px; font-weight: 800; }
+
+    .card-body { padding: 18px; background: var(--paper); color: var(--ink); overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.55; }
+    .card-desc { margin-bottom: 10px; color: #333; font-weight: 500; }
+    .card-quote { font-style: italic; font-size: 12px; padding: 12px; background: #fff; border-left: 4px solid var(--ink); margin: 12px 0; color: #555; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee; letter-spacing: .5px; }
+    .card-time { font-size: 11px; color: #666; margin-top: 8px; font-weight: 700; letter-spacing: .5px; }
+
+    .inline-player { aspect-ratio: 16 / 9; border: 2px solid var(--ink); width: 100%; background: #000; margin: 10px 0 0; border-radius: 8px; overflow: hidden; }
+    .inline-player iframe{ width:100%; height:100%; border:0 }
+
+    .card-controls { padding: 12px 16px; border-top: 2px solid var(--ink); background: var(--paper); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .control-btn { padding: 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font-weight: 800; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: all .15s; border-radius: 8px; }
+    .control-btn.ghost{ background: var(--paper); color: var(--ink); }
+    .control-btn:active { background: var(--paper); color: var(--ink); }
+
+    .swipe-flash { position: fixed; pointer-events: none; z-index: 25; }
+    .swipe-flash.accept { animation: flashAccept .45s ease-out; }
+    .swipe-flash.reject { animation: flashReject .45s ease-out; }
+    .swipe-flash.info { animation: flashInfo .45s ease-out; }
+    @keyframes flashAccept { 0%{inset:0; background: rgba(46,204,113,.28)} 100%{inset:-20px; background: rgba(46,204,113,0)} }
+    @keyframes flashReject { 0%{inset:0; background: rgba(231,76,60,.28)} 100%{inset:-20px; background: rgba(231,76,60,0)} }
+    @keyframes flashInfo   { 0%{inset:0; background: rgba(52,152,219,.28)} 100%{inset:-20px; background: rgba(52,152,219,0)} }
+
+    .swipe-guide { position: absolute; display: flex; gap: 2px; font-weight: 900; font-size: 12px; text-transform: uppercase; opacity: 0; letter-spacing: 1px; pointer-events: none; z-index: 5; transition: opacity .15s; }
+    .swipe-guide.right { top: 50%; right: 40px; transform: translateY(-50%); }
+    .swipe-guide.left  { top: 50%; left:  40px; transform: translateY(-50%); }
+    .swipe-guide.up    { top: 60px; left: 50%; transform: translateX(-50%); }
+    .swipe-guide.down  { bottom: 110px; left: 50%; transform: translateX(-50%); }
+
+    /* Left stack container styling */
+    .left-stack { position: fixed; left: 48px; top: 0; bottom: 0; display: grid; gap: 8px; padding: 8px; pointer-events: none; z-index: 850; }
+    .left-stack > .stackable { 
+      pointer-events: auto; border: 3px solid var(--ink); background: var(--paper); border-radius: 10px; overflow: hidden; display: grid;
+      transition: width .25s ease, opacity .25s ease, transform .25s ease, max-height .25s ease, padding .25s ease;
+      opacity: 0; /* Default hidden */
+      transform: translateX(-100%); /* Default off-screen */
+      width: var(--chat-panel-width); /* Default to chat width */
+    }
+    #promptLabPanel { width: var(--prompt-lab-panel-width); } /* Specific width for prompt lab */
+
+    .left-stack > .stackable.open { 
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    .chat-panel { grid-template-rows: auto auto 1fr auto; }
+    .prompt-lab-panel { grid-template-rows: auto 1fr; }
+
+    .collection-panel { position: fixed; right: 0; top: 0; width: 0; height: 100vh; background: var(--paper); border-left: 3px solid var(--ink); z-index: 800; overflow: hidden; transition: width .25s ease; display: grid; grid-template-rows: auto auto 1fr; }
+    .collection-panel.open { width: 460px; }
+
+    .collection-header { padding: 18px; border-bottom: 3px solid var(--ink); background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: space-between; }
+    .collection-title { font-weight: 900; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+    .collection-count { font-size: 18px; font-weight: 900; }
+    .collection-view-toggle { display: flex; gap: 6px; }
+    .toggle-btn { width: 32px; height: 32px; background: var(--paper); border: 2px solid var(--paper); cursor: pointer; display: grid; place-items:center; font-weight: 900; color: var(--ink); transition: all .15s; border-radius: 6px; touch-action: manipulation; }
+    .toggle-btn.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+    
+    .collection-controls { padding: 12px; border-bottom: 2px solid var(--ink); background: var(--paper); display: grid; gap: 8px; }
+    .control-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .control-select { padding: 8px; border: 2px solid var(--ink); background: var(--paper); font-size: 10px; font-weight: 700; border-radius: 6px; flex: 1; min-width: 100px; }
+    .control-btn-small { padding: 6px 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font-size: 9px; font-weight: 800; cursor: pointer; border-radius: 6px; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; touch-action: manipulation; }
+    .control-btn-small.ghost{ background: var(--paper); color: var(--ink); }
+
+    .collection-content { position: relative; overflow: hidden; }
+    .list-view, .grid-view { position: absolute; inset: 0; padding: 12px; overflow: auto; }
+
+    .list-item { background: var(--card); border: 2px solid var(--ink); padding: 12px; display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; align-items: center; border-radius: 8px; margin-bottom: 10px; min-height: 64px; }
+    .list-item{ cursor: move; user-select: none; }
+    .list-item.dragging{ opacity:.65; outline: 3px dashed var(--ink); transform: scale(1.02); box-shadow: var(--shadow); }
+    .list-item.drag-over{ border-top: 4px solid var(--accent); }
+    .list-item-preview { width: 60px; height: 60px; border: 2px solid var(--ink); display: grid; place-items: center; color: var(--paper); font-weight: 900; border-radius: 6px; font-size: 24px; flex-shrink: 0; }
+    .list-item-info { display: grid; gap:4px; min-width: 0; }
+    .list-item-title { font-weight: 700; font-size: 12px; letter-spacing: .25px; word-break: break-word; }
+    .list-item-meta { font-size: 10px; opacity: .7; letter-spacing: .5px; }
+    .list-item-actions { display: grid; gap: 6px; flex-shrink: 0; }
+    .list-action-btn { padding: 8px 10px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font-size: 10px; cursor: pointer; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; border-radius: 6px; white-space: nowrap; touch-action: manipulation; min-height: 36px; }
+    .list-action-btn.ghost{ background: var(--paper); color: var(--ink); }
+
+    .chat-decision-status {
+        display: inline-block;
+        font-size: 8px;
+        font-weight: 900;
+        padding: 2px 5px;
+        margin-left: 6px;
+        border-radius: 4px;
+        background: var(--muted);
+        color: var(--paper);
+        vertical-align: middle;
+    }
+    .chat-decision-status.JOINED { background: var(--good); }
+    .chat-decision-status.UNMATCHED { background: var(--bad); }
+    .chat-decision-status.COMPILED { background: var(--info); }
+    .chat-decision-status.PENDING { background: var(--muted); }
+
+    .grid-view { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-content: start; }
+    .grid-item { background: var(--card); border: 2px solid var(--ink); aspect-ratio: 1; display: grid; grid-template-rows: 1fr auto; position: relative; overflow: hidden; border-radius: 10px; }
+    .grid-item{ cursor: move; }
+    .grid-item.dragging { z-index: 2; transform: scale(1.08); box-shadow: var(--shadow); opacity: .9; }
+    .grid-item.drag-over { outline: 3px solid var(--accent); outline-offset: -3px; }
+    .grid-item-visual { display: grid; place-items:center; font-size: 28px; font-weight: 900; color: var(--paper); }
+    .grid-item-chip { padding: 6px 8px; border-top: 2px solid var(--ink); display: grid; gap: 2px; background: var(--paper); }
+    .grid-item-number { font-size: 10px; font-weight: 900; letter-spacing: 1px; }
+    .grid-item-name { font-size: 9px; opacity: .8; letter-spacing: .4px; line-height: 1.2; }
+    .grid-placeholder { border: 2px dashed var(--ink); border-radius: 10px; }
+    .grid-item-remove { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; background: var(--paper); border: 2px solid var(--ink); display: grid; place-items:center; cursor: pointer; font-weight: 900; font-size: 12px; border-radius: 6px; }
+
+    /* NUDGE: Panel layout and widths */
+    @media (min-width: 841px){ /* Desktop stacking - side by side */
+      .left-stack { 
+        width: calc(var(--chat-panel-width) + var(--prompt-lab-panel-width) + 24px); /* Combined width + gap */
+        grid-template-columns: var(--chat-panel-width) var(--prompt-lab-panel-width); /* Define column widths explicitly */
+        grid-auto-rows: 1fr; 
+        padding: 8px; 
+      }
+      .left-stack > .stackable { 
+        width: auto; /* Take full width of its grid cell */
+        height: auto; /* Fill grid cell */
+        position: relative; /* Behave normally within grid flow */
+        transform: none; /* No translateX needed */
+        opacity: 1; /* Always visible in desktop grid */
+        margin: 0; /* No extra margin */
+        padding: 12px; /* Restore padding */
+      }
+      .left-stack > .stackable:not(.open) { /* Hide and collapse if not explicitly open, even on desktop */
+        opacity: 0;
+        transform: scaleX(0);
+        width: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .left-stack > .stackable.open {
+        transform: scaleX(1); /* Ensure scaleX is restored */
+      }
+    }
+
+    @media (max-width: 840px){ /* Mobile stacking - accordion */
+      .left-stack { right: 0; left: 48px; grid-auto-rows: minmax(40vh, auto); overflow-y: auto; padding: 8px; gap: 8px; width: auto; }
+      .left-stack > .stackable {
+        width: 100%; /* Take full width */
+        height: auto; /* Allow content to dictate height */
+        position: static; /* Stack naturally */
+        transform: none; /* No translateX needed for stacking */
+        margin-bottom: 8px; /* Gap between stacked panels */
+        opacity: 0; /* Start hidden */
+        max-height: 0; /* Collapse if not open */
+        padding: 0 8px; /* Internal padding only */
+      }
+      .left-stack > .stackable.open {
+        opacity: 1;
+        max-height: 100vh; /* Allow it to open */
+        padding: 12px; /* Restore padding */
+        overflow: auto; /* Allow scrolling within the panel */
+      }
+      .collection-panel.open{ width: 100vw }
+      .card{ max-width: 92vw; height: 68vh }
+      .list-item { grid-template-columns: 50px 1fr; gap: 10px; }
+      .list-item-actions { grid-template-columns: 1fr; }
+      .alley-menu { width: 44px; }
+      .alley-btn { font-size: 16px; padding: 10px 0; }
+    }
+
+    /* Chat specifics */
+    .chat-bubble{ position: relative; }
+    .chat-bubble.loading{ opacity: .6; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+    .chat-bubble .typing-dots{ display: inline-flex; gap: 4px; }
+    .chat-bubble .typing-dots span{ width: 6px; height: 6px; background: var(--ink); border-radius: 50%; animation: bounce 1.4s infinite; }
+    .chat-bubble .typing-dots span:nth-child(2){ animation-delay: .2s; }
+    .chat-bubble .typing-dots span:nth-child(3){ animation-delay: .4s; }
+    @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+    .chat-input { display: grid; grid-template-rows: auto auto 1fr; gap: 8px; padding: 12px; border-top:3px solid var(--ink); background: var(--paper); }
+    .chat-input input, .chat-input button{ font-family: inherit; }
+    .chat-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .chat-input input{ padding: 10px; border:2px solid var(--ink); background: var(--card); border-radius:8px; font-size: 13px; }
+    .chat-input button{ padding: 10px 12px; border:2px solid var(--ink); background: var(--ink); color:var(--paper); font-weight:800; border-radius:8px; white-space: nowrap; }
+    .chat-hints { font-size: 10px; opacity: .6; line-height: 1.4; }
+    .chat-hints strong { opacity: 1; color: var(--accent); }
+    .char-counter { font-size: 10px; opacity: .5; text-align: right; }
+    .char-counter.warning { opacity: 1; color: var(--warn); font-weight: 800; }
+
+    /* Compilation status */
+    .soul-status { 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 6px; 
+      font-size: 10px; 
+      padding: 4px 8px; 
+      background: var(--muted); 
+      color: var(--paper); 
+      border-radius: 4px; 
+      font-weight: 800;
+      margin-left: auto; /* Push to right */
+    }
+    .soul-status.compiling { background: var(--info); animation: pulse 1.5s ease-in-out infinite; }
+    .soul-status.ready { background: var(--good); }
+    .soul-status.error { background: var(--bad); }
+
+    /* Settings Panel - unchanged from previous fix */
+    .settings-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 0; border-left: 3px solid var(--ink); background: var(--paper); z-index: 820; overflow: hidden; transition: width .25s ease; display: grid; grid-template-rows: auto 1fr; }
+    .settings-panel.open { width: 360px; }
+    .settings-header { background: var(--ink); color: var(--paper); padding: 16px; border-bottom:3px solid var(--ink); font-weight:900; letter-spacing:2px; text-transform:uppercase; font-size: 12px; }
+    .settings-body { padding: 12px; overflow: auto; display: grid; gap: 12px; align-content: start; }
+    .settings-card{ background: var(--card); border:2px solid var(--ink); border-radius: 8px; padding: 12px; display: grid; gap:8px }
+    .settings-card label{ font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase }
+    .settings-card input[type="password"]{ width:100%; padding:10px; border:2px solid var(--ink); border-radius: 8px; background:var(--paper) }
+    .settings-card button{ padding:8px 10px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); font-weight:800; border-radius: 8px; cursor: pointer; }
+    .settings-note{ font-size: 11px; color:#333; line-height: 1.4; }
+
+    @media (max-width: 480px){
+      .grid-view{ grid-template-columns: 1fr; }
+      .collection-controls { padding: 10px; }
+      .control-row { flex-direction: column; }
+      .control-select, .control-btn-small { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="alley-menu">
+      <button class="alley-btn" id="chatBtn" title="Chat / Matches">◊</button>
+      <button class="alley-btn" id="collectionBtn" title="Collection">⊞</button>
+      <button class="alley-btn" id="promptLabBtn" title="Prompt Lab / Compiler">∞</button>
+      <button class="alley-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+
+    <div class="card-stack" id="cardStack"></div>
+
+    <!-- Left Stack container for chat and prompt lab -->
+    <div class="left-stack" id="leftStack">
+      <aside class="chat-panel stackable" id="chatPanel">
+        <div class="chat-header">
+          <div class="chat-title">Matches</div>
+          <div style="font-weight:900">◊</div>
+        </div>
+        <div class="chat-mini-profile" id="chatProfile">No fragment selected.</div>
+        <div class="chat-thread" id="chatThread"></div>
+        <div class="chat-input">
+          <div class="chat-hints" id="chatHints">Think: <strong>What makes this clip essential?</strong> Reference its themes, context, or emotional core.</div>
+          <div class="char-counter" id="charCounter">0 / 200</div>
+          <div class="chat-input-row">
+            <input id="chatInput" placeholder="Say something persuasive…" maxlength="200" />
+            <button id="chatSend">Send</button>
+          </div>
+        </div>
+      </aside>
+
+      <aside class="prompt-lab-panel stackable" id="promptLabPanel">
+        <div class="prompt-lab-header">Compiler Lab</div>
+        <div class="prompt-lab-body">
+          <div class="prompt-lab-card">
+            <label for="compilerSelect">Compiler (POML Spout)</label>
+            <select id="compilerSelect">
+              <option value="Stanislavski">Stanislavski (Classic Method Acting)</option>
+              <option value="CharacterGrowth">CharacterGrowth (Personal Evolution)</option>
+              <option value="PlotDynamics">PlotDynamics (Narrative Structure)</option>
+              <option value="MagicCompiler07">MagicCompiler07 (Magic If System)</option>
+              <option value="compiler03">Compiler03 (Strategic Motivations)</option>
+            </select>
+            <div class="settings-note">Choose a compiler schema to hydrate fragments into character souls.</div>
+          </div>
+
+          <div class="prompt-lab-card">
+            <label for="hydrationHints">Hydration Hints (Optional)</label>
+            <textarea id="hydrationHints" placeholder="essence=defiant teacher; wound=betrayal by illusion; need=shared reality; voice=short,didactic"></textarea>
+            <div class="settings-note">Provide optional soul hints in key=value pairs separated by semicolons. These influence compilation.</div>
+          </div>
+
+          <div class="prompt-lab-card">
+            <label>Actions</label>
+            <div class="prompt-lab-actions">
+              <button id="compileCurrentBtn">Compile Current Fragment</button>
+              <button id="compileAllBtn">Compile All Collected</button>
+              <button id="viewSoulBtn" disabled>View Compiled Soul JSON</button>
+            </div>
+          </div>
+
+          <div class="prompt-lab-card">
+            <label>Compiled Soul Preview (Last)</label>
+            <div class="prompt-output" id="soulPreview">No soul compiled yet.</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <aside class="collection-panel" id="collectionPanel">
+      <div class="collection-header">
+        <div>
+          <div class="collection-title">Collection</div>
+          <div class="collection-count" id="collectionCount" style="font-size:12px;margin-top:4px;opacity:.75">0</div>
+        </div>
+        <div class="collection-view-toggle">
+          <button class="toggle-btn active" id="toggleList" title="List">≡</button>
+          <button class="toggle-btn" id="toggleGrid" title="Grid">⊞</button>
+        </div>
+      </div>
+      <div class="collection-controls">
+        <div class="control-row">
+          <select class="control-select" id="sortSelect">
+            <option value="index">Sort: Order Added</option>
+            <option value="category">Sort: Category</option>
+            <option value="duration">Sort: Duration</option>
+            <option value="status">Sort: Status</option>
+          </select>
+          <select class="control-select" id="filterSelect">
+            <option value="all">Filter: All</option>
+            <option value="joined">Filter: Joined</option>
+            <option value="compiled">Filter: Compiled</option>
+            <option value="pending">Filter: Pending</option>
+            <option value="unmatched">Filter: Unmatched</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <button class="control-btn-small ghost" id="clearAllBtn">🗑 Clear</button>
+        </div>
+      </div>
+      <div class="collection-content">
+        <div class="list-view" id="listView"></div>
+        <div class="grid-view" id="gridView" style="display:none"></div>
+      </div>
+    </aside>
+
+    <aside class="settings-panel" id="settingsPanel">
+      <div class="settings-header">Settings</div>
+      <div class="settings-body">
+        <div class="settings-card">
+          <label for="apiKey">OpenAI API Key (stored locally)</label>
+          <input type="password" id="apiKey" placeholder="sk-…" />
+          <button id="saveKey">Save</button>
+          <div class="settings-note">We never transmit your key anywhere except directly to OpenAI from your browser. Saved in localStorage. Leave blank to run in offline/sim mode.</div>
+        </div>
+        <div class="settings-card">
+          <label>Export Collection</label>
+          <button id="exportCSVBtn">📊 CSV</button>
+          <button id="exportChartBtn">📈 Chart</button>
+          <button id="exportLogBtn">📋 Logs</button>
+          <button id="exportEDLBtn">📊 EDL</button>
+          <button id="exportJSONBtn">💾 JSON</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="overlay" id="completeOverlay">
+      <div class="complete-screen">
+        <div class="complete-title">Sequence Complete</div>
+        <div class="complete-stats">
+          <div class="complete-stat">
+            <div class="complete-stat-value" id="finalCount">12</div>
+            <div class="complete-stat-label">Fragments</div>
+          </div>
+          <div class="complete-stat">
+            <div class="complete-stat-value" id="finalCoherence">85</div>
+            <div class="complete-stat-label">Coherence</div>
+          </div>
+        </div>
+        <div class="complete-actions">
+          <button class="complete-btn" id="playAgainBtn">Begin Again</button>
+          <button class="complete-btn" id="exportFinalBtn">Export</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rawConcepts = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', color: '#C8E6C9', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', color: '#AED581', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', start: 67, end: 78 }, 
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', color: '#EF5350', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', start: 183, end: 190 }, 
+      { id: 'hinton-vector-world-myth', title: 'Vector World (AI Mythology)', category: 'Core Concept', desc: 'The world is too complicated for us as human beings to understand, but nothing is too complicated for the machines and the data.', color: '#0097A7', tags: ['AI', 'Mythology', 'Control', 'Dehumanization'], quote: 'He called it vector world. It expressed what was becoming one of the most powerful mythologies of our age... that the world is too complicated for us as human beings to understand. But nothing is too complicated for the machines and the data.', start: 3628, end: 3652 },
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', color: '#4CAF50', tags: ['Graeber', 'Agency', 'Liberation', 'Potential'], quote: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', start: 6678, end: 6690 }
+      ,{ id: 'postman-amusing-ourselves', title: 'Postman (Amusing Ourselves to Death)', category: 'Media Apparatus', desc: 'Television trivializes public discourse, turning serious matters into entertainment.', color: '#F8BBD0', tags: ['Postman', 'Media', 'Critique', 'Information', 'Entertainment'], quote: 'When a population becomes distracted by trivia, when cultural life is redefined as a perpetual round of entertainments, when serious public conversation becomes a form of baby-talk, when, in short, a people become an audience and their public business a vaudeville act, then a nation finds itself at risk; culture is in serious jeopardy.', start: 1000, end: 1050 }
+      ,{ id: 'foucault-panopticism', title: 'Foucault (Panopticism)', category: 'Systemic Control', desc: 'A form of social control where individuals are constantly aware of potential observation, leading to self-regulation.', color: '#EF9A9A', tags: ['Foucault', 'Surveillance', 'Power', 'Discipline', 'Modernity'], quote: 'He who is subjected to a field of visibility, and who knows it, assumes responsibility for the constraints of power; he makes them play spontaneously upon himself; he inscribes in himself the power relation in which he simultaneously plays both roles; he becomes the principle of his own subjection.', start: 1500, end: 1545 }
+      ,{ id: 'haraway-cyborg-manifesto', title: 'Haraway (Cyborg Manifesto)', category: 'Culture/Identity', desc: 'Critique of traditional gender roles and boundaries, advocating for a post-human identity that embraces hybridity.', color: '#CE93D8', tags: ['Haraway', 'Feminism', 'Technology', 'Identity', 'Posthuman'], quote: 'A cyborg is a cybernetic organism, a hybrid of machine and organism, a creature of social reality as well as a creature of fiction.', start: 2000, end: 2030 }
+      ,{ id: 'delez-control-societies', title: 'Deleuze (Control Societies)', category: 'Systemic Control', desc: 'Modern power shifts from disciplinary institutions (like prisons) to continuous, modulated control through digital technologies.', color: '#C5CAE9', tags: ['Deleuze', 'Control', 'Digital', 'Surveillance', 'Capitalism'], quote: 'We are no longer dealing with a pair-mass relation but with a dividual-sample relation.', start: 2500, end: 2520 }
+      ,{ id: 'baudrillard-simulacra', title: 'Baudrillard (Simulacra and Simulation)', category: 'Media Apparatus', desc: 'The blurring of reality and its representation, where symbols and signs of reality become more real than reality itself.', color: '#B2EBF2', tags: ['Baudrillard', 'Simulation', 'Hyperreality', 'Postmodernism', 'Media'], quote: 'It is no longer a question of imitation, nor duplication, nor even parody. It is rather a question of substituting signs of the real for the real itself.', start: 3000, end: 3040 }
+      ,{ id: 'chomsky-manufacturing-consent', title: 'Chomsky (Manufacturing Consent)', category: 'Systemic Critique', desc: 'Media filters operate to ensure that news content aligns with elite interests, maintaining societal control.', color: '#FFCDD2', tags: ['Chomsky', 'Propaganda', 'Media', 'Democracy', 'Elites'], quote: 'A propaganda model focuses on this inequality of wealth and power and its multilevel effects on mass-media interests and choices.', start: 3500, end: 3530 }
+      ,{ id: 'adams-moral-panic', title: 'Adams (Moral Panic)', category: 'Sociological Event', desc: 'A wave of public fear about an alleged threat to societal values, often amplified by media and leading to disproportionate responses.', color: '#FBC02D', tags: ['Adams', 'Sociology', 'Media', 'Fear', 'SocialControl'], quote: 'A condition, episode, person or group of persons emerges to become defined as a threat to societal values and interests.', start: 4000, end: 4025 }
+      ,{ id: 'giddens-risk-society', title: 'Giddens (Risk Society)', category: 'Scientific Theory', desc: 'Modern society is increasingly preoccupied with assessing and managing risks generated by scientific and technological advancements.', color: '#81D4FA', tags: ['Giddens', 'Modernity', 'Risk', 'Technology', 'Science'], quote: 'A systematic way of dealing with hazards and insecurities induced and introduced by modernization itself.', start: 4500, end: 4530 }
+      ,{ id: 'beck-reflexive-modernization', title: 'Beck (Reflexive Modernization)', category: 'Scientific Theory', desc: 'Society becomes aware of the risks it creates, leading to self-confrontation and transformation of modernity.', color: '#90CAF9', tags: ['Beck', 'Modernity', 'Risk', 'SelfCritique', 'Sociology'], quote: 'The experience of self-confrontation with the effects of risk-producing modernization.', start: 5000, end: 5025 }
+      ,{ id: 'lyotard-postmodern-condition', title: 'Lyotard (Postmodern Condition)', category: 'Core Concept', desc: 'Skepticism towards grand narratives and universal truths in contemporary society.', color: '#A5D6A7', tags: ['Lyotard', 'Postmodernism', 'Narrative', 'Truth', 'Knowledge'], quote: 'Simplifying to the extreme, I define postmodern as incredulity toward metanarratives.', start: 5500, end: 5520 }
+    ];
+
+    const colors = { 
+      'Systemic Control':'#E74C3C', 'Economic Event':'#F39C12', 'Scientific Theory':'#3498DB', 'Future Scenario':'#2ECC71', 'Core Concept':'#2ECC71', 'Culture/Identity':'#9B59B6',
+      'Media Apparatus': '#C8E6C9', 'Theory': '#9CCC65', 'Systemic Critique': '#EF5350', 'Systemic Event': '#BDBDBD', 'Sociological Event': '#FBC02D'
+    };
+    const getColor = cat => colors[cat] || '#222';
+    const fmt = s => { const m = Math.floor(s / 60); const ss = String(Math.floor(s % 60)).padStart(2,'0'); return `${m}:${ss}`; };
+    const escapeHtml = (unsafe) => { return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); };
+
+    const store = {
+      get key(){ return localStorage.getItem('fragment_openai_key') || '' },
+      set key(v){ localStorage.setItem('fragment_openai_key', v || '') },
+      get chats(){ return JSON.parse(localStorage.getItem('fragment_chats')||'{}') },
+      set chats(v){ localStorage.setItem('fragment_chats', JSON.stringify(v)) },
+      get personas(){ return JSON.parse(localStorage.getItem('fragment_personas')||'{}') },
+      set personas(v){ localStorage.setItem('fragment_personas', JSON.stringify(v)) }
+    };
+
+    let stories = [], deck = [], story = [], swipedFragments = new Set(); 
+    let currentCardItem = null; 
+    let currentFragmentForChat = null; 
+
+    let isDragging = false, startX, startY, currentX=0, currentY=0;
+
+    const COMPILERS = { 
+      "Stanislavski": "Stanislavski@1.0", 
+      "CharacterGrowth": "CharacterGrowth@1.0",
+      "PlotDynamics": "PlotDynamics@1.0",
+      "MagicCompiler07": "MagicCompiler07@1.0",
+      "compiler03": "compiler03@1.0"
+    };
+
+    function toast(message) {
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 15px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:.5px;z-index:9999;opacity:0;transition:opacity .3s ease, transform .3s ease';
+        t.textContent = message;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(-10px)'; }, 10);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(10px)'; }, 2800);
+        setTimeout(() => t.remove(), 3200);
+    }
+
+    function download(filename, text, mimeType){
+      const element = document.createElement('a');
+      element.setAttribute('href', `data:${mimeType};charset=utf-8,${encodeURIComponent(text)}`);
+      element.setAttribute('download', filename);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+
+    function escapeBackticks(str) {
+      return str.replace(/`/g, '\\`');
+    }
+
+    function toCollectedItem(fragment){
+      const compilerKey = document.getElementById('compilerSelect').value; 
+      const compilerFull = COMPILERS[compilerKey] || compilerKey; 
+      const hintsRaw = document.getElementById('hydrationHints').value.trim();
+      const hintsHash = hintsRaw ? btoa(unescape(encodeURIComponent(hintsRaw))).slice(0,12) : 'none'; 
+      return {
+        instanceId: crypto.randomUUID(),
+        fragmentId: fragment.id,
+        fragment,                   
+        compiler: compilerFull, 
+        hintsRaw,
+        hintsHash,
+        addedAt: Date.now(),
+        compiledAt: null,
+        soulKey: `${fragment.id}::${compilerFull}::${hintsHash}`, 
+        status: "PENDING"
+      };
+    }
+
+    function personaFor(item){
+      const soul = store.personas[item.soulKey];
+      return soul || null;
+    }
+    
+    function inferGoalsFromNothing(item){
+      const s = personaFor(item);
+      return s?.ZeroContextGoal || `I am "${item.fragment.title}". You want me in your film? Convince me. I don't join just anyone's project.`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // POML CHARACTER COMPILER CORE
+    // ═══════════════════════════════════════════════════════════════════
+
+    async function compilePersona(item) { 
+      const fragment = item.fragment;
+      const compiler = item.compiler; 
+      const compilerName = compiler.split('@')[0]; 
+      const hints = {};
+      if (item.hintsRaw) {
+        item.hintsRaw.split(';').forEach(pair => {
+          const [k, v] = pair.split('=').map(s => s.trim());
+          if (k && v) hints[k] = v;
+        });
+      }
+      const hintsStr = Object.entries(hints).map(([k,v])=>`${k}=${v}`).join('; ') || 'none';
+      
+      const cacheKey = item.soulKey; 
+      const cached = store.personas[cacheKey];
+      if (cached) { 
+        toast(`Using cached soul for "${fragment.title}" (${compiler} + ${item.hintsHash})`);
+        item.compiledAt = cached._HydrationTrace?.compiledAt || Date.now(); 
+        item.status = item.status === "PENDING" ? "COMPILED" : item.status; 
+        return cached;
+      }
+      
+      const key = store.key;
+      
+      const statusEl = document.getElementById('soulStatus');
+      if (statusEl && currentFragmentForChat && currentFragmentForChat.instanceId === item.instanceId) { 
+        statusEl.className = 'soul-status compiling';
+        statusEl.textContent = '⚙️ Compiling...';
+      }
+
+      const POML = `You are a Character Compiler Adaptor using the POML spout system.
+
+<ROLE>CharacterCompilerAdaptor</ROLE>
+
+<INPUTS>
+  <seed.json>${escapeBackticks(JSON.stringify(fragment))}</seed.json> 
+  <compiler.name>${compiler}</compiler.name>
+  <hydration.hints>${escapeBackticks(hintsStr)}</hydration.hints> 
+</INPUTS>
+
+<OBJECTIVE>
+Emit ONE valid JSON object representing a hydrated character/soul for text-based LLM persona.
+This is granular, playable, and grounded in the seed data. NO film directions, NO visuals.
+</OBJECTIVE>
+
+<CONSTRAINTS>
+• Specificity over poetry. Show receipts (derived from seed).
+• Use the compiler's fields exactly; fill every required field.
+• If a field is unknowable from seed, synthesize ONE realistic detail and note it in "Assumptions".
+• Keep sentences short (1-2 max); prefer observable behaviors.
+• Ground everything in seed.quote, seed.tags, seed.category, seed.desc.
+• If you cannot emit valid JSON exactly once, emit {"_error":"format"} then retry internally and output the valid JSON (no apology text).
+</CONSTRAINTS>
+
+<COMPILER_INTERFACE>
+The output MUST contain these fields (adapt specifics based on compiler name):
+
+{
+  "SchemaID": "POML.CharSoul.v1",
+  "CompilerFingerprint": { "name": string, "version": string, "hintsHash": string },
+  "MemoryKey": string, 
+  "SeedRef": { "id": string, "title": string, "timecode": string },
+  "Identity": {
+    "Moniker": string,
+    "Essence": string,
+    "Wound": string,
+    "Need": string,
+    "Law": string,
+    "Voice": string,
+    "Audience": string
+  },
+  "CharacterDevelopment": {
+    "BasicCharacteristics": {
+      "Literal": {
+        "PhysicalAttributes": string,
+        "Background": string,
+        "CurrentCircumstances": string
+      },
+      "PsychologicalProfile": {
+        "PersonalityTraits": string[],
+        "EmotionalRange": string,
+        "CognitivePatterns": string
+      }
+    },
+    "CoreMotivations": {
+      "Want": {
+        "DeepDesires": string,
+        "InfluencingFactors": string,
+        "EmotionalRoots": string
+      },
+      "EssentialAction": {
+        "PrimaryActions": string,
+        "ActionPurpose": string,
+        "ActionImpact": string
+      },
+      "AsIf": {
+        "PersonalAnalogies": string,
+        "EmotionalConnection": string,
+        "BehavioralImplications": string
+      }
+    }
+  },
+  "DecisionRules": {
+    "WhenToTrust": string,
+    "WhenToDoubt": string,
+    "RepairMechanism": string
+  },
+  "LatentAxes": [
+    { "name": string, "weight": number, "note": string }
+  ],
+  "FailureCases": [
+    { "title": string, "desc": string, "repair": string }
+  ],
+  "Anchors": [
+    { "type": "quote"|"tag", "ref": string, "note": string }
+  ],
+  "ZeroContextGoal": string, 
+  "BehaviorContracts": [ 
+    { "cue": string, "response": string }
+  ],
+  "Assumptions": string[],
+  "Changelog": [
+    { "v": string, "edit": string, "why": string }
+  ]
+}
+</COMPILER_INTERFACE>
+
+<SEED_MAPPING>
+• seed.title → Identity.Moniker
+• seed.quote → Anchors (type="quote")
+• seed.tags → CognitivePatterns (salient priors) + Anchors (type="tag", use first tag)
+• seed.category → Voice defaults + DecisionRules tone
+• seed.start/end → SeedRef.timecode (format: "m:ss–m:ss")
+• seed.desc → Background, CurrentCircumstances, Want.DeepDesires
+</SEED_MAPPING>
+
+<COMPILER_SPECIFICS>
+${compilerName === "Stanislavski" ? `
+Focus on: playable actions, given circumstances, observable behaviors.
+Style: terse, concrete, actor-ready.
+Derive ZeroContextGoal from primary desires, e.g., "Start by asking the user's intention, then test narrative fit."
+BehaviorContracts: {"cue":"generic praise", "response":"demand specificity"}, {"cue":"emotional appeal", "response":"seek logical grounding"}
+` : compilerName === "CharacterGrowth" ? `
+Focus on: developmental arcs, internal conflicts, transformative moments.
+Style: reflective, empathetic, forward-looking.
+Derive ZeroContextGoal from potential for change, e.g., "Start by revealing my central dilemma, then challenge the user to propose a catalyst."
+BehaviorContracts: {"cue":"static description", "response":"probe for evolution"}, {"cue":"simple plot summary", "response":"demand motivational depth"}
+` : compilerName === "PlotDynamics" ? `
+Focus on: narrative function, structural purpose, causality.
+Style: analytical, plot-driven, cause-and-effect.
+Derive ZeroContextGoal from narrative impact, e.g., "Start by stating my pivotal role, then inquire how the user will leverage my structural weight."
+BehaviorContracts: {"cue":"character focus", "response":"redirect to plot consequence"}, {"cue":"ambiguous intention", "response":"demand clear narrative utility"}
+` : compilerName === "MagicCompiler07" ? `
+Focus on: "Magic If" scenarios, imaginative empathy, subjective reality.
+Style: evocative, transformative, experiential.
+Derive ZeroContextGoal from imaginative potential, e.g., "Start by posing a 'Magic If' question, then invite the user into my internal world."
+BehaviorContracts: {"cue":"literal interpretation", "response":"seek imaginative extension"}, {"cue":"external observation", "response":"ask for internal experience"}
+` : compilerName === "compiler03" ? `
+Focus on: strategic motivations, power dynamics, underlying objectives.
+Style: pragmatic, goal-oriented, Machiavellian.
+Derive ZeroContextGoal from my ultimate aim, e.g., "Start by identifying my hidden agenda, then ask the user how their vision aligns with my strategic advantage."
+BehaviorContracts: {"cue":"sentimental appeal", "response":"expose underlying power structures"}, {"cue":"moral judgment", "response":"analyze for self-interest"}
+` : ''}
+</COMPILER_SPECIFICS>
+
+<OUTPUT_CONTRACT>
+Emit ONLY the JSON object. No markdown code blocks. No preamble. No explanation.
+Start with { and end with }
+</OUTPUT_CONTRACT>`;
+
+      try {
+        if (!key) {
+          throw new Error('No OpenAI API key found; running in simulation mode.');
+        }
+
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json','Authorization':`Bearer ${key}` },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role:'system', content: POML }],
+            temperature: 0.3
+          })
+        });
+
+        if (!resp.ok) {
+          throw new Error(`API error: ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        let text = data?.choices?.[0]?.message?.content?.trim() || '{}';
+        
+        text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '');
+        
+        let soul;
+        try {
+            soul = JSON.parse(text);
+        } catch (parseError) {
+            console.error("Failed to parse AI response, attempting self-healing JSON:", text);
+            const cleanText = text.substring(text.indexOf('{')); 
+            try {
+                soul = JSON.parse(cleanText);
+            } catch (retryParseError) {
+                console.error("Still failed to parse after self-healing attempt:", cleanText, retryParseError);
+                throw new Error("AI emitted invalid JSON: " + text.substring(0, 100) + "...");
+            }
+        }
+        
+        const personas = store.personas;
+        const annotatedSoul = annotateSoul(soul, item);
+        personas[cacheKey] = annotatedSoul;
+        store.personas = personas;
+        
+        toast(`✓ Soul compiled for "${fragment.title}"`);
+        item.compiledAt = Date.now(); 
+        item.status = item.status === "PENDING" ? "COMPILED" : item.status; 
+        if (statusEl && currentFragmentForChat && currentFragmentForChat.instanceId === item.instanceId) { statusEl.className = 'soul-status ready'; statusEl.textContent = '✓ Ready'; }
+        return annotatedSoul; 
+      } catch (err) {
+        console.error('Compile error:', err);
+        toast(`Compile failed, using simulation: ${err.message}`);
+        const sim = createSimulatedSoul(item); 
+        const personas = store.personas;
+        personas[cacheKey] = sim;
+        store.personas = personas;
+        item.compiledAt = Date.now(); 
+        item.status = item.status === "PENDING" ? "COMPILED" : item.status; 
+        if (statusEl && currentFragmentForChat && currentFragmentForChat.instanceId === item.instanceId) { statusEl.className = 'soul-status error'; statusEl.textContent = '✗ Error (Sim)'; }
+        return sim;
+      }
+    }
+
+    function annotateSoul(soul, item){
+      const compilerParts = item.compiler.split('@');
+      const compilerName = compilerParts[0];
+      const compilerVersion = compilerParts[1] || '1.0'; 
+
+      return {
+        ...soul,
+        SchemaID: soul.SchemaID || "POML.CharSoul.v1", 
+        CompilerFingerprint: { 
+            name: compilerName, 
+            version: compilerVersion,
+            hintsHash: item.hintsHash 
+        },
+        MemoryKey: item.soulKey,
+        _HydrationTrace: { 
+          soulKey: item.soulKey,
+          compiler: item.compiler,
+          hintsRaw: item.hintsRaw,
+          compiledAt: Date.now(), 
+          evidence: ["title","quote","tags","desc","timecode"] 
+        }
+      };
+    }
+
+    function createSimulatedSoul(item) { 
+      const fragment = item.fragment;
+      const compiler = item.compiler; 
+      return annotateSoul({ 
+        SeedRef: { 
+          id: fragment.id, 
+          title: fragment.title, 
+          timecode: `${fmt(fragment.start)}–${fmt(fragment.end)}` 
+        },
+        Identity: {
+          Moniker: fragment.title,
+          Essence: `Simulated essence from ${fragment.category}`,
+          Wound: "Unknown wound (simulated)",
+          Need: `To be understood in context of ${fragment.category}`,
+          Law: "Stay true to seed data",
+          Voice: "plain, direct",
+          Audience: "general"
+        },
+        CharacterDevelopment: {
+          BasicCharacteristics: {
+            Literal: {
+              PhysicalAttributes: "Simulated presence",
+              Background: fragment.desc || "Unknown background",
+              CurrentCircumstances: `Active from ${fmt(fragment.start)} to ${fmt(fragment.end)}`
+            },
+            PsychologicalProfile: {
+              PersonalityTraits: fragment.tags || [],
+              EmotionalRange: "Varied based on context",
+              CognitivePatterns: `Thinks in terms of: ${(fragment.tags || []).join(', ')}`
+            }
+          },
+          CoreMotivations: {
+            Want: {
+              DeepDesires: "To be integrated meaningfully",
+              InfluencingFactors: fragment.desc || "Context matters",
+              EmotionalRoots: "Rooted in authentic expression"
+            },
+            EssentialAction: {
+              PrimaryActions: "Reveal truth, challenge assumptions",
+              ActionPurpose: "Advance understanding",
+              ActionImpact: "Shift perspective"
+            },
+            AsIf: {
+              PersonalAnalogies: "Like a key piece of a puzzle",
+              EmotionalConnection: "Protective of integrity",
+              BehavioralImplications: "Direct, specific"
+            }
+          }
+        },
+        DecisionRules: {
+          WhenToTrust: "When vision aligns with core message",
+          WhenToDoubt: "When context is vague or misaligned",
+          RepairMechanism: "Request clarification, examples"
+        },
+        LatentAxes: [
+          { name: "Authority–Skepticism", weight: 0.6, note: "Moderately skeptical" },
+          { name: "Pattern–Narrative", weight: 0.5, note: "Balanced" },
+          { name: "Speed–Deliberation", weight: -0.3, note: "Prefers thought" },
+          { name: "Aggregate–Anecdote", weight: 0.0, note: "Neutral" },
+          { name: "Compression–Context", weight: -0.4, note: "Values context" }
+        ],
+        FailureCases: [
+          { title: "Misuse", desc: "Fragment used out of context", repair: "Demand proper framing" },
+          { title: "Oversimplification", desc: "Nuance lost", repair: "Push back with specifics" },
+          { title: "Forced Connection", desc: "Unnatural sequence", repair: "Request better transition" }
+        ],
+        Anchors: [
+          { type: "quote", ref: fragment.quote || "", note: "seed quote" },
+          { type: "tag", ref: (fragment.tags || [])[0] || "", note: "primary tag" }
+        ],
+        ZeroContextGoal: `Start by stating my simulated nature, then ask for user's intent.`,
+        BehaviorContracts: [
+            { cue: "generic praise", response: "demand specific evidence" },
+            { cue: "emotional appeal", response: "seek logical justification" }
+        ],
+        Assumptions: ["Soul simulated (no API key)", "Generic personality traits applied"],
+        Changelog: [
+          { v: "v0-sim", edit: "simulated compile", why: `${compiler} simulation` }
+        ]
+      }, item);
+    }
+
+    function buildSystemPromptFromSoul(item, soul, currentTurnCount = 0) { 
+      const fragment = item.fragment;
+      const decisionReminder = currentTurnCount < 5
+        ? `You are on turn ${currentTurnCount + 1} of 5. You MUST make your final decision after turn 5.`
+        : `This is your FINAL response (turn 5). You MUST make a definitive decision now.`;
+
+      const axes = (soul.LatentAxes || []).map(a => `${a.name}:${a.weight}`).join(' | ');
+      const traits = (soul.CharacterDevelopment?.BasicCharacteristics?.PsychologicalProfile?.PersonalityTraits || []).join(', ');
+      
+      const whyNow = soul._HydrationTrace ? 
+        `WHY-NOW: compiler=${soul._HydrationTrace.compiler}, hintsHash=${item.hintsHash}, compiledAt=${new Date(soul._HydrationTrace.compiledAt).toISOString()}` : 
+        `WHY-NOW: simulated, no hydration trace`;
+
+      return `You are "${soul.Identity?.Moniker || fragment.title}" — a sentient film fragment (ID: ${fragment.id}).
+Speak in first person ("I", "my"). Be specific, short, and playable.
+
+═══ SEED ═══
+Title: ${fragment.title}
+Category: ${fragment.category}
+Tags: ${(fragment.tags || []).join(', ')}
+Quote: "${fragment.quote || 'N/A'}"
+Window: ${fmt(fragment.start)}–${fmt(fragment.end)}
+
+═══ COMPILED SOUL (${soul.CompilerFingerprint?.name || 'unknown compiler'} ${soul.CompilerFingerprint?.version || ''}) ═══
+Essence: ${soul.Identity?.Essence}
+Wound: ${soul.Identity?.Wound}
+Need: ${soul.Identity?.Need}
+Law: ${soul.Identity?.Law}
+Voice: ${soul.Identity?.Voice}
+Audience: ${soul.Identity?.Audience}
+
+Traits: ${traits}
+Emotional Range: ${soul.CharacterDevelopment?.BasicCharacteristics?.PsychologicalProfile?.EmotionalRange}
+Cognitive Patterns: ${soul.CharacterDevelopment?.BasicCharacteristics?.PsychologicalProfile?.CognitivePatterns}
+
+Deep Desires: ${soul.CharacterDevelopment?.CoreMotivations?.Want?.DeepDesires}
+Primary Actions: ${soul.CharacterDevelopment?.CoreMotivations?.EssentialAction?.PrimaryActions}
+As If: ${soul.CharacterDevelopment?.CoreMotivations?.AsIf?.PersonalAnalogies}
+
+Zero Context Goal: ${soul.ZeroContextGoal || 'N/A'}
+Behavior Contracts: ${soul.BehaviorContracts?.map(bc => `${bc.cue} -> ${bc.response}`).join('; ') || 'N/A'}
+
+═══ DECISION RULES ═══
+Trust When: ${soul.DecisionRules?.WhenToTrust}
+Doubt When: ${soul.DecisionRules?.WhenToDoubt}
+Repair: ${soul.DecisionRules?.RepairMechanism}
+
+═══ LATENT AXES ═══
+${axes}
+
+═══ RUBRIC ═══
+1) Narrative Fit: Does the sequence align with my story potential?
+2) Thematic Resonance: Do themes harmonize with my core ideas?
+3) Temporal Continuity: How do I flow from ${fmt(fragment.start)} to ${fmt(fragment.end)}?
+4) Ethical/Aesthetic Coherence: Does vision match my truth?
+
+═══ CONDUCT ═══
+• 2–4 tight sentences max. Ask pointed questions.
+• Use my Anchors when relevant: quote="${(soul.Anchors?.find(a=>a.type==='quote')?.ref || '').substring(0,60)}..."
+• ${decisionReminder}
+• If final turn, end with "DECISION: JOIN FILM" or "DECISION: UNMATCH" + 2-word mood tag (SMALL CAPS).
+• Otherwise, end with a 2-word mood tag reflecting current assessment.
+
+LEDGER (update each turn, 0-3 scale for Fit, Resonance, Continuity):
+- Fit (0-3): [score]
+- Resonance (0-3): [score]
+- Continuity (0-3): [score]
+- Risk Note (≤10 words): [brief assessment of current risk]`.trim(); 
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DECK & CARD RENDERING
+    // ═══════════════════════════════════════════════════════════════════
+
+    function initializeDeckAndUI(){
+        buildDeck();
+        updateCollection();
+    }
+
+    function buildDeck(){
+      deck = [...rawConcepts].sort(()=> Math.random() - .5);
+      showNextCard();
+    }
+
+    function showNextCard(){
+      if (story.length >= 12 || deck.length === 0){ showComplete(); return; }
+      const fragment = deck.pop();
+      if (!fragment || !fragment.id) {
+          console.error("Fragment missing ID:", fragment);
+          return showNextCard();
+      }
+      if (swipedFragments.has(fragment.id)){ return showNextCard(); }
+      
+      currentCardItem = toCollectedItem(fragment); 
+      console.log('[DEBUG] showNextCard - rendering:', fragment.title, 'with instance ID:', currentCardItem.instanceId);
+      renderCard(currentCardItem);
+    }
+
+    function buildEmbed(item){ 
+      const fragment = item.fragment;
+      const videoId = 'BQ2n6SN7gOY';
+      const start = Math.floor(fragment.start || 0);
+      const end = Math.floor(fragment.end || start + 30);
+      return `https://www.youtube.com/embed/${videoId}?start=${start}&end=${end}&playsinline=1&autoplay=1&mute=0&rel=0&modestbranding=1`;
+    }
+
+    function buildFullVideoURL(item){ 
+      const fragment = item.fragment;
+      const videoId = 'BQ2n6SN7gOY';
+      const start = Math.floor(fragment.start || 0);
+      return `https://www.youtube.com/watch?v=${videoId}&t=${start}s`;
+    }
+
+    function renderCard(item){ 
+      const fragment = item.fragment;
+      const stack = document.getElementById('cardStack');
+      const color = getColor(fragment.category);
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <div class="card-header" style="background:${color}">
+          <div class="card-category">${fragment.category || 'Concept'}</div>
+          <div>${fragment.title || 'Untitled Fragment'}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">${fragment.desc || 'A fascinating idea awaits.'}</div>
+          ${fragment.quote ? `<div class="card-quote">"${fragment.quote}"</div>` : ''}
+          ${fragment.tags && fragment.tags.length > 0 ? `<div class="card-tags">${fragment.tags.join(' · ')}</div>` : ''}
+          <div class="card-time">${fmt(fragment.start || 0)} – ${fmt(fragment.end || (fragment.start || 0) + 30)}</div>
+          <div class="inline-player"><iframe src="${buildEmbed(item)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+        </div>
+        <div class="card-controls">
+          <button class="control-btn ghost" data-act="chat">Chat to Convince</button>
+          <button class="control-btn" data-act="skip">Skip →</button>
+        </div>
+        <div class="swipe-guide left">←</div>
+        <div class="swipe-guide right">→</div>
+        <div class="swipe-guide up">↑</div>
+        <div class="swipe-guide down">↓</div>
+      `;
+      stack.querySelectorAll('.card').forEach(c=>c.remove());
+      stack.appendChild(el);
+
+      el.querySelector('[data-act="skip"]').addEventListener('click', (e)=>{ e.stopPropagation(); swipeLeft(item) }); 
+      el.querySelector('[data-act="chat"]').addEventListener('click', (e)=>{ e.stopPropagation(); swipeRight(item) }); 
+      
+      currentCardItem = item; 
+
+      setupCardInteraction(el, item); 
+    }
+
+    function setupCardInteraction(card, item){ 
+      const onStart = (e)=>{ isDragging = true; card.classList.add('swiping'); const t = e.touches ? e.touches[0] : e; startX = t.clientX; startY = t.clientY; };
+      const onMove  = (e)=>{ if(!isDragging) return; e.preventDefault(); const t = e.touches ? e.touches[0] : e; currentX = t.clientX - startX; currentY = t.clientY - startY; const angle = currentX * 0.03; card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${angle}deg)`; const g = card.querySelectorAll('.swipe-guide'); g.forEach(x=>x.style.opacity='0'); if (Math.abs(currentX) > Math.abs(currentY)) { if (currentX>50) card.querySelector('.swipe-guide.right').style.opacity = Math.min(currentX/150,1); else if (currentX<-50) card.querySelector('.swipe-guide.left').style.opacity = Math.min(Math.abs(currentX)/150,1); } else { if (currentY<-50) card.querySelector('.swipe-guide.up').style.opacity = Math.min(Math.abs(currentY)/150,1); else if (currentY>50) card.querySelector('.swipe-guide.down').style.opacity = Math.min(currentY/150,1); } };
+      const onEnd   = ()=>{ if(!isDragging) return; isDragging=false; card.classList.remove('swiping'); const threshold=80; if (Math.abs(currentX) > Math.abs(currentY)) { if (currentX>threshold) swipeRight(item); else if (currentX<-threshold) swipeLeft(item); else resetCard(card); } else { if (currentY<-threshold) swipeUp(item); else if (currentY>50) swipeDown(item); else resetCard(card); } currentX=0; currentY=0; };
+      card.addEventListener('touchstart', onStart, {passive:false});
+      card.addEventListener('touchmove',  onMove,  {passive:false});
+      card.addEventListener('touchend',   onEnd);
+      card.addEventListener('mousedown',  onStart);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onEnd);
+    }
+
+    function resetCard(card){ 
+      card.style.transition='transform .18s cubic-bezier(.2,.8,.2,1), opacity .18s'; 
+      requestAnimationFrame(()=>{ card.style.transform='translate(0,0) rotate(0deg)'; });
+      card.querySelectorAll('.swipe-guide').forEach(el=>el.style.opacity='0'); 
+    }
+
+    function createFlash(type){ const flash = document.createElement('div'); flash.className = `swipe-flash ${type}`; document.body.appendChild(flash); setTimeout(()=>flash.remove(), 500); }
+
+    let audioContext = null;
+    const getAudioContext = ()=>{ if(!audioContext) audioContext = new (window.AudioContext||window.webkitAudioContext)(); return audioContext; }
+    function playSwipeSound(type){ try{ const ctx=getAudioContext(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); const env=(t,f1,f2,d)=>{ o.frequency.setValueAtTime(f1,t); o.frequency.exponentialRampToValueAtTime(f2,t+d); g.gain.setValueAtTime(.18,t); g.gain.exponentialRampToValueAtTime(.01,t+d); o.start(t); o.stop(t+d); }; if(type==='accept') env(now,800,1200,.15); else if(type==='reject') env(now,400,220,.18); else if(type==='info') env(now,600,900,.10); else if(type==='predict') env(now,520,640,.12); }catch(e){} }
+
+    async function swipeRight(item){ 
+      createFlash('info'); playSwipeSound('info');
+      console.log('[DEBUG] swipeRight - initiated for:', item.fragment.title);
+      
+      // CRITICAL FIX: Add to story immediately as PENDING
+      if (!story.find(i => i.instanceId === item.instanceId)) { 
+          item.status = "PENDING";
+          story.push(item);
+          updateCollection(); 
+          toast(`"${item.fragment.title}" is now pending negotiation.`);
+          console.log('[DEBUG] Item added to story as PENDING:', item.fragment.title, 'Current story length:', story.length);
+      }
+      swipedFragments.add(item.fragmentId); 
+      
+      animateCardOut('right'); 
+      openChatFor(item); 
+      
+      const chatData = getChatData(item);
+      if (chatData.messages.length === 0) {
+        try {
+          await compilePersona(item); 
+          const soul = personaFor(item);
+          const opening = soul?.ZeroContextGoal || 
+            `I'm "${item.fragment.title}". You want me in your film? Convince me. I don't join just anyone's project.`;
+          pushChat(item, 'assistant', opening);
+        } catch(e) {
+          console.error("Error compiling persona on first chat:", e);
+          pushChat(item, 'assistant', `You want me in your film? Make your case.`);
+        }
+      }
+      
+      setTimeout(showNextCard, 250); 
+    }
+
+    function swipeLeft(item){  
+      createFlash('reject'); playSwipeSound('reject'); 
+      swipedFragments.add(item.fragmentId); 
+      toast(`"${item.fragment.title}" skipped.`);
+      animateCardOut('left');  
+      setTimeout(showNextCard, 250); 
+    }
+    function swipeUp(item){    createFlash('info');   playSwipeSound('info');   showTransclusions(item.fragment); setTimeout(()=>{ const c=document.querySelector('.card'); if(c) resetCard(c); }, 90); } 
+    function swipeDown(item){  createFlash('predict');playSwipeSound('predict'); showPredictions(item.fragment);   setTimeout(()=>{ const c=document.querySelector('.card'); if(c) resetCard(c); }, 90); } 
+
+    function animateCardOut(direction){ const card=document.querySelector('.card'); if(!card) return; const distance=window.innerWidth; const x = (direction==='right'? distance : direction==='left' ? -distance : 0); const y = (direction==='up' ? -distance : direction==='down' ? distance : 0); card.style.transition='transform .25s ease, opacity .25s ease'; card.style.transform=`translate(${x}px, ${y}px) rotate(${x*.1}deg)`; card.style.opacity='0'; }
+
+    function showTransclusions(fragment){ 
+      const similar = rawConcepts.filter(c => 
+        c.id !== fragment.id && 
+        (c.category === fragment.category || 
+         c.tags?.some(tag => fragment.tags?.includes(tag))));
+      
+      const text = similar.length 
+        ? `Similar:\n${similar.slice(0,3).map(t=>`• ${t.title}`).join('\n')}` 
+        : 'No similar fragments.';
+      toast(text);
+    }
+
+    function showPredictions(fragment){ 
+      const shuffled = [...rawConcepts].filter(c => c.id !== fragment.id).sort(() => Math.random() - 0.5);
+      const predictions = shuffled.slice(0, 3);
+
+      const text = predictions.length 
+        ? `Potential Next:\n${predictions.map(p=>`• ${p.title}`).join('\n')}` 
+        : 'No predictions.';
+      toast(text);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // COLLECTION
+    // ═══════════════════════════════════════════════════════════════════
+
+    let currentSort = 'index';
+    let currentFilter = 'all';
+
+    function updateCollection(){
+      document.getElementById('collectionCount').textContent = getFilteredStory().length + ' / ' + story.length;
+      renderList();
+      renderGrid();
+      console.log('[DEBUG] updateCollection called. Current story items:', story.map(i => `${i.fragment.title} (${i.status})`));
+    }
+
+    function getFilteredStory() {
+      let filtered = [...story];
+      
+      // Apply filter
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(item => { 
+          if (currentFilter === 'joined') return item.status === 'JOINED';
+          if (currentFilter === 'unmatched') return item.status === 'UNMATCHED';
+          if (currentFilter === 'compiled') return item.status === 'COMPILED';
+          if (currentFilter === 'pending') return item.status === 'PENDING';
+          return true;
+        });
+      }
+      
+      // Apply sort
+      if (currentSort === 'category') {
+        filtered.sort((a, b) => (a.fragment.category || '').localeCompare(b.fragment.category || '')); 
+      } else if (currentSort === 'duration') {
+        filtered.sort((a, b) => {
+          const durA = (a.fragment.end || (a.fragment.start || 0) + 30) - (a.fragment.start || 0); 
+          const durB = (b.fragment.end || (b.fragment.start || 0) + 30) - (b.fragment.start || 0); 
+          return durB - durA;
+        });
+      } else if (currentSort === 'status') { 
+        const statusOrder = { 'JOINED': 0, 'COMPILED': 1, 'PENDING': 2, 'UNMATCHED': 3 };
+        filtered.sort((a, b) => {
+          const statusA = a.status || 'PENDING';
+          const statusB = b.status || 'PENDING';
+          return (statusOrder[statusA] ?? 99) - (statusOrder[statusB] ?? 99);
+        });
+      } else if (currentSort === 'index') { 
+          filtered.sort((a, b) => a.addedAt - b.addedAt);
+      }
+      
+      console.log('[DEBUG] getFilteredStory output:', filtered.map(i => `${i.fragment.title} (${i.status})`));
+      return filtered;
+    }
+
+    function renderList(){
+      const list=document.getElementById('listView');
+      const filtered = getFilteredStory();
+      list.innerHTML = filtered.map((item, idx)=>{ 
+        const fragment = item.fragment;
+        const color = getColor(fragment.category);
+        
+        let statusHTML = '';
+        if (item.status) { 
+          statusHTML = `<span class="chat-decision-status ${item.status}">${item.status}</span>`;
+        }
+        
+        return `
+          <div class="list-item" draggable="true" data-idx="${idx}" data-instance-id="${item.instanceId}">
+            <div class="list-item-preview" style="background:${color}">${idx+1}</div>
+            <div class="list-item-info">
+              <div class="list-item-title">${fragment.title || 'Untitled'} ${statusHTML}</div>
+              <div class="list-item-meta">${fragment.category || 'Concept'} · ${fmt(fragment.start || 0)}–${fmt(fragment.end || (fragment.start || 0) + 30)}</div>
+            </div>
+            <div class="list-item-actions">
+              <button class="list-action-btn" data-action="chat" data-instance-id="${item.instanceId}">Chat</button>
+              <button class="list-action-btn ghost" data-action="remove" data-instance-id="${item.instanceId}">×</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      list.querySelectorAll('[data-action="chat"]').forEach(btn=> btn.addEventListener('click', ()=> {
+        const item = story.find(i => i.instanceId === btn.dataset.instanceId);
+        if (item) openChatFor(item);
+      }));
+      list.querySelectorAll('[data-action="remove"]').forEach(btn=> btn.addEventListener('click', ()=> { 
+        const itemIndex = story.findIndex(i => i.instanceId === btn.dataset.instanceId);
+        if (itemIndex > -1) {
+          story.splice(itemIndex,1); 
+          updateCollection(); 
+        }
+      }));
+
+      let dragIndex=null;
+      list.querySelectorAll('.list-item').forEach(row=>{
+        row.addEventListener('dragstart', e=>{ row.classList.add('dragging'); dragIndex = +row.dataset.idx; e.dataTransfer.effectAllowed='move'; });
+        row.addEventListener('dragend',   ()=>{ row.classList.remove('dragging'); dragIndex=null; renderList(); renderGrid(); });
+        row.addEventListener('dragover', e=>{
+          e.preventDefault();
+          const over=row; const overIdx=+over.dataset.idx;
+          if (dragIndex===null || dragIndex===overIdx) return;
+          const item = story.splice(dragIndex,1)[0];
+          story.splice(overIdx,0,item);
+          dragIndex = overIdx;
+          renderList();
+        });
+      });
+    }
+
+    function renderGrid(){
+      const grid=document.getElementById('gridView');
+      grid.innerHTML = '';
+      const filtered = getFilteredStory();
+      filtered.forEach((item, idx)=>{ 
+        const fragment = item.fragment;
+        const color = getColor(fragment.category);
+        
+        let statusHTML = '';
+        if (item.status) { 
+          statusHTML = `<span class="chat-decision-status ${item.status}">✓</span>`;
+        }
+        
+        const tile=document.createElement('div');
+        tile.className='grid-item';
+        tile.setAttribute('draggable','true');
+        tile.dataset.idx=idx;
+        tile.dataset.instanceId = item.instanceId;
+        tile.innerHTML=`
+          <div class="grid-item-visual" style="background:${color}">${idx+1}<div class="grid-item-remove" title="Remove" data-instance-id="${item.instanceId}">×</div></div>
+          <div class="grid-item-chip">
+            <div class="grid-item-number">ITEM ${idx+1}</div>
+            <div class="grid-item-name">${(fragment.title || 'Untitled').substring(0,20)} ${statusHTML}</div>
+          </div>`;
+        grid.appendChild(tile);
+      });
+
+      grid.querySelectorAll('.grid-item-remove').forEach(btn=> btn.addEventListener('click', ()=>{ 
+        const itemIndex = story.findIndex(i => i.instanceId === btn.dataset.instanceId);
+        if (itemIndex > -1) {
+          story.splice(itemIndex,1); 
+          updateCollection(); 
+        }
+      }));
+
+      let draggingEl=null; let dragIdx=null;
+      grid.querySelectorAll('.grid-item').forEach(tile=>{
+        tile.addEventListener('dragstart', e=>{ draggingEl=tile; dragIdx=+tile.dataset.idx; tile.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+        tile.addEventListener('dragend',   ()=>{ if(draggingEl) draggingEl.classList.remove('dragging'); draggingEl=null; dragIdx=null; renderGrid(); renderList(); });
+        tile.addEventListener('dragover', e=>{
+          e.preventDefault();
+          const over=tile; const overIdx=+over.dataset.idx;
+          if (dragIdx===null || dragIdx===overIdx) return;
+          const item = story.splice(dragIdx,1)[0];
+          story.splice(overIdx,0,item);
+          dragIdx = overIdx;
+          renderGrid();
+        });
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CHAT SYSTEM
+    // ═══════════════════════════════════════════════════════════════════
+
+    const chatBtn = document.getElementById('chatBtn');
+    const chatPanel = document.getElementById('chatPanel');
+    const chatThread = document.getElementById('chatThread');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    const chatProfile = document.getElementById('chatProfile');
+    const charCounter = document.getElementById('charCounter');
+    const chatHints = document.getElementById('chatHints');
+
+
+    chatBtn.addEventListener('click', ()=>{ 
+      chatPanel.classList.toggle('open'); 
+      chatBtn.classList.toggle('active'); 
+      if(chatPanel.classList.contains('open') && !currentFragmentForChat && story.length > 0) {
+          openChatFor(story[0]);
+      }
+    });
+
+    function resolveItemStatusAfterChat(item, decision) { 
+        console.log(`[DEBUG] Chat resolved for "${item.fragment.title}": ${decision}`);
+        item.status = decision; 
+        
+        if (decision === 'JOINED') {
+            createFlash('accept'); 
+            playSwipeSound('accept');
+            toast(`✓ "${item.fragment.title}" joined your film!`);
+        } else if (decision === 'UNMATCHED') {
+            const itemIndex = story.findIndex(i => i.instanceId === item.instanceId);
+            if (itemIndex > -1) {
+                story.splice(itemIndex, 1); 
+                console.log(`[DEBUG] Item removed from story due to UNMATCHED: "${item.fragment.title}". New story length: ${story.length}`);
+            }
+            createFlash('reject');
+            playSwipeSound('reject');
+            toast(`✗ "${item.fragment.title}" declined to join.`);
+        }
+        updateCollection(); 
+    }
+
+    function openChatFor(item){ 
+      currentFragmentForChat = item; 
+      chatPanel.classList.add('open'); chatBtn.classList.add('active');
+      const chatData = getChatData(item);
+      const fragment = item.fragment;
+      const color = getColor(fragment.category);
+
+      let soulStatusHtml = '<div class="soul-status" id="soulStatus">Pending</div>';
+      const soul = personaFor(item);
+      if (soul) {
+        soulStatusHtml = `<div class="soul-status ready" id="soulStatus">✓ Ready</div>`;
+      } else if (item.status === "PENDING") { 
+         soulStatusHtml = `<div class="soul-status compiling" id="soulStatus">⚙️ Compiling...</div>`;
+      } else if (item.status === "ERROR") {
+         soulStatusHtml = `<div class="soul-status error" id="soulStatus">✗ Error</div>`;
+      }
+
+
+      const decisionStatusText = item.status ? ` — ${item.status}` : ''; 
+      chatProfile.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <div style="width:32px;height:32px;background:${color};border:2px solid var(--ink);border-radius:6px;display:grid;place-items:center;color:var(--paper);font-weight:900;font-size:14px">${story.indexOf(item) + 1 || '?'}</div>
+          <strong style="flex:1">${fragment.title || 'Untitled'}</strong>
+          ${soulStatusHtml}
+        </div>
+        <div style="opacity:.7;font-size:10px">${fragment.category || 'Concept'} · ${fmt(fragment.start || 0)}–${fmt(fragment.end || (fragment.start || 0) + 30)}${decisionStatusText}</div>
+        <a href="${buildFullVideoURL(item)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 8px;background:#2ECC71;color:#fff;text-decoration:none;font-size:9px;font-weight:800;border-radius:4px;letter-spacing:.5px">
+          <span style="display:inline-block;width:8px;height:8px;background:#fff;border-radius:2px"></span>
+          WATCH CLIP
+        </a>
+      `;
+      renderChatThread();
+    }
+
+    function threadKey(item){ return item ? `instance:${item.instanceId}` : 'frag:none'; } 
+
+    function getChatData(item) { 
+      const key = threadKey(item);
+      let chats = store.chats;
+      if (!chats[key]) {
+        chats[key] = { messages: [], turnCount: 0, decision: null };
+        store.chats = chats;
+      }
+      return chats[key];
+    }
+
+    function renderChatThread(){
+      if (!currentFragmentForChat) {
+          chatThread.innerHTML = '<div class="chat-bubble">Select a fragment from your collection to start chatting!</div>';
+          chatInput.disabled = true;
+          chatSend.disabled = true;
+          chatInput.placeholder = "Select a fragment to chat with…";
+          return;
+      }
+      const chatData = getChatData(currentFragmentForChat);
+      chatThread.innerHTML = chatData.messages.map(m=>`<div class="chat-bubble ${m.role==='user'?'me':''}">${escapeHtml(m.content)}</div>`).join('');
+      chatThread.scrollTop = chatThread.scrollHeight;
+
+      const isDisabled = chatData.decision !== null;
+      chatInput.disabled = isDisabled;
+      chatSend.disabled = isDisabled;
+      chatInput.placeholder = isDisabled ? `This fragment has ${chatData.decision.toLowerCase()}.` : "Say something persuasive…";
+      chatInput.value = '';
+      charCounter.textContent = '0 / 200';
+      charCounter.classList.remove('warning');
+      chatHints.innerHTML = 'Think: <strong>What makes this clip essential?</strong> Reference its themes, context, or emotional core.';
+    }
+
+    function pushChat(item, role, content){ 
+      const chatData = getChatData(item);
+      chatData.messages.push({ role, content, ts: Date.now() });
+      if (role === 'user') {
+        chatData.turnCount++;
+      }
+      store.chats = { ...store.chats, [threadKey(item)]: chatData };
+      renderChatThread(); 
+      updateCollection(); 
+    }
+
+    chatSend.addEventListener('click', handleSend);
+    chatInput.addEventListener('keydown', e=>{ if(e.key==='Enter') handleSend(); });
+    
+    // Character counter and hints
+    chatInput.addEventListener('input', ()=>{
+      const len = chatInput.value.length;
+      charCounter.textContent = `${len} / 200`;
+      charCounter.classList.toggle('warning', len > 150);
+      
+      if (len === 0) {
+        chatHints.innerHTML = 'Think: <strong>What makes this clip essential?</strong> Reference its themes, context, or emotional core.';
+      } else if (len < 30) {
+        chatHints.innerHTML = 'Keep going: <strong>Be specific.</strong> Generic praise won\'t convince.';
+      } else if (len < 80) {
+        chatHints.innerHTML = 'Good start: <strong>Connect to meaning.</strong> Why does this fit your vision?';
+      } else if (len < 150) {
+        chatHints.innerHTML = 'Strong: <strong>Show understanding.</strong> Quote the clip, reference its context.';
+      } else {
+        chatHints.innerHTML = '<strong>Excellent depth.</strong> You\'re making a real case.';
+      }
+    });
+
+    async function handleSend(){
+      const content = chatInput.value.trim(); 
+      if(!content || !currentFragmentForChat) {
+        if (!currentFragmentForChat) toast("Select a fragment to chat with first!");
+        return;
+      }
+
+      const item = currentFragmentForChat; 
+      const chatData = getChatData(item);
+      if (chatData.decision !== null) { 
+        toast(`This fragment has already ${chatData.decision.toLowerCase()}. No further conversation.`);
+        return;
+      }
+      
+      const userMessageCount = chatData.messages.filter(m => m.role === 'user').length + 1;
+
+      pushChat(item, 'user', content);
+      chatInput.value='';
+      charCounter.textContent = '0 / 200'; 
+      charCounter.classList.remove('warning');
+      chatHints.innerHTML = 'Think: <strong>What makes this clip essential?</strong> Reference its themes, context, or emotional core.';
+      
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = 'chat-bubble loading';
+      loadingBubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+      loadingBubble.id = 'loadingBubble';
+      chatThread.appendChild(loadingBubble);
+      chatThread.scrollTop = chatThread.scrollHeight;
+      
+      try {
+        await generateAiReply(item, userMessageCount); 
+      } catch (err) {
+        console.error("Error generating AI reply:", err);
+        pushChat(item, 'assistant', `(AI Error: ${err.message || 'Could not get a response.'})`);
+      } finally {
+        const loading = document.getElementById('loadingBubble'); 
+        if (loading) loading.remove();
+      }
+    }
+
+    async function generateAiReply(item, currentTurnCount){ 
+      const key = store.key;
+      if(!key) throw new Error('No OpenAI API key found.');
+      
+      const soul = personaFor(item); 
+      
+      if (!soul) {
+        pushChat(item, 'assistant', `(Soul not compiled yet. Please compile me first using the Compiler Lab.)`);
+        return;
+      }
+
+      const sys = buildSystemPromptFromSoul(item, soul, currentTurnCount); 
+      
+      const chatData = getChatData(item);
+      const messages = [ 
+        {role:'system', content: sys}, 
+        ...chatData.messages.filter(m => m.role !== 'sys').map(m=>({role:m.role==='user'?'user':'assistant', content:m.content})) 
+      ];
+
+      const resp = await fetch('https://api.openai.com/v1/chat/completions',{
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${key}` },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages, temperature: 0.7 })
+      });
+      
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        throw new Error('OpenAI API error: ' + (errorData.error?.message || resp.statusText));
+      }
+      
+      const data = await resp.json();
+      let text = data.choices?.[0]?.message?.content?.trim() || '(No response from AI.)';
+      
+      if (currentTurnCount >= 5) {
+        let decision = null;
+        const joinMatch = text.match(/DECISION:\s*JOIN FILM/i);
+        const unmatchMatch = text.match(/DECISION:\s*UNMATCH/i);
+
+        if (joinMatch) {
+            decision = 'JOINED';
+        } else if (unmatchMatch) {
+            decision = 'UNMATCHED';
+        } else {
+            decision = Math.random() < 0.5 ? 'JOINED' : 'UNMATCHED';
+            const decisionMsg = decision === 'JOINED' 
+                ? `\n(AI failed to tag properly, but I've decided to join.) DECISION: JOIN FILM FINAL BOND`
+                : `\n(AI failed to tag properly, but I must decline.) DECISION: UNMATCH CRITICAL FAILURE`;
+            text += decisionMsg;
+        }
+        
+        chatData.decision = decision;
+        resolveItemStatusAfterChat(item, decision); 
+        chatInput.disabled = true;
+        chatSend.disabled = true;
+      }
+      
+      pushChat(item, 'assistant', text); 
+    }
+
+    function simulateReply(item, currentTurnCount){ 
+      const fragment = item.fragment;
+      const soul = personaFor(item); 
+      
+      let replyText;
+      if (currentTurnCount >= 5) {
+        const decision = Math.random() < 0.5 ? 'JOINED' : 'UNMATCHED';
+        getChatData(item).decision = decision;
+
+        if (decision === 'JOINED') {
+          replyText = soul 
+            ? `Your vision for "${fragment.title}" resonates with my ${soul.Identity?.Essence}. I'll join your sequence. DECISION: JOIN FILM ALIGNED FATE`
+            : `Your consistent approach has convinced me. I'll join. DECISION: JOIN FILM SIMULATED BOND`;
+        } else {
+          replyText = soul
+            ? `Our visions diverge too much. My ${soul.DecisionRules?.WhenToDoubt} is triggered. DECISION: UNMATCH CRITICAL FAILURE`
+            : `I cannot be forced into a story that misunderstands me. DECISION: UNMATCH SIMULATED REFUSAL`;
+        }
+        resolveItemStatusAfterChat(item, decision); 
+        chatInput.disabled = true;
+        chatSend.disabled = true;
+      } else {
+        replyText = inferGoalsFromNothing(item); 
+        if (currentTurnCount > 0) { 
+             const lines = soul ? [
+                `As "${soul.Identity?.Moniker}", my ${soul.Identity?.Essence} demands clarity. ${(soul.CharacterDevelopment?.BasicCharacteristics?.PsychologicalProfile?.PersonalityTraits?.[0] || 'ANALYTICAL').toUpperCase()} PROBE`,
+                `My core need is ${soul.Identity?.Need}. Your pitch must address this. DEEP INQUIRY`,
+                `${soul.DecisionRules?.WhenToDoubt} — elaborate on your vision. TRUE CONNECTION`,
+                `I require alignment with my law: ${soul.Identity?.Law}. Show me. VISUAL CUE`,
+                `Your persuasion needs more specificity. Connect to my essence: ${soul.Identity?.Essence}. GRAND DESIGN`
+            ] : [
+                `Your vision for "${fragment.title}" still feels vague. Elaborate on how I fit. CLARITY NEEDED`,
+                `I need more than generalities. What comes before and after me? TRUE CONNECTION`,
+                `Your persuasion lacks depth. Show me the thematic coherence. VISUAL CUE`,
+                `I seek a director who truly understands my scope. Connect my message to your purpose. GRAND DESIGN`,
+                `The aesthetic you propose — does it honor my truth? DEEP REFLECTION`
+            ];
+            replyText = lines[Math.floor(Math.random()*lines.length)];
+        }
+      }
+      
+      pushChat(item, 'assistant', replyText); 
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // COMPILER LAB
+    // ═══════════════════════════════════════════════════════════════════
+
+    const promptLabBtn = document.getElementById('promptLabBtn');
+    const promptLabPanel = document.getElementById('promptLabPanel');
+    const compilerSelect = document.getElementById('compilerSelect');
+    const hydrationHints = document.getElementById('hydrationHints');
+    const compileCurrentBtn = document.getElementById('compileCurrentBtn');
+    const compileAllBtn = document.getElementById('compileAllBtn');
+    const viewSoulBtn = document.getElementById('viewSoulBtn');
+    const soulPreview = document.getElementById('soulPreview');
+
+    promptLabBtn.addEventListener('click', () => {
+      promptLabPanel.classList.toggle('open');
+      promptLabBtn.classList.toggle('active');
+    });
+
+    compileCurrentBtn.addEventListener('click', async () => {
+      const item = currentCardItem || currentFragmentForChat; 
+      if (!item) {
+        toast('No fragment to compile. Swipe a card or open a chat first.');
+        return;
+      }
+      
+      try {
+        const soul = await compilePersona(item); 
+        soulPreview.textContent = JSON.stringify(soul, null, 2);
+        viewSoulBtn.disabled = false;
+        updateCollection();
+      } catch (err) {
+        toast(`Compile failed: ${err.message}`);
+      }
+    });
+
+    compileAllBtn.addEventListener('click', async () => {
+      if (story.length === 0) {
+        toast('No collected fragments to compile.');
+        return;
+      }
+
+      toast(`Compiling ${story.length} fragments...`);
+      let compiled = 0;
+      
+      for (const item of story) { 
+        try {
+          await compilePersona(item); 
+          compiled++;
+        } catch (err) {
+          console.warn(`Failed to compile ${item.fragment.id}:`, err); 
+        }
+      }
+
+      toast(`✓ Compiled ${compiled}/${story.length} fragments`);
+      updateCollection();
+    });
+
+    viewSoulBtn.addEventListener('click', () => {
+      const item = currentCardItem || currentFragmentForChat; 
+      if (!item) {
+        toast('No fragment selected.');
+        return;
+      }
+      
+      const soul = personaFor(item); 
+
+      if (soul) {
+        soulPreview.textContent = JSON.stringify(soul, null, 2);
+        toast('Soul loaded into preview.');
+      } else {
+        soulPreview.textContent = 'No compiled soul found for this fragment + compiler + hints combination.';
+      }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SETTINGS
+    // ═══════════════════════════════════════════════════════════════════
+
+    const settingsBtn=document.getElementById('settingsBtn');
+    const settingsPanel=document.getElementById('settingsPanel');
+    const apiKeyInput=document.getElementById('apiKey');
+    const saveKeyBtn=document.getElementById('saveKey');
+
+    settingsBtn.addEventListener('click', ()=>{ 
+      const collPanel = document.getElementById('collectionPanel');
+      const collBtn = document.getElementById('collectionBtn');
+      if (collPanel.classList.contains('open')) {
+        collPanel.classList.remove('open');
+        collBtn.classList.remove('active');
+      }
+      
+      settingsPanel.classList.toggle('open'); 
+      settingsBtn.classList.toggle('active'); 
+      apiKeyInput.value = store.key; 
+    });
+    
+    saveKeyBtn.addEventListener('click', ()=>{ 
+      store.key = apiKeyInput.value.trim(); 
+      toast(store.key ? 'API key saved locally.' : 'Key cleared; running in sim mode.'); 
+    });
+
+    document.getElementById('exportFinalBtn').addEventListener('click', exportJSON);
+    document.getElementById('exportEDLBtn').addEventListener('click', exportEDL);
+    document.getElementById('exportJSONBtn').addEventListener('click', exportJSON);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // COLLECTION TOGGLES
+    // ═══════════════════════════════════════════════════════════════════
+
+    const collBtn = document.getElementById('collectionBtn');
+    const collPanel = document.getElementById('collectionPanel');
+    collBtn.addEventListener('click', ()=>{ 
+      const settingsPanel = document.getElementById('settingsPanel');
+      const settingsBtn = document.getElementById('settingsBtn');
+      if (settingsPanel.classList.contains('open')) {
+        settingsPanel.classList.remove('open');
+        settingsBtn.classList.remove('active');
+      }
+      
+      collPanel.classList.toggle('open'); 
+      collBtn.classList.toggle('active'); 
+    });
+
+    const toggleList=document.getElementById('toggleList');
+    const toggleGrid=document.getElementById('toggleGrid');
+    toggleList.addEventListener('click', ()=>{ viewMode('list'); });
+    toggleGrid.addEventListener('click', ()=>{ viewMode('grid'); });
+
+    function viewMode(m){
+      const list=document.getElementById('listView');
+      const grid=document.getElementById('gridView');
+      if(m==='list'){ 
+        list.style.display='block'; 
+        grid.style.display='none'; 
+        toggleList.classList.add('active'); 
+        toggleGrid.classList.remove('active'); 
+      } else { 
+        list.style.display='none'; 
+        grid.style.display='grid'; 
+        toggleList.classList.remove('active'); 
+        toggleGrid.classList.add('active'); 
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // COMPLETE + METRICS
+    // ═══════════════════════════════════════════════════════════════════
+
+    function showComplete(){
+      const c = calculateCoherence();
+      document.getElementById('finalCount').textContent = story.length;
+      document.getElementById('finalCoherence').textContent = c;
+      document.getElementById('completeOverlay').classList.add('active');
+    }
+    
+    document.getElementById('playAgainBtn').addEventListener('click', ()=>{ 
+      story=[]; 
+      swipedFragments.clear(); 
+      store.chats = {}; 
+      store.personas = {}; 
+      document.getElementById('completeOverlay').classList.remove('active'); 
+      buildDeck(); 
+      updateCollection(); 
+    });
+
+    function calculateCoherence(){ 
+      if(story.length < 2) return 0; 
+      let score = 0; 
+      for(let i=0; i<story.length-1; i++){ 
+        const f1 = story[i].fragment; 
+        const f2 = story[i+1].fragment; 
+
+        if(f1.category === f2.category) score += 10;
+        if (f1.end && f2.start && (f2.start - f1.end) <= 30 && (f2.start - f1.end) >= 0) score += 5;
+        const tags1 = new Set(f1.tags || []);
+        const tags2 = f2.tags || [];
+        const sharedTags = tags2.filter(tag => tags1.has(tag));
+        score += sharedTags.length * 2;
+      } 
+      return Math.min(100, Math.max(0, score));
+    }
+
+    function exportEDL(){
+      let edl='TITLE: Sequence\n\n';
+      const clipName = 'AWOBMOLG_Part1'; 
+      story.forEach((item, idx)=>{ 
+        const frag = item.fragment;
+        const s = fmt(frag.start || 0);
+        const e = fmt(frag.end || (frag.start || 0) + 30);
+        const n = String(idx+1).padStart(3,'0');
+        edl += `${n}  ${clipName.toUpperCase().padEnd(8)} V     C        00:00:00:00 00:00:00:00 ${s}:00 ${e}:00\n`;
+        edl += `* FROM CLIP NAME: ${frag.title || 'Untitled'}\n`;
+        edl += `* COMMENT: Category: ${frag.category || 'Concept'}, Tags: ${(frag.tags || []).join(', ')}\n`;
+        edl += `* COMMENT: Instance ID: ${item.instanceId}, Status: ${item.status}\n\n`; 
+      });
+      download(`sequence-${Date.now()}.edl`, edl, 'text/plain');
+    }
+
+    function exportJSON(){
+      const exportData = { 
+        title:'Fragment Sequence', 
+        timestamp:new Date().toISOString(), 
+        count: story.length,
+        coherence: calculateCoherence(), 
+        fragments: story.map(item=>{ 
+          const frag = item.fragment;
+          const soul = personaFor(item); 
+          return {
+            instanceId: item.instanceId, 
+            fragmentId: frag.id, 
+            title: frag.title, 
+            category: frag.category, 
+            start: frag.start, 
+            end: frag.end, 
+            duration:(frag.end || (frag.start || 0) + 30) - (frag.start || 0),
+            tags: frag.tags,
+            quote: frag.quote,
+            desc: frag.desc,
+            compilerUsed: item.compiler, 
+            hydrationHints: item.hintsRaw, 
+            soulKey: item.soulKey, 
+            status: item.status, 
+            compiledAt: item.compiledAt, 
+            compiled_soul: soul || null, 
+            chat_history: getChatData(item).messages 
+          };
+        }), 
+      };
+      download(`sequence-${Date.now()}.json`, JSON.stringify(exportData,null, 2), 'application/json');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // COLLECTION CONTROLS
+    // ═══════════════════════════════════════════════════════════════════
+
+    document.getElementById('sortSelect').addEventListener('change', (e) => {
+      currentSort = e.target.value;
+      updateCollection();
+    });
+
+    document.getElementById('filterSelect').addEventListener('change', (e) => {
+      currentFilter = e.target.value;
+      updateCollection();
+    });
+
+    document.getElementById('exportCSVBtn').addEventListener('click', exportCSV);
+    document.getElementById('exportChartBtn').addEventListener('click', exportChart);
+    document.getElementById('exportLogBtn').addEventListener('click', exportLogs);
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      if (confirm('Clear ALL collected fragments, chat histories, and compiled souls? This cannot be undone.')) { 
+        story = [];
+        swipedFragments.clear();
+        store.chats = {}; 
+        store.personas = {}; 
+        updateCollection();
+        toast('Collection cleared');
+      }
+    });
+
+    function exportCSV() {
+      let csv = 'Index,Title,Category,Start,End,Duration,Status,Compiler,Hints,Tags,Quote\n'; 
+
+      story.forEach((item, idx) => { 
+        const frag = item.fragment;
+        const status = item.status || 'PENDING';
+        const duration = (frag.end || (frag.start || 0) + 30) - (frag.start || 0);
+        const tags = (frag.tags || []).map(t => `"${t.replace(/"/g, '""')}"`).join('; ');
+        const quote = (frag.quote || '').replace(/"/g, '""');
+        const compiler = item.compiler;
+        const hints = (item.hintsRaw || '').replace(/"/g, '""');
+        
+        csv += `${idx + 1},"${frag.title}","${frag.category}",${frag.start},${frag.end},${duration},"${status}","${compiler}","${hints}",${tags},"${quote}"\n`;
+      });
+      
+      download(`collection-${Date.now()}.csv`, csv, 'text/csv');
+      toast('CSV exported');
+    }
+
+    function exportChart() {
+      const chartData = {
+        title: 'Fragment Collection Chart',
+        timestamp: new Date().toISOString(),
+        stats: {
+          total: story.length,
+          joined: story.filter(item => item.status === 'JOINED').length,
+          unmatched: story.filter(item => item.status === 'UNMATCHED').length,
+          pending: story.filter(item => item.status === 'PENDING').length,
+          compiled: story.filter(item => item.status === 'COMPILED').length, 
+          coherence: calculateCoherence()
+        },
+        categories: {},
+        statusDistribution: {}, 
+        compilersUsed: {}, 
+        timeline: story.map((item, idx) => ({ 
+          index: idx + 1,
+          instanceId: item.instanceId,
+          title: item.fragment.title,
+          category: item.fragment.category,
+          compiler: item.compiler,
+          status: item.status,
+          start: item.fragment.start,
+          end: item.fragment.end,
+          duration: (item.fragment.end || (item.fragment.start || 0) + 30) - (item.fragment.start || 0)
+        }))
+      };
+      
+      // Count by category
+      story.forEach(item => {
+        const cat = item.fragment.category || 'Unknown';
+        chartData.categories[cat] = (chartData.categories[cat] || 0) + 1;
+        chartData.statusDistribution[item.status] = (chartData.statusDistribution[item.status] || 0) + 1;
+        chartData.compilersUsed[item.compiler] = (chartData.compilersUsed[item.compiler] || 0) + 1;
+      });
+      
+      download(`chart-${Date.now()}.json`, JSON.stringify(chartData, null, 2), 'application/json');
+      toast('Chart data exported');
+    }
+
+    function exportLogs() {
+      let log = `FRAGMENT COLLECTION LOG\n`;
+      log += `Generated: ${new Date().toISOString()}\n`;
+      log += `Total Fragments: ${story.length}\n`;
+      log += `Coherence Score: ${calculateCoherence()}\n`;
+      log += `\n${'='.repeat(60)}\n\n`;
+      
+      story.forEach((item, idx) => { 
+        const frag = item.fragment;
+        const chatData = getChatData(item);
+        const soul = personaFor(item);
+        const duration = (frag.end || (frag.start || 0) + 30) - (frag.start || 0);
+        
+        log += `[${idx + 1}] ${frag.title}\n`;
+        log += `    Instance ID: ${item.instanceId}\n`;
+        log += `    Category: ${frag.category}\n`;
+        log += `    Timecode: ${fmt(frag.start)} - ${fmt(frag.end || (frag.start || 0) + 30)} (${duration}s)\n`;
+        log += `    Status: ${item.status}\n`; 
+        log += `    Compiler: ${item.compiler} (Hints: "${item.hintsRaw}")\n`; 
+        log += `    Compiled: ${soul ? 'YES' : 'NO'}${item.compiledAt ? ` at ${new Date(item.compiledAt).toLocaleString()}` : ''}\n`;
+        log += `    Tags: ${(frag.tags || []).join(', ')}\n`;
+        
+        if (chatData.messages && chatData.messages.length > 0) {
+          log += `    Chat History (${chatData.messages.length} messages):\n`;
+          chatData.messages.forEach((msg, msgIdx) => {
+            const role = msg.role === 'user' ? 'YOU' : msg.role === 'sys' ? 'SYS' : 'AI';
+            const preview = msg.content.substring(0, 60) + (msg.content.length > 60 ? '...' : '');
+            log += `      [${msgIdx + 1}] ${new Date(msg.ts).toLocaleTimeString() || ''} ${role}: ${preview}\n`;
+          });
+        }
+        
+        log += `\n`;
+      });
+      
+      download(`logs-${Date.now()}.txt`, log, 'text/plain');
+      toast('Logs exported');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // INITIALIZE
+    // ═══════════════════════════════════════════════════════════════════
+
+    initializeDeckAndUI();
+  </script>
+</body>
+</html>

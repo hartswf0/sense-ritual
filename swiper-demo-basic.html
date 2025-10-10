@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swiper Demo - Information Architecture</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f5f5f5; 
+      height: 100vh; 
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 48px 1fr 300px;
+      grid-template-rows: 1fr;
+    }
+
+    /* Navigation */
+    .nav { 
+      background: #000; 
+      display: flex; 
+      flex-direction: column; 
+      border-right: 2px solid #000;
+    }
+    .nav-btn { 
+      width: 48px; 
+      height: 48px; 
+      border: none; 
+      background: transparent; 
+      color: #fff; 
+      cursor: pointer; 
+      font-size: 20px;
+      border-bottom: 1px solid #333;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: #222; }
+    .nav-btn.active { background: #fff; color: #000; }
+
+    /* Main Content Area */
+    .main { 
+      position: relative; 
+      overflow: hidden;
+      background: #fff;
+    }
+
+    /* Card Stack */
+    .card-area { 
+      position: absolute; 
+      inset: 0; 
+      display: grid; 
+      place-items: center; 
+      padding: 40px;
+    }
+    .card { 
+      width: 100%; 
+      max-width: 500px; 
+      height: 600px; 
+      background: #fff; 
+      border: 3px solid #000; 
+      border-radius: 12px; 
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .card-header { 
+      background: #000; 
+      color: #fff; 
+      padding: 20px; 
+      font-weight: bold;
+    }
+    .card-category { 
+      font-size: 10px; 
+      opacity: 0.7; 
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+    .card-title { font-size: 18px; }
+    .card-body { 
+      padding: 20px; 
+      flex: 1; 
+      overflow: auto;
+    }
+    .card-desc { 
+      margin-bottom: 16px; 
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .card-meta { 
+      font-size: 12px; 
+      opacity: 0.6; 
+      margin-top: 16px;
+    }
+    .card-controls { 
+      padding: 16px; 
+      display: grid; 
+      grid-template-columns: 1fr 1fr; 
+      gap: 12px;
+      border-top: 2px solid #000;
+    }
+    .card-btn { 
+      padding: 12px; 
+      border: 2px solid #000; 
+      background: #fff; 
+      font-weight: bold; 
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    .card-btn:hover { background: #000; color: #fff; }
+    .card-btn.primary { background: #000; color: #fff; }
+    .card-btn.primary:hover { background: #fff; color: #000; }
+
+    /* Chat Panel */
+    .chat-panel { 
+      position: absolute; 
+      inset: 0; 
+      background: #fff;
+      display: none;
+      flex-direction: column;
+    }
+    .chat-panel.active { display: flex; }
+    .chat-header { 
+      background: #000; 
+      color: #fff; 
+      padding: 16px; 
+      font-weight: bold;
+      border-bottom: 2px solid #000;
+    }
+    .chat-fragment-info { 
+      padding: 12px 16px; 
+      background: #f0f0f0;
+      border-bottom: 2px solid #000;
+      font-size: 12px;
+    }
+    .chat-fragment-title { 
+      font-weight: bold; 
+      margin-bottom: 4px;
+    }
+    .chat-messages { 
+      flex: 1; 
+      overflow: auto; 
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-message { 
+      padding: 12px; 
+      border: 2px solid #000;
+      border-radius: 8px;
+      max-width: 80%;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .chat-message.user { 
+      background: #000; 
+      color: #fff; 
+      align-self: flex-end;
+    }
+    .chat-message.assistant { 
+      background: #fff;
+      align-self: flex-start;
+    }
+    .chat-message.system { 
+      background: #f0f0f0;
+      border-style: dashed;
+      align-self: center;
+      font-size: 11px;
+      text-align: center;
+    }
+    .chat-input-area { 
+      padding: 16px; 
+      border-top: 2px solid #000;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+    .chat-input { 
+      padding: 12px; 
+      border: 2px solid #000;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .chat-send { 
+      padding: 12px 20px; 
+      background: #000; 
+      color: #fff; 
+      border: 2px solid #000;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* Collection Sidebar */
+    .collection { 
+      background: #fff; 
+      border-left: 2px solid #000;
+      display: flex;
+      flex-direction: column;
+    }
+    .collection-header { 
+      background: #000; 
+      color: #fff; 
+      padding: 16px; 
+      font-weight: bold;
+      border-bottom: 2px solid #000;
+    }
+    .collection-count { 
+      font-size: 11px; 
+      opacity: 0.7; 
+      margin-top: 4px;
+    }
+    .collection-list { 
+      flex: 1; 
+      overflow: auto; 
+      padding: 12px;
+    }
+    .collection-item { 
+      padding: 12px; 
+      border: 2px solid #000;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fff;
+    }
+    .collection-item:hover { 
+      background: #f0f0f0;
+      transform: translateX(-4px);
+    }
+    .collection-item.active { 
+      background: #000; 
+      color: #fff;
+    }
+    .collection-item-title { 
+      font-weight: bold; 
+      font-size: 13px; 
+      margin-bottom: 4px;
+    }
+    .collection-item-meta { 
+      font-size: 10px; 
+      opacity: 0.6;
+    }
+    .collection-item-status { 
+      display: inline-block;
+      padding: 2px 6px;
+      background: #ddd;
+      font-size: 9px;
+      font-weight: bold;
+      margin-top: 4px;
+      border-radius: 3px;
+    }
+    .collection-item-status.joined { background: #4CAF50; color: #fff; }
+    .collection-item-status.pending { background: #FFC107; color: #000; }
+    .collection-item-status.unmatched { background: #F44336; color: #fff; }
+
+    /* Settings Panel */
+    .settings-panel {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      display: none;
+      flex-direction: column;
+    }
+    .settings-panel.active { display: flex; }
+    .settings-header {
+      background: #000;
+      color: #fff;
+      padding: 16px;
+      font-weight: bold;
+      border-bottom: 2px solid #000;
+    }
+    .settings-body {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+    }
+    .settings-section {
+      margin-bottom: 24px;
+      padding: 16px;
+      border: 2px solid #000;
+    }
+    .settings-section h3 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
+    .settings-section button {
+      padding: 10px 16px;
+      background: #000;
+      color: #fff;
+      border: 2px solid #000;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* Status Indicator */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 48px;
+      right: 0;
+      background: #000;
+      color: #fff;
+      padding: 8px 16px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 1000;
+    }
+
+    /* Empty State */
+    .empty-state {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 40px;
+    }
+    .empty-state h2 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    .empty-state p {
+      font-size: 14px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <div class="nav">
+    <button class="nav-btn active" data-view="cards" title="Cards">🃏</button>
+    <button class="nav-btn" data-view="chat" title="Chat">💬</button>
+    <button class="nav-btn" data-view="settings" title="Settings">⚙️</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Card Stack View -->
+    <div class="card-area" data-panel="cards">
+      <div id="cardContainer"></div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" data-panel="chat">
+      <div class="chat-header">💬 Chat</div>
+      <div class="chat-fragment-info" id="chatFragmentInfo">
+        <div class="chat-fragment-title">No fragment selected</div>
+        <div>Select a fragment from the collection to start chatting</div>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-state">
+          <div>
+            <h2>No Active Chat</h2>
+            <p>Select a fragment from the collection →</p>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." />
+        <button class="chat-send" id="chatSend">Send</button>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" data-panel="settings">
+      <div class="settings-header">⚙️ Settings</div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <h3>Export Collection</h3>
+          <button id="exportJSON">Export JSON</button>
+          <button id="exportCSV">Export CSV</button>
+        </div>
+        <div class="settings-section">
+          <h3>Debug</h3>
+          <button id="debugLog">Log Story Array</button>
+          <button id="debugClear">Clear Collection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Sidebar -->
+  <div class="collection">
+    <div class="collection-header">
+      📚 Collection
+      <div class="collection-count" id="collectionCount">0 fragments</div>
+    </div>
+    <div class="collection-list" id="collectionList">
+      <div class="empty-state">
+        <p>Swipe cards to build your collection</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span id="statusLeft">Ready</span>
+    <span id="statusRight">0 collected</span>
+  </div>
+
+  <script>
+    // ============================================
+    // DATA
+    // ============================================
+    
+    const rawFragments = [
+      { id: 'fom-1', title: 'Family of Man', category: 'Media', desc: 'A new way of seeing the world, alternative to horrors of Nazism.', start: 27, end: 53 },
+      { id: 'chaos-1', title: 'Chaos Theory', category: 'Science', desc: 'One tiny change could have massive catastrophic consequences.', start: 664, end: 669 },
+      { id: 'vector-1', title: 'Vector World', category: 'AI Myth', desc: 'World too complicated for humans, but not for machines.', start: 3628, end: 3652 },
+      { id: 'google-1', title: 'Google Mission', category: 'Tech', desc: 'Make world\'s information accessible and useful.', start: 1739, end: 1770 },
+      { id: 'graeber-1', title: 'World We Make', category: 'Philosophy', desc: 'World is something we make and could make differently.', start: 6678, end: 6690 },
+      { id: 'tupac-1', title: 'Tupac Stories', category: 'Culture', desc: 'Believed in power of grand stories to inspire change.', start: 143, end: 148 },
+      { id: 'skinner-1', title: 'Operant Conditioning', category: 'Psychology', desc: 'Alter behavior using simple system of rewards.', start: 5356, end: 5369 },
+      { id: 'putin-1', title: 'Putin No Logic', category: 'Politics', desc: 'No plan or strategy, just tactical real-time responses.', start: 2126, end: 2147 }
+    ];
+
+    // ============================================
+    // STATE
+    // ============================================
+    
+    let deck = [];
+    let story = [];  // Collected fragments
+    let currentCard = null;
+    let currentChatFragment = null;
+    let currentView = 'cards';
+    
+    // Simulated chat data
+    const chats = new Map();  // fragmentId -> {messages: [], status: 'pending'}
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    
+    function init() {
+      console.log('[INIT] Starting demo');
+      deck = [...rawFragments].sort(() => Math.random() - 0.5);
+      showNextCard();
+      setupEventListeners();
+      updateUI();
+    }
+
+    function setupEventListeners() {
+      // Navigation
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+      });
+
+      // Chat
+      document.getElementById('chatSend').addEventListener('click', sendMessage);
+      document.getElementById('chatInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+
+      // Settings
+      document.getElementById('exportJSON').addEventListener('click', exportJSON);
+      document.getElementById('exportCSV').addEventListener('click', exportCSV);
+      document.getElementById('debugLog').addEventListener('click', () => {
+        console.log('[DEBUG] story:', story);
+        console.log('[DEBUG] chats:', chats);
+      });
+      document.getElementById('debugClear').addEventListener('click', () => {
+        if (confirm('Clear all collected fragments?')) {
+          story = [];
+          chats.clear();
+          updateUI();
+        }
+      });
+    }
+
+    // ============================================
+    // CARD MANAGEMENT
+    // ============================================
+    
+    function showNextCard() {
+      if (deck.length === 0) {
+        document.getElementById('cardContainer').innerHTML = `
+          <div class="empty-state">
+            <h2>All Done!</h2>
+            <p>You've seen all ${rawFragments.length} fragments</p>
+          </div>
+        `;
+        return;
+      }
+
+      const fragment = deck.pop();
+      currentCard = fragment;
+      
+      console.log('[SHOW CARD]', fragment.id, '-', fragment.title);
+      
+      renderCard(fragment);
+    }
+
+    function renderCard(fragment) {
+      const container = document.getElementById('cardContainer');
+      
+      container.innerHTML = `
+        <div class="card" data-fragment-id="${fragment.id}">
+          <div class="card-header">
+            <div class="card-category">${fragment.category}</div>
+            <div class="card-title">${fragment.title}</div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc">${fragment.desc}</div>
+            <div class="card-meta">
+              Timecode: ${formatTime(fragment.start)} - ${formatTime(fragment.end)}
+            </div>
+          </div>
+          <div class="card-controls">
+            <button class="card-btn" onclick="skipCard()">Skip</button>
+            <button class="card-btn primary" onclick="collectCard()">Collect →</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ============================================
+    // CARD ACTIONS
+    // ============================================
+    
+    function collectCard() {
+      if (!currentCard) return;
+      
+      const fragment = currentCard;
+      
+      console.log('[COLLECT] Adding fragment:', fragment.id, '-', fragment.title);
+      console.log('[COLLECT] story BEFORE:', story.map(f => f.title));
+      
+      // Add to collection
+      story.push(fragment);
+      
+      console.log('[COLLECT] story AFTER:', story.map(f => f.title));
+      
+      // Initialize chat for this fragment
+      if (!chats.has(fragment.id)) {
+        chats.set(fragment.id, {
+          messages: [
+            { role: 'system', content: `Fragment "${fragment.title}" collected. Chat to convince it to join your film.` }
+          ],
+          status: 'pending'
+        });
+      }
+      
+      // Update UI
+      updateUI();
+      updateStatus(`Collected: ${fragment.title}`, `${story.length} collected`);
+      
+      // Show next card
+      showNextCard();
+    }
+
+    function skipCard() {
+      console.log('[SKIP] Skipping:', currentCard?.title);
+      showNextCard();
+    }
+
+    // ============================================
+    // VIEW SWITCHING
+    // ============================================
+    
+    function switchView(view) {
+      console.log('[VIEW] Switching to:', view);
+      
+      currentView = view;
+      
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+      });
+      
+      // Show/hide panels
+      document.querySelectorAll('[data-panel]').forEach(panel => {
+        const isActive = panel.dataset.panel === view;
+        if (panel.classList.contains('chat-panel') || panel.classList.contains('settings-panel')) {
+          panel.classList.toggle('active', isActive);
+        } else {
+          panel.style.display = isActive ? 'grid' : 'none';
+        }
+      });
+    }
+
+    // ============================================
+    // COLLECTION
+    // ============================================
+    
+    function renderCollection() {
+      const list = document.getElementById('collectionList');
+      
+      if (story.length === 0) {
+        list.innerHTML = '<div class="empty-state"><p>Swipe cards to build your collection</p></div>';
+        return;
+      }
+      
+      console.log('[RENDER COLLECTION] Rendering', story.length, 'items');
+      
+      list.innerHTML = story.map((frag, idx) => {
+        const chatData = chats.get(frag.id) || { status: 'pending' };
+        const isActive = currentChatFragment?.id === frag.id;
+        
+        return `
+          <div class="collection-item ${isActive ? 'active' : ''}" 
+               data-fragment-id="${frag.id}"
+               onclick="openChatForFragment('${frag.id}')">
+            <div class="collection-item-title">${idx + 1}. ${frag.title}</div>
+            <div class="collection-item-meta">${frag.category} · ${formatTime(frag.start)}-${formatTime(frag.end)}</div>
+            <span class="collection-item-status ${chatData.status}">${chatData.status.toUpperCase()}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ============================================
+    // CHAT
+    // ============================================
+    
+    function openChatForFragment(fragmentId) {
+      console.log('[OPEN CHAT] For fragment ID:', fragmentId);
+      
+      const fragment = story.find(f => f.id === fragmentId);
+      
+      if (!fragment) {
+        console.error('[OPEN CHAT] Fragment not found:', fragmentId);
+        return;
+      }
+      
+      console.log('[OPEN CHAT] Found fragment:', fragment.title);
+      
+      currentChatFragment = fragment;
+      
+      // Switch to chat view
+      switchView('chat');
+      
+      // Update chat header
+      document.getElementById('chatFragmentInfo').innerHTML = `
+        <div class="chat-fragment-title">${fragment.title}</div>
+        <div>${fragment.category} · ${formatTime(fragment.start)}-${formatTime(fragment.end)}</div>
+      `;
+      
+      // Render messages
+      renderChatMessages();
+      
+      // Update collection to show active item
+      renderCollection();
+    }
+
+    function renderChatMessages() {
+      const messagesContainer = document.getElementById('chatMessages');
+      
+      if (!currentChatFragment) {
+        messagesContainer.innerHTML = `
+          <div class="empty-state">
+            <div>
+              <h2>No Active Chat</h2>
+              <p>Select a fragment from the collection →</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      const chatData = chats.get(currentChatFragment.id);
+      
+      if (!chatData || chatData.messages.length === 0) {
+        messagesContainer.innerHTML = '<div class="empty-state"><p>No messages yet</p></div>';
+        return;
+      }
+      
+      messagesContainer.innerHTML = chatData.messages.map(msg => `
+        <div class="chat-message ${msg.role}">
+          ${msg.content}
+        </div>
+      `).join('');
+      
+      // Scroll to bottom
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function sendMessage() {
+      if (!currentChatFragment) {
+        alert('Select a fragment from the collection first');
+        return;
+      }
+      
+      const input = document.getElementById('chatInput');
+      const content = input.value.trim();
+      
+      if (!content) return;
+      
+      console.log('[SEND MESSAGE] To:', currentChatFragment.title, 'Message:', content);
+      
+      const chatData = chats.get(currentChatFragment.id);
+      
+      // Add user message
+      chatData.messages.push({ role: 'user', content });
+      
+      // Simulate AI response
+      setTimeout(() => {
+        const responses = [
+          "I see. But can you be more specific about how I fit your vision?",
+          "That's interesting. Tell me more about the thematic connections.",
+          "You're making progress. But I need to understand the broader context.",
+          "Alright, you're convincing me. What comes before and after me?",
+          "Okay, I'm joining your film. DECISION: JOINED"
+        ];
+        
+        const response = responses[Math.min(chatData.messages.filter(m => m.role === 'user').length - 1, responses.length - 1)];
+        
+        chatData.messages.push({ role: 'assistant', content: response });
+        
+        // Check if fragment joined
+        if (response.includes('DECISION: JOINED')) {
+          chatData.status = 'joined';
+          updateStatus(`${currentChatFragment.title} joined!`, `${story.length} collected`);
+        }
+        
+        renderChatMessages();
+        renderCollection();
+      }, 500);
+      
+      input.value = '';
+      renderChatMessages();
+    }
+
+    // ============================================
+    // EXPORT
+    // ============================================
+    
+    function exportJSON() {
+      const data = {
+        fragments: story.map(f => ({
+          id: f.id,
+          title: f.title,
+          category: f.category,
+          start: f.start,
+          end: f.end,
+          status: chats.get(f.id)?.status || 'pending'
+        })),
+        timestamp: new Date().toISOString(),
+        count: story.length
+      };
+      
+      download('collection.json', JSON.stringify(data, null, 2), 'application/json');
+    }
+
+    function exportCSV() {
+      let csv = 'Index,Title,Category,Start,End,Status\n';
+      story.forEach((f, i) => {
+        const status = chats.get(f.id)?.status || 'pending';
+        csv += `${i+1},${f.title},${f.category},${formatTime(f.start)},${formatTime(f.end)},${status}\n`;
+      });
+      
+      download('collection.csv', csv, 'text/csv');
+    }
+
+    function download(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ============================================
+    // UI UPDATES
+    // ============================================
+    
+    function updateUI() {
+      renderCollection();
+      document.getElementById('collectionCount').textContent = `${story.length} fragment${story.length !== 1 ? 's' : ''}`;
+      document.getElementById('statusRight').textContent = `${story.length} collected`;
+    }
+
+    function updateStatus(left, right) {
+      document.getElementById('statusLeft').textContent = left;
+      if (right) document.getElementById('statusRight').textContent = right;
+    }
+
+    // ============================================
+    // UTILS
+    // ============================================
+    
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // ============================================
+    // START
+    // ============================================
+    
+    init();
+  </script>
+</body>
+</html>

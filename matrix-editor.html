@@ -2966,6 +2966,61 @@
         }
 
         function showFinalCutScore(handScore) {
+            // Prepare film data for the new final screen
+            const allFragments = game.chains.flatMap(c => c.fragments);
+            const words = allFragments.map(f => f.title.split(' ')).flat();
+            const uniqueWords = [...new Set(words)].filter(w => w.length > 4);
+            const autoTitle = uniqueWords.length >= 2 
+                ? `${uniqueWords[0]} ${uniqueWords[1]}: A Documentary`
+                : 'Untitled Documentary';
+            
+            const filmData = {
+                title: autoTitle,
+                logline: 'A documentary assembled through interactive gameplay in Matrix Editor',
+                color: game.color || '#fff',
+                score: handScore.total,
+                stats: {
+                    base: handScore.breakdown.base,
+                    sharedClips: handScore.stats.sharedClips,
+                    connections: handScore.stats.connections,
+                    dominantCategory: handScore.stats.dominantCategory,
+                    dominance: handScore.stats.dominance
+                },
+                beats: game.chains.map((chain, idx) => ({
+                    name: chain.beatName || `Beat ${idx + 1}`,
+                    syntagma: chain.syntagmaType || 'SC',
+                    clips: chain.fragments.map(frag => ({
+                        id: frag.id || `${chain.beatName}-${frag.title}`.toLowerCase().replace(/\s+/g, '-'),
+                        icon: frag.icon || '◯',
+                        title: frag.title,
+                        duration: Math.round(frag.end - frag.start),
+                        start: frag.start,
+                        end: frag.end,
+                        category: frag.category || '',
+                        desc: frag.desc || '',
+                        quote: frag.quote || frag.desc || '',
+                        tags: frag.tags || [frag.category, chain.beatName],
+                        color: frag.color || game.color || '#fff'
+                    }))
+                })),
+                metadata: {
+                    totalBeats: game.chains.length,
+                    totalShots: game.chains.reduce((sum, c) => sum + c.fragments.length, 0),
+                    totalDuration: Math.round(game.chains.reduce((sum, c) => 
+                        c.fragments.reduce((s, f) => s + (f.end - f.start), 0) + sum, 0))
+                }
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('matrixEditorFilm', JSON.stringify(filmData));
+            
+            // Open the new final screen in a new window
+            window.open('matrix-final-screen.html', '_blank', 'width=1200,height=800');
+            
+            // Fallback: show simple message if popup blocked
+            showNarrative('FILM READY! Check new window', game.color);
+            
+            // Old inline version as fallback
             const screen = document.getElementById('finalCutScreen');
             const content = document.getElementById('finalCutContent');
             
