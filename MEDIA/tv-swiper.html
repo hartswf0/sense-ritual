@@ -169,12 +169,163 @@
     padding: 8px 12px;
     border: 2px solid var(--accent);
   }
+  
+  /* COLLECTION BUTTON */
+  .collect-btn{
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(174, 213, 129, 0.5);
+  }
+  
+  .collect-btn.collected{
+    background: #666;
+    color: #fff;
+  }
+  
+  /* COLLECTION PANEL */
+  .collection-panel{
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: min(400px, 100vw);
+    height: 100vh;
+    background: var(--card-bg);
+    border-left: 3px solid var(--accent);
+    z-index: 100;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .collection-panel.open{
+    right: 0;
+  }
+  
+  .collection-header{
+    padding: 20px;
+    border-bottom: 2px solid var(--accent);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .collection-title{
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .close-panel{
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .collection-list{
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  
+  .collection-item{
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(174, 213, 129, 0.1);
+    border: 1px solid var(--accent);
+    font-size: 12px;
+  }
+  
+  .collection-item-title{
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: var(--accent);
+  }
+  
+  .collection-item-category{
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  
+  .collection-footer{
+    padding: 20px;
+    border-top: 2px solid var(--accent);
+    display: flex;
+    gap: 10px;
+  }
+  
+  .export-btn{
+    flex: 1;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px;
+  }
+  
+  .clear-btn{
+    padding: 12px 20px;
+    background: transparent;
+    color: var(--text);
+    border: 2px solid var(--dim);
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px;
+  }
+  
+  .empty-collection{
+    text-align: center;
+    color: var(--dim);
+    padding: 40px 20px;
+    font-size: 14px;
+  }
 </style>
 </head>
 <body>
   <div id="feed-container"></div>
   <div class="swipe-indicator">↑ SWIPE UP FOR NEXT ↑</div>
   <div class="counter" id="counter">1 / 49</div>
+  <button class="collect-btn" id="collectBtn" onclick="toggleCollect()">+</button>
+  
+  <!-- Collection Panel -->
+  <div class="collection-panel" id="collectionPanel">
+    <div class="collection-header">
+      <div class="collection-title">Collection (<span id="collectionCount">0</span>)</div>
+      <button class="close-panel" onclick="togglePanel()">✕</button>
+    </div>
+    <div class="collection-list" id="collectionList">
+      <div class="empty-collection">No fragments collected yet.<br>Tap + to collect current fragment.</div>
+    </div>
+    <div class="collection-footer">
+      <button class="export-btn" onclick="sendToPromptLab()" style="background: #0a84ff;">🎬 PROMPT LAB</button>
+      <button class="export-btn" onclick="exportCollection()">📄 EDL</button>
+      <button class="clear-btn" onclick="clearCollection()">CLEAR</button>
+    </div>
+  </div>
 
   <script>
     // --- MEDIA LIBRARY: 49 Documentary Fragments ---
@@ -236,6 +387,7 @@
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
+    let collection = []; // Collected fragments
 
     // --- INIT ---
     function init(){
@@ -391,10 +543,192 @@
     window.addEventListener('keydown', (e) => {
       if(e.key === 'ArrowUp') nextCard();
       if(e.key === 'ArrowDown') prevCard();
+      if(e.key === 'c' || e.key === 'C') toggleCollect();
+      if(e.key === 'o' || e.key === 'O') togglePanel();
     });
+
+    // --- COLLECTION FUNCTIONS ---
+    function toggleCollect(){
+      const frag = fragments[currentIndex];
+      const index = collection.findIndex(f => f.id === frag.id);
+      
+      if(index !== -1){
+        // Remove from collection
+        collection.splice(index, 1);
+        document.getElementById('collectBtn').textContent = '+';
+        document.getElementById('collectBtn').classList.remove('collected');
+        console.log(`❌ Removed: ${frag.title}`);
+      } else {
+        // Add to collection
+        collection.push(frag);
+        document.getElementById('collectBtn').textContent = '✓';
+        document.getElementById('collectBtn').classList.add('collected');
+        console.log(`✅ Collected: ${frag.title} (${collection.length} total)`);
+      }
+      
+      updateCollectionPanel();
+    }
+    
+    function updateCollectionPanel(){
+      const listEl = document.getElementById('collectionList');
+      const countEl = document.getElementById('collectionCount');
+      
+      countEl.textContent = collection.length;
+      
+      if(collection.length === 0){
+        listEl.innerHTML = '<div class="empty-collection">No fragments collected yet.<br>Tap + to collect current fragment.</div>';
+      } else {
+        listEl.innerHTML = collection.map((frag, i) => `
+          <div class="collection-item">
+            <div class="collection-item-title">${i + 1}. ${frag.title}</div>
+            <div class="collection-item-category">${frag.category}</div>
+          </div>
+        `).join('');
+      }
+    }
+    
+    function togglePanel(){
+      document.getElementById('collectionPanel').classList.toggle('open');
+    }
+    
+    function sendToPromptLab(){
+      if(collection.length === 0){
+        alert('No fragments collected yet!');
+        return;
+      }
+      
+      // Create OTI (Organized Temporal Information) format for Prompt Lab
+      const otiData = {
+        metadata: {
+          title: 'MEDIA TV Swiper Collection',
+          source: 'MEDIA/tv-swiper.html',
+          timestamp: new Date().toISOString(),
+          totalClips: collection.length,
+          totalDuration: collection.length * 30, // Estimate 30s per clip
+          videoId: 'BQ2n6SN7gOY' // Default YouTube video ID
+        },
+        coherenceScore: Math.floor(Math.random() * 30) + 70, // Random score 70-100
+        sequences: collection.map((frag, i) => ({
+          sequenceNumber: i + 1,
+          beatNumber: i + 1,
+          beatName: frag.title,
+          syntagmaType: frag.category,
+          syntagmaName: frag.category,
+          note: frag.desc,
+          clips: [{
+            title: frag.title,
+            description: frag.desc,
+            category: frag.category,
+            tags: frag.tags,
+            duration: 30, // Estimate
+            file: frag.file,
+            youtubeId: 'BQ2n6SN7gOY',
+            start: 0,
+            end: 30
+          }]
+        }))
+      };
+      
+      // Save to localStorage for Prompt Lab to pick up
+      localStorage.setItem('promptLabData', JSON.stringify(otiData));
+      
+      // Also download as JSON
+      const blob = new Blob([JSON.stringify(otiData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `media_collection_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      console.log(`🎬 Sent ${collection.length} fragments to Prompt Lab`);
+      console.log('📄 Also downloaded JSON file');
+      
+      // Open Prompt Lab in new tab
+      if(confirm(`Open Prompt Lab to generate film?\n\n${collection.length} fragments ready to assemble.`)){
+        window.open('../prompt-lab.html', '_blank');
+      }
+    }
+    
+    function exportCollection(){
+      if(collection.length === 0){
+        alert('No fragments collected yet!');
+        return;
+      }
+      
+      // Export as EDL
+      let edl = `TITLE: MEDIA TV Swiper Collection\nFCM: NON-DROP FRAME\n\n`;
+      let recordIn = 0;
+      
+      collection.forEach((frag, i) => {
+        // Estimate duration (30 seconds per fragment as default)
+        const duration = 30;
+        const recordOut = recordIn + duration;
+        
+        edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+        edl += `00:00:00:00 00:00:${String(duration).padStart(2, '0')}:00 `;
+        edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`;
+        edl += `* FROM CLIP NAME: ${frag.title}\n`;
+        edl += `* CATEGORY: ${frag.category}\n`;
+        edl += `* FILE: ${frag.file}\n\n`;
+        
+        recordIn = recordOut;
+      });
+      
+      const blob = new Blob([edl], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `media_collection_${Date.now()}.edl`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      console.log(`📄 Exported ${collection.length} fragments to EDL`);
+    }
+    
+    function clearCollection(){
+      if(collection.length === 0) return;
+      if(!confirm(`Clear all ${collection.length} collected fragments?`)) return;
+      
+      collection = [];
+      document.getElementById('collectBtn').textContent = '+';
+      document.getElementById('collectBtn').classList.remove('collected');
+      updateCollectionPanel();
+      console.log('🗑️ Collection cleared');
+    }
+    
+    function formatTimecode(seconds){
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      const f = Math.floor((seconds % 1) * 30);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+    }
+    
+    // Update collect button state when showing card
+    function updateCollectButton(){
+      const frag = fragments[currentIndex];
+      const isCollected = collection.some(f => f.id === frag.id);
+      const btn = document.getElementById('collectBtn');
+      
+      if(isCollected){
+        btn.textContent = '✓';
+        btn.classList.add('collected');
+      } else {
+        btn.textContent = '+';
+        btn.classList.remove('collected');
+      }
+    }
 
     // --- START ---
     init();
+    
+    // Override showCard to update collect button
+    const originalShowCard = showCard;
+    showCard = function(index){
+      originalShowCard(index);
+      updateCollectButton();
+    };
   </script>
 </body>
 </html>
