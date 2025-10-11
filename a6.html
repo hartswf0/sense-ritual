@@ -892,13 +892,19 @@
                 0.1, 
                 1000
             );
-            // Position camera for better overview - lower and further back
+            // Position camera for better overview - centered on grid
+            // Adjust for small screens
+            const isMobile = window.innerWidth < 768;
+            const cameraDistance = isMobile ? this.GRID_HEIGHT * 1.8 : this.GRID_HEIGHT * 1.2;
+            const cameraHeight = isMobile ? this.GRID_HEIGHT * 0.5 : this.GRID_HEIGHT * 0.4;
+            
             this.camera.position.set(
                 this.GRID_WIDTH / 2, 
-                this.GRID_HEIGHT * 0.4, 
-                this.GRID_HEIGHT * 1.2
+                cameraHeight, 
+                cameraDistance
             );
-            this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT * 0.3, 0));
+            // Look at center of grid
+            this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, 0));
             
             // Add click-to-zoom functionality
             this.raycaster = new THREE.Raycaster();
@@ -2177,6 +2183,18 @@
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Recenter camera on resize for small screens
+            const isMobile = window.innerWidth < 768;
+            const cameraDistance = isMobile ? this.GRID_HEIGHT * 1.8 : this.GRID_HEIGHT * 1.2;
+            const cameraHeight = isMobile ? this.GRID_HEIGHT * 0.5 : this.GRID_HEIGHT * 0.4;
+            
+            this.camera.position.set(
+                this.GRID_WIDTH / 2, 
+                cameraHeight, 
+                cameraDistance
+            );
+            this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, 0));
         }
 
         // Sound Effects using Web Audio API

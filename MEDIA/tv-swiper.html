@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>MEDIA TV SWIPER — Documentary Fragments</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg: #000;
+    --card-bg: #1a1a1a;
+    --accent: #AED581;
+    --text: #fff;
+    --dim: #666;
+  }
+  body{ 
+    font-family: 'Courier New', monospace; 
+    background: var(--bg); 
+    color: var(--text); 
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  
+  /* VERTICAL FEED CONTAINER */
+  #feed-container{
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  
+  /* TV CARD */
+  .tv-card{
+    position: absolute;
+    width: min(92vw, 600px);
+    max-height: 85vh;
+    background: var(--card-bg);
+    border: 3px solid var(--accent);
+    border-radius: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+    touch-action: pan-y;
+  }
+  
+  .tv-card.swiping{
+    transition: none;
+  }
+  
+  .tv-card.exiting-up{
+    animation: exitUp 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  
+  .tv-card.exiting-down{
+    animation: exitDown 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  
+  @keyframes exitUp{
+    to{ transform: translateY(-120vh); opacity: 0; }
+  }
+  
+  @keyframes exitDown{
+    to{ transform: translateY(120vh); opacity: 0; }
+  }
+  
+  /* TV SCREEN */
+  .tv-screen{
+    width: 100%;
+    flex: 0 0 auto;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .tv-screen video{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: none;
+  }
+  
+  .tv-screen .placeholder{
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--dim);
+    font-size: 48px;
+  }
+  
+  /* TV INFO */
+  .tv-info{
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  .tv-title{
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .tv-category{
+    font-size: 11px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  
+  .tv-desc{
+    font-size: 14px;
+    line-height: 1.6;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+  
+  .tv-tags{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .tv-tag{
+    padding: 4px 10px;
+    background: rgba(174, 213, 129, 0.2);
+    border: 1px solid var(--accent);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  /* SWIPE INDICATOR */
+  .swipe-indicator{
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: var(--dim);
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  /* COUNTER */
+  .counter{
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: bold;
+    z-index: 10;
+    background: rgba(0,0,0,0.8);
+    padding: 8px 12px;
+    border: 2px solid var(--accent);
+  }
+</style>
+</head>
+<body>
+  <div id="feed-container"></div>
+  <div class="swipe-indicator">↑ SWIPE UP FOR NEXT ↑</div>
+  <div class="counter" id="counter">1 / 49</div>
+
+  <script>
+    // --- MEDIA LIBRARY: 49 Documentary Fragments ---
+    const fragments = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', tags: ['Bayer', '1950s', 'Humanism'], file: 'video_0443d3f46b1f433597e8d9d89469cad8.mp4' },
+      { id: 'bayer-individual-self', title: 'Individual Self', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story.', tags: ['Bayer', 'Agency'], file: 'video_06ac4003fedc438588cf48eb594c8f22.mp4' },
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', tags: ['Bayer', 'Idealism'], file: 'video_0e770098e193417596602ae22ae3ab30.mp4' },
+      { id: 'tupac-grand-stories', title: 'Grand Stories', category: 'Core Concept', desc: 'Believed deeply in their power to move people and inspire change.', tags: ['Tupac', 'Revolution'], file: 'video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4' },
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality', category: 'Systemic Critique', desc: 'The harsh reality of power concealed by an unreal fairy land.', tags: ['Afeni', 'Power'], file: 'video_14c639e88a2c4718aee990049945815c.mp4' },
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', category: 'Systemic Critique', desc: 'The world that concealed the harsh reality of power.', tags: ['Afeni', 'Illusion'], file: 'video_219ff5b76d874686bcfecbe4d10f5c83.mp4' },
+      { id: 'civil-rights-promises-broken', title: 'Civil Rights Promises', category: 'Systemic Event', desc: 'The idealism fell away and communities divided into gangs.', tags: ['History', 'Disillusionment'], file: 'video_27b3377368254f1babcfb96a0c47859a.mp4' },
+      { id: 'society-boom-q', title: 'Societal Boom', category: 'Systemic Control', desc: 'Society lets you go far, but as soon as you ask questions, boom.', tags: ['Repression', 'Control'], file: 'video_29245c98b1904304bdaa5513eb2ddc76.mp4' },
+      { id: 'tupac-thug-life-authenticity', title: 'Thug Life', category: 'Culture/Identity', desc: 'Tupac tried to prove his authenticity, accused of intensifying violence.', tags: ['Tupac', 'Identity'], file: 'video_3250a9cf85244759a18a4db13c37d174.mp4' },
+      { id: 'mass-incarceration-clinton', title: 'Mass Incarceration', category: 'Systemic Control', desc: 'Hundreds of thousands imprisoned with no hope of parole.', tags: ['Clinton', 'Injustice'], file: 'video_37ed60eedd054e2aaa8bb1448f65d760.mp4' },
+      { id: 'cultural-fairy-tale-tupac', title: 'Culture as Fairy Tale', category: 'Systemic Critique', desc: 'Tupac helped keep anger sealed off from real politics and power.', tags: ['Media', 'Illusion'], file: 'video_3ca5a80acfde4d4cbd79d94d7605320d.mp4' },
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'Tiny changes could have massive catastrophic consequences.', tags: ['Science', 'Complexity'], file: 'video_3cff4bd16de5427894d5cba1e1e385fb.mp4' },
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could see hidden patterns and make chaos manageable.', tags: ['Science', 'Patterns'], file: 'video_4dd2ee3dbd36497084a52af94e3da979.mp4' },
+      { id: 'gell-mann-underlying-patterns', title: 'Gell-Mann: Underlying Patterns', category: 'Core Concept', desc: 'Underlying patterns at every level of the universe.', tags: ['Gell-Mann', 'Universal'], file: 'video_4e317f6ef333499997fb40ac8257b521.mp4' },
+      { id: 'gazzaniga-multiple-selves', title: 'Gazzaniga: Multiple Selves', category: 'Psychological Theory', desc: 'Multiple selves inside the human brain taking control at different moments.', tags: ['Neuroscience', 'Psychology'], file: 'video_63ff0f9940cc4592b4441f2154e7d123.mp4' },
+      { id: 'google-mission-idealism', title: 'Google Mission', category: 'Organizational Idealism', desc: "Make the world's information accessible and useful.", tags: ['Google', 'Information'], file: 'video_6579a780ae594edb83a690b0dc3468d6.mp4' },
+      { id: 'dot-com-burst-money-power', title: 'Dot-Com Bust', category: 'Economic Event', desc: 'The crash meant Google met the power of money.', tags: ['Economy', 'Crisis'], file: 'video_660de41592134e2489e5e0664ca3ac57.mp4' },
+      { id: 'google-data-trails-predict', title: 'Google Data Trails', category: 'Technological Apparatus', desc: 'Build a picture of how every individual behaved to predict ads.', tags: ['Google', 'Data'], file: 'video_66eb582f7c3c4322823fce3ab08cd1af.mp4' },
+      { id: '911-patriot-act-privacy-lost', title: '9/11 & Patriot Act', category: 'Systemic Event', desc: 'Privacy became irrelevant in the face of security.', tags: ['Security', 'Privacy'], file: 'video_6b720ebb7d604cf5a1162ade16ef45fa.mp4' },
+      { id: 'google-sidelining-consciousness', title: 'Google Sidelining Consciousness', category: 'Systemic Impact', desc: 'What they thought or felt as individuals was completely eradicated.', tags: ['Google', 'Dehumanization'], file: 'video_7404528be4e546dd96305460876438c3.mp4' },
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks', category: 'Technological Apparatus', desc: 'AI learns from mass data, ignores all human stories.', tags: ['AI', 'Data'], file: 'video_7421c0db16f34650b3a4e035793cd128.mp4' },
+      { id: 'hinton-vector-world-myth', title: 'Vector World', category: 'Core Concept', desc: 'The world is too complicated for humans but not for machines.', tags: ['AI', 'Mythology'], file: 'video_742d9608b41f474fbed54ef2f8c408aa.mp4' },
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush', category: 'Economic Apparatus', desc: 'Products set up to mine traces of human behavior everywhere.', tags: ['Surveillance', 'Privacy'], file: 'video_7a3cebeef6544f778247918c5a820e47.mp4' },
+      { id: 'pokemon-go-persuasive', title: 'Pokémon Go', category: 'Technological Apparatus', desc: 'Herding people to monetize checkpoints without them knowing.', tags: ['Gaming', 'Behavioral Control'], file: 'video_7b94990ada2744bb8fdc631159bf3e89.mp4' },
+      { id: 'china-princelings-void', title: "China Princelings' Void", category: 'Systemic Event', desc: 'Money filled the void of any guiding ideology.', tags: ['China', 'Elite'], file: 'video_7dd04a1baf2441ff88096efe9cfa9c14.mp4' },
+      { id: 'china-land-grab-corruption', title: 'China Land Grab', category: 'Systemic Event', desc: 'Organized gangs forcing farmers out at gunpoint.', tags: ['Corruption', 'Injustice'], file: 'video_8040315874d14fd7ab34d1a8960eebb0.mp4' },
+      { id: 'bo-chongqing-experiment', title: 'Bo Xilai Chongqing', category: 'Political Project', desc: 'Used the city as a laboratory to reawaken past idealism.', tags: ['Bo Xilai', 'Populism'], file: 'video_85db0227eea74a2d95191d74497ea214.mp4' },
+      { id: 'china-algorithmic-governance', title: 'China Algorithmic Governance', category: 'Systemic Control', desc: 'Adjusting behavior with social credits for rewards/penalties.', tags: ['China', 'Surveillance State'], file: 'video_8d84e63bb7524b1a850612a7eecd1d1e.mp4' },
+      { id: 'skinner-operant-conditioning', title: 'Skinner Operant Conditioning', category: 'Psychological Theory', desc: 'Easily alter behavior using simple rewards.', tags: ['Behaviorism', 'Control'], file: 'video_8f1a7f1e1a334cdf9208b5946969b691.mp4' },
+      { id: 'xi-jinping-giant-control', title: 'Xi Jinping Giant Control', category: 'Political Project', desc: 'Turn China into a giant system where everyone is controlled.', tags: ['China', 'Totalitarian'], file: 'video_97f853e665434903b8768b5f3430b93d.mp4' },
+      { id: 'russia-oligarchs-putin-rise', title: 'Russia Oligarchs', category: 'Systemic Event', desc: 'Oligarchs selected Vladimir Putin, a man who believed in nothing.', tags: ['Russia', 'Corruption'], file: 'video_98e8654eabe3436e9d44c67916c14d28.mp4' },
+      { id: 'kursk-disaster-anger-power', title: 'Kursk Disaster', category: 'Systemic Event', desc: 'Putin turned public anger towards the corrupt elites.', tags: ['Putin', 'Populism'], file: 'video_9fc306d9816c48e782063216a09a3a74.mp4' },
+      { id: 'putin-no-logic-strategy', title: 'Putin No Logic', category: 'Leadership Critique', desc: 'Everything is a tactical step devoid of any ultimate objective.', tags: ['Putin', 'Nihilism'], file: 'video_9fd24d09d52e42d5beae9952ddd0444c.mp4' },
+      { id: 'putin-eurasia-defense', title: 'Putin Eurasia Defense', category: 'Political Ideology', desc: 'Russia as the last defense against a corrupt West.', tags: ['Putin', 'Nationalism'], file: 'video_adc91bd7f5384d1297042833675813d9.mp4' },
+      { id: 'nightwolves-conspiracy-propaganda', title: 'Nightwolves Conspiracy', category: 'Culture/Propaganda', desc: 'Dramatized paranoid conspiracy that America was destroying Russia.', tags: ['Russia', 'Conspiracy'], file: 'video_ae6bc654fa724459ab6ad31f08342d29.mp4' },
+      { id: 'russia-dream-consumption', title: 'Russia Dream Consumption', category: 'Systemic Critique', desc: 'The country rode through in a dream world of consumption.', tags: ['Social Decay', 'Illusion'], file: 'video_b3d9fe27233c477292aab4239eed1b08.mp4' },
+      { id: 'london-second-empire-discretion', title: 'London Second Empire', category: 'Systemic Apparatus', desc: "City's discretion turned into a force shield hiding illegal fortunes.", tags: ['Finance', 'Corruption'], file: 'video_b481340670b64d4189f8fe0270436329.mp4' },
+      { id: 'algorithmic-mortgages-broken', title: 'Algorithmic Mortgages', category: 'Systemic Apparatus', desc: 'Computers cut up dangerous loans, breaking connection to human reality.', tags: ['Finance', 'Abstraction'], file: 'video_b538c7ec6b634707af8b6a5b4aabdb6f.mp4' },
+      { id: 'skinner-walden2', title: 'Walden 2 Utopia', category: 'Concept', desc: 'Utopia where human behavior is controlled through operant conditioning.', tags: ['Utopia', 'Control'], file: 'video_b7c4908b702f4d77986d03ccbf4ee9d7.mp4' },
+      { id: 'conspiracy-theories-human-ai', title: 'Conspiracy Theories', category: 'Social Phenomenon', desc: 'Humans searching online data for patterns like AI.', tags: ['Social', 'Fragmentation'], file: 'video_c02fccca1a264aaf86cddc620b16ca5b.mp4' },
+      { id: 'illuminati-mind-control', title: 'Illuminati Mind Control', category: 'Conspiracy Theory', desc: 'Millions convinced stars were manipulated by Illuminati.', tags: ['Conspiracy', 'Media'], file: 'video_c1e680e7523647a9ab441d66c0ea8200.mp4' },
+      { id: 'thornley-op-mindfuck', title: 'Operation Mindfuck', category: 'Theory/Action', desc: 'Spread Illuminati theory to parody conspiracy theories.', tags: ['Parody', 'Manipulation'], file: 'video_c4906e0b3da24f11be68dde4c4c59cca.mp4' },
+      { id: '2008-global-economic-crash', title: '2008 Global Crash', category: 'Systemic Event', desc: 'Mortgage systems failed completely, leading to global crash.', tags: ['Economy', 'Crisis'], file: 'video_c7387ae6b119498588975e54c3991097.mp4' },
+      { id: 'banks-rigging-money-laundering', title: 'Banks Rigging', category: 'Systemic Corruption', desc: 'Major banks rigged interest rates and laundered money.', tags: ['Corruption', 'Finance'], file: 'video_c9d18827c251421499c0c679665fcb6b.mp4' },
+      { id: 'populist-anger-elite-bailout', title: 'Populist Anger', category: 'Political Phenomenon', desc: 'The party of Davos bail themselves out.', tags: ['Politics', 'Resistance'], file: 'video_d119202594d54f6baeb084b9f918682e.mp4' },
+      { id: 'brexit-take-back-control', title: 'Brexit', category: 'Political Project', desc: 'A way to get rid of failed elites and old political systems.', tags: ['Populism', 'Nationalism'], file: 'video_d216d4ed13a74083bc1414427d93b6ef.mp4' },
+      { id: 'trump-qanon-pedophile-cabal', title: 'Trump & QAnon', category: 'Political Phenomenon', desc: 'QAnon explained nothing happening via secret cabal of pedophiles.', tags: ['Politics', 'Conspiracy'], file: 'video_d8c1e1812f3f4477ad1ea5afba750261.mp4' },
+      { id: 'liberal-avoidance-despair', title: 'Liberal Avoidance', category: 'Critique', desc: 'Liberals avoided facing genuine grievances and real anger.', tags: ['Politics', 'Elite Disconnect'], file: 'video_ddb407bcc9b24ef9ae0e3dfcfd99fb72.mp4' },
+      { id: 'covid-deep-inequalities', title: 'COVID-19', category: 'Global Crisis', desc: 'The virus brought into focus how deep inequalities have gone.', tags: ['Crisis', 'Social'], file: 'video_e12fb3631ca341a78bc30a14f94615b6.mp4' }
+    ];
+
+    // --- STATE ---
+    let currentIndex = 0;
+    let currentCard = null;
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+
+    // --- INIT ---
+    function init(){
+      showCard(currentIndex);
+      updateCounter();
+    }
+
+    // --- SHOW CARD ---
+    function showCard(index){
+      if(index < 0 || index >= fragments.length) return;
+      
+      const container = document.getElementById('feed-container');
+      
+      // Remove old card
+      if(currentCard){
+        currentCard.remove();
+      }
+      
+      const frag = fragments[index];
+      const card = document.createElement('div');
+      card.className = 'tv-card';
+      
+      card.innerHTML = `
+        <div class="tv-screen">
+          <video autoplay loop muted playsinline>
+            <source src="${frag.file}" type="video/mp4">
+          </video>
+        </div>
+        <div class="tv-info">
+          <div class="tv-title">${frag.title}</div>
+          <div class="tv-category">${frag.category}</div>
+          <div class="tv-desc">${frag.desc}</div>
+          <div class="tv-tags">
+            ${frag.tags.map(t => `<span class="tv-tag">${t}</span>`).join('')}
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(card);
+      currentCard = card;
+      
+      // Add touch events
+      card.addEventListener('touchstart', handleTouchStart, {passive: false});
+      card.addEventListener('touchmove', handleTouchMove, {passive: false});
+      card.addEventListener('touchend', handleTouchEnd, {passive: false});
+      
+      // Add mouse events for desktop
+      card.addEventListener('mousedown', handleMouseDown);
+      card.addEventListener('mousemove', handleMouseMove);
+      card.addEventListener('mouseup', handleMouseEnd);
+      card.addEventListener('mouseleave', handleMouseEnd);
+    }
+
+    // --- TOUCH HANDLERS ---
+    function handleTouchStart(e){
+      startY = e.touches[0].clientY;
+      currentY = startY;
+      isDragging = true;
+      currentCard.classList.add('swiping');
+    }
+
+    function handleTouchMove(e){
+      if(!isDragging) return;
+      e.preventDefault();
+      currentY = e.touches[0].clientY;
+      const deltaY = currentY - startY;
+      currentCard.style.transform = `translateY(${deltaY}px)`;
+      currentCard.style.opacity = 1 - Math.abs(deltaY) / 500;
+    }
+
+    function handleTouchEnd(e){
+      if(!isDragging) return;
+      isDragging = false;
+      currentCard.classList.remove('swiping');
+      
+      const deltaY = currentY - startY;
+      const threshold = 100;
+      
+      if(deltaY < -threshold){
+        // Swipe up - next
+        nextCard();
+      } else if(deltaY > threshold){
+        // Swipe down - previous
+        prevCard();
+      } else {
+        // Reset
+        currentCard.style.transform = '';
+        currentCard.style.opacity = '';
+      }
+    }
+
+    // --- MOUSE HANDLERS ---
+    function handleMouseDown(e){
+      startY = e.clientY;
+      currentY = startY;
+      isDragging = true;
+      currentCard.classList.add('swiping');
+    }
+
+    function handleMouseMove(e){
+      if(!isDragging) return;
+      e.preventDefault();
+      currentY = e.clientY;
+      const deltaY = currentY - startY;
+      currentCard.style.transform = `translateY(${deltaY}px)`;
+      currentCard.style.opacity = 1 - Math.abs(deltaY) / 500;
+    }
+
+    function handleMouseEnd(e){
+      if(!isDragging) return;
+      isDragging = false;
+      currentCard.classList.remove('swiping');
+      
+      const deltaY = currentY - startY;
+      const threshold = 100;
+      
+      if(deltaY < -threshold){
+        nextCard();
+      } else if(deltaY > threshold){
+        prevCard();
+      } else {
+        currentCard.style.transform = '';
+        currentCard.style.opacity = '';
+      }
+    }
+
+    // --- NAVIGATION ---
+    function nextCard(){
+      if(currentIndex >= fragments.length - 1) return;
+      currentCard.classList.add('exiting-up');
+      setTimeout(() => {
+        currentIndex++;
+        showCard(currentIndex);
+        updateCounter();
+      }, 400);
+    }
+
+    function prevCard(){
+      if(currentIndex <= 0) return;
+      currentCard.classList.add('exiting-down');
+      setTimeout(() => {
+        currentIndex--;
+        showCard(currentIndex);
+        updateCounter();
+      }, 400);
+    }
+
+    function updateCounter(){
+      document.getElementById('counter').textContent = `${currentIndex + 1} / ${fragments.length}`;
+    }
+
+    // --- KEYBOARD ---
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowUp') nextCard();
+      if(e.key === 'ArrowDown') prevCard();
+    });
+
+    // --- START ---
+    init();
+  </script>
+</body>
+</html>
