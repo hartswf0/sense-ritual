@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SYNTEGRON: Extended Field of Vision — Icosahedron Concepts</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    /*
+      ███████╗██╗   ██╗███╗   ██╗████████╗███████╗████████╗ ██████╗  ██████╗ ███████╗ ██████╗ ███╗   ██╗
+      ██╔════╝██║   ██║████╗  ██║╚══██╔══╝██╔════╝██╔═════╝██╔════╝ ██╔════╝ ██╔════╝██╔═══██╗████╗  ██║
+      ███████╗██║   ██║██╔██╗ ██║   ██║   █████╗  ██║     ██║  ███╗ ██║  ███╗█████╗  ██║   ██║██╔██╗ ██║
+      ╚════██║██║   ██║██║╚██╗██║   ██║   ██╔══╝  ██║     ██║   ██║ ██║   ██║██╔══╝  ██║   ██║██║╚██╗██║
+      ███████║╚██████╔╝██║ ╚████║   ██║   ███████╗████████╗╚██████╔╝ ╚██████╔╝███████╗╚██████╔╝██║ ╚████║
+      ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚══════╝  ╚═════╝   ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝
+    */
+    
+    /* === GLOBAL / RESET === */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #fff;
+      color: #000;
+      overflow: hidden; /* Prevent scrollbars from the layout */
+    }
+
+    /* === LAYOUT === */
+    .app-layout {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .main-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* === CONTROLS BAR === */
+    .view-controls {
+      padding: 12px 16px;
+      border-bottom: 3px solid #000;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.98);
+      z-index: 50; /* Ensure controls are above 3D canvas */
+      position: relative; /* Needed for z-index to work against icosahedron-container */
+    }
+
+    .view-btn {
+      padding: 8px 14px;
+      border: 2px solid #000;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .view-btn:hover { background: #f0f0f0; }
+    .view-btn.active { background: #000; color: #fff; }
+
+    .filter-bar { display: flex; gap: 8px; align-items: center; flex: 1; }
+    .filter-bar input {
+      flex: 1; min-width: 150px; padding: 6px 10px; border: 2px solid #000;
+      font-family: inherit; font-size: 12px;
+    }
+    .count-badge { font-size: 11px; font-weight: bold; min-width: 60px; }
+
+    /* === GRID VIEW === */
+    .grid-view { flex: 1; overflow-y: auto; padding: 16px; }
+    .cards-grid {
+      display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      max-width: 1600px; margin: 0 auto;
+    }
+    @media (max-width: 768px) { .cards-grid { grid-template-columns: 1fr; } }
+
+    .card { background: #f8f8f8; border: 3px solid #000; cursor: pointer; transition: all 0.2s; user-select: none; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+    .card.selected { box-shadow: inset 0 0 0 5px #c00; background: #fff; }
+
+    .card-header {
+      padding: 12px; font-weight: bold; font-size: 18px; line-height: 1.2; color: #fff; min-height: 50px; display: flex; align-items: center;
+    }
+    .card-body { padding: 12px; font-size: 12px; line-height: 1.4; max-height: 150px; overflow-y: auto; }
+    .card-category { font-weight: bold; font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 6px; }
+    .card-desc { color: #333; margin-bottom: 6px; }
+    .card-quote { font-style: italic; font-size: 11px; color: #555; padding: 6px; border-left: 2px solid #ccc; margin-top: 6px; }
+    .card-tags { font-size: 10px; color: #999; margin-top: 6px; }
+
+    /* === LIST VIEW === */
+    .list-view { flex: 1; overflow-y: auto; padding: 16px; }
+    .list-item { background: #f8f8f8; border: 2px solid #000; padding: 16px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; display: flex; gap: 12px; align-items: flex-start; }
+    .list-item:hover { background: #f0f0f0; }
+    .list-item.selected { background: #fff; box-shadow: inset 0 0 0 4px #c00; }
+    .list-item-color { width: 50px; height: 50px; border: 2px solid #000; flex-shrink: 0; }
+    .list-item-content { flex: 1; min-width: 0; }
+    .list-item-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+    .list-item-meta { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .list-item-desc { font-size: 12px; color: #333; }
+
+    /* === 3D VIEW (Icosahedron) === */
+    #icosahedron-container { 
+        position: absolute;
+        inset: 0; /* Fill the main-view area below controls */
+        background: #fff; /* White background for 3D scene */
+        display: none;
+        touch-action: none; /* Crucial for OrbitControls on touch devices */
+    }
+    #icosahedron-container.active { display: block; }
+    #icosahedron-canvas {
+      width: 100%; 
+      height: 100%;
+      display: block;
+    }
+
+    /* Labels for 3D view */
+    .element-label {
+        position: absolute;
+        color: #000000;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 11px;
+        pointer-events: none; /* Allow clicks to pass through labels */
+        transform: translate(-50%, -50%);
+        white-space: nowrap;
+        z-index: 10; /* Above 3D canvas, below tooltip/info */
+        display: none; /* Controlled by JS */
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* Info and Tooltip specific to 3D */
+    #info3d { 
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 5px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        color: #000;
+        z-index: 20;
+    }
+    #tooltip3d { 
+        position: absolute;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        display: none;
+        pointer-events: none; /* Allow clicks to pass through tooltip */
+        z-index: 30;
+        max-width: 350px;
+        line-height: 1.4;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    #tooltip3d strong {
+        color: #FFC107; /* Amber highlight */
+    }
+
+    #toggleLabels3d {
+      position: absolute; 
+      top: 10px; 
+      right: 10px; 
+      z-index: 20; 
+      padding: 8px 12px; 
+      font-size: 12px; 
+      border: 2px solid #000; 
+      background-color: #fff; 
+      cursor: pointer;
+    }
+
+    /* === DOCK === */
+    .dock { width: 280px; border-left: 3px solid #000; background: rgba(255,255,255,0.98); display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 51; /* Above main-view content */ }
+    .dock-header { padding: 12px; border-bottom: 3px solid #000; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: #f0f0f0; }
+    .dock-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+    .dock-item { background: #f8f8f8; border: 2px solid #000; padding: 10px; cursor: pointer; position: relative; transition: all 0.2s; font-size: 12px; }
+    .dock-item:hover { background: #f0f0f0; }
+    .dock-item-num { position: absolute; top: 4px; right: 6px; font-weight: bold; color: #999; font-size: 10px; }
+    .dock-item-title { font-weight: bold; font-size: 11px; margin-bottom: 4px; margin-right: 20px; }
+    .dock-item-category { font-size: 9px; color: #666; text-transform: uppercase; }
+    .dock-item-remove { position: absolute; bottom: 2px; right: 6px; cursor: pointer; color: #c00; font-weight: bold; font-size: 12px; opacity: 0; transition: opacity 0.2s; }
+    .dock-item:hover .dock-item-remove { opacity: 1; }
+    .dock-footer { padding: 12px; border-top: 3px solid #000; display: flex; gap: 6px; font-size: 11px; }
+    .dock-btn { flex: 1; padding: 6px; border: 2px solid #000; background: #fff; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 11px; transition: all 0.2s; }
+    .dock-btn:hover { background: #000; color: #fff; }
+    .empty-state { padding: 20px; text-align: center; color: #999; font-size: 12px; }
+
+    /* === VIDEO OVERLAY === */
+    .video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .video-overlay.active { display: flex; }
+    .video-container { position: relative; width: 90%; max-width: 1000px; aspect-ratio: 16 / 9; }
+    .video-container iframe { width: 100%; height: 100%; border: 3px solid #fff; }
+    .video-close { position: absolute; top: -50px; right: 0; background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; width: 50px; height: 50px; font-family: monospace; }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1024px) {
+      .dock { width: 200px; }
+      .dock-header, .dock-content { font-size: 11px; }
+    }
+    @media (max-width: 768px) {
+      .app-layout { flex-direction: column; }
+      .dock { width: 100%; border-left: none; border-top: 3px solid #000; max-height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="main-view">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="grid">Grid</button>
+        <button class="view-btn" data-view="list">List</button>
+        <button class="view-btn" data-view="3d">3D Model</button>
+        <div class="filter-bar">
+          <input id="filterInput" placeholder="Search..." />
+          <div class="count-badge"><span id="visibleCount">0</span> / <span id="totalCount">0</span></div>
+        </div>
+      </div>
+
+      <div class="grid-view" id="gridView"></div>
+      <div class="list-view" id="listView" style="display: none;"></div>
+
+      <!-- Icosahedron 3D view container -->
+      <div id="icosahedron-container">
+        <canvas id="icosahedron-canvas"></canvas>
+        <div id="info3d">
+            Explore a SYNTEGRON of complex concepts.<br>
+            Core Concepts (green spheres) are topics.<br>
+            Connections (red lines) are linking elements.<br>
+            **Click** to add to your story (max 12).<br>
+            **Double-click** to play video.
+        </div>
+        <button id="toggleLabels3d">Show Labels</button>
+        <div id="tooltip3d"></div>
+      </div>
+    </div>
+
+    <div class="dock">
+      <div class="dock-header">Your Story (0/12)</div>
+      <div class="dock-content" id="dockContent">
+        <div class="empty-state">Select up to 12 concepts to build your story</div>
+      </div>
+      <div class="dock-footer">
+        <button class="dock-btn" id="exportBtn">Export</button>
+        <button class="dock-btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-overlay" id="videoOverlay">
+    <div class="video-container">
+      <button class="video-close" id="closeVideo">✕</button>
+      <iframe id="videoFrame" allowfullscreen></iframe>
+    </div>
+  </div>
+  
+  <!-- Auto-play video trail overlay -->
+  <div id="videoTrail" style="position: fixed; top: 20px; right: 20px; width: 300px; max-height: 80vh; overflow-y: auto; z-index: 100; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+
+  <!-- 
+███████╗ ██████╗  ██████╗ ██╗    ██╗ ██████╗ ████████╗
+██╔════╝██╔═══██╗██╔═══██╗██║    ██║██╔═══██╗╚══██╔══╝
+███████╗██║   ██║██║   ██║██║ █╗ ██║██║   ██║   ██║   
+╚════██║██║   ██║██║   ██║██║███╗██║██║   ██║   ██║   
+███████║╚██████╔╝╚██████╔╝╚███╔███╔╝╚██████╔╝   ██║   
+╚══════╝ ╚═════╝  ╚═════╝  ╚══╝╚══╝  ╚═════╝    ╚═╝   
+  -->
+  <script>
+    // --- Master Data Source ---
+    const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY'; // All concepts refer to this video for simplicity
+    const USE_LOCAL_MEDIA = true; // Use local videos from MEDIA/ folder
+    const MEDIA_FOLDER = './MEDIA/';
+    
+    // Map concept IDs to local video files
+    const VIDEO_FILE_MAP = {
+      'fom-exhibition-1950s': 'video_0443d3f46b1f433597e8d9d89469cad8.mp4',
+      'bayer-individual-self': 'video_06ac4003fedc438588cf48eb594c8f22.mp4',
+      'bayer-utopian-vision': 'video_0e770098e193417596602ae22ae3ab30.mp4',
+      'tupac-grand-stories': 'video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4',
+      'afeni-harsh-reality': 'video_14c639e88a2c4718aee990049945815c.mp4',
+      'afeni-fairyland-conceal': 'video_219ff5b76d874686bcfecbe4d10f5c83.mp4',
+      'civil-rights-promises-broken': 'video_27b3377368254f1babcfb96a0c47859a.mp4',
+      'society-boom-q': 'video_29245c98b1904304bdaa5513eb2ddc76.mp4',
+      'tupac-thug-life-authenticity': 'video_3250a9cf85244759a18a4db13c37d174.mp4',
+      'mass-incarceration-clinton': 'video_37ed60eedd054e2aaa8bb1448f65d760.mp4',
+      'cultural-fairy-tale-tupac': 'video_3ca5a80acfde4d4cbd79d94d7605320d.mp4',
+      'chaos-theory-unpredictable': 'video_3cff4bd16de5427894d5cba1e1e385fb.mp4',
+      'complexity-theory-patterns': 'video_4dd2ee3dbd36497084a52af94e3da979.mp4',
+      'gell-mann-underlying-patterns': 'video_4e317f6ef333499997fb40ac8257b521.mp4',
+      'gazzaniga-multiple-selves': 'video_63ff0f9940cc4592b4441f2154e7d123.mp4',
+      'google-mission-idealism': 'video_6579a780ae594edb83a690b0dc3468d6.mp4',
+      'dot-com-burst-money-power': 'video_660de41592134e2489e5e0664ca3ac57.mp4',
+      'google-data-trails-predict': 'video_66eb582f7c3c4322823fce3ab08cd1af.mp4',
+      '911-patriot-act-privacy-lost': 'video_6b720ebb7d604cf5a1162ade16ef45fa.mp4',
+      'google-sidelining-consciousness': 'video_7404528be4e546dd96305460876438c3.mp4',
+      'hinton-neural-networks': 'video_7421c0db16f34650b3a4e035793cd128.mp4',
+      'hinton-vector-world-myth': 'video_742d9608b41f474fbed54ef2f8c408aa.mp4',
+      'data-gold-rush-surveillance': 'video_7a3cebeef6544f778247918c5a820e47.mp4',
+      'pokemon-go-persuasive': 'video_7b94990ada2744bb8fdc631159bf3e89.mp4',
+      'china-princelings-void': 'video_7dd04a1baf2441ff88096efe9cfa9c14.mp4',
+      'china-land-grab-corruption': 'video_8040315874d14fd7ab34d1a8960eebb0.mp4',
+      'bo-chongqing-experiment': 'video_85db0227eea74a2d95191d74497ea214.mp4',
+      'china-algorithmic-governance': 'video_8d84e63bb7524b1a850612a7eecd1d1e.mp4',
+      'skinner-operant-conditioning': 'video_8f1a7f1e1a334cdf9208b5946969b691.mp4',
+      'xi-jinping-giant-control': 'video_97f853e665434903b8768b5f3430b93d.mp4',
+      'russia-oligarchs-putin-rise': 'video_98e8654eabe3436e9d44c67916c14d28.mp4'
+    };
+    
+    const rawConcepts = [
+      { id: 'fom-exhibition-1950s', title: 'Family of Man (Exhibition)', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', color: '#C8E6C9', tags: ['Bayer', '1950s', 'Humanism', 'Propaganda', 'Individualism'], quote: 'We are all one world. And at the center of that world is the individual self.', youtubeId: YOUTUBE_VIDEO_ID, start: 27, end: 53 },
+      { id: 'bayer-individual-self', title: 'Individual Self (Central)', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story out of photographs.', color: '#AED581', tags: ['Bayer', 'Agency', 'Self-determination'], quote: 'The individual would make their own story out of the photographs.', youtubeId: YOUTUBE_VIDEO_ID, start: 67, end: 78 },
+      { id: 'bayer-utopian-vision', title: 'Utopian Vision (Bayer)', category: 'Theory', desc: 'Self selecting and arranging fragments into their own story to withstand tyranny.', color: '#9CCC65', tags: ['Bayer', 'Idealism', 'Resistance'], quote: 'It was a utopian vision of the self selecting and arranging the fragments of images into their own story and so becoming strong enough to withstand tyranny.', youtubeId: YOUTUBE_VIDEO_ID, start: 91, end: 97 },
+      { id: 'afeni-harsh-reality', title: 'Harsh Reality (Afeni)', category: 'Systemic Critique', desc: 'The harsh reality of the power that controlled their lives, concealed by an unreal fairy land.', color: '#EF5350', tags: ['Afeni', 'Power', 'Truth', 'Illusion', 'Systemic'], quote: 'What Afeni taught him was that the world most Americans lived in, both white and black, was an unreal fairyland, that concealed the harsh reality of the power that controlled their lives.', youtubeId: YOUTUBE_VIDEO_ID, start: 183, end: 190 },
+      { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland (Afeni)', category: 'Systemic Critique', desc: 'The world most Americans lived in, both white and black, that concealed the harsh reality of power.', color: '#FFCDD2', tags: ['Afeni', 'Illusion', 'Societal Narrative', 'Control'], quote: "We're not being taught to deal with the world as it is. We're being taught to deal with this fairyland, which we're not even living in anymore.", youtubeId: YOUTUBE_VIDEO_ID, start: 197, end: 204 },
+      { id: 'tupac-grand-stories', title: 'Grand Stories (Tupac)', category: 'Core Concept', desc: 'Believed deeply in their power to move people and to inspire them to change the world.', color: '#F44336', tags: ['Tupac', 'Revolution', 'Collective Action'], quote: 'He believed deeply in the idea of self-expression. But he was also one of the few in the 1980s who still believed in the power of grand stories to move people and to inspire them to change the world.', youtubeId: YOUTUBE_VIDEO_ID, start: 143, end: 148 },
+      { id: 'civil-rights-promises-broken', title: 'Civil Rights Promises (Broken)', category: 'Systemic Event', desc: 'The idealism of black politics fell away and communities divided into gangs that then turned on each other.', color: '#BDBDBD', tags: ['History', 'Disillusionment', 'Social Decay'], quote: 'By the 1980s, it was clear that the promises of the civil rights movement had not been kept in America and the idealism of black politics fell away and the communities divided into gangs that then turned on each other.', youtubeId: YOUTUBE_VIDEO_ID, start: 244, end: 251 },
+      { id: 'society-boom-q', title: 'Societal "Boom" (Repression)', category: 'Systemic Control', desc: 'Society will let you go as far as you want, but as soon as you start asking too many questions, "boom".', color: '#616161', tags: ['Repression', 'Control', 'Censorship'], quote: "Well, society is like that. They'll let you go as far as you want, but as soon as you start asking too many questions and you're ready to change, boom.", youtubeId: YOUTUBE_VIDEO_ID, start: 230, end: 237 },
+      { id: 'crack-epidemic-afeni-fall', title: "Crack Epidemic (Afeni's Fall)", category: 'Systemic Event', desc: 'Crack swept through black communities, and Afeni Shakur finally gave up, becoming addicted.', color: '#424242', tags: ['Social Crisis', 'Vulnerability', 'Systemic Impact'], quote: 'Then crack swept through the black communities of America and the famous Shakur finally gave up. She became addicted to crack. Tupac found itself alone.', youtubeId: YOUTUBE_VIDEO_ID, start: 291, end: 300 },
+      { id: 'tupac-thug-life-authenticity', title: 'Thug Life (Authenticity)', category: 'Culture/Identity', desc: 'Tupac tried to become more and more part of that world to prove his authenticity, accused of intensifying violence.', color: '#FF7043', tags: ['Tupac', 'Identity', 'Violence', 'Critique'], quote: 'In response, Tupac tried to become more and more part of that world to prove his authenticity. But then the black radicals accused him of getting lost in the character he had created.', youtubeId: YOUTUBE_VIDEO_ID, start: 971, end: 992 },
+      { id: 'mass-incarceration-clinton', title: 'Mass Incarceration (Clinton)', category: 'Systemic Control', desc: 'President Clinton brought in tough new crime rules, imprisoning hundreds of thousands of young black men.', color: '#78909C', tags: ['Clinton', 'Injustice', 'Control', 'Politics'], quote: 'Hundreds of thousands of young black men were now imprisoned with no hope of parole, even for minor offenses.', youtubeId: YOUTUBE_VIDEO_ID, start: 1070, end: 1078 },
+      { id: 'cultural-fairy-tale-tupac', title: 'Culture as Fairy Tale (Tupac)', category: 'Systemic Critique', desc: 'By moving radical politics into culture, Tupac helped keep anger and dissent sealed off from real politics and power.', color: '#90CAF9', tags: ['Media', 'Illusion', 'Politics', 'Dissent'], quote: 'By moving radical politics into the world of culture, Tupac Shakur had also become part of the fairy tale world because he helped keep the anger and the dissent sealed off from the real world of politics and power.', youtubeId: YOUTUBE_VIDEO_ID, start: 1099, end: 1113 },
+      { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society (Corrupt)', category: 'Systemic Critique', desc: 'Billions of dollars from the West created a dreamlike society run by an elite, but also deeply corrupt.', color: '#FFD54F', tags: ['Saudi', 'Wealth', 'Corruption', 'Illusion'], quote: 'This vast wave of money had created a dreamlike society run by an elite where no one paid any tax.', youtubeId: YOUTUBE_VIDEO_ID, start: 379, end: 384 },
+      { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary (Fragments)", category: 'Personal Apparatus', desc: 'A vast collage of memories and feelings, written after shrapnel pierced his skull, leaving his world in fragments.', color: '#BCAAA4', tags: ['Trauma', 'Memory', 'Fragmentation', 'Identity'], quote: 'Then his memories from the past began to come back but in a mass of fragments. Nothing linked them. They made no sense.', youtubeId: YOUTUBE_VIDEO_ID, start: 1166, end: 1172 },
+      { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', category: 'Systemic Event', desc: 'The whole organization of Jihad was disintegrating into rival factions; all ideas of solidarity and collective action had gone.', color: '#90A4AE', tags: ['Disillusionment', 'Conflict', 'Revolution'], youtubeId: YOUTUBE_VIDEO_ID, start: 1237, end: 1248 },
+      { id: 'zubaydah-perpetual-now', title: 'Perpetual Now (Zubaydah)', category: 'Emotional State', desc: 'His identity had disintegrated into random memories, trapped in a perpetual now, no way of moving forward.', color: '#424242', tags: ['Existential', 'Fragmentation', 'Nihilism'], quote: 'He wrote how it was as though time had stopped. He was trapped in a perpetual now, haunted by fragments of memory, with no way of moving forward into the future.', youtubeId: YOUTUBE_VIDEO_ID, start: 1313, end: 1320 },
+      { id: 'cia-enhanced-interrogation', title: 'CIA Enhanced Interrogation', category: 'Systemic Control', desc: 'Used waterboarding 83 times, smashing, and freezing to reduce Abu Zubaydah to a state of "learned helplessness".', color: '#B71C1C', tags: ['Torture', 'Power', 'Control', 'Psychology', 'Systemic'], quote: 'They would use it to reduce Abu Zubeda back to a state of learned helplessness. They called it enhanced interrogation.', youtubeId: YOUTUBE_VIDEO_ID, start: 2604, end: 2616 },
+      { id: 'cia-godzilla-fear', title: 'CIA & Godzilla (Fear Wave)', category: 'Systemic Impact', desc: "Disconnected memories from Zubaydah's brain, including from films like Godzilla, spread fear across America.", color: '#795548', tags: ['Media', 'Propaganda', 'Fear', 'Systemic'], quote: 'Desperate for the torture to stop, Zuba just spewed out all the disconnected memories inside his brain... many of them drawn from the films he had watched, including Godzilla.', youtubeId: YOUTUBE_VIDEO_ID, start: 2664, end: 2675 },
+      { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'One tiny change in equations could have massive catastrophic consequences which they could never have predicted.', color: '#42A5F5', tags: ['Science', 'Complexity', 'Prediction', 'Limits of Control'], quote: 'One tiny change in their equations could have massive catastrophic consequences which they could never have predicted. It was called chaos theory.', youtubeId: YOUTUBE_VIDEO_ID, start: 664, end: 669 },
+      { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers could be used to see hidden underlying patterns and make the chaos manageable (Murray Gell-Mann).', color: '#2196F3', tags: ['Science', 'Patterns', 'Management', 'Control'], quote: 'But in the 1990s... computers could be used to see hidden underlying patterns and make the chaos manageable. This new idea was called complexity theory.', youtubeId: YOUTUBE_VIDEO_ID, start: 738, end: 751 },
+      { id: 'gell-mann-underlying-patterns', title: 'Gell-Mann: Underlying Patterns', category: 'Core Concept', desc: 'Believed there were underlying patterns at every level of the universe: particles, thought, societies, languages.', color: '#1976D2', tags: ['Gell-Mann', 'Universal', 'Structure', 'Order'], quote: 'He believed that there were underlying patterns at every level of the universe. Not just in the particles, but in the way people think, in the structure of human societies, and even in the languages they spoke.', youtubeId: YOUTUBE_VIDEO_ID, start: 766, end: 779 },
+      { id: 'gazzaniga-multiple-selves', title: 'Gazzaniga: Multiple Selves', category: 'Psychological Theory', desc: 'Inside brains, human beings have all kinds of different selves; conscious mind makes up stories for illusion of control.', color: '#FFB74D', tags: ['Neuroscience', 'Psychology', 'Identity', 'Illusion'], quote: 'Gazanaga argued that really there were multiple selves inside the human brain. Each one taking control at different moments. Normally that is hidden because the one self that is conscious constantly makes up stories to explain what all the other selves are doing.', youtubeId: YOUTUBE_VIDEO_ID, start: 1450, end: 1478 },
+      { id: 'hinton-neural-networks', title: 'Hinton: Neural Networks (AI)', category: 'Technological Apparatus', desc: 'AI learns from mass data, looks for connections/patterns, completely ignores all human stories and meaning.', color: '#00BCD4', tags: ['AI', 'Data', 'Pattern Recognition', 'Algorithms'], quote: "Hinton's neural networks were a kind of intelligence that completely ignored all stories.", youtubeId: YOUTUBE_VIDEO_ID, start: 3595, end: 3606 },
+      { id: 'hinton-vector-world-myth', title: 'Vector World (AI Mythology)', category: 'Core Concept', desc: 'The world is too complicated for us as human beings to understand, but nothing is too complicated for the machines and data.', color: '#0097A7', tags: ['AI', 'Mythology', 'Control', 'Dehumanization'], quote: 'He called it vector world. It expressed what was becoming one of the most powerful mythologies of our age... that the world is too complicated for us as human beings to understand. But nothing is too complicated for the machines and the data.', youtubeId: YOUTUBE_VIDEO_ID, start: 3628, end: 3652 },
+      { id: 'google-mission-idealism', title: 'Google (Early Mission)', category: 'Organizational Idealism', desc: "To make the world's information accessible and useful, providing instant access to any information anybody ever wants.", color: '#8BC34A', tags: ['Google', 'Information', 'Idealism', 'Technology'], quote: "At Google, our mission is to make the world's information accessible and useful...", youtubeId: YOUTUBE_VIDEO_ID, start: 1739, end: 1770 },
+      { id: 'dot-com-burst-money-power', title: 'Dot-Com Bust (Money Power)', category: 'Economic Event', desc: 'The crash meant Google met the power of money, which was going to reshape their aims completely by venture capitalists.', color: '#BCAAA4', tags: ['Economy', 'Crisis', 'Corporate Control'], quote: 'Google managed to survive, but the crash meant that they met the power of money, which was going to reshape their aims completely.', youtubeId: YOUTUBE_VIDEO_ID, start: 2210, end: 2215 },
+      { id: 'google-data-trails-predict', title: 'Google (Data Trails & Predict)', category: 'Technological Apparatus', desc: 'Engineers realized they could build a picture of how every individual behaved to predict what advertisements they would click.', color: '#689F38', tags: ['Google', 'Data', 'Prediction', 'Surveillance'], quote: 'Every time someone searched the web, they left trails behind them... they could build up a picture of how every individual behaved and how they were likely to behave in the future. It meant they could predict what advertisement an individual would click on', youtubeId: YOUTUBE_VIDEO_ID, start: 2254, end: 2269 },
+      { id: '911-patriot-act-privacy-lost', title: '9/11 & Patriot Act (Privacy Lost)', category: 'Systemic Event', desc: "Everyone's personal data must be open to examination to stop further attacks; privacy became irrelevant.", color: '#D32F2F', tags: ['Security', 'Privacy', 'State Control', 'Systemic'], quote: 'Privacy of the individual now became irrelevant in the face of a much higher need, security.', youtubeId: YOUTUBE_VIDEO_ID, start: 2347, end: 2353 },
+      { id: 'google-sidelining-consciousness', title: 'Google (Sidelining Consciousness)', category: 'Systemic Impact', desc: 'Taking people\'s data to predict what they would do, what they thought or felt as individuals was completely eradicated.', color: '#AFB42B', tags: ['Google', 'Dehumanization', 'Control', 'Data'], quote: "What Google were now doing was taking people's data and using it to predict what those individuals would do... What they thought or felt as individuals and the stories they told themselves was completely iraded. Consciousness was being sidelined even more.", youtubeId: YOUTUBE_VIDEO_ID, start: 2402, end: 2425 },
+      { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush (Surveillance)', category: 'Economic Apparatus', desc: 'Products (Roomba, We Vibe, Kayla doll, Pokémon Go) set up to mine traces of human behavior everywhere.', color: '#FFD700', tags: ['Surveillance Capitalism', 'Privacy', 'Commercial'], quote: 'Products of more and more companies around the world were set up to mine all the traces of human behavior everywhere.', youtubeId: YOUTUBE_VIDEO_ID, start: 3691, end: 3698 },
+      { id: 'pokemon-go-persuasive', title: 'Pokémon Go (Persuasive Gaming)', category: 'Technological Apparatus', desc: 'An experiment to see if you could move mass groups of people around to where you wanted them to monetize checkpoints.', color: '#FFEB3B', tags: ['Gaming', 'Behavioral Control', 'Monetization'], quote: 'Pokémon, she said, is about herding people to monetize checkpoints without them being fully aware of it.', youtubeId: YOUTUBE_VIDEO_ID, start: 3789, end: 3795 },
+      { id: 'algorithmic-mortgages-broken', title: 'Algorithmic Mortgages (Broken)', category: 'Systemic Apparatus', desc: 'Computers cut up dangerous high-risk loans and recombined them; the connection of debts to human reality was broken.', color: '#90A4AE', tags: ['Finance', 'Abstraction', 'Crisis', 'Systemic'], quote: 'The computers cut up the dangerous high-risk loans and recombined them with other safer loans... the connection of the debts to human reality was broken.', youtubeId: YOUTUBE_VIDEO_ID, start: 4049, end: 4062 },
+      { id: 'china-algorithmic-governance', title: 'China (Algorithmic Governance)', category: 'Systemic Control', desc: 'Adjusting behavior with "social credits" for rewards/penalties, forcibly reprogram if unresponsive (Xinjiang).', color: '#4169E1', tags: ['China', 'Surveillance State', 'Social Control', 'BF Skinner'], quote: 'And if the data from all the different sources showed a person behaving well... then they would be given what were called social credits.', youtubeId: YOUTUBE_VIDEO_ID, start: 5315, end: 5329 },
+      { id: 'skinner-operant-conditioning', title: 'Skinner (Operant Conditioning)', category: 'Psychological Theory', desc: 'Easily alter behavior of animals using simple rewards, leading to a "beyond freedom and dignity" utopia (Walden Two).', color: '#1E88E5', tags: ['Behaviorism', 'Control', 'Utopia', 'China'], quote: 'Skinner had shown how he could easily alter the behavior of animals like pigeons by using a simple system of rewards. He called it operant conditioning.', youtubeId: YOUTUBE_VIDEO_ID, start: 5356, end: 5369 },
+      { id: 'skinner-walden2', title: 'Walden 2 Utopia', category: 'Concept', desc: 'Utopia where human behavior is controlled through operant conditioning, freeing society from dangerous and irrational impulses.', color: '#87CEEB', tags: ['Utopia', 'Control', 'Prediction', 'BF Skinner'], quote: 'Skinner wrote a novel called Walden 2 that described a future utopia where all human behavior would be controlled through this kind of operant conditioning.', youtubeId: YOUTUBE_VIDEO_ID, start: 5410, end: 5422 },
+      { id: 'russia-oligarchs-putin-rise', title: "Russia (Oligarchic Control)", category: 'Systemic Event', desc: 'Oligarchs looted the country and selected Vladimir Putin, a man who believed in nothing, to protect their power.', color: '#607D8B', tags: ['Russia', 'Corruption', 'Power Elite'], quote: 'In 1999, the oligarchs decided to select Russia\'s next president... And they selected Vladimir Putin... a man who believed in nothing.', youtubeId: YOUTUBE_VIDEO_ID, start: 1905, end: 1926 },
+      { id: 'kursk-disaster-anger-power', title: "Kursk Disaster (Putin's Power)", category: 'Systemic Event', desc: 'Putin turned public anger away from himself and towards the corrupt elites in Moscow, the oligarchs, discovering a new source of power.', color: '#455A64', tags: ['Putin', 'Populism', 'Crisis Management'], quote: 'What Putin then did to save himself was turn that anger away from himself and towards the very people who had put him in power.', youtubeId: YOUTUBE_VIDEO_ID, start: 2053, end: 2062 },
+      { id: 'putin-no-logic-strategy', title: 'Putin (No Logic/Strategy)', category: 'Leadership Critique', desc: 'Everything is a tactical step, a real-time response to external stimuli devoid of any ultimate objective (Mikhail Zygar).', color: '#37474F', tags: ['Putin', 'Nihilism', 'Post-Truth'], quote: 'The Russian journalist Mikuel Zygar wrote, "There is no logic in the age of Putin. There is no plan or strategy. Everything that happens... is a tactical step... devoid of any ultimate objective."', youtubeId: YOUTUBE_VIDEO_ID, start: 2126, end: 2147 },
+      { id: 'putin-eurasia-defense', title: 'Putin (Eurasia as Defense)', category: 'Political Ideology', desc: 'Summoned a dark, frightening vision of Russia (Eurasia) as the last defense against a corrupt West, promoting Russian exceptionalism.', color: '#D32F2F', tags: ['Putin', 'Nationalism', 'Geopolitics', 'Propaganda'], quote: 'He summoned up a dark, frightening vision from Russia\'s past. It said that Russia as a whole, what was called Eurasia, was the last defense against a corrupt West that was trying to take over the whole world.', youtubeId: YOUTUBE_VIDEO_ID, start: 4809, end: 4827 },
+      { id: 'nightwolves-conspiracy-propaganda', title: 'Nightwolves (Conspiracy Drama)', category: 'Culture/Propaganda', desc: 'Extreme nationalist motorcycle club dramatized a paranoid conspiracy that America/Illuminati were planning to undermine Putin and destroy Russia.', color: '#E53935', tags: ['Russia', 'Conspiracy', 'Nationalism'], quote: 'The Nightwolves put on mass shows that dramatized the paranoid conspiracy theory that America... were planning to undermine Vladimir Putin and destroy Russia.', youtubeId: YOUTUBE_VIDEO_ID, start: 4893, end: 4907 },
+      { id: 'russia-dream-consumption', title: 'Russia (Dream World of Consumption)', category: 'Systemic Critique', desc: 'The country rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', color: '#BBDEFB', tags: ['Social Decay', 'Illusion', 'Economy'], quote: 'The country, he said, rode through the first decade of the 21st century in a state of semi-oblivion, in a dream world of consumption.', youtubeId: YOUTUBE_VIDEO_ID, start: 3611, end: 3618 },
+      { id: 'london-second-empire-discretion', title: 'London (Second Empire of Secrecy)', category: 'Systemic Apparatus', desc: "City's 'discretion in the market' turned into a force shield, hiding hundreds of billions of illegal fortunes, making the world seem bewilderingly complicated.", color: '#757575', tags: ['Finance', 'Corruption', 'Offshore', 'Globalization'], quote: 'Now, the discretion that the city was still so proud of had in reality turned into a force shield. It stopped any proper investigation of what was really going on.', youtubeId: YOUTUBE_VIDEO_ID, start: 5013, end: 5019 },
+      { id: 'china-princelings-void', title: "China (Princelings' Ideological Void)", category: 'Systemic Event', desc: 'Children of the Cultural Revolution in power; money filled the void of any guiding ideology, dissolving social bonds.', color: '#FF5722', tags: ['China', 'Elite', 'Corruption', 'Ideological Vacuum'], quote: 'What had been buried and forgotten was any guiding ideology, any confident story about what this was all for. Instead, money had filled the void...', youtubeId: YOUTUBE_VIDEO_ID, start: 3011, end: 3023 },
+      { id: 'china-land-grab-corruption', title: 'China (Massive Land Grab)', category: 'Systemic Event', desc: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', color: '#F4511E', tags: ['Corruption', 'Injustice', 'Economy', 'Systemic'], quote: 'Organized gangs were forcing farmers out of their houses at gunpoint and seizing their land.', youtubeId: YOUTUBE_VIDEO_ID, start: 3043, end: 3050 },
+      { id: 'bo-chongqing-experiment', title: 'Bo Xilai (Chongqing Experiment)', category: 'Political Project', desc: 'Used the city as a laboratory to reawaken past idealism with Mao songs and tackle inequality, later exposed as a corruption smokescreen.', color: '#A1887F', tags: ['Bo Xilai', 'Populism', 'Hypocrisy'], quote: 'Bor soon became famous and he was seen as a future leader.', youtubeId: YOUTUBE_VIDEO_ID, start: 3261, end: 3267 },
+      { id: 'xi-jinping-giant-control', title: 'Xi Jinping (Giant Control System)', category: 'Political Project', desc: 'Decided to turn China into a giant system in which everyone\'s behavior could be predicted, managed, and controlled.', color: '#1A237E', tags: ['China', 'Totalitarian', 'Surveillance', 'Control'], youtubeId: YOUTUBE_VIDEO_ID, start: 5296, end: 5301 },
+      { id: 'conspiracy-theories-human-ai', title: 'Conspiracy Theories (Human AI)', category: 'Social Phenomenon', desc: 'Humans spent vast amounts of time searching online data for patterns like AI, turning them into fantastic, elaborate stories.', color: '#7E57C2', tags: ['Social', 'Fragmentation', 'Narrative', 'Post-Truth'], quote: 'But then it got more complicated because human beings were also exposed to the avalanche of data online and they started to behave in very much the same way as Jeffrey Hinton\'s artificial intelligence machines.', youtubeId: YOUTUBE_VIDEO_ID, start: 4129, end: 4161 },
+      { id: 'illuminati-mind-control', title: 'Illuminati (Mind Control Theory)', category: 'Conspiracy Theory', desc: 'Millions convinced major stars were manipulated by Illuminati via MK Ultra/Disney, with hidden messages and triangles in videos.', color: '#5E35B1', tags: ['Conspiracy', 'Media', 'Control', 'Paranoia'], quote: 'Millions of people became convinced that all the major stars, from Britney Spears to Beyonce, were being manipulated and controlled by the Illuminati. The theory said that the Illuminati had worked with the CIA and their MK Ultra project and with Walt Disney to create a new system of mind control.', youtubeId: YOUTUBE_VIDEO_ID, start: 4216, end: 4221 },
+      { id: 'thornley-op-mindfuck', title: 'Operation Mindfuck (Thornley)', category: 'Theory/Action', desc: 'Spread Illuminati theory to parody/ridicule conspiracy theories, believing they undermined individual confidence.', color: '#9575CD', tags: ['Parody', 'Manipulation', 'Subversion'], quote: 'They had spread the conspiracy theory that the Illuminati were really the secret rulers of the world. They had done it to parody and ridicule all conspiracy theories because they thought that they undermined the confidence of individuals and made them easier to control.', youtubeId: YOUTUBE_VIDEO_ID, start: 4182, end: 4196 },
+      { id: '2008-global-economic-crash', title: '2008 Global Economic Crash', category: 'Systemic Event', desc: 'Mortgage systems failed completely, leading to global crash; governments transferred private debt to public, leading to austerity.', color: '#E57373', tags: ['Economy', 'Crisis', 'Inequality', 'Systemic'], quote: 'In 2008, the systems in the banks that had structured the mortgage loans failed completely. It led to a global economic crash.', youtubeId: YOUTUBE_VIDEO_ID, start: 4329, end: 4336 },
+      { id: 'banks-rigging-money-laundering', title: 'Banks (Rigging/Laundering)', category: 'Systemic Corruption', desc: 'Major banks rigged interest rates and laundered money for organized crime, but "nothing seemed to change".', color: '#E53935', tags: ['Corruption', 'Finance', 'Impunity'], quote: 'That all the major banks had been rigging interest rates and many of them had been laundering money for organized crime, including the drug cartels in Mexico. But again, nothing seemed to change.', youtubeId: YOUTUBE_VIDEO_ID, start: 4370, end: 4378 },
+      { id: 'populist-anger-elite-bailout', title: 'Populist Anger (Elite Bailout)', category: 'Political Phenomenon', desc: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out. (Populist critique).', color: '#F44336', tags: ['Politics', 'Resistance', 'Inequality'], quote: 'The party of Davos, the scientific, engineering, managerial, financial, cultural elite bail themselves out.', youtubeId: YOUTUBE_VIDEO_ID, start: 4415, end: 4422 },
+      { id: 'brexit-take-back-control', title: 'Brexit (Take Back Control)', category: 'Political Project', desc: 'For Dominic Cummings, a way to get rid of failed elites and old political systems, transforming a decaying society.', color: '#EF5350', tags: ['Populism', 'Nationalism', 'Disenchantment'], quote: 'For Dominic Cummings, Brexit was not an end in itself. For him, it was a way of getting rid of the failed elites and the old political systems that ran Britain.', youtubeId: YOUTUBE_VIDEO_ID, start: 4476, end: 4488 },
+      { id: 'trump-qanon-pedophile-cabal', title: 'Trump & QAnon', category: 'Political Phenomenon', desc: 'Paranoia allowed Trump to hide corruption; QAnon explained nothing happening via a "secret cabal of pedophiles in Washington".', color: '#B71C1C', tags: ['Politics', 'Conspiracy', 'Post-Truth'], quote: 'His supporters, though, had their own conspiracy theory, QAnon, that explained why nothing was happening. Trump was being stopped by a secret cabal of pedophiles in Washington.', youtubeId: YOUTUBE_VIDEO_ID, start: 6093, end: 6105 },
+      { id: 'liberal-avoidance-despair', title: 'Liberal Avoidance (Despair)', category: 'Critique', desc: 'Liberals avoided facing genuine grievances and real anger, having no idea how to solve problems of desolation/despair.', color: '#BBDEFB', tags: ['Politics', 'Elite Disconnect', 'Failure'], quote: 'But the liberal opposition, it was a way of avoiding facing up to the genuine grievances and the very real anger in America that Trump\'s election had revealed.', youtubeId: YOUTUBE_VIDEO_ID, start: 6143, end: 6152 },
+      { id: 'fragile-structure-discon-frag', title: 'Fragile Structure (Disconnected Fragments)', category: 'Systemic Vulnerability', desc: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', color: '#9E9E9E', tags: ['Illusion', 'Vulnerability', 'Post-Truth'], quote: 'Groups clinging to power protected themselves behind this brittle shell of conspiracy theories built out of disconnected fragments. But it was a very fragile structure.', youtubeId: YOUTUBE_VIDEO_ID, start: 6164, end: 6183 },
+      { id: 'ai-dogs-everywhere-meaningless', title: 'AI (Dogs Everywhere)', category: 'Technological Impact', desc: 'Google engineers demonstrated AI altering reality, seeing dogs everywhere; a world where anything could be anything, because there was no real meaning any longer.', color: '#4FC3F7', tags: ['AI', 'Perception', 'Illusion', 'Meaninglessness'], quote: 'Google engineers demonstrated how easily reality in this fragmented world could become strange and frightening. They created an AI program to learn how to see dogs. But they then showed how if they ran the algorithm backwards, the machines would alter the images of reality they were being fed, so they would see dogs everywhere.', youtubeId: YOUTUBE_VIDEO_ID, start: 6193, end: 6210 },
+      { id: 'covid-deep-inequalities', title: 'COVID-19 (Deep Inequalities)', category: 'Global Crisis', desc: 'The virus, a force completely outside systems of power, brought into focus how deep inequalities in modern Western societies have gone.', color: '#7E57C2', tags: ['Crisis', 'Social', 'Systemic', 'Vulnerability'], quote: 'The virus was a force that came from completely outside the systems of power. But it has come at a moment when many of the old certainties of this age are already cracking.', youtubeId: YOUTUBE_VIDEO_ID, start: 6364, end: 6371 },
+      { id: 'future-indiv-disappear', title: 'Future (Individualism Disappears)', category: 'Future Scenario', desc: 'Data used to predict/manage human behavior like BF Skinner predicted; individualism would be just a brief moment in history.', color: '#5C6BC0', tags: ['Dystopia', 'Control', 'BF Skinner'], quote: 'Data will be gathered and used on a massive scale to predict and manage all human behavior in the way that the psychologist BF Skinner predicted. He said that individualism would be just a brief moment in history before science would find a way to manage and control everyone.', youtubeId: YOUTUBE_VIDEO_ID, start: 6421, end: 6432 },
+      { id: 'future-old-stability', title: 'Future (Return to Old Stability)', category: 'Future Scenario', desc: 'Hope for return to an old stability where individualism can continue to be managed by a benign elite, but enormous pressures will not go away.', color: '#9FA8DA', tags: ['Nostalgia', 'Illusion', 'Unresolved Conflict'], quote: 'Many people are hoping that with the election of Joe Biden in America, it will be possible to return to an old stability where individualism can continue to be managed by a benign elite. But although Donald Trump is gone and the Brexit deal done, what they both revealed was that underneath Western societies, there are enormous pressures building up that will not go away.', youtubeId: YOUTUBE_VIDEO_ID, start: 6490, end: 6509 },
+      { id: 'future-imagine-new', title: 'Future (Imagine New)', category: 'Future Scenario', desc: 'Regain confidence, imagine genuinely new kinds of futures (David Graeber: "the world is something we make and could just as easily make differently").', color: '#66BB6A', tags: ['Hope', 'Agency', 'Transformation'], quote: 'If we can regain our confidence, we will find that we have the power to influence how that future turns out. And as a first step, we have to start imagining what kind of future it is we want to build.', youtubeId: YOUTUBE_VIDEO_ID, start: 6603, end: 6609 },
+      { id: 'graeber-world-we-make', title: 'Graeber (World We Make)', category: 'Core Concept', desc: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', color: '#4CAF50', tags: ['Graeber', 'Agency', 'Liberation', 'Potential'], quote: 'The ultimate hidden truth of the world, he wrote, is that it is something we make and could just as easily make differently.', youtubeId: YOUTUBE_VIDEO_ID, start: 6678, end: 6690 }
+    ];
+
+    // --- Global State for UI ---
+    let selected = []; // Holds IDs of selected concepts for the dock/story
+    let filter = '';
+    let currentView = 'grid';
+    let clickTimers = {}; // For double-click detection in Grid/List
+
+    // --- UI Control Functions ---
+    const viewBtns = document.querySelectorAll('.view-btn');
+    viewBtns.forEach(btn => { btn.addEventListener('click', () => switchView(btn.dataset.view)); });
+
+    function switchView(view) {
+      currentView = view;
+      viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+      document.getElementById('gridView').style.display = view === 'grid' ? '' : 'none';
+      document.getElementById('listView').style.display = view === 'list' ? '' : 'none';
+      document.getElementById('icosahedron-container').classList.toggle('active', view === '3d');
+      
+      if (view === '3d') {
+        if (!window.icosahedronInitialized) initIcosahedron3D();
+        resizeIcosahedronCanvas(); // Ensure canvas is correctly sized
+        // Ensure animation loop is running
+        if (!window.animationFrameId) animateIcosahedron3D(); 
+        
+        // Show/hide 3d specific UI
+        document.getElementById('info3d').style.display = 'block';
+        document.getElementById('toggleLabels3d').style.display = 'block';
+        updateIcosahedronSelection(); // Apply selection highlights to 3D elements
+      } else {
+        document.getElementById('info3d').style.display = 'none';
+        document.getElementById('toggleLabels3d').style.display = 'none';
+      }
+    }
+
+    function renderCards() {
+      const grid = document.getElementById('gridView');
+      grid.innerHTML = '<div class="cards-grid" id="cardsGrid"></div>';
+      const gridWrap = document.getElementById('cardsGrid');
+      rawConcepts.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = data.id;
+        const headerColor = data.color || '#e0e0e0';
+        const textColor = isLight(headerColor) ? '#000' : '#fff';
+        card.innerHTML = `
+          <div class="card-header" style="background-color: ${headerColor}; color: ${textColor};">${data.title}</div>
+          <div class="card-body">
+            <div class="card-category">${data.category}</div>
+            <div class="card-desc">${data.desc}</div>
+            ${data.quote ? `<div class="card-quote">"${data.quote}"</div>` : ''}
+            <div class="card-tags">${(data.tags || []).join(' · ')}</div>
+          </div>`;
+        card.addEventListener('click', (event) => handleConceptClick(data.id, card, event));
+        gridWrap.appendChild(card);
+      });
+    }
+
+    function renderList() {
+      const list = document.getElementById('listView');
+      list.innerHTML = '';
+      rawConcepts.forEach(data => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.dataset.id = data.id;
+        item.innerHTML = `
+          <div class="list-item-color" style="background-color: ${data.color}"></div>
+          <div class="list-item-content">
+            <div class="list-item-title">${data.title}</div>
+            <div class="list-item-meta">${data.category}</div>
+            <div class="list-item-desc">${data.desc}</div>
+          </div>`;
+        item.addEventListener('click', (event) => handleConceptClick(data.id, item, event));
+        list.appendChild(item);
+      });
+    }
+
+    // AUTO-PLAY VIDEO TRAIL: Shows collected nodes as fading video thumbnails
+    function addToVideoTrail(conceptData) {
+      const trail = document.getElementById('videoTrail');
+      
+      // Create video preview container
+      const preview = document.createElement('div');
+      preview.style.cssText = `
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: #000;
+        border: 3px solid ${conceptData.color || '#fff'};
+        position: relative;
+        opacity: 0;
+        transition: opacity 0.5s ease-in;
+        pointer-events: auto;
+        cursor: pointer;
+      `;
+      
+      if (USE_LOCAL_MEDIA && VIDEO_FILE_MAP[conceptData.id]) {
+        // Local video preview
+        const videoPath = MEDIA_FOLDER + VIDEO_FILE_MAP[conceptData.id];
+        const video = document.createElement('video');
+        video.src = videoPath;
+        video.muted = true;
+        video.autoplay = true;
+        video.loop = true;
+        video.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+        preview.appendChild(video);
+      } else {
+        // YouTube thumbnail fallback
+        const thumb = document.createElement('img');
+        thumb.src = `https://img.youtube.com/vi/${conceptData.youtubeId}/mqdefault.jpg`;
+        thumb.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+        preview.appendChild(thumb);
+      }
+      
+      // Add title overlay
+      const title = document.createElement('div');
+      title.textContent = conceptData.title;
+      title.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 8px;
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+      `;
+      preview.appendChild(title);
+      
+      // Click to play full video
+      preview.addEventListener('click', () => playVideo(conceptData));
+      
+      // Add to trail
+      trail.appendChild(preview);
+      
+      // Fade in
+      setTimeout(() => preview.style.opacity = '1', 50);
+      
+      // Auto-remove after 10 seconds (fade out first)
+      setTimeout(() => {
+        preview.style.opacity = '0';
+        setTimeout(() => preview.remove(), 500);
+      }, 10000);
+      
+      console.log(`Added to video trail: ${conceptData.title}`);
+    }
+    
+    // Handles single-click (select/deselect) and double-click (play video) for Grid/List views
+    function handleConceptClick(id, element, event) {
+      let clickCount = clickTimers[id]?.count || 0;
+      clickCount++;
+
+      if (clickTimers[id]) clearTimeout(clickTimers[id].timer);
+
+      if (clickCount === 2) {
+        // Double-click detected
+        const conceptData = rawConcepts.find(c => c.id === id);
+        if (conceptData) playVideo(conceptData);
+        clickTimers[id] = { count: 0, timer: null }; // Reset
+      } else {
+        // First click, set timer for potential second click
+        clickTimers[id] = {
+          count: clickCount,
+          timer: setTimeout(() => {
+            // Single click action: toggle selection
+            toggleSelect(id, element);
+            clickTimers[id] = { count: 0, timer: null }; // Reset after action
+          }, 300) // 300ms debounce for double-click
+        };
+      }
+    }
+
+    function toggleSelect(id, element) {
+      const index = selected.indexOf(id);
+      const wasAdded = index === -1;
+      
+      if (index !== -1) {
+        selected.splice(index, 1);
+      } else {
+        if (selected.length < 12) {
+          selected.push(id);
+          // AUTO-PLAY: When node is collected, add to video trail
+          const conceptData = rawConcepts.find(c => c.id === id);
+          if (conceptData) {
+            addToVideoTrail(conceptData);
+          }
+        }
+      }
+      
+      // Update UI for grid/list (element might be null if called from 3D view)
+      if (element && element.classList) {
+        element.classList.toggle('selected', selected.includes(id));
+      } else { // if called from 3D, update all visible UI elements that might be out of sync
+        document.querySelectorAll('[data-id]').forEach(el => {
+          el.classList.toggle('selected', selected.includes(el.dataset.id));
+        });
+      }
+      updateDock();
+      updateCounts();
+      updateIcosahedronSelection(); // Keep 3D connections updated with highlights
+    }
+
+    function updateDock() {
+      const dock = document.getElementById('dockContent');
+      const header = document.querySelector('.dock-header');
+      header.textContent = `Your Story (${selected.length}/12)`;
+      if (selected.length === 0) {
+        dock.innerHTML = '<div class="empty-state">Select up to 12 concepts to build your story</div>';
+        return;
+      }
+      dock.innerHTML = '';
+      selected.forEach((id, idx) => {
+        const data = rawConcepts.find(c => c.id === id);
+        if (!data) return; // defensive check
+
+        const item = document.createElement('div');
+        item.className = 'dock-item';
+        item.style.borderColor = data.color;
+        item.innerHTML = `
+          <div class="dock-item-num">${idx + 1}</div>
+          <div class="dock-item-title">${data.title}</div>
+          <div class="dock-item-category">${data.category}</div>
+          <div class="dock-item-remove">×</div>`;
+        item.querySelector('.dock-item-remove').addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSelect(id, null); // Pass null, as we'll refresh all UI
+        });
+        item.addEventListener('click', (event) => handleConceptClick(data.id, item, event));
+        dock.appendChild(item);
+      });
+    }
+
+    function playVideo(conceptData) {
+      if (!conceptData) return;
+      
+      const overlay = document.getElementById('videoOverlay');
+      const videoContainer = overlay.querySelector('.video-container');
+      
+      // Clear previous content
+      videoContainer.innerHTML = '<button class="video-close" id="closeVideo">✕</button>';
+      
+      if (USE_LOCAL_MEDIA && VIDEO_FILE_MAP[conceptData.id]) {
+        // Use local video
+        const videoPath = MEDIA_FOLDER + VIDEO_FILE_MAP[conceptData.id];
+        const videoElement = document.createElement('video');
+        videoElement.src = videoPath;
+        videoElement.controls = true;
+        videoElement.autoplay = true;
+        videoElement.style.width = '100%';
+        videoElement.style.height = '100%';
+        videoElement.style.border = '3px solid #fff';
+        videoContainer.appendChild(videoElement);
+        console.log(`Playing local video: ${conceptData.title} from ${videoPath}`);
+      } else {
+        // Fallback to YouTube
+        const iframe = document.createElement('iframe');
+        const start = conceptData.start || 0;
+        iframe.src = `https://www.youtube.com/embed/${conceptData.youtubeId}?start=${start}&autoplay=1&rel=0&modestbranding=1`;
+        iframe.allowFullscreen = true;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = '3px solid #fff';
+        videoContainer.appendChild(iframe);
+      }
+      
+      // Re-attach close button event listener
+      document.getElementById('closeVideo').addEventListener('click', () => {
+        overlay.classList.remove('active');
+        videoContainer.innerHTML = '<button class="video-close" id="closeVideo">✕</button><iframe id="videoFrame" allowfullscreen></iframe>';
+      });
+      
+      overlay.classList.add('active');
+    }
+
+    function updateCounts() {
+      const q = (filter || '').toLowerCase();
+      const visible = rawConcepts.filter(c => {
+        const inTags = (c.tags || []).some(t => t.toLowerCase().includes(q));
+        return !q || c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q) || inTags;
+      }).length;
+      document.getElementById('visibleCount').textContent = visible;
+      document.getElementById('totalCount').textContent = rawConcepts.length;
+    }
+
+    function isLight(color) {
+      const hex = color.replace('#', '');
+      if (hex.length === 3) { // Handle shorthand hex codes
+        const r = parseInt(hex.charAt(0) + hex.charAt(0), 16);
+        const g = parseInt(hex.charAt(1) + hex.charAt(1), 16);
+        const b = parseInt(hex.charAt(2) + hex.charAt(2), 16);
+        return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+      }
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+    }
+
+    // --- Event Listeners for UI Controls ---
+    document.getElementById('filterInput').addEventListener('input', (e) => {
+      filter = e.target.value.toLowerCase();
+      const query = filter.toLowerCase();
+      document.querySelectorAll('[data-id]').forEach(el => {
+        const data = rawConcepts.find(c => c.id === el.dataset.id);
+        const match = !query || data.title.toLowerCase().includes(query) || data.category.toLowerCase().includes(query) || data.desc.toLowerCase().includes(query) || (data.tags||[]).some(t => t.toLowerCase().includes(query));
+        el.style.display = match ? '' : 'none';
+      });
+      updateCounts();
+    });
+
+    document.getElementById('closeVideo').addEventListener('click', () => {
+      document.getElementById('videoOverlay').classList.remove('active');
+      document.getElementById('videoFrame').src = ''; // Stop video playback
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      selected = [];
+      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+      updateDock();
+      updateCounts();
+      updateIcosahedronSelection(); // Clear highlights in 3D too
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const story = selected.map((id, idx) => {
+        const data = rawConcepts.find(c => c.id === id);
+        return `${idx + 1}. ${data.title}\n   ${data.desc}`;
+      }).join('\n\n');
+      const blob = new Blob([`Your Story\n\n${story}`], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'your_syntegron_story.txt'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+
+    // ===============================================
+    // ==== SYNTEGRON Icosahedron 3D Visualization ====
+    // ===============================================
+
+    // Global variables for Three.js scene
+    window.icosahedronInitialized = false;
+    window.icosahedronScene = null;
+    window.icosahedronCamera = null;
+    window.icosahedronRenderer = null;
+    window.icosahedronControls = null;
+    window.icosahedronGroup = null; // Group for the icosahedron mesh, topics, and participants
+
+    window.icosahedronTopics = []; // Stores THREE.Mesh for topics (spheres)
+    window.icosahedronParticipants = []; // Stores THREE.Line for participants (edges)
+    window.icosahedronLabelsVisible = false;
+    window.animationFrameId = null; // To control animation loop
+
+    // Helper maps for quick lookup of 3D objects and raw concepts by their IDs
+    const icosahedronTopicMap = new Map(); // Maps T-ID to 3D sphere object
+    const icosahedronParticipantMap = new Map(); // Maps P-ID to 3D line object
+    const rawConceptTo3DObjectMap = new Map(); // Maps rawConceptId to its 3D object (T or P)
+
+    // --- Data Processing for Icosahedron ---
+    let icosahedronProcessedData = null; // Will store the processed data.Topics, .Participants, .Faces
+
+    function generateIcosahedronData() {
+        if (icosahedronProcessedData) return icosahedronProcessedData; // Avoid re-processing
+
+        const conceptMap = new Map(rawConcepts.map(c => [c.id, c]));
+
+        const topics = [];
+        const participants = [];
+        const faces = [];
+
+        // 1. Define Topics (12 concepts)
+        const TOPIC_IDS = [
+            'bayer-individual-self',
+            'afeni-harsh-reality',
+            'tupac-grand-stories',
+            'gell-mann-underlying-patterns',
+            'hinton-vector-world-myth',
+            'google-data-trails-predict',
+            'cia-enhanced-interrogation',
+            'china-algorithmic-governance',
+            'putin-no-logic-strategy',
+            'conspiracy-theories-human-ai',
+            '2008-global-economic-crash',
+            'graeber-world-we-make'
+        ];
+        TOPIC_IDS.forEach((id, index) => {
+            const rc = conceptMap.get(id);
+            if (!rc) {
+                console.warn(`Raw concept with ID ${id} not found for Topic T${index + 1}. Skipping.`);
+                return;
+            }
+            topics.push({
+                id: `T${index + 1}`,
+                title: rc.title,
+                rawConceptId: rc.id, // Link back to raw concept
+                teamMembers: [], // Populated by participants
+                critics: [],
+                observers: []
+            });
+        });
+        const topicIdMap = new Map(topics.map(t => [t.rawConceptId, t.id])); // Map rawConceptId to T-ID
+
+        // 2. Define Participants (30 concepts) and link to Topics
+        // Map of rawConceptId to the two topic IDs it connects
+        // This is a manual mapping based on thematic coherence from our previous discussion
+        const participantConnections = {
+            'fom-exhibition-1950s': ['bayer-individual-self', 'tupac-grand-stories'],
+            'bayer-utopian-vision': ['bayer-individual-self', 'tupac-grand-stories'],
+            'afeni-fairyland-conceal': ['afeni-harsh-reality', 'tupac-grand-stories'],
+            'civil-rights-promises-broken': ['afeni-harsh-reality', 'tupac-grand-stories'],
+            'society-boom-q': ['afeni-harsh-reality', 'cia-enhanced-interrogation'],
+            'crack-epidemic-afeni-fall': ['afeni-harsh-reality', 'tupac-grand-stories'],
+            'tupac-thug-life-authenticity': ['afeni-harsh-reality', 'tupac-grand-stories'],
+            'mass-incarceration-clinton': ['afeni-harsh-reality', 'cia-enhanced-interrogation'],
+            'cultural-fairy-tale-tupac': ['afeni-harsh-reality', 'tupac-grand-stories'],
+            'saudi-dream-corrupt': ['afeni-harsh-reality', '2008-global-economic-crash'],
+            'zubaydah-diary-fragments': ['cia-enhanced-interrogation', 'conspiracy-theories-human-ai'],
+            'jihad-disintegration-factions': ['putin-no-logic-strategy', 'conspiracy-theories-human-ai'],
+            'zubaydah-perpetual-now': ['cia-enhanced-interrogation', 'conspiracy-theories-human-ai'],
+            'cia-godzilla-fear': ['cia-enhanced-interrogation', 'conspiracy-theories-human-ai'], 
+            'chaos-theory-unpredictable': ['gell-mann-underlying-patterns', 'conspiracy-theories-human-ai'],
+            'complexity-theory-patterns': ['gell-mann-underlying-patterns', 'google-data-trails-predict'],
+            'gazzaniga-multiple-selves': ['bayer-individual-self', 'conspiracy-theories-human-ai'],
+            'hinton-neural-networks': ['hinton-vector-world-myth', 'google-data-trails-predict'],
+            'google-mission-idealism': ['bayer-individual-self', 'google-data-trails-predict'],
+            'dot-com-burst-money-power': ['google-data-trails-predict', '2008-global-economic-crash'],
+            '911-patriot-act-privacy-lost': ['google-data-trails-predict', 'cia-enhanced-interrogation'],
+            'google-sidelining-consciousness': ['bayer-individual-self', 'hinton-vector-world-myth'],
+            'data-gold-rush-surveillance': ['google-data-trails-predict', '2008-global-economic-crash'],
+            'pokemon-go-persuasive': ['google-data-trails-predict', 'china-algorithmic-governance'],
+            'algorithmic-mortgages-broken': ['conspiracy-theories-human-ai', '2008-global-economic-crash'],
+            'skinner-operant-conditioning': ['china-algorithmic-governance', 'bayer-individual-self'],
+            'skinner-walden2': ['china-algorithmic-governance', 'bayer-individual-self'],
+            'russia-oligarchs-putin-rise': ['putin-no-logic-strategy', '2008-global-economic-crash'],
+            'kursk-disaster-anger-power': ['putin-no-logic-strategy', '2008-global-economic-crash'],
+            'putin-eurasia-defense': ['putin-no-logic-strategy', 'conspiracy-theories-human-ai']
+        };
+
+        let participantCounter = 1;
+        for (const rawConceptId in participantConnections) {
+            const rc = conceptMap.get(rawConceptId);
+            if (!rc) {
+                console.warn(`Raw concept with ID ${rawConceptId} not found for Participant. Skipping.`);
+                continue;
+            }
+            const rawTopicIds = participantConnections[rawConceptId];
+            const connectedIcosahedronTopics = rawTopicIds.map(id => topicIdMap.get(id)).filter(Boolean); // Filter out undefined if topic not found
+
+            if (connectedIcosahedronTopics.length < 2) { // Ensure a valid edge connection
+                 console.warn(`Participant ${rawConceptId} has less than 2 valid topics to connect. Skipping.`);
+                 continue;
+            }
+
+            participants.push({
+                id: `P${participantCounter++}`,
+                name: rc.title,
+                rawConceptId: rc.id,
+                roles: rc.tags && rc.tags.length > 0 ? rc.tags : [rc.category], // Derive roles from tags/category, fallback to category
+                description: rc.desc,
+                connectedTopics: connectedIcosahedronTopics
+            });
+            // Populate Topic's teamMembers/critics/observers based on participant's nature
+            const pRoles = rc.tags || [];
+            const participantIcosahedronId = `P${participantCounter - 1}`;
+            
+            topics.forEach(t => {
+                if (connectedIcosahedronTopics.includes(t.id)) {
+                    if (pRoles.includes('Critic') || (rc.category && rc.category.includes('Critique'))) { // Check for rc.category existence
+                        if (!t.critics.includes(participantIcosahedronId)) t.critics.push(participantIcosahedronId);
+                    } else if (pRoles.includes('Observer')) {
+                        if (!t.observers.includes(participantIcosahedronId)) t.observers.push(participantIcosahedronId);
+                    } else {
+                        if (!t.teamMembers.includes(participantIcosahedronId)) t.teamMembers.push(participantIcosahedronId);
+                    }
+                }
+            });
+        }
+        
+        // Ensure no duplicate participants in topic arrays
+        topics.forEach(t => {
+            t.teamMembers = [...new Set(t.teamMembers)].sort();
+            t.critics = [...new Set(t.critics)].sort();
+            t.observers = [...new Set(t.observers)].sort();
+        });
+
+        // 3. Define Faces (20 clusters)
+        // This is a static definition for now, linked to existing Topic/Participant IDs.
+        const faceDefinitions = [
+            { id: "F1", title: "Idealism vs. Reality: The Shattered Promise", topics: ["T1", "T2", "T3"], participants: ["P1", "P4", "P9"], relatedConcepts: ['fom-exhibition-1950s', 'civil-rights-promises-broken', 'cultural-fairy-tale-tupac'] },
+            { id: "F2", title: "Surveillance and State Coercion: The Digital Iron Curtain", topics: ["T6", "T7", "T8"], participants: ["P21", "P22", "P24"], relatedConcepts: ['xi-jinping-giant-control', '911-patriot-act-privacy-lost', 'google-sidelining-consciousness', 'pokemon-go-persuasive'] },
+            { id: "F3", title: "The Algorithmic Dehumanization", topics: ["T1", "T5", "T6"], participants: ["P18", "P22", "P27"], relatedConcepts: ['hinton-neural-networks', 'google-sidelining-consciousness', 'future-indiv-disappear', 'skinner-walden2'] },
+            { id: "F4", title: "Economic Collapse & Populist Rage", topics: ["T2", "T10", "T11"], participants: ["P25", "P4", "P20"], relatedConcepts: ['populist-anger-elite-bailout', 'brexit-take-back-control', 'algorithmic-mortgages-broken', 'civil-rights-promises-broken', 'dot-com-burst-money-power'] },
+            { id: "F5", title: "The Weaponization of Paranoia", topics: ["T7", "T9", "T10"], participants: ["P14", "P30", "P13"], relatedConcepts: ['trump-qanon-pedophile-cabal', 'cia-godzilla-fear', 'putin-eurasia-defense', 'zubaydah-perpetual-now'] },
+            { id: "F6", title: "The Illusion of Progress: Science, Order, and Economic Reality", topics: ["T1", "T4", "T11"], participants: ["P1", "P15", "P20"], relatedConcepts: ['fom-exhibition-1950s', 'chaos-theory-unpredictable', 'dot-com-burst-money-power'] },
+            { id: "F7", title: "Narratives of Resistance & Control: From Authenticity to Fairytale", topics: ["T3", "T7", "T12"], participants: ["P7", "P13", "P9"], relatedConcepts: ['tupac-thug-life-authenticity', 'zubaydah-perpetual-now', 'cultural-fairy-tale-tupac'] },
+            { id: "F8", title: "From Idealism to Surveillance Capitalism", topics: ["T1", "T6", "T11"], participants: ["P19", "P20", "P23"], relatedConcepts: ['google-mission-idealism', 'dot-com-burst-money-power', 'data-gold-rush-surveillance'] },
+            { id: "F9", title: "Totalitarian Dreams of Order: Science and Authoritarian Control", topics: ["T4", "T8", "T9"], participants: ["P16", "P26", "P30"], relatedConcepts: ['complexity-theory-patterns', 'skinner-operant-conditioning', 'putin-eurasia-defense'] },
+            { id: "F10", title: "The Fragmented Self in a Controlled World", topics: ["T1", "T7", "T10"], participants: ["P11", "P13", "P17"], relatedConcepts: ['zubaydah-diary-fragments', 'zubaydah-perpetual-now', 'gazzaniga-multiple-selves'] },
+            { id: "F11", title: "Global Finance: The Empire of Secrecy", topics: ["T11", "T2", "T6"], participants: ["P25", "P10", "P23"], relatedConcepts: ['london-second-empire-discretion', 'banks-rigging-money-laundering', 'saudi-dream-corrupt', 'data-gold-rush-surveillance', 'algorithmic-mortgages-broken'] },
+            { id: "F12", title: "China's Void: Control, Corruption, and Performance", topics: ["T8", "T2", "T9"], participants: ["P26", "P3", "P6"], relatedConcepts: ['china-princelings-void', 'china-land-grab-corruption', 'bo-chongqing-experiment', 'afeni-fairyland-conceal', 'crack-epidemic-afeni-fall'] },
+            { id: "F13", title: "The Weaponized Narrative: From Parody to Paranoia", topics: ["T10", "T3", "T7"], participants: ["P14", "P9", "P21"], relatedConcepts: ['illuminati-mind-control', 'thornley-op-mindfuck', 'cultural-fairy-tale-tupac', '911-patriot-act-privacy-lost', 'cia-godzilla-fear'] },
+            { id: "F14", title: "Russia's Path: Consumption, Propaganda, and Power", topics: ["T9", "T2", "T11"], participants: ["P28", "P29", "P30"], relatedConcepts: ['russia-oligarchs-putin-rise', 'kursk-disaster-anger-power', 'putin-eurasia-defense', 'russia-dream-consumption', 'nightwolves-conspiracy-propaganda'] },
+            { id: "F15", title: "AI's Altered Reality: When Meaning Disappears", topics: ["T5", "T6", "T10"], participants: ["P18", "P22", "P24"], relatedConcepts: ['ai-dogs-everywhere-meaningless', 'hinton-neural-networks', 'google-sidelining-consciousness', 'pokemon-go-persuasive'] },
+            { id: "F16", title: "Global Crisis: Exposing Systemic Failures", topics: ["T2", "T11", "T12"], participants: ["P4", "P21", "P25"], relatedConcepts: ['covid-deep-inequalities', 'civil-rights-promises-broken', '911-patriot-act-privacy-lost', 'algorithmic-mortgages-broken'] },
+            { id: "F17", title: "The Future's Choice: Control, Apathy, or Agency", topics: ["T8", "T1", "T12"], participants: ["P27", "P22", "P26"], relatedConcepts: ['future-indiv-disappear', 'future-old-stability', 'skinner-walden2', 'google-sidelining-consciousness', 'skinner-operant-conditioning'] },
+            { id: "F18", title: "The Populist Backlash: Reclaiming a Fractured Control", topics: ["T10", "T11", "T2"], participants: ["P4", "P25", "P8"], relatedConcepts: ['populist-anger-elite-bailout', 'brexit-take-back-control', 'mass-incarceration-clinton', 'civil-rights-promises-broken', 'algorithmic-mortgages-broken'] },
+            { id: "F19", title: "Digital Spectacle & Authoritarian Resurgence", topics: ["T3", "T5", "T9"], participants: ["P9", "P24", "P30"], relatedConcepts: ['cultural-fairy-tale-tupac', 'pokemon-go-persuasive', 'putin-eurasia-defense', 'russia-dream-consumption', 'nightwolves-conspiracy-propaganda'] },
+            { id: "F20", title: "Imagining a New Future: Beyond Despair and Fragile Structures", topics: ["T12", "T1", "T3"], participants: ["P2", "P4", "P9"], relatedConcepts: ['liberal-avoidance-despair', 'fragile-structure-discon-frag', 'future-imagine-new', 'bayer-utopian-vision', 'civil-rights-promises-broken', 'cultural-fairy-tale-tupac'] }
+        ];
+
+        faceDefinitions.forEach(fdef => {
+            const primaryRc = conceptMap.get(fdef.relatedConcepts[0]); // Use first related concept for main desc/quote
+            faces.push({
+                id: fdef.id,
+                title: fdef.title,
+                topics: fdef.topics,
+                participants: fdef.participants,
+                discussionCluster: fdef.discussionCluster,
+                rawConceptId: primaryRc ? primaryRc.id : null // Link to a primary raw concept
+            });
+        });
+
+        icosahedronProcessedData = { topics, participants, faces };
+        return icosahedronProcessedData;
+    }
+
+    // --- Icosahedron 3D Initialization ---
+    function initIcosahedron3D() {
+        if (window.icosahedronInitialized) return;
+
+        icosahedronProcessedData = generateIcosahedronData(); // Generate data from rawConcepts
+
+        const container = document.getElementById('icosahedron-container');
+        const canvas = document.getElementById('icosahedron-canvas');
+        
+        // Clear previous children to prevent duplicates on re-init if ever called
+        if (window.icosahedronGroup) {
+            window.icosahedronGroup.children.slice().forEach(child => {
+                window.icosahedronGroup.remove(child);
+            });
+        }
+        window.icosahedronTopics.forEach(t => t.userData.label?.remove()); // Optional chaining for robustness
+        window.icosahedronParticipants.forEach(p => p.userData.label?.remove());
+        window.icosahedronTopics = [];
+        window.icosahedronParticipants = [];
+        icosahedronTopicMap.clear();
+        icosahedronParticipantMap.clear();
+        rawConceptTo3DObjectMap.clear();
+
+
+        window.icosahedronScene = new THREE.Scene();
+        window.icosahedronScene.background = new THREE.Color(0xffffff); // White background
+
+        window.icosahedronCamera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        window.icosahedronCamera.position.z = 5;
+
+        window.icosahedronRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        window.icosahedronRenderer.setPixelRatio(window.devicePixelRatio);
+        window.icosahedronRenderer.setSize(container.clientWidth, container.clientHeight);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        window.icosahedronScene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(5, 5, 5);
+        window.icosahedronScene.add(pointLight);
+
+        window.icosahedronGroup = new THREE.Group();
+        window.icosahedronScene.add(window.icosahedronGroup);
+
+        // Icosahedron geometry (the translucent cage)
+        const geometry = new THREE.IcosahedronGeometry(1.5, 0); // Slightly larger
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x156289, // A deep blue
+            wireframe: true,
+            transparent: true,
+            opacity: 0.2 // More translucent
+        });
+        const icosahedronMesh = new THREE.Mesh(geometry, material);
+        window.icosahedronGroup.add(icosahedronMesh);
+
+        // --- Create Topics (Spheres) ---
+        const positionAttribute = geometry.attributes.position;
+        const uniqueVertices = new Map(); // To ensure one sphere per unique vertex
+        let vertexCount = 0; // Tracks which vertex we're assigning to
+
+        for (let i = 0; i < positionAttribute.count; i++) {
+            const vertex = new THREE.Vector3();
+            vertex.fromBufferAttribute(positionAttribute, i);
+            // Use a fixed precision key to compare vertices
+            const key = `${vertex.x.toFixed(4)},${vertex.y.toFixed(4)},${vertex.z.toFixed(4)}`;
+
+            if (!uniqueVertices.has(key) && vertexCount < icosahedronProcessedData.topics.length) {
+                const sphereGeometry = new THREE.SphereGeometry(0.08, 16, 16); // Slightly larger spheres
+                const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green
+                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                sphere.position.copy(vertex);
+
+                // Map topic data to sphere userData
+                const topicData = icosahedronProcessedData.topics[vertexCount];
+                sphere.userData = {
+                    type: 'topic',
+                    id: topicData.id,
+                    rawConceptId: topicData.rawConceptId, // Link to original raw concept
+                    name: topicData.title,
+                    teamMembers: topicData.teamMembers,
+                    critics: topicData.critics,
+                    observers: topicData.observers
+                };
+
+                // Create and attach HTML label
+                const label = document.createElement('div');
+                label.className = 'element-label';
+                label.textContent = topicData.title; // Use full title for label
+                container.appendChild(label); // Append label to the 3D container
+                sphere.userData.label = label;
+
+                window.icosahedronGroup.add(sphere);
+                window.icosahedronTopics.push(sphere);
+                icosahedronTopicMap.set(topicData.id, sphere); // Map T-ID to object
+                rawConceptTo3DObjectMap.set(topicData.rawConceptId, sphere); // Map rawConceptId to object
+                uniqueVertices.set(key, sphere);
+                vertexCount++;
+            }
+        }
+
+        // --- Create Participants (Edges) ---
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 }); // Red, slightly thicker line
+        let participantAssignmentIndex = 0; // For sequential assignment to generated participants
+
+        const edgePositions = edgesGeometry.attributes.position.array;
+        for (let i = 0; i < edgePositions.length; i += 6) {
+            if (participantAssignmentIndex >= icosahedronProcessedData.participants.length) break;
+
+            const startVertex = new THREE.Vector3(
+                edgePositions[i], edgePositions[i + 1], edgePositions[i + 2]
+            );
+            const endVertex = new THREE.Vector3(
+                edgePositions[i + 3], edgePositions[i + 4], edgePositions[i + 5]
+            );
+
+            const points = [startVertex, endVertex];
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const edge = new THREE.Line(lineGeometry, edgesMaterial.clone());
+
+            // Map participant data to edge userData
+            const participantData = icosahedronProcessedData.participants[participantAssignmentIndex];
+            edge.userData = {
+                type: 'participant',
+                id: participantData.id,
+                rawConceptId: participantData.rawConceptId, // Link to original raw concept
+                name: participantData.name,
+                roles: participantData.roles,
+                description: participantData.description,
+                connectedTopics: participantData.connectedTopics
+            };
+            participantAssignmentIndex++;
+
+            // Create and attach HTML label at midpoint
+            const midpoint = new THREE.Vector3().addVectors(startVertex, endVertex).multiplyScalar(0.5);
+            const label = document.createElement('div');
+            label.className = 'element-label';
+            label.textContent = participantData.name; // Use full name for label
+            container.appendChild(label); // Append label to the 3D container
+            edge.userData.label = label;
+            edge.userData.midpoint = midpoint;
+
+            window.icosahedronGroup.add(edge);
+            window.icosahedronParticipants.push(edge);
+            icosahedronParticipantMap.set(participantData.id, edge); // Map P-ID to object
+            rawConceptTo3DObjectMap.set(participantData.rawConceptId, edge); // Map rawConceptId to object
+        }
+
+        // OrbitControls for camera movement - IMPORTANT: attach to renderer's DOM element (the canvas)
+        window.icosahedronControls = new THREE.OrbitControls(window.icosahedronCamera, window.icosahedronRenderer.domElement);
+        window.icosahedronControls.enableDamping = true;
+        window.icosahedronControls.dampingFactor = 0.05;
+        window.icosahedronControls.minDistance = 2;
+        window.icosahedronControls.maxDistance = 10;
+        window.icosahedronControls.autoRotate = false; // Start without auto-rotation
+        window.icosahedronControls.autoRotateSpeed = 2.0;
+
+        setupIcosahedronInteraction();
+        window.icosahedronInitialized = true;
+
+        // Start animation loop only if not already running
+        if (!window.animationFrameId) animateIcosahedron3D();
+    }
+
+    // --- Icosahedron 3D Interaction ---
+    const icosahedronRaycaster = new THREE.Raycaster();
+    icosahedronRaycaster.params.Line.threshold = 0.15; // Increased for easier line selection
+    const icosahedronMouse = new THREE.Vector2();
+    const tooltip3d = document.getElementById('tooltip3d');
+    let icosahedronHoveredObject = null; // Currently hovered 3D object
+
+    function setupIcosahedronInteraction() {
+        const canvas = document.getElementById('icosahedron-canvas');
+        canvas.addEventListener('mousemove', onIcosahedronMouseMove);
+        canvas.addEventListener('mouseout', onIcosahedronMouseOut);
+        canvas.addEventListener('mousedown', (e) => {
+            icosahedronClickStartTime = Date.now();
+            icosahedronClickStartPos = { x: e.clientX, y: e.clientY };
+        });
+        canvas.addEventListener('touchstart', (e) => {
+            icosahedronClickStartTime = Date.now();
+            const touch = e.touches[0];
+            icosahedronClickStartPos = { x: touch.clientX, y: touch.clientY };
+        });
+        canvas.addEventListener('click', onIcosahedronClick); // Single click for selection (no Shift needed)
+        canvas.addEventListener('dblclick', onIcosahedronDoubleClick); // Double click for video
+    }
+
+    function onIcosahedronMouseMove(event) {
+        const rect = event.target.getBoundingClientRect();
+        icosahedronMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        icosahedronMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        icosahedronRaycaster.setFromCamera(icosahedronMouse, window.icosahedronCamera);
+        const intersects = icosahedronRaycaster.intersectObjects([...window.icosahedronTopics, ...window.icosahedronParticipants], true);
+
+        if (intersects.length > 0) {
+            const object = intersects[0].object;
+            const rawConceptId = object.userData.rawConceptId;
+
+            tooltip3d.style.display = 'block';
+            tooltip3d.style.left = event.clientX + 10 + 'px';
+            tooltip3d.style.top = event.clientY + 10 + 'px';
+
+            if (object.userData.type === 'topic') {
+                const topicConcept = rawConcepts.find(rc => rc.id === rawConceptId);
+                tooltip3d.innerHTML = `<strong>Topic: ${object.userData.name}</strong><br>`;
+                tooltip3d.innerHTML += `<em>Description:</em> ${topicConcept ? topicConcept.desc : 'N/A'}<br>`;
+                tooltip3d.innerHTML += `<em>Team Members:</em> ${object.userData.teamMembers.map(pid => icosahedronParticipantMap.get(pid)?.userData?.name || pid).join(', ') || 'None'}<br>`;
+                tooltip3d.innerHTML += `<em>Critics:</em> ${object.userData.critics.map(pid => icosahedronParticipantMap.get(pid)?.userData?.name || pid).join(', ') || 'None'}<br>`;
+                tooltip3d.innerHTML += `<em>Observers:</em> ${object.userData.observers.map(pid => icosahedronParticipantMap.get(pid)?.userData?.name || pid).join(', ') || 'None'}`;
+            } else if (object.userData.type === 'participant') {
+                const participantConcept = rawConcepts.find(rc => rc.id === rawConceptId);
+                tooltip3d.innerHTML = `<strong>Connection: ${object.userData.name}</strong><br>`;
+                tooltip3d.innerHTML += `<em>Description:</em> ${participantConcept ? participantConcept.desc : 'N/A'}<br>`;
+                tooltip3d.innerHTML += `<em>Roles:</em> ${object.userData.roles.join(', ') || 'N/A'}<br>`;
+                tooltip3d.innerHTML += `<em>Connects:</em> ${object.userData.connectedTopics.map(tid => icosahedronTopicMap.get(tid)?.userData?.name || tid).join(', ')}`;
+            }
+
+            if (object !== icosahedronHoveredObject) {
+                resetIcosahedronHighlights(); // Reset previous hover highlight
+                icosahedronHoveredObject = object;
+                applyHighlight(object, true); // Apply new hover highlight
+            }
+        } else {
+            tooltip3d.style.display = 'none';
+            if (icosahedronHoveredObject) {
+                resetIcosahedronHighlights(); // Clear the last hovered object's highlights
+                icosahedronHoveredObject = null;
+            }
+        }
+    }
+
+    function onIcosahedronMouseOut() {
+        tooltip3d.style.display = 'none';
+        resetIcosahedronHighlights();
+        icosahedronHoveredObject = null;
+    }
+
+    // Handles click for selection in 3D (no Shift key needed)
+    let icosahedronClickStartTime = 0;
+    let icosahedronClickStartPos = { x: 0, y: 0 };
+    
+    function onIcosahedronClick(event) {
+        // Check if this was a drag (camera movement) or a real click
+        const clickDuration = Date.now() - icosahedronClickStartTime;
+        const clickDistance = Math.sqrt(
+            Math.pow(event.clientX - icosahedronClickStartPos.x, 2) +
+            Math.pow(event.clientY - icosahedronClickStartPos.y, 2)
+        );
+        
+        // If drag detected (moved >10px or held >300ms), don't select
+        if (clickDistance > 10 || clickDuration > 300) {
+            return;
+        }
+
+        const rect = event.target.getBoundingClientRect();
+        icosahedronMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        icosahedronMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        icosahedronRaycaster.setFromCamera(icosahedronMouse, window.icosahedronCamera);
+        const intersects = icosahedronRaycaster.intersectObjects([...window.icosahedronTopics, ...window.icosahedronParticipants], true);
+
+        if (intersects.length > 0) {
+            const clickedObject = intersects[0].object;
+            const rawConceptId = clickedObject.userData.rawConceptId;
+            const conceptData = rawConcepts.find(c => c.id === rawConceptId);
+            console.log(`✅ Collected: ${conceptData?.title} (${selected.length + 1}/12)`);
+            toggleSelect(rawConceptId, null); // toggle selection. Visual update handled by updateIcosahedronSelection
+        }
+    }
+
+    // Handles double-click for video playback in 3D
+    function onIcosahedronDoubleClick(event) {
+        const rect = event.target.getBoundingClientRect();
+        icosahedronMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        icosahedronMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        icosahedronRaycaster.setFromCamera(icosahedronMouse, window.icosahedronCamera);
+        const intersects = icosahedronRaycaster.intersectObjects([...window.icosahedronTopics, ...window.icosahedronParticipants], true);
+
+        if (intersects.length > 0) {
+            const clickedObject = intersects[0].object;
+            const rawConceptId = clickedObject.userData.rawConceptId;
+            const conceptData = rawConcepts.find(rc => rc.id === rawConceptId);
+            if (conceptData) playVideo(conceptData);
+        }
+    }
+
+    // Colors for highlighting
+    const COLOR_TOPIC_DEFAULT = new THREE.Color(0x00ff00); // Green
+    const COLOR_PARTICIPANT_DEFAULT = new THREE.Color(0xff0000); // Red
+    const COLOR_HIGHLIGHT_HOVER = new THREE.Color(0xffff00); // Yellow
+    const COLOR_HIGHLIGHT_SELECTED = new THREE.Color(0x0000ff); // Blue for selected
+    const COLOR_CONNECTED_HIGHLIGHT = new THREE.Color(0x00ffff); // Cyan for connected
+
+    function applyHighlight(object, isHover = false) {
+        const rawConceptId = object.userData.rawConceptId;
+        const isCurrentlySelected = selected.includes(rawConceptId);
+        let highlightColor;
+
+        if (isCurrentlySelected) {
+            highlightColor = COLOR_HIGHLIGHT_SELECTED;
+            // Also highlight connected nodes if this is a selected node
+            highlightConnected(object, COLOR_CONNECTED_HIGHLIGHT);
+        } else if (isHover) {
+            highlightColor = COLOR_HIGHLIGHT_HOVER;
+            // Also highlight connected nodes on hover
+            highlightConnected(object, COLOR_CONNECTED_HIGHLIGHT);
+        } else {
+            // Should not happen if logic is sound, but as fallback
+            highlightColor = object.userData.type === 'topic' ? COLOR_TOPIC_DEFAULT : COLOR_PARTICIPANT_DEFAULT;
+        }
+
+        if (object.material.color) {
+            object.material.color.copy(highlightColor);
+            if (object.userData.type === 'participant') {
+                object.material.linewidth = isCurrentlySelected ? 4 : (isHover ? 3 : 2); // Make lines thicker for selected/hovered
+            }
+        }
+        if (object.userData.label) {
+            object.userData.label.style.display = 'block';
+        }
+    }
+
+    function highlightConnected(sourceObject, color) {
+        if (sourceObject.userData.type === 'topic') {
+            const topicData = icosahedronProcessedData.topics.find(t => t.id === sourceObject.userData.id);
+            if (!topicData) return;
+
+            // Highlight connected participants
+            [...topicData.teamMembers, ...topicData.critics, ...topicData.observers].forEach(pId => {
+                const participantObj = icosahedronParticipantMap.get(pId);
+                if (participantObj && !selected.includes(participantObj.userData.rawConceptId)) { // Don't override main selection
+                    participantObj.material.color.copy(color);
+                    participantObj.material.linewidth = 3;
+                    if (participantObj.userData.label) participantObj.userData.label.style.display = 'block';
+                }
+                // Highlight the other end of the participant connection (the other topic)
+                const connectedRawTopicIds = participantObj?.userData.connectedTopics
+                    .filter(tid => tid !== sourceObject.userData.id)
+                    .map(tid => icosahedronTopicMap.get(tid)?.userData.rawConceptId);
+                connectedRawTopicIds?.forEach(rcId => {
+                    const otherTopicObj = rawConceptTo3DObjectMap.get(rcId);
+                    if (otherTopicObj && !selected.includes(otherTopicObj.userData.rawConceptId)) {
+                        otherTopicObj.material.color.copy(color);
+                        if (otherTopicObj.userData.label) otherTopicObj.userData.label.style.display = 'block';
+                    }
+                });
+            });
+        } else if (sourceObject.userData.type === 'participant') {
+            const participantData = icosahedronProcessedData.participants.find(p => p.id === sourceObject.userData.id);
+            if (!participantData) return;
+
+            // Highlight connected topics
+            participantData.connectedTopics.forEach(tId => {
+                const topicObj = icosahedronTopicMap.get(tId);
+                if (topicObj && !selected.includes(topicObj.userData.rawConceptId)) { // Don't override main selection
+                    topicObj.material.color.copy(color);
+                    if (topicObj.userData.label) topicObj.userData.label.style.display = 'block';
+                }
+            });
+        }
+    }
+
+
+    function resetIcosahedronHighlights() {
+        window.icosahedronTopics.forEach(topic => {
+            // Reset to default if not selected
+            if (!selected.includes(topic.userData.rawConceptId)) {
+                topic.material.color.copy(COLOR_TOPIC_DEFAULT); 
+            }
+            // Hide label if labels are not globally visible AND not currently hovered/selected
+            const isHovered = icosahedronHoveredObject && icosahedronHoveredObject.userData.rawConceptId === topic.userData.rawConceptId;
+            const isSelected = selected.includes(topic.userData.rawConceptId);
+            if (topic.userData.label && !window.icosahedronLabelsVisible && !isHovered && !isSelected) {
+                topic.userData.label.style.display = 'none';
+            }
+        });
+        window.icosahedronParticipants.forEach(participant => {
+            // Reset to default if not selected
+            if (!selected.includes(participant.userData.rawConceptId)) {
+                participant.material.color.copy(COLOR_PARTICIPANT_DEFAULT); 
+                participant.material.linewidth = 2; // Reset line thickness
+            }
+            // Hide label if labels are not globally visible AND not currently hovered/selected
+            const isHovered = icosahedronHoveredObject && icosahedronHoveredObject.userData.rawConceptId === participant.userData.rawConceptId;
+            const isSelected = selected.includes(participant.userData.rawConceptId);
+            if (participant.userData.label && !window.icosahedronLabelsVisible && !isHovered && !isSelected) {
+                participant.userData.label.style.display = 'none';
+            }
+        });
+        // After resetting, re-apply persistent selected highlights
+        updateIcosahedronSelection();
+    }
+
+    function updateIcosahedronSelection() {
+        if (!window.icosahedronInitialized || !icosahedronProcessedData) return;
+
+        // First, reset all to default (non-selected, non-hovered state for non-selected items)
+        window.icosahedronTopics.forEach(topic => {
+            topic.material.color.copy(COLOR_TOPIC_DEFAULT);
+            if (topic.userData.label) {
+                topic.userData.label.style.display = (window.icosahedronLabelsVisible || selected.includes(topic.userData.rawConceptId)) ? 'block' : 'none';
+            }
+        });
+        window.icosahedronParticipants.forEach(participant => {
+            participant.material.color.copy(COLOR_PARTICIPANT_DEFAULT);
+            participant.material.linewidth = 2;
+            if (participant.userData.label) {
+                participant.userData.label.style.display = (window.icosahedronLabelsVisible || selected.includes(participant.userData.rawConceptId)) ? 'block' : 'none';
+            }
+        });
+
+        // Then, apply persistent selection highlights and connected highlights
+        selected.forEach(rawConceptId => {
+            const object = rawConceptTo3DObjectMap.get(rawConceptId);
+            if (object) {
+                applyHighlight(object, false); // Apply selection highlight
+            }
+        });
+
+        // Finally, re-apply current hover highlight if any
+        if (icosahedronHoveredObject) {
+            applyHighlight(icosahedronHoveredObject, true);
+        }
+
+        updateIcosahedronLabels(); // Ensure label visibility and position are correct
+    }
+
+
+    // Update label positions based on 3D coordinates projected to screen
+    function updateIcosahedronLabels() {
+        if (!window.icosahedronInitialized || !window.icosahedronCamera) return;
+
+        const container = document.getElementById('icosahedron-container');
+        if (!container || container.offsetWidth === 0 || container.offsetHeight === 0) return; // Not visible
+        const containerRect = container.getBoundingClientRect();
+
+        window.icosahedronTopics.forEach(topic => {
+            if (!topic.userData.label) return;
+
+            const vector = topic.position.clone();
+            vector.applyMatrix4(window.icosahedronGroup.matrixWorld);
+            vector.project(window.icosahedronCamera);
+            
+            // Check if object is behind the camera
+            if (vector.z > 1) { // z is normalized depth from -1 to 1, >1 means behind.
+                topic.userData.label.style.display = 'none';
+                return;
+            }
+
+            // Convert to screen coordinates relative to the icosahedron-container
+            const x = (vector.x * 0.5 + 0.5) * containerRect.width;
+            const y = (-vector.y * 0.5 + 0.5) * containerRect.height;
+            topic.userData.label.style.left = `${x}px`;
+            topic.userData.label.style.top = `${y}px`;
+            
+            // Only display if globally visible OR currently hovered OR currently selected
+            const isHovered = icosahedronHoveredObject && icosahedronHoveredObject.userData.rawConceptId === topic.userData.rawConceptId;
+            const isSelected = selected.includes(topic.userData.rawConceptId);
+            topic.userData.label.style.display = (window.icosahedronLabelsVisible || isHovered || isSelected) ? 'block' : 'none';
+        });
+
+        window.icosahedronParticipants.forEach(participant => {
+            if (!participant.userData.label) return;
+
+            const vector = participant.userData.midpoint.clone();
+            vector.applyMatrix4(window.icosahedronGroup.matrixWorld);
+            vector.project(window.icosahedronCamera);
+
+            // Check if object is behind the camera
+            if (vector.z > 1) { 
+                participant.userData.label.style.display = 'none';
+                return;
+            }
+
+            const x = (vector.x * 0.5 + 0.5) * containerRect.width;
+            const y = (-vector.y * 0.5 + 0.5) * containerRect.height;
+            participant.userData.label.style.left = `${x}px`;
+            participant.userData.label.style.top = `${y}px`;
+
+            const isHovered = icosahedronHoveredObject && icosahedronHoveredObject.userData.rawConceptId === participant.userData.rawConceptId;
+            const isSelected = selected.includes(participant.userData.rawConceptId);
+            participant.userData.label.style.display = (window.icosahedronLabelsVisible || isHovered || isSelected) ? 'block' : 'none';
+        });
+    }
+
+    // Label toggle functionality for 3D view
+    const toggleLabels3dButton = document.getElementById('toggleLabels3d');
+    toggleLabels3dButton.addEventListener('click', () => {
+        window.icosahedronLabelsVisible = !window.icosahedronLabelsVisible;
+        toggleLabels3dButton.textContent = window.icosahedronLabelsVisible ? 'Hide Labels' : 'Show Labels';
+        updateIcosahedronLabels(); // Update label visibility immediately
+    });
+
+    // Animation loop
+    function animateIcosahedron3D() {
+        window.animationFrameId = requestAnimationFrame(animateIcosahedron3D); // Store ID to potentially cancel
+        if (!window.icosahedronInitialized) return;
+
+        window.icosahedronControls.update(); // THIS IS CRUCIAL FOR ORBITCONTROLS TO WORK
+        window.icosahedronRenderer.render(window.icosahedronScene, window.icosahedronCamera);
+        updateIcosahedronLabels();
+    }
+
+    // Resize handler for the icosahedron canvas
+    function resizeIcosahedronCanvas() {
+      if (window.icosahedronRenderer && window.icosahedronCamera && window.icosahedronInitialized) {
+        const container = document.getElementById('icosahedron-container');
+        window.icosahedronCamera.aspect = container.clientWidth / container.clientHeight;
+        window.icosahedronCamera.updateProjectionMatrix();
+        window.icosahedronRenderer.setSize(container.clientWidth, container.clientHeight);
+        updateIcosahedronLabels(); // Recalculate label positions
+      }
+    }
+
+    window.addEventListener('resize', () => {
+        resizeIcosahedronCanvas();
+    });
+
+    // --- INITIALIZATION ---
+    console.log("SYNTEGRON: Initializing Extended Field of Vision...");
+    renderCards();
+    renderList();
+    updateDock();
+    updateCounts();
+    // Default to Grid view initially
+    switchView('grid'); 
+  </script>
+</body>
+</html>
