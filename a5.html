@@ -1,0 +1,2502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VIDEO TETRIS — Timeline Editor</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Crect x='10' y='10' width='35' height='35' fill='%23e94560' stroke='%23fff' stroke-width='2'/%3E%3Crect x='55' y='10' width='35' height='35' fill='%23e94560' stroke='%23fff' stroke-width='2'/%3E%3Crect x='10' y='55' width='35' height='35' fill='%23e94560' stroke='%23fff' stroke-width='2'/%3E%3Crect x='55' y='55' width='35' height='35' fill='%23e94560' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg-primary: #16213e;
+            --bg-secondary: #1a1a2e;
+            --text-primary: #e94560;
+            --text-secondary: #ffffff;
+            --grid-color: #444444;
+        }
+        
+        body.light-mode {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #c40000;
+            --text-secondary: #000000;
+            --grid-color: #cccccc;
+        }
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Overlay for Score and Level */
+        #overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #e94560;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 2;
+        }
+        /* Side Displays for Hold and Next Pieces */
+        #sideDisplays {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 2;
+        }
+        /* Hold and Next Piece Displays */
+        #holdPiece, #nextPiece {
+            color: #e94560;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        #holdPiece h3, #nextPiece h3 {
+            margin-top: 0;
+            font-size: 1.5rem;
+        }
+        #holdPieceDisplay, #nextPieceDisplay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+        /* Controls */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            gap: 10px; /* Space between control rows */
+            padding: 0 20px; /* Padding for mobile */
+        }
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px; /* Space between buttons */
+            width: 100%;
+        }
+        .control-btn {
+            background-color: rgba(233,69,96,0.8);
+            border: 2px solid #e94560;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            flex: 1;
+            max-width: 80px;
+        }
+        .control-btn:active {
+            transform: scale(0.9);
+            background-color: rgba(233,69,96,0.9);
+        }
+        /* Title Screen (Matrix-Editor Style) */
+        .title-screen {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .title-screen.hidden {
+            animation: slideOutLeft 0.8s ease-in forwards;
+        }
+        
+        .context-hint {
+            font-size: clamp(11px, 2.5vw, 14px);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(174, 213, 129, 0.8);
+            margin-bottom: 30px;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.1s forwards;
+            text-align: center;
+        }
+        
+        .intro-text {
+            max-width: 400px;
+            padding: 0 30px;
+            margin-bottom: 50px;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.2s forwards;
+        }
+        
+        .intro-text p {
+            font-size: clamp(13px, 2.8vw, 16px);
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            letter-spacing: 0.05em;
+            font-weight: 300;
+        }
+        
+        .faction-select {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            opacity: 0;
+            padding: 0 20px;
+            width: 100%;
+            max-width: 500px;
+            animation: fadeInUp 1s ease-out 0.3s forwards;
+        }
+        
+        .faction-btn {
+            padding: 18px 30px;
+            height: 60px;
+            font-size: clamp(13px, 3vw, 16px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            color: #AED581;
+        }
+
+        .faction-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: #AED581;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .faction-btn:active::before {
+            transform: translateX(0);
+        }
+
+        .faction-btn span {
+            position: relative;
+            z-index: 1;
+            transition: color 0.3s ease;
+        }
+
+        .faction-btn:active span {
+            color: #000;
+        }
+        
+        /* Modals */
+        #gameOverModal, #pauseModal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border: 2px solid #e94560;
+            display: none;
+            text-align: center;
+            z-index: 100;
+            color: #e94560;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        #gameOverModal h1, #difficultyModal h1, #openingModal h1, #pauseModal h1, #quoteModal h1 {
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            color: #ff6347;
+        }
+        #gameOverModal p, #difficultyModal p, #openingModal p, #pauseModal p, #quoteModal p {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        #gameOverModal button, #difficultyModal button, #pauseModal button, #quoteModal button {
+            padding: 12px 24px;
+            font-size: 1.2rem;
+            background-color: #0f3460;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        #gameOverModal button:hover, #difficultyModal button:hover, #pauseModal button:hover, #quoteModal button:hover {
+            background-color: #533483;
+        }
+        /* Timeline Collection (Matrix-Editor Style) */
+        .timeline-collection {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 3px solid #AED581;
+            z-index: 50;
+            display: none;
+        }
+        
+        .timeline-collection.active {
+            display: block;
+        }
+        
+        .timeline-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 20px;
+            background: rgba(174, 213, 129, 0.15);
+            border-bottom: 1px solid rgba(174, 213, 129, 0.3);
+        }
+        
+        .timeline-title {
+            font-size: clamp(11px, 2.5vw, 14px);
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #AED581;
+            flex: 1;
+        }
+        
+        .timeline-btn {
+            padding: 6px 12px;
+            font-size: clamp(10px, 2vw, 12px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border: 2px solid #AED581;
+            background: transparent;
+            color: #AED581;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .timeline-btn:hover {
+            background: #AED581;
+            color: #000;
+            box-shadow: 0 0 20px rgba(174, 213, 129, 0.5);
+        }
+        
+        .timeline-clips {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            overflow-x: auto;
+            min-height: 100px;
+            align-items: center;
+        }
+        
+        .timeline-clip {
+            min-width: 120px;
+            height: 80px;
+            border: 2px solid #AED581;
+            background: rgba(174, 213, 129, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .timeline-clip:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(174, 213, 129, 0.5);
+            background: rgba(174, 213, 129, 0.2);
+        }
+        
+        .timeline-clip-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #AED581;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        
+        .timeline-clip-category {
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+        }
+        
+        .timeline-clip-time {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+        }
+        
+        /* Animations (Matrix-Editor Style) */
+        @keyframes slideOutLeft {
+            to {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #overlay, #sideDisplays, #controls, #gameOverModal, #difficultyModal, #openingModal, #pauseModal, #quoteModal {
+                font-size: 16px;
+                padding: 8px;
+            }
+            .control-btn {
+                padding: 10px 18px;
+                margin: 0 5px;
+                font-size: 1rem;
+                max-width: 60px; /* Further limit button width on smaller screens */
+            }
+            #sideDisplays {
+                top: 10px;
+                right: 10px;
+                gap: 10px;
+            }
+            #holdPiece, #nextPiece {
+                padding: 10px;
+            }
+            #holdPiece h3, #nextPiece h3 {
+                font-size: 1.2rem;
+            }
+            #gameOverModal h1, #difficultyModal h1, #openingModal h1, #pauseModal h1, #quoteModal h1 {
+                font-size: 2rem;
+            }
+            #gameOverModal p, #difficultyModal p, #openingModal p, #pauseModal p, #quoteModal p {
+                font-size: 1.2rem;
+            }
+            #gameOverModal button, #difficultyModal button, #pauseModal button, #quoteModal button {
+                padding: 10px 20px;
+                font-size: 1rem;
+            }
+            /* Stack control rows vertically on very small screens */
+            #controls .control-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Overlay for Score and Level -->
+    <div id="overlay">
+        <div>Score: <span id="scoreDisplay">0</span></div>
+        <div>Level: <span id="levelDisplay">1</span></div>
+        <button id="themeToggle" style="margin-top:8px; padding:4px 8px; background:#e94560; border:none; color:#fff; border-radius:3px; cursor:pointer; font-size:0.8rem; font-weight:700;">LIGHT</button>
+    </div>
+
+    <!-- Side Displays for Hold and Next Pieces -->
+    <div id="sideDisplays">
+        <!-- Hold Piece Display -->
+        <div id="holdPiece">
+            <h3>Hold:</h3>
+            <div id="holdPieceDisplay"></div>
+        </div>
+
+        <!-- Next Piece Display -->
+        <div id="nextPiece">
+            <h3>Next:</h3>
+            <div id="nextPieceDisplay"></div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+        <!-- Top Row: Movement and Rotation Controls -->
+        <div class="control-row">
+            <button id="leftBtn" class="control-btn">←</button>
+            <button id="rotateBtn" class="control-btn">↻</button>
+            <button id="rightBtn" class="control-btn">→</button>
+            <button id="dropBtn" class="control-btn">↓</button>
+        </div>
+        <!-- Bottom Row: Secondary Controls -->
+        <div class="control-row">
+            <button id="holdBtn" class="control-btn">◎</button>
+            <button id="pauseBtn" class="control-btn">⏸</button>
+            <button id="rewindBtn" class="control-btn">⎌</button>
+        </div>
+    </div>
+
+    <!-- Three.js Canvas -->
+    <canvas id="tetrisCanvas"></canvas>
+    
+    <!-- Timeline Collection (Matrix-Editor Style) -->
+    <div id="timelineCollection" class="timeline-collection">
+        <div class="timeline-header">
+            <span class="timeline-title">COLLECTED FRAGMENTS</span>
+            <button id="playTimelineBtn" class="timeline-btn">▶ PLAY</button>
+            <button id="clearTimelineBtn" class="timeline-btn">✕ CLEAR</button>
+        </div>
+        <div id="timelineClips" class="timeline-clips"></div>
+    </div>
+
+    <!-- Title Screen (Clean, no text) -->
+    <div id="titleScreen" class="title-screen">
+        <div class="context-hint">When Dreams Become Responsibility</div>
+        <div class="intro-text">
+            <p>Match three. Collect fragments. Assemble meaning.</p>
+        </div>
+        <div class="faction-select">
+            <button class="faction-btn" data-difficulty="beginner"><span></span></button>
+            <button class="faction-btn" data-difficulty="medium"><span></span></button>
+            <button class="faction-btn" data-difficulty="expert"><span></span></button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal">
+        <h1>Game Over</h1>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <!-- Poem will be conditionally inserted here -->
+        <div id="poemContainer" style="display: none; text-align: left; margin-top: 20px;">
+            <h2>题西林壁 (Written on the Wall of West Forest Temple)</h2>
+            <p>横看成岭侧成峰，<br>
+            远近高低各不同。<br>
+            不识庐山真面目，<br>
+            只缘身在此山中。</p>
+            <h3>English Translation:</h3>
+            <p>A mountain range in panorama becomes a peak from the side,<br>
+            Far, near, high and low, with no two alike.<br>
+            I do not know the true face of Lushan Mountain,<br>
+            Only because I myself am in the mountain.</p>
+        </div>
+        <button onclick="resetGame()">Restart</button>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="pauseModal">
+        <h1>Paused</h1>
+        <p>Game is paused.</p>
+        <button id="resumeBtn">Resume</button>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+    <script>
+    /*
+     * NOVEL PATENTABLE MECHANIC: Time-Locked Narrative Chain Editing
+     * 
+     * Core Innovation: Video blocks can only be edited/rearranged when they form
+     * complete "narrative chains" with adjacent blocks. This creates a unique
+     * constraint-based editing paradigm where:
+     * 
+     * 1. TEMPORAL LOCKING: Each video block has a timestamp range (start/end)
+     * 2. ADJACENCY REQUIREMENT: Blocks must be physically adjacent (tetris-style)
+     * 3. NARRATIVE COHERENCE: Only complete horizontal lines can be "edited" (cleared)
+     * 4. CHAIN VALIDATION: The system validates temporal continuity before allowing edits
+     * 5. QUANTUM SUPERPOSITION: Blocks exist in multiple potential arrangements until locked
+     * 
+     * This differs from traditional NLE (non-linear editors) by:
+     * - Spatial constraint (tetris grid) determines temporal editing capability
+     * - Game mechanics enforce narrative structure
+     * - Physical arrangement = editorial permission
+     * 
+     * Patent Claims:
+     * - Method for constraint-based video editing using spatial adjacency
+     * - System for time-locked media fragments requiring physical arrangement
+     * - Apparatus combining game mechanics with non-linear editing
+     */
+    
+    // Define the Piece class
+    class Piece {
+        constructor(type, shape, concept, gridWidth, gridHeight) {
+            this.type = type;
+            this.shape = shape;
+            this.concept = concept; // Video concept with title, yt, color
+            this.color = concept.color;
+            this.gridWidth = gridWidth;
+            this.gridHeight = gridHeight;
+            // Initial position will be set during spawn
+            this.x = 0;
+            this.y = 0;
+            this.rotationState = 0; // For SRS
+        }
+
+        rotate() {
+            // 90-degree clockwise rotation
+            this.shape = this.shape[0].map((_, index) =>
+                this.shape.map(row => row[index]).reverse()
+            );
+            this.rotationState = (this.rotationState + 1) % 4;
+        }
+
+        attemptRotate(grid) {
+            const originalShape = JSON.parse(JSON.stringify(this.shape));
+            const originalX = this.x;
+            const originalY = this.y;
+            const originalRotation = this.rotationState;
+
+            this.rotate();
+
+            // Define wall kicks based on SRS for the piece type
+            const wallKicks = this.getWallKicks();
+
+            for (const [kickX, kickY] of wallKicks) {
+                this.x += kickX;
+                this.y += kickY;
+                if (!this.checkCollision(grid)) {
+                    return true; // Successful rotation with kick
+                }
+                this.x = originalX;
+                this.y = originalY;
+            }
+
+            // Revert rotation if all kicks fail
+            this.shape = originalShape;
+            this.rotationState = originalRotation;
+            return false;
+        }
+
+        getWallKicks() {
+            // Simplified wall kicks; implement SRS based on rotation state
+            // For brevity, returning a static set
+            return [
+                [0, 0],
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ];
+        }
+
+        checkCollision(grid) {
+            return this.shape.some((row, dy) => 
+                row.some((cell, dx) => {
+                    if (!cell) return false;
+                    const x = this.x + dx;
+                    const y = Math.floor(this.y - dy);
+                    return (
+                        x < 0 || x >= this.gridWidth || 
+                        y < 0 || y >= this.gridHeight ||
+                        (y >= 0 && grid[y] && grid[y][x])
+                    );
+                })
+            );
+        }
+    }
+
+    // Define the QuantumTetris class
+    class QuantumTetris {
+        constructor() {
+            this.GRID_WIDTH = 10;
+            this.GRID_HEIGHT = 20;
+            this.BLOCK_SIZE = 1;
+            this.dropInterval = 1000; // Initial drop interval in ms (Beginner)
+            this.grid = Array.from(
+                { length: this.GRID_HEIGHT }, 
+                () => Array(this.GRID_WIDTH).fill(null)
+            );
+            this.nextPieces = [];
+            this.holdPiece = null;
+            this.canHold = true;
+            this.isGameOver = false;
+            this.isPaused = false;
+            this.score = 0;
+            this.level = 1;
+            this.comboCount = 0;
+            this.timeFrozen = false;
+            this.lastMoveTime = 0;
+            
+            // Camera zoom controls
+            this.defaultCameraZ = 25;
+            this.zoomedCameraZ = 10;
+            this.isZoomed = false;
+            this.zoomTarget = null;
+
+            // Complete VIDEO CONCEPTS library from a3.html - Full Documentary Narrative
+            this.YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+            this.VIDEO_CONCEPTS = [
+                // Bayer & Individual Self Arc
+                { id: 'fom-exhibition-1950s', title: 'Family of Man', category: 'Media Apparatus', color: 0xC8E6C9, start: 27, end: 53 },
+                { id: 'bayer-individual-self', title: 'Individual Self', category: 'Core Concept', color: 0xAED581, start: 67, end: 78 },
+                { id: 'bayer-utopian-vision', title: 'Utopian Vision', category: 'Theory', color: 0x9CCC65, start: 91, end: 97 },
+                
+                // Tupac & Reality Arc
+                { id: 'tupac-grand-stories', title: 'Grand Stories', category: 'Core Concept', color: 0xF44336, start: 143, end: 148 },
+                { id: 'afeni-harsh-reality', title: 'Harsh Reality', category: 'Systemic Critique', color: 0xEF5350, start: 183, end: 190 },
+                { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', category: 'Systemic Critique', color: 0xFFCDD2, start: 197, end: 204 },
+                { id: 'civil-rights-promises-broken', title: 'Civil Rights Broken', category: 'Systemic Event', color: 0xBDBDBD, start: 244, end: 251 },
+                { id: 'society-boom-q', title: 'Societal Boom', category: 'Systemic Control', color: 0x616161, start: 230, end: 237 },
+                { id: 'tupac-thug-life-authenticity', title: 'Thug Life', category: 'Culture/Identity', color: 0xFF7043, start: 971, end: 992 },
+                { id: 'mass-incarceration-clinton', title: 'Mass Incarceration', category: 'Systemic Control', color: 0x78909C, start: 1070, end: 1078 },
+                { id: 'cultural-fairy-tale-tupac', title: 'Culture as Fairy Tale', category: 'Systemic Critique', color: 0x90CAF9, start: 1099, end: 1113 },
+                
+                // Complexity & Control Arc
+                { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', color: 0x42A5F5, start: 664, end: 669 },
+                { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', color: 0x2196F3, start: 738, end: 751 },
+                { id: 'gell-mann-underlying-patterns', title: 'Underlying Patterns', category: 'Core Concept', color: 0x1976D2, start: 766, end: 779 },
+                { id: 'gazzaniga-multiple-selves', title: 'Multiple Selves', category: 'Psychological Theory', color: 0xFFB74D, start: 1450, end: 1478 },
+                
+                // Google & Surveillance Arc
+                { id: 'google-mission-idealism', title: 'Google Mission', category: 'Organizational Idealism', color: 0x8BC34A, start: 1739, end: 1770 },
+                { id: 'dot-com-burst-money-power', title: 'Dot-Com Bust', category: 'Economic Event', color: 0xBCAA4, start: 2210, end: 2215 },
+                { id: 'google-data-trails-predict', title: 'Data Trails', category: 'Technological Apparatus', color: 0x689F38, start: 2254, end: 2269 },
+                { id: '911-patriot-act-privacy-lost', title: '9/11 Privacy Lost', category: 'Systemic Event', color: 0xD32F2F, start: 2347, end: 2353 },
+                { id: 'google-sidelining-consciousness', title: 'Sidelining Consciousness', category: 'Systemic Impact', color: 0xAFB42B, start: 2402, end: 2425 },
+                
+                // AI & Algorithms Arc
+                { id: 'hinton-neural-networks', title: 'Neural Networks', category: 'Technological Apparatus', color: 0x00BCD4, start: 3595, end: 3606 },
+                { id: 'hinton-vector-world-myth', title: 'Vector World', category: 'Core Concept', color: 0x0097A7, start: 3628, end: 3652 },
+                { id: 'data-gold-rush-surveillance', title: 'Data Gold Rush', category: 'Economic Apparatus', color: 0xFFD700, start: 3691, end: 3698 },
+                { id: 'pokemon-go-persuasive', title: 'Pokémon Go', category: 'Technological Apparatus', color: 0xFFEB3B, start: 3789, end: 3795 },
+                
+                // China Arc
+                { id: 'china-princelings-void', title: 'Princelings Void', category: 'Systemic Event', color: 0xFF5722, start: 3011, end: 3023 },
+                { id: 'china-land-grab-corruption', title: 'Land Grab', category: 'Systemic Event', color: 0xF4511E, start: 3043, end: 3050 },
+                { id: 'bo-chongqing-experiment', title: 'Bo Xilai', category: 'Political Project', color: 0xA1887F, start: 3261, end: 3267 },
+                { id: 'china-algorithmic-governance', title: 'Algorithmic Gov', category: 'Systemic Control', color: 0x4169E1, start: 5315, end: 5329 },
+                { id: 'skinner-operant-conditioning', title: 'Operant Conditioning', category: 'Psychological Theory', color: 0x1E88E5, start: 5356, end: 5369 },
+                { id: 'xi-jinping-giant-control', title: 'Xi Control System', category: 'Political Project', color: 0x1A237E, start: 5296, end: 5301 },
+                
+                // Russia Arc
+                { id: 'russia-oligarchs-putin-rise', title: 'Putin Rise', category: 'Systemic Event', color: 0x607D8B, start: 1905, end: 1926 },
+                { id: 'kursk-disaster-anger-power', title: 'Kursk Disaster', category: 'Systemic Event', color: 0x455A64, start: 2053, end: 2062 },
+                { id: 'putin-no-logic-strategy', title: 'Putin No Logic', category: 'Leadership Critique', color: 0x37474F, start: 2126, end: 2147 },
+                { id: 'putin-eurasia-defense', title: 'Eurasia Defense', category: 'Political Ideology', color: 0xD32F2F, start: 4809, end: 4827 },
+                { id: 'nightwolves-conspiracy-propaganda', title: 'Nightwolves', category: 'Culture/Propaganda', color: 0xE53935, start: 4893, end: 4907 },
+                
+                // Conspiracy & Fragmentation Arc
+                { id: 'conspiracy-theories-human-ai', title: 'Human AI', category: 'Social Phenomenon', color: 0x7E57C2, start: 4129, end: 4161 },
+                { id: 'illuminati-mind-control', title: 'Illuminati', category: 'Conspiracy Theory', color: 0x5E35B1, start: 4216, end: 4221 },
+                { id: 'thornley-op-mindfuck', title: 'Operation Mindfuck', category: 'Theory/Action', color: 0x9575CD, start: 4182, end: 4196 },
+                { id: 'trump-qanon-pedophile-cabal', title: 'Trump & QAnon', category: 'Political Phenomenon', color: 0xB71C1C, start: 6093, end: 6105 },
+                { id: 'fragile-structure-discon-frag', title: 'Fragile Structure', category: 'Systemic Vulnerability', color: 0x9E9E9E, start: 6164, end: 6183 },
+                
+                // Crisis & Future Arc
+                { id: '2008-global-economic-crash', title: '2008 Crash', category: 'Systemic Event', color: 0xE57373, start: 4329, end: 4336 },
+                { id: 'banks-rigging-money-laundering', title: 'Banks Rigging', category: 'Systemic Corruption', color: 0xE53935, start: 4370, end: 4378 },
+                { id: 'populist-anger-elite-bailout', title: 'Populist Anger', category: 'Political Phenomenon', color: 0xF44336, start: 4415, end: 4422 },
+                { id: 'brexit-take-back-control', title: 'Brexit', category: 'Political Project', color: 0xEF5350, start: 4476, end: 4488 },
+                { id: 'covid-deep-inequalities', title: 'COVID-19', category: 'Global Crisis', color: 0x7E57C2, start: 6364, end: 6371 },
+                { id: 'future-indiv-disappear', title: 'Individualism Disappears', category: 'Future Scenario', color: 0x5C6BC0, start: 6421, end: 6432 },
+                { id: 'future-old-stability', title: 'Old Stability', category: 'Future Scenario', color: 0x9FA8DA, start: 6490, end: 6509 },
+                { id: 'future-imagine-new', title: 'Imagine New', category: 'Future Scenario', color: 0x66BB6A, start: 6603, end: 6609 },
+                { id: 'graeber-world-we-make', title: 'World We Make', category: 'Core Concept', color: 0x4CAF50, start: 6678, end: 6690 }
+            ];
+            
+            // Video ring buffer for efficient rendering
+            this.videoRingBuffer = {
+                maxVideos: 20, // Maximum concurrent videos
+                active: new Map(), // Map of position -> video element
+                add: function(key, video) {
+                    if (this.active.size >= this.maxVideos) {
+                        // Remove oldest video
+                        const firstKey = this.active.keys().next().value;
+                        const oldVideo = this.active.get(firstKey);
+                        if (oldVideo && oldVideo.element) {
+                            const iframes = oldVideo.element.querySelectorAll('iframe');
+                            iframes.forEach(iframe => iframe.src = 'about:blank');
+                        }
+                        this.active.delete(firstKey);
+                    }
+                    this.active.set(key, video);
+                },
+                remove: function(key) {
+                    const video = this.active.get(key);
+                    if (video && video.element) {
+                        const iframes = video.element.querySelectorAll('iframe');
+                        iframes.forEach(iframe => iframe.src = 'about:blank');
+                    }
+                    this.active.delete(key);
+                },
+                clear: function() {
+                    this.active.forEach((video, key) => this.remove(key));
+                    this.active.clear();
+                }
+            };
+            
+            // Define PIECE_TOKENS with video concepts
+            this.PIECE_TOKENS = {
+                'I': { 
+                    shape: [[1,1,1,1]], 
+                    concept: this.VIDEO_CONCEPTS[0],
+                    weight: 1.2 
+                },
+                'O': { 
+                    shape: [[1,1],[1,1]], 
+                    concept: this.VIDEO_CONCEPTS[1],
+                    weight: 1.5 
+                },
+                'T': { 
+                    shape: [[0,1,0],[1,1,1]], 
+                    concept: this.VIDEO_CONCEPTS[2],
+                    weight: 1.0 
+                },
+                'L': { 
+                    shape: [[0,0,1],[1,1,1]], 
+                    concept: this.VIDEO_CONCEPTS[3],
+                    weight: 0.9 
+                },
+                'J': { 
+                    shape: [[1,0,0],[1,1,1]], 
+                    concept: this.VIDEO_CONCEPTS[4],
+                    weight: 0.9 
+                },
+                'S': { 
+                    shape: [[0,1,1],[1,1,0]], 
+                    concept: this.VIDEO_CONCEPTS[5],
+                    weight: 0.8 
+                },
+                'Z': { 
+                    shape: [[1,1,0],[0,1,1]], 
+                    concept: this.VIDEO_CONCEPTS[6],
+                    weight: 0.8 
+                }
+            };
+
+            // Shared geometries and materials for performance
+            this.blockGeometry = new THREE.BoxGeometry(0.95, 0.95, 0.95); // Slightly smaller blocks for wireframes
+            this.edgeGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.95, 0.95, 0.95));
+            this.lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+
+            this.lockedBlockMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
+
+            // Timeline collection system (matrix-editor style)
+            this.collectedFragments = [];
+            
+            // Initialize Three.js Scene Elements
+            this.scene = null;
+            this.camera = null;
+            this.renderer = null;
+
+            // Groups for dynamic objects
+            this.pieceGroup = null;
+            this.ghostGroup = null;
+
+            // Initialize game
+            this.initGame();
+
+            // Initialize Quotes
+            this.quotes = [
+                "Man anders versteht, wenn man überhaupt versteht. – Hans-Georg Gadamer",
+                "Say not, 'I have found the truth,' but rather, 'I have found a truth.' – Kahlil Gibran",
+                "The essence of the question is the opening up, and keeping open, of possibilities. – Hans-Georg Gadamer",
+                "Everything we see is a perspective, not the truth. – Marcus Aurelius"
+            ];
+
+            // Initialize History Stack for Rewind Functionality
+            this.history = [];
+            this.maxHistory = 1; // Limit history to last 1 state for single-step undo
+            this.gameLoopStarted = false; // To prevent multiple loops
+        }
+
+        initGame() {
+            this.setupScene();
+            this.setupCamera();
+            this.setupRenderer();
+            this.setupLighting();
+            this.setupGridVisualization();
+            this.setupControls();
+            this.fillNextQueue();
+            this.showOpeningAnimation();
+            // Do NOT start the game loop here
+            // It will be started after the first piece is spawned
+        }
+
+        setupScene() {
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x16213e);
+        }
+
+        setupCamera() {
+            this.camera = new THREE.PerspectiveCamera(
+                60, 
+                window.innerWidth / window.innerHeight, 
+                0.1, 
+                1000
+            );
+            // Position camera for better overview - lower and further back
+            this.camera.position.set(
+                this.GRID_WIDTH / 2, 
+                this.GRID_HEIGHT * 0.4, 
+                this.GRID_HEIGHT * 1.2
+            );
+            this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT * 0.3, 0));
+            
+            // Add click-to-zoom functionality
+            this.raycaster = new THREE.Raycaster();
+            this.mouse = new THREE.Vector2();
+            this.zoomedBlock = null;
+            
+            window.addEventListener('click', (event) => {
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+                
+                if (intersects.length > 0) {
+                    const block = intersects[0].object.parent;
+                    if (block && block.name === 'lockedBlock') {
+                        // Zoom to block
+                        const targetPos = block.position.clone();
+                        this.camera.position.set(targetPos.x, targetPos.y, targetPos.z + 3);
+                        this.camera.lookAt(targetPos);
+                        this.zoomedBlock = block;
+                    }
+                } else if (this.zoomedBlock) {
+                    // Zoom out to default view
+                    this.camera.position.set(
+                        this.GRID_WIDTH / 2, 
+                        this.GRID_HEIGHT * 0.4, 
+                        this.GRID_HEIGHT * 1.2
+                    );
+                    this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT * 0.3, 0));
+                    this.zoomedBlock = null;
+                }
+            });
+        }
+
+        setupRenderer() {
+            const canvas = document.getElementById('tetrisCanvas');
+            this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Add CSS3DRenderer for video blocks
+            this.cssScene = new THREE.Scene();
+            this.cssRenderer = new THREE.CSS3DRenderer();
+            this.cssRenderer.setSize(window.innerWidth, window.innerHeight);
+            this.cssRenderer.domElement.style.position = 'absolute';
+            this.cssRenderer.domElement.style.top = '0';
+            this.cssRenderer.domElement.style.left = '0';
+            this.cssRenderer.domElement.style.pointerEvents = 'none';
+            this.cssRenderer.domElement.style.zIndex = '1';
+            // Insert before canvas so WebGL renders on top
+            document.body.insertBefore(this.cssRenderer.domElement, canvas);
+            
+            window.addEventListener('resize', this.onWindowResize.bind(this), false);
+        }
+
+        setupLighting() {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            backLight.position.set(-5, -5, -5);
+            
+            this.scene.add(ambientLight);
+            this.scene.add(directionalLight);
+            this.scene.add(backLight);
+        }
+
+        setupGridVisualization() {
+            // Base grid plane
+            const gridPlane = new THREE.Mesh(
+                new THREE.PlaneGeometry(this.GRID_WIDTH, this.GRID_HEIGHT),
+                new THREE.MeshBasicMaterial({
+                    color: 0x1a1a2e,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            gridPlane.rotation.x = Math.PI / 2;
+            gridPlane.position.set(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, -0.1);
+            this.scene.add(gridPlane);
+
+            // Grid lines
+            const gridHelper = new THREE.GridHelper(
+                this.GRID_WIDTH, 
+                this.GRID_WIDTH,
+                0x444444,
+                0x333333
+            );
+            gridHelper.rotation.x = Math.PI / 2;
+            gridHelper.position.set(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, 0);
+            this.scene.add(gridHelper);
+        }
+
+        fillNextQueue() {
+            while (this.nextPieces.length < 3) {
+                this.nextPieces.push(this.selectPieceWithProbability());
+            }
+            this.renderNextPieces();
+        }
+
+        selectPieceWithProbability() {
+            const totalWeight = Object.values(this.PIECE_TOKENS)
+                .reduce((sum, piece) => sum + piece.weight, 0);
+            
+            const randomValue = Math.random() * totalWeight;
+            let cumulativeWeight = 0;
+
+            for (const [type, piece] of Object.entries(this.PIECE_TOKENS)) {
+                cumulativeWeight += piece.weight;
+                if (randomValue <= cumulativeWeight) {
+                    return new Piece(type, piece.shape, piece.concept, this.GRID_WIDTH, this.GRID_HEIGHT);
+                }
+            }
+
+            // Fallback
+            return new Piece('T', this.PIECE_TOKENS['T'].shape, this.PIECE_TOKENS['T'].concept, this.GRID_WIDTH, this.GRID_HEIGHT);
+        }
+
+        spawnPiece() {
+            if (this.nextPieces.length === 0) {
+                this.fillNextQueue();
+            }
+
+            this.currentPiece = this.nextPieces.shift();
+            // Reset position for new piece
+            this.currentPiece.x = Math.floor(this.GRID_WIDTH / 2) - Math.ceil(this.currentPiece.shape[0].length / 2);
+            this.currentPiece.y = this.GRID_HEIGHT - 1; // Corrected y position
+
+            this.fillNextQueue();
+            this.renderNextPieces();
+
+            // Only check collision after piece is properly positioned
+            if (this.currentPiece.checkCollision(this.grid)) {
+                this.showGameOver();
+                return;
+            }
+
+            this.renderPiece();
+            this.renderGhostPiece();
+
+            // Start the game loop now that the first piece is spawned
+            if (!this.gameLoopStarted) {
+                this.startGameLoop();
+                this.gameLoopStarted = true;
+            }
+        }
+
+        renderPiece() {
+            // Clear previous piece
+            if (this.pieceGroup) {
+                this.scene.remove(this.pieceGroup);
+            }
+            this.pieceGroup = new THREE.Group();
+            
+            // Clear previous labels
+            if (this.currentPieceLabel) {
+                this.cssScene.remove(this.currentPieceLabel);
+                this.currentPieceLabel = null;
+            }
+
+            this.currentPiece.shape.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        const block = this.renderBlock(
+                            this.currentPiece.x + x, 
+                            this.currentPiece.y - y, 
+                            this.currentPiece.color,
+                            1,
+                            this.currentPiece.concept
+                        );
+                        this.pieceGroup.add(block);
+                        
+                        // Add floating label on first block
+                        if (x === 0 && y === 0 && this.currentPiece.concept) {
+                            this.currentPieceLabel = this.createFloatingLabel(
+                                this.currentPiece.x + x,
+                                this.currentPiece.y - y,
+                                this.currentPiece.concept
+                            );
+                            this.cssScene.add(this.currentPieceLabel);
+                        }
+                    }
+                });
+            });
+
+            this.scene.add(this.pieceGroup);
+        }
+
+        renderGhostPiece() {
+            // Remove existing ghost piece if any
+            if (this.ghostGroup) {
+                this.scene.remove(this.ghostGroup);
+            }
+
+            const ghostPiece = new Piece(
+                this.currentPiece.type, 
+                JSON.parse(JSON.stringify(this.currentPiece.shape)), 
+                this.currentPiece.concept, 
+                this.GRID_WIDTH, 
+                this.GRID_HEIGHT
+            );
+            ghostPiece.x = this.currentPiece.x;
+            ghostPiece.y = this.currentPiece.y;
+
+            // Move ghost piece down until collision
+            while (!ghostPiece.checkCollision(this.grid)) {
+                ghostPiece.y -= 1;
+            }
+            ghostPiece.y += 1; // Move back up to last valid position
+
+            this.ghostGroup = new THREE.Group();
+
+            ghostPiece.shape.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        const ghostBlock = this.renderBlock(
+                            ghostPiece.x + x, 
+                            ghostPiece.y - y, 
+                            this.currentPiece.color,
+                            0.3, // Opacity for ghost piece
+                            null // NO concept for ghost - no video
+                        );
+                        // Make the ghost piece semi-transparent
+                        ghostBlock.children.forEach(child => {
+                            child.material.transparent = true;
+                            child.material.opacity = 0.3;
+                        });
+                        this.ghostGroup.add(ghostBlock);
+                    }
+                });
+            });
+
+            this.scene.add(this.ghostGroup);
+        }
+
+        renderBlock(x, y, color, opacity = 1, concept = null) {
+            const blockGroup = new THREE.Group();
+
+            // Main block - COLOR-CODED with TV bar effect
+            const cube = new THREE.Mesh(
+                this.blockGeometry,
+                new THREE.MeshPhongMaterial({
+                    color: color || 0xe94560,
+                    emissive: color || 0xe94560,
+                    emissiveIntensity: opacity < 1 ? 0.1 : 0.3,
+                    opacity: opacity,
+                    transparent: opacity < 1
+                })
+            );
+
+            // Bright white edge wireframe (TV color bar style)
+            const edges = new THREE.LineSegments(
+                this.edgeGeometry,
+                new THREE.LineBasicMaterial({ 
+                    color: 0xffffff,
+                    opacity: opacity,
+                    transparent: opacity < 1
+                })
+            );
+
+            blockGroup.add(cube);
+            blockGroup.add(edges);
+            blockGroup.position.set(x + 0.5, y + 0.5, 0);
+            
+            // Store concept for later video creation (only when locked)
+            blockGroup.userData.concept = concept;
+            blockGroup.userData.position = { x, y };
+            
+            return blockGroup;
+        }
+        
+        createFloatingLabel(x, y, concept) {
+            const labelDiv = document.createElement('div');
+            labelDiv.style.width = '400px';
+            labelDiv.style.padding = '20px 30px';
+            labelDiv.style.background = 'rgba(0, 0, 0, 0.95)';
+            labelDiv.style.border = `4px solid #${concept.color.toString(16).padStart(6, '0')}`;
+            labelDiv.style.borderRadius = '12px';
+            labelDiv.style.color = '#fff';
+            labelDiv.style.fontSize = '24px';
+            labelDiv.style.fontWeight = '900';
+            labelDiv.style.textAlign = 'center';
+            labelDiv.style.textTransform = 'uppercase';
+            labelDiv.style.letterSpacing = '2px';
+            labelDiv.style.pointerEvents = 'none';
+            labelDiv.style.boxShadow = `0 0 40px rgba(${(concept.color >> 16) & 255}, ${(concept.color >> 8) & 255}, ${concept.color & 255}, 0.8)`;
+            labelDiv.style.textShadow = `0 0 20px #${concept.color.toString(16).padStart(6, '0')}`;
+            
+            const titleSpan = document.createElement('div');
+            titleSpan.textContent = concept.title;
+            titleSpan.style.marginBottom = '12px';
+            titleSpan.style.color = `#${concept.color.toString(16).padStart(6, '0')}`;
+            titleSpan.style.fontSize = '28px';
+            titleSpan.style.lineHeight = '1.2';
+            
+            const categorySpan = document.createElement('div');
+            categorySpan.textContent = concept.category;
+            categorySpan.style.fontSize = '14px';
+            categorySpan.style.color = 'rgba(255, 255, 255, 0.7)';
+            categorySpan.style.fontWeight = '600';
+            categorySpan.style.letterSpacing = '1px';
+            
+            labelDiv.appendChild(titleSpan);
+            labelDiv.appendChild(categorySpan);
+            
+            const label = new THREE.CSS3DObject(labelDiv);
+            // Position above the piece, centered
+            label.position.set(x + 1, y + 3, 0);
+            label.scale.set(0.015, 0.015, 1);
+            
+            return label;
+        }
+        
+        createVideoScreen(concept) {
+            const el = document.createElement('div');
+            const size = 300; // pixels
+            el.style.width = size + 'px';
+            el.style.height = size + 'px';
+            el.style.background = '#000';
+            el.style.overflow = 'hidden';
+            el.style.position = 'relative';
+            el.classList.add('video-block');
+            
+            // Create iframe with time-based clip if available
+            const iframe = document.createElement('iframe');
+            const videoId = this.YOUTUBE_VIDEO_ID || 'BQ2n6SN7gOY';
+            const startTime = concept.start || 0;
+            const endTime = concept.end || (startTime + 30);
+            
+            iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&end=${endTime}&autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${videoId}`;
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.setAttribute('allow', 'autoplay; encrypted-media');
+            el.appendChild(iframe);
+            
+            // Add title overlay (matrix-editor style)
+            const titleBar = document.createElement('div');
+            titleBar.style.position = 'absolute';
+            titleBar.style.top = '0';
+            titleBar.style.left = '0';
+            titleBar.style.right = '0';
+            titleBar.style.background = 'rgba(233, 69, 96, 0.9)';
+            titleBar.style.color = '#fff';
+            titleBar.style.padding = '6px 8px';
+            titleBar.style.fontSize = '11px';
+            titleBar.style.fontWeight = '700';
+            titleBar.style.textTransform = 'uppercase';
+            titleBar.style.letterSpacing = '0.8px';
+            titleBar.style.textAlign = 'center';
+            titleBar.style.borderBottom = '2px solid #fff';
+            titleBar.style.zIndex = '10';
+            titleBar.textContent = concept.title;
+            el.appendChild(titleBar);
+            
+            // Add category badge
+            const categoryBadge = document.createElement('div');
+            categoryBadge.style.position = 'absolute';
+            categoryBadge.style.bottom = '0';
+            categoryBadge.style.left = '0';
+            categoryBadge.style.right = '0';
+            categoryBadge.style.background = 'rgba(0,0,0,0.8)';
+            categoryBadge.style.color = 'rgba(255,255,255,0.7)';
+            categoryBadge.style.padding = '4px';
+            categoryBadge.style.fontSize = '9px';
+            categoryBadge.style.fontWeight = '600';
+            categoryBadge.style.textTransform = 'uppercase';
+            categoryBadge.style.letterSpacing = '0.5px';
+            categoryBadge.style.textAlign = 'center';
+            categoryBadge.textContent = concept.category || 'Fragment';
+            el.appendChild(categoryBadge);
+            
+            const obj = new THREE.CSS3DObject(el);
+            obj.scale.set(1/size, 1/size, 1);
+            obj.userData.concept = concept; // Store concept for later access
+            return obj;
+        }
+
+        setupControls() {
+            // Remove saveState() from action functions
+            // Only save state when a piece is about to be locked
+
+            const controlMap = {
+                'ArrowLeft': () => this.movePiece(-1),
+                'ArrowRight': () => this.movePiece(1),
+                'ArrowDown': () => this.dropPiece(),
+                'ArrowUp': () => this.rotatePiece(),
+                'c': () => this.holdPieceFunction(),
+                'C': () => this.holdPieceFunction(),
+                ' ': () => this.togglePause() // Spacebar to toggle pause
+            };
+
+            window.addEventListener('keydown', (event) => {
+                const action = controlMap[event.key];
+                if (action) action();
+            });
+            
+            // Canvas click for zoom
+            this.renderer.domElement.addEventListener('click', (event) => {
+                this.handleCanvasClick(event);
+            });
+            
+            // Z key to zoom out quickly
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'z' || event.key === 'Z') {
+                    if (this.isZoomed) {
+                        this.zoomOut();
+                    }
+                }
+            });
+
+            // Mobile controls
+            ['leftBtn', 'rightBtn', 'dropBtn', 'rotateBtn', 'holdBtn', 'pauseBtn', 'rewindBtn'].forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                let action;
+                switch(btnId) {
+                    case 'leftBtn':
+                        action = () => this.movePiece(-1);
+                        break;
+                    case 'rightBtn':
+                        action = () => this.movePiece(1);
+                        break;
+                    case 'dropBtn':
+                        action = () => this.dropPiece();
+                        break;
+                    case 'rotateBtn':
+                        action = () => this.rotatePiece();
+                        break;
+                    case 'holdBtn':
+                        action = () => this.holdPieceFunction();
+                        break;
+                    case 'pauseBtn':
+                        action = () => this.togglePause();
+                        break;
+                    case 'rewindBtn':
+                        action = () => this.rewindGame(); // Rewind now correctly implemented
+                        break;
+                }
+                if (action) {
+                    // Use touchend instead of touchstart to prevent multiple triggers
+                    btn.addEventListener('touchend', (e) => { 
+                        e.preventDefault(); 
+                        action(); 
+                    });
+                    btn.addEventListener('mouseup', (e) => { 
+                        e.preventDefault(); 
+                        action(); 
+                    });
+                }
+            });
+            
+            // Resume button in pause modal
+            document.getElementById('resumeBtn').addEventListener('click', () => {
+                this.togglePause();
+            });
+        }
+
+        movePiece(direction) {
+            if (this.isPaused || this.isGameOver) return;
+            // Remove saveState() from here
+            this.currentPiece.x += direction;
+            if (this.currentPiece.checkCollision(this.grid)) {
+                this.currentPiece.x -= direction;
+            } else {
+                this.renderPiece();
+                this.renderGhostPiece();
+                this.playSound('move');
+                
+                // TIME FREEZE: Stop time briefly when moving
+                this.timeFrozen = true;
+                this.lastMoveTime = Date.now();
+                setTimeout(() => {
+                    if (Date.now() - this.lastMoveTime >= 300) {
+                        this.timeFrozen = false;
+                    }
+                }, 300);
+            }
+        }
+
+        rotatePiece() {
+            if (this.isPaused || this.isGameOver) return;
+            // Remove saveState() from here
+            const rotated = this.currentPiece.attemptRotate(this.grid);
+            if (rotated) {
+                this.renderPiece();
+                this.renderGhostPiece();
+                this.playSound('rotate');
+                
+                // ROTATION INCREASES LEVEL: Each rotation makes game harder
+                this.rotationCount = (this.rotationCount || 0) + 1;
+                if (this.rotationCount % 10 === 0) {
+                    this.level = Math.min(10, this.level + 1);
+                    this.dropInterval = Math.max(100, 1000 - (this.level - 1) * 100);
+                    this.updateScoreDisplay();
+                    // Visual feedback
+                    console.log(`Level up! Now at level ${this.level}`);
+                }
+                
+                // TIME FREEZE: Stop time when rotating
+                this.timeFrozen = true;
+                this.lastMoveTime = Date.now();
+                setTimeout(() => {
+                    if (Date.now() - this.lastMoveTime >= 500) {
+                        this.timeFrozen = false;
+                    }
+                }, 500);
+            }
+        }
+
+        dropPiece() {
+            if (this.isPaused || this.isGameOver) return;
+            // Remove saveState() from here
+            this.currentPiece.y -= 1;
+            if (this.currentPiece.checkCollision(this.grid)) {
+                this.currentPiece.y += 1;
+                this.lockPiece();
+                this.clearLines();
+                this.updateScoreAndLevel(); // Fixed function call
+                this.spawnPiece();
+                this.playSound('lock');
+            } else {
+                this.renderPiece();
+                this.renderGhostPiece();
+                this.playSound('drop');
+            }
+        }
+
+        holdPieceFunction() {
+            if (this.isPaused || this.isGameOver || !this.canHold) return;
+            // Remove saveState() from here
+            this.canHold = false;
+
+            if (this.holdPiece) {
+                // Swap current piece with hold piece
+                const temp = this.holdPiece;
+                this.holdPiece = this.currentPiece;
+
+                // Clone the hold piece to set it as the current piece
+                this.currentPiece = new Piece(
+                    temp.type,
+                    JSON.parse(JSON.stringify(temp.shape)),
+                    temp.color,
+                    this.GRID_WIDTH,
+                    this.GRID_HEIGHT
+                );
+                // Reset position for the new current piece
+                this.currentPiece.x = Math.floor(this.GRID_WIDTH / 2) - Math.ceil(this.currentPiece.shape[0].length / 2);
+                this.currentPiece.y = this.GRID_HEIGHT - 1;
+
+                // Check collision for the new current piece
+                if (this.currentPiece.checkCollision(this.grid)) {
+                    this.showGameOver();
+                    return;
+                }
+
+                this.renderPiece();
+                this.renderGhostPiece();
+                this.playSound('swap');
+            } else {
+                // If no piece is held, hold the current piece and spawn a new one
+                this.holdPiece = this.currentPiece;
+                this.spawnPiece();
+                this.playSound('hold');
+            }
+
+            this.renderHeldPiece();
+        }
+
+        rewindGame() {
+            if (this.history.length === 0) {
+                // No history to rewind
+                return;
+            }
+
+            // Pop the last state from the history
+            const lastState = this.history.pop();
+
+            // Restore the game state
+            this.grid = lastState.grid.map(row => row.slice());
+
+            if (lastState.currentPiece) {
+                this.currentPiece = new Piece(
+                    lastState.currentPiece.type,
+                    JSON.parse(JSON.stringify(lastState.currentPiece.shape)),
+                    lastState.currentPiece.color,
+                    this.GRID_WIDTH,
+                    this.GRID_HEIGHT
+                );
+                this.currentPiece.x = lastState.currentPiece.x;
+                this.currentPiece.y = lastState.currentPiece.y;
+                this.currentPiece.rotationState = lastState.currentPiece.rotationState;
+            } else {
+                this.currentPiece = null;
+            }
+
+            this.nextPieces = lastState.nextPieces.map(piece => new Piece(
+                piece.type,
+                JSON.parse(JSON.stringify(piece.shape)),
+                piece.color,
+                this.GRID_WIDTH,
+                this.GRID_HEIGHT
+            ));
+            this.holdPiece = lastState.holdPiece ? new Piece(
+                lastState.holdPiece.type,
+                JSON.parse(JSON.stringify(lastState.holdPiece.shape)),
+                lastState.holdPiece.color,
+                this.GRID_WIDTH,
+                this.GRID_HEIGHT
+            ) : null;
+
+            this.score = lastState.score;
+            this.level = lastState.level;
+            this.comboCount = lastState.comboCount;
+            this.cameraRotationState = lastState.cameraRotationState;
+
+            // Update display
+            document.getElementById('scoreDisplay').textContent = this.score;
+            document.getElementById('levelDisplay').textContent = this.level;
+
+            // Re-render the scene
+            if (this.pieceGroup) {
+                this.scene.remove(this.pieceGroup);
+            }
+            if (this.ghostGroup) {
+                this.scene.remove(this.ghostGroup);
+            }
+
+            this.renderLockedBlocks();
+            if (this.currentPiece) {
+                this.renderPiece();
+                this.renderGhostPiece();
+            }
+            this.renderNextPieces();
+            this.renderHeldPiece();
+
+            this.playSound('rewind');
+        }
+
+        renderNextPieces() {
+            const nextDisplay = document.getElementById('nextPieceDisplay');
+            if (!nextDisplay) return;
+            nextDisplay.innerHTML = ''; // Clear previous display
+
+            this.nextPieces.slice(0, 3).forEach(piece => {
+                if (!piece || !piece.shape) return;
+                const pieceDiv = document.createElement('div');
+                pieceDiv.style.display = 'flex';
+                pieceDiv.style.flexDirection = 'column';
+                pieceDiv.style.alignItems = 'center';
+                piece.shape.forEach(row => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.style.display = 'flex';
+                    rowDiv.style.flexDirection = 'row';
+                    row.forEach(cell => {
+                        const block = document.createElement('div');
+                        block.style.width = '20px';
+                        block.style.height = '20px';
+                        // Use piece.color which is set from concept.color in constructor
+                        const color = piece.color || 0xe94560;
+                        block.style.backgroundColor = cell ? `#${color.toString(16).padStart(6, '0')}` : 'transparent';
+                        block.style.margin = '1px';
+                        rowDiv.appendChild(block);
+                    });
+                    pieceDiv.appendChild(rowDiv);
+                });
+                nextDisplay.appendChild(pieceDiv);
+            });
+        }
+
+        renderHeldPiece() {
+            const holdDisplay = document.getElementById('holdPieceDisplay');
+            if (!holdDisplay) return;
+            holdDisplay.innerHTML = ''; // Clear previous display
+
+            if (this.holdPiece && this.holdPiece.shape) {
+                const pieceDiv = document.createElement('div');
+                pieceDiv.style.display = 'flex';
+                pieceDiv.style.flexDirection = 'column';
+                pieceDiv.style.alignItems = 'center';
+                this.holdPiece.shape.forEach(row => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.style.display = 'flex';
+                    rowDiv.style.flexDirection = 'row';
+                    rowDiv.style.justifyContent = 'center'; // Center align blocks
+                    row.forEach(cell => {
+                        const block = document.createElement('div');
+                        block.style.width = '20px';
+                        block.style.height = '20px';
+                        const color = this.holdPiece.color || 0xe94560;
+                        block.style.backgroundColor = cell ? `#${color.toString(16).padStart(6, '0')}` : 'transparent';
+                        block.style.margin = '1px';
+                        rowDiv.appendChild(block);
+                    });
+                    pieceDiv.appendChild(rowDiv);
+                });
+                holdDisplay.appendChild(pieceDiv);
+            }
+        }
+
+        lockPiece() {
+            // Save the current state before locking the piece
+            this.saveState(); // This captures the state before the piece is locked
+
+            this.currentPiece.shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        const x = this.currentPiece.x + dx;
+                        const y = Math.floor(this.currentPiece.y - dy);
+                        
+                        if (y >= 0 && y < this.GRID_HEIGHT && x >= 0 && x < this.GRID_WIDTH) {
+                            // Store both color and concept
+                            this.grid[y][x] = {
+                                color: this.currentPiece.color,
+                                concept: this.currentPiece.concept
+                            };
+                            
+                            // Create video screen for this locked block using ring buffer
+                            if (this.currentPiece.concept && this.cssRenderer) {
+                                const videoScreen = this.createVideoScreen(this.currentPiece.concept);
+                                videoScreen.position.set(x + 0.5, y + 0.5, 0.5);
+                                const videoKey = `video_${x}_${y}`;
+                                videoScreen.name = videoKey;
+                                this.cssScene.add(videoScreen);
+                                this.videoRingBuffer.add(videoKey, videoScreen);
+                            }
+                        }
+                    }
+                });
+            });
+            this.canHold = true; // Reset hold ability after locking
+            this.redrawGrid(); // Update the grid visualization
+        }
+
+        renderLockedBlocks() {
+            // Remove existing locked blocks
+            const existingLockedBlocks = this.scene.children.filter(child => child.name === 'lockedBlock');
+            existingLockedBlocks.forEach(block => this.scene.remove(block));
+
+            // Render locked blocks based on grid data
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                for (let x = 0; x < this.GRID_WIDTH; x++) {
+                    const cell = this.grid[y][x];
+                    if (cell !== null) {
+                        const color = typeof cell === 'object' ? cell.color : cell;
+                        const block = this.renderBlock(x, y, color);
+                        block.name = 'lockedBlock';
+                        this.scene.add(block);
+                    }
+                }
+            }
+        }
+
+        clearLines() {
+            let linesCleared = 0;
+            const linesToClear = [];
+
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                if (this.grid[y].every(cell => cell !== null)) {
+                    linesToClear.push(y);
+                }
+            }
+
+            if (linesToClear.length > 0) {
+                linesCleared = linesToClear.length;
+                // Collect fragments with sophisticated matching (3+ of same type)
+                linesToClear.forEach(y => {
+                    // Analyze the line for concept matches
+                    const conceptCounts = {};
+                    const conceptPositions = {};
+                    
+                    for (let x = 0; x < this.GRID_WIDTH; x++) {
+                        const cell = this.grid[y][x];
+                        if (cell && cell.concept) {
+                            const conceptId = cell.concept.id;
+                            conceptCounts[conceptId] = (conceptCounts[conceptId] || 0) + 1;
+                            if (!conceptPositions[conceptId]) {
+                                conceptPositions[conceptId] = [];
+                            }
+                            conceptPositions[conceptId].push({ x, concept: cell.concept });
+                        }
+                    }
+                    
+                    // Only collect concepts that appear 3+ times in the line
+                    Object.keys(conceptCounts).forEach(conceptId => {
+                        if (conceptCounts[conceptId] >= 3) {
+                            const positions = conceptPositions[conceptId];
+                            // Add to collection with match info
+                            this.collectedFragments.push({
+                                concept: positions[0].concept,
+                                timestamp: Date.now(),
+                                matchCount: conceptCounts[conceptId],
+                                lineY: y,
+                                positions: positions.map(p => p.x)
+                            });
+                            
+                            // Visual feedback for matched concepts
+                            this.playSound('collect'); // Special sound for collection
+                        }
+                    });
+                    
+                    // Clean up videos
+                    for (let x = 0; x < this.GRID_WIDTH; x++) {
+                        const videoKey = `video_${x}_${y}`;
+                        this.videoRingBuffer.remove(videoKey);
+                        const video = this.cssScene.children.find(child => child.name === videoKey);
+                        if (video) {
+                            this.cssScene.remove(video);
+                        }
+                    }
+                    
+                    this.grid.splice(y, 1);
+                    this.grid.unshift(Array(this.GRID_WIDTH).fill(null));
+                });
+                
+                // Update timeline collection display
+                this.updateTimelineCollection();
+                this.comboCount += 1;
+                this.updateScore(linesCleared); // Pass linesCleared correctly
+                this.renderLockedBlocks(); // Update grid visualization after clearing
+                this.playSound('clearLine');
+                this.animateLineClear(linesToClear);
+            } else {
+                this.comboCount = 0;
+            }
+        }
+
+        updateScoreAndLevel(linesCleared) {
+            // Implement scoring logic here
+            // Example:
+            const scoreMultipliers = {1: 40, 2: 100, 3: 300, 4: 1200};
+            const increment = scoreMultipliers[linesCleared] || 0;
+            this.score += increment;
+            document.getElementById('scoreDisplay').textContent = this.score;
+
+            // Level up every 500 points
+            if (this.score >= this.level * 500) {
+                this.level++;
+                document.getElementById('levelDisplay').textContent = this.level;
+                // Decrease drop interval to increase difficulty
+                this.dropInterval = Math.max(200, this.dropInterval - 100);
+            }
+        }
+
+        updateScore(linesCleared) {
+            this.updateScoreAndLevel(linesCleared); // Correctly pass linesCleared
+        }
+
+        redrawGrid() {
+            this.renderLockedBlocks();
+        }
+
+        rotateCamera() {
+            // Smooth camera rotation
+            const targetRotation = (this.cameraRotationState + 90) % 360;
+            const startRotation = this.cameraRotationState;
+            const startTime = Date.now();
+            const duration = 500; // ms
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const currentRotation = startRotation + (targetRotation - startRotation) * progress;
+                const radians = THREE.MathUtils.degToRad(currentRotation);
+                
+                const radius = Math.sqrt(
+                    Math.pow(this.camera.position.x - this.GRID_WIDTH / 2, 2) +
+                    Math.pow(this.camera.position.z - 0, 2)
+                );
+                const newX = this.GRID_WIDTH / 2 + radius * Math.cos(radians);
+                const newZ = radius * Math.sin(radians);
+                this.camera.position.set(newX, this.camera.position.y, newZ);
+                this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, 0));
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    this.cameraRotationState = targetRotation;
+                }
+            };
+            
+            animate();
+        }
+
+        animateRotation() {
+            // Implement a unique rotation animation for the piece
+            if (this.pieceGroup) {
+                const duration = 200; // ms
+                const rotationAngle = Math.PI / 2; // 90 degrees
+
+                const rotateStartTime = Date.now();
+                const rotateInitialRotation = this.pieceGroup.rotation.z;
+
+                const rotateAnimate = () => {
+                    const elapsed = Date.now() - rotateStartTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    this.pieceGroup.rotation.z = rotateInitialRotation + rotationAngle * progress;
+                    if (progress < 1) {
+                        requestAnimationFrame(rotateAnimate);
+                    } else {
+                        // Reset rotation to prevent accumulation
+                        this.pieceGroup.rotation.z = 0;
+                    }
+                };
+                rotateAnimate();
+            }
+        }
+
+        animateLineClear(linesToClear) {
+            // Implement visual effects for cleared lines
+            linesToClear.forEach(y => {
+                for (let x = 0; x < this.GRID_WIDTH; x++) {
+                    const block = this.scene.children.find(child => child.name === 'lockedBlock' && child.position.x === x + 0.5 && child.position.y === y + 0.5);
+                    if (block) {
+                        // Add a scaling animation to make the block "pop"
+                        const initialScale = block.scale.clone();
+                        const scaleUp = () => {
+                            const startTime = Date.now();
+                            const duration = 300; // ms
+
+                            const scaleAnimate = () => {
+                                const elapsed = Date.now() - startTime;
+                                const progress = Math.min(elapsed / duration, 1);
+                                const scaleFactor = 1 + 0.5 * Math.sin(Math.PI * progress);
+                                block.scale.set(initialScale.x * scaleFactor, initialScale.y * scaleFactor, initialScale.z * scaleFactor);
+                                if (progress < 1) {
+                                    requestAnimationFrame(scaleAnimate);
+                                } else {
+                                    block.scale.copy(initialScale);
+                                }
+                            };
+                            scaleAnimate();
+                        };
+                        scaleUp();
+
+                        // Optional: Add color flash effect
+                        const originalColor = block.children[0].material.color.clone();
+                        const flashColor = new THREE.Color(0xFFFFFF);
+                        const flashStartTime = Date.now();
+                        const flashDuration = 200; // ms
+
+                        const flashAnimate = () => {
+                            const elapsed = Date.now() - flashStartTime;
+                            const progress = Math.min(elapsed / flashDuration, 1);
+                            block.children[0].material.color.lerp(flashColor, progress);
+                            if (progress < 1) {
+                                requestAnimationFrame(flashAnimate);
+                            } else {
+                                block.children[0].material.color.copy(originalColor);
+                            }
+                        };
+                        flashAnimate();
+                    }
+                }
+            });
+        }
+
+        startGameLoop() {
+            this.lastDropTime = Date.now();
+            const animate = () => {
+                requestAnimationFrame(animate);
+                if (this.isPaused || this.isGameOver) return;
+
+                const now = Date.now();
+                const delta = now - this.lastDropTime;
+
+                // TIME FREEZE: Don't drop pieces when time is frozen
+                if (delta > this.dropInterval && !this.timeFrozen) {
+                    this.dropPiece();
+                    this.lastDropTime = now;
+                }
+                
+                // Smooth camera zoom animation
+                this.updateCameraZoom();
+
+                this.renderer.render(this.scene, this.camera);
+                if (this.cssRenderer) {
+                    this.cssRenderer.render(this.cssScene, this.camera);
+                }
+            };
+            animate();
+        }
+        
+        // Camera zoom methods
+        updateCameraZoom() {
+            const targetZ = this.isZoomed ? this.zoomedCameraZ : this.defaultCameraZ;
+            const diff = targetZ - this.camera.position.z;
+            if (Math.abs(diff) > 0.1) {
+                this.camera.position.z += diff * 0.1; // Smooth interpolation
+            }
+            
+            if (this.isZoomed && this.zoomTarget) {
+                // Move camera to focus on target position
+                const targetX = this.zoomTarget.x;
+                const targetY = this.zoomTarget.y;
+                // Clamp camera position to keep in frustum
+                const clampedX = Math.max(-5, Math.min(5, targetX));
+                const clampedY = Math.max(5, Math.min(15, targetY));
+                this.camera.position.x += (clampedX - this.camera.position.x) * 0.1;
+                this.camera.position.y += (clampedY - this.camera.position.y) * 0.1;
+            } else {
+                // Return to center
+                this.camera.position.x += (0 - this.camera.position.x) * 0.1;
+                this.camera.position.y += (10 - this.camera.position.y) * 0.1;
+            }
+        }
+        
+        zoomToBlock(x, y) {
+            this.isZoomed = true;
+            this.zoomTarget = { x: x + 0.5, y: y + 0.5 };
+            this.timeFrozen = true; // Freeze time while zoomed
+        }
+        
+        zoomOut() {
+            this.isZoomed = false;
+            this.zoomTarget = null;
+            this.timeFrozen = false; // Resume time
+        }
+        
+        handleCanvasClick(event) {
+            if (this.isGameOver) return;
+            
+            // Get mouse position
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            // Raycaster for click detection
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+            
+            // Check if clicking on locked blocks
+            const intersects = raycaster.intersectObjects(this.scene.children, true);
+            
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj.parent && obj.parent.userData && obj.parent.userData.position) {
+                    const pos = obj.parent.userData.position;
+                    if (this.isZoomed) {
+                        this.zoomOut();
+                    } else {
+                        this.zoomToBlock(pos.x, pos.y);
+                    }
+                }
+            } else {
+                // Click on empty space - zoom out
+                if (this.isZoomed) {
+                    this.zoomOut();
+                }
+            }
+        }
+
+        showGameOver() {
+            document.getElementById('finalScore').textContent = this.score;
+            
+            // Check if score is 200 or above to display the poem
+            if (this.score >= 200) {
+                const poemContainer = document.getElementById('poemContainer');
+                poemContainer.style.display = 'block';
+            } else {
+                const poemContainer = document.getElementById('poemContainer');
+                poemContainer.style.display = 'none';
+            }
+
+            document.getElementById('gameOverModal').style.display = 'block';
+            this.isGameOver = true;
+            this.playSound('gameOver');
+        }
+
+        hideGameOver() {
+            document.getElementById('gameOverModal').style.display = 'none';
+            this.isGameOver = false;
+        }
+
+        resetGame() {
+            // Reset grid
+            this.grid = Array.from(
+                { length: this.GRID_HEIGHT }, 
+                () => Array(this.GRID_WIDTH).fill(null)
+            );
+
+            // Reset score and level
+            this.score = 0;
+            this.level = 1;
+            this.comboCount = 0;
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('levelDisplay').textContent = '1';
+
+            // Hide Game Over Modal
+            this.hideGameOver();
+
+            // Remove existing pieces
+            if (this.pieceGroup) {
+                this.scene.remove(this.pieceGroup);
+            }
+            if (this.ghostGroup) {
+                this.scene.remove(this.ghostGroup);
+            }
+            const existingLockedBlocks = this.scene.children.filter(child => child.name === 'lockedBlock');
+            existingLockedBlocks.forEach(block => this.scene.remove(block));
+
+            // Reset drop interval to initial based on difficulty
+            this.dropInterval = this.initialDropInterval;
+
+            // Reset next and hold queues
+            this.nextPieces = [];
+            this.holdPiece = null;
+            this.canHold = true;
+            this.fillNextQueue();
+
+            // Reset camera rotation
+            this.cameraRotationState = 0;
+            this.camera.position.set(
+                this.GRID_WIDTH / 2, 
+                this.GRID_HEIGHT * 1.5, 
+                this.GRID_HEIGHT * 1.5
+            );
+            this.camera.lookAt(new THREE.Vector3(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, 0));
+
+            // Spawn a new piece
+            this.spawnPiece();
+
+            // Clear history
+            this.history = [];
+        }
+
+        onWindowResize() {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Sound Effects using Web Audio API
+        playSound(type) {
+            // Initialize AudioContext on first sound (user interaction required)
+            if (!this.audioCtx) {
+                try {
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio API not supported');
+                    return;
+                }
+            }
+            
+            if (!this.audioCtx) return;
+            
+            const oscillator = this.audioCtx.createOscillator();
+            const gainNode = this.audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioCtx.destination);
+
+            switch(type) {
+                case 'move':
+                    oscillator.frequency.value = 440; // A4
+                    oscillator.type = 'sine';
+                    gainNode.gain.value = 0.1;
+                    break;
+                case 'rotate':
+                    oscillator.frequency.value = 523.25; // C5
+                    oscillator.type = 'triangle';
+                    gainNode.gain.value = 0.15;
+                    break;
+                case 'drop':
+                    oscillator.frequency.value = 392; // G4
+                    oscillator.type = 'square';
+                    gainNode.gain.value = 0.1;
+                    break;
+                case 'swap':
+                    oscillator.frequency.value = 349.23; // F4
+                    oscillator.type = 'sawtooth';
+                    gainNode.gain.value = 0.12;
+                    break;
+                case 'clearLine':
+                    oscillator.frequency.value = 659.25; // E5
+                    oscillator.type = 'sine';
+                    gainNode.gain.value = 0.2;
+                    break;
+                case 'lock':
+                    oscillator.frequency.value = 261.63; // C4
+                    oscillator.type = 'triangle';
+                    gainNode.gain.value = 0.18;
+                    break;
+                case 'hold':
+                    oscillator.frequency.value = 329.63; // E4
+                    oscillator.type = 'square';
+                    gainNode.gain.value = 0.1;
+                    break;
+                case 'gameOver':
+                    oscillator.frequency.value = 130.81; // C3
+                    oscillator.type = 'sawtooth';
+                    gainNode.gain.value = 0.25;
+                    break;
+                case 'rewind':
+                    oscillator.frequency.value = 294; // D4
+                    oscillator.type = 'triangle';
+                    gainNode.gain.value = 0.15;
+                    break;
+                case 'collect':
+                    // Special triumphant sound for collecting fragments (3+ match)
+                    oscillator.frequency.value = 880; // A5
+                    oscillator.type = 'sine';
+                    gainNode.gain.value = 0.25;
+                    break;
+                default:
+                    oscillator.frequency.value = 440;
+                    oscillator.type = 'sine';
+                    gainNode.gain.value = 0.1;
+            }
+
+            oscillator.start();
+
+            gainNode.gain.exponentialRampToValueAtTime(
+                0.00001, 
+                this.audioCtx.currentTime + 0.5
+            );
+
+            oscillator.stop(this.audioCtx.currentTime + 0.5);
+        }
+
+        // Animation for unique rotation effect
+        animateRotation() {
+            // Implement a unique rotation animation for the piece
+            if (this.pieceGroup) {
+                const duration = 200; // ms
+                const rotationAngle = Math.PI / 2; // 90 degrees
+
+                const rotateStartTime = Date.now();
+                const rotateInitialRotation = this.pieceGroup.rotation.z;
+
+                const rotateAnimate = () => {
+                    const elapsed = Date.now() - rotateStartTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    this.pieceGroup.rotation.z = rotateInitialRotation + rotationAngle * progress;
+                    if (progress < 1) {
+                        requestAnimationFrame(rotateAnimate);
+                    } else {
+                        // Reset rotation to prevent accumulation
+                        this.pieceGroup.rotation.z = 0;
+                    }
+                };
+                rotateAnimate();
+            }
+        }
+
+        // Animation for line clear effects
+        animateLineClear(linesToClear) {
+            // Implement visual effects for cleared lines
+            linesToClear.forEach(y => {
+                for (let x = 0; x < this.GRID_WIDTH; x++) {
+                    const block = this.scene.children.find(child => child.name === 'lockedBlock' && child.position.x === x + 0.5 && child.position.y === y + 0.5);
+                    if (block) {
+                        // Add a scaling animation to make the block "pop"
+                        const initialScale = block.scale.clone();
+                        const scaleUp = () => {
+                            const startTime = Date.now();
+                            const duration = 300; // ms
+
+                            const scaleAnimate = () => {
+                                const elapsed = Date.now() - startTime;
+                                const progress = Math.min(elapsed / duration, 1);
+                                const scaleFactor = 1 + 0.5 * Math.sin(Math.PI * progress);
+                                block.scale.set(initialScale.x * scaleFactor, initialScale.y * scaleFactor, initialScale.z * scaleFactor);
+                                if (progress < 1) {
+                                    requestAnimationFrame(scaleAnimate);
+                                } else {
+                                    block.scale.copy(initialScale);
+                                }
+                            };
+                            scaleAnimate();
+                        };
+                        scaleUp();
+
+                        // Optional: Add color flash effect
+                        const originalColor = block.children[0].material.color.clone();
+                        const flashColor = new THREE.Color(0xFFFFFF);
+                        const flashStartTime = Date.now();
+                        const flashDuration = 200; // ms
+
+                        const flashAnimate = () => {
+                            const elapsed = Date.now() - flashStartTime;
+                            const progress = Math.min(elapsed / flashDuration, 1);
+                            block.children[0].material.color.lerp(flashColor, progress);
+                            if (progress < 1) {
+                                requestAnimationFrame(flashAnimate);
+                            } else {
+                                block.children[0].material.color.copy(originalColor);
+                            }
+                        };
+                        flashAnimate();
+                    }
+                }
+            });
+        }
+
+        togglePause() {
+            if (this.isGameOver) return;
+            this.isPaused = !this.isPaused;
+            if (this.isPaused) {
+                // Show pause overlay or modal
+                this.showPauseModal();
+                this.playSound('pause');
+            } else {
+                // Hide pause overlay or modal
+                this.hidePauseModal();
+                this.playSound('resume');
+            }
+        }
+
+        showPauseModal() {
+            const pauseModal = document.getElementById('pauseModal');
+            pauseModal.style.display = 'block';
+        }
+
+        hidePauseModal() {
+            const pauseModal = document.getElementById('pauseModal');
+            pauseModal.style.display = 'none';
+        }
+
+        // Function to show the quote modal with a random quote
+        showQuoteModal() {
+            // No quote modal - removed for clean interface
+        }
+
+        hideQuoteModal() {
+            // No quote modal to hide
+        }
+
+        // Difficulty Selection Modal
+        showDifficultyModal() {
+            // No modal - using title screen buttons
+        }
+
+        hideDifficultyModal() {
+            // No modal to hide - title screen is already hidden by event listener
+        }
+
+        // Start Game with selected difficulty
+        startGame(difficulty) {
+            switch(difficulty) {
+                case 'beginner':
+                    this.dropInterval = 1000; // 1 second
+                    break;
+                case 'medium':
+                    this.dropInterval = 700; // 0.7 seconds
+                    break;
+                case 'expert':
+                    this.dropInterval = 400; // 0.4 seconds
+                    break;
+                default:
+                    this.dropInterval = 1000;
+            }
+            this.initialDropInterval = this.dropInterval; // Save initial drop interval for reset
+            this.hideDifficultyModal();
+            this.spawnPiece();
+        }
+
+        // Opening Animation - removed, using title screen instead
+        showOpeningAnimation() {
+            // Title screen is shown by default, no need for modal
+        }
+
+        playIntroSound() {
+            const oscillator = this.audioCtx.createOscillator();
+            const gainNode = this.audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioCtx.destination);
+
+            oscillator.frequency.value = 261.63; // C4
+            gainNode.gain.value = 0.1;
+
+            oscillator.type = 'sine';
+            oscillator.start();
+
+            gainNode.gain.exponentialRampToValueAtTime(
+                0.00001, 
+                this.audioCtx.currentTime + 1
+            );
+
+            oscillator.stop(this.audioCtx.currentTime + 1);
+        }
+
+        // State Management for Rewind Functionality
+        saveState() {
+            // Deep copy the grid
+            const gridCopy = this.grid.map(row => row.slice());
+
+            // Deep copy currentPiece
+            const currentPieceCopy = this.currentPiece ? {
+                type: this.currentPiece.type,
+                shape: JSON.parse(JSON.stringify(this.currentPiece.shape)),
+                color: this.currentPiece.color,
+                x: this.currentPiece.x,
+                y: this.currentPiece.y,
+                rotationState: this.currentPiece.rotationState
+            } : null;
+
+            // Deep copy nextPieces
+            const nextPiecesCopy = this.nextPieces.map(piece => ({
+                type: piece.type,
+                shape: JSON.parse(JSON.stringify(piece.shape)),
+                color: piece.color,
+                x: piece.x,
+                y: piece.y,
+                rotationState: piece.rotationState
+            }));
+
+            // Deep copy holdPiece
+            const holdPieceCopy = this.holdPiece ? {
+                type: this.holdPiece.type,
+                shape: JSON.parse(JSON.stringify(this.holdPiece.shape)),
+                color: this.holdPiece.color,
+                x: this.holdPiece.x,
+                y: this.holdPiece.y,
+                rotationState: this.holdPiece.rotationState
+            } : null;
+
+            // Save other properties
+            const scoreCopy = this.score;
+            const levelCopy = this.level;
+            const comboCountCopy = this.comboCount;
+            const cameraRotationStateCopy = this.cameraRotationState;
+
+            // Push the snapshot to history
+            this.history.push({
+                grid: gridCopy,
+                currentPiece: currentPieceCopy,
+                nextPieces: nextPiecesCopy,
+                holdPiece: holdPieceCopy,
+                score: scoreCopy,
+                level: levelCopy,
+                comboCount: comboCountCopy,
+                cameraRotationState: cameraRotationStateCopy
+            });
+
+            // Limit history to last 1 state for single-step undo
+            if (this.history.length > this.maxHistory) {
+                this.history.shift();
+            }
+        }
+
+        rewindGame() {
+            if (this.history.length === 0) {
+                // No history to rewind
+                return;
+            }
+
+            // Pop the last state from the history
+            const lastState = this.history.pop();
+
+            // Restore the game state
+            this.grid = lastState.grid.map(row => row.slice());
+
+            if (lastState.currentPiece) {
+                this.currentPiece = new Piece(
+                    lastState.currentPiece.type,
+                    JSON.parse(JSON.stringify(lastState.currentPiece.shape)),
+                    lastState.currentPiece.color,
+                    this.GRID_WIDTH,
+                    this.GRID_HEIGHT
+                );
+                this.currentPiece.x = lastState.currentPiece.x;
+                this.currentPiece.y = lastState.currentPiece.y;
+                this.currentPiece.rotationState = lastState.currentPiece.rotationState;
+            } else {
+                this.currentPiece = null;
+            }
+
+            this.nextPieces = lastState.nextPieces.map(piece => new Piece(
+                piece.type,
+                JSON.parse(JSON.stringify(piece.shape)),
+                piece.color,
+                this.GRID_WIDTH,
+                this.GRID_HEIGHT
+            ));
+            this.holdPiece = lastState.holdPiece ? new Piece(
+                lastState.holdPiece.type,
+                JSON.parse(JSON.stringify(lastState.holdPiece.shape)),
+                lastState.holdPiece.color,
+                this.GRID_WIDTH,
+                this.GRID_HEIGHT
+            ) : null;
+
+            this.score = lastState.score;
+            this.level = lastState.level;
+            this.comboCount = lastState.comboCount;
+            this.cameraRotationState = lastState.cameraRotationState;
+
+            // Update display
+            document.getElementById('scoreDisplay').textContent = this.score;
+            document.getElementById('levelDisplay').textContent = this.level;
+
+            // Re-render the scene
+            if (this.pieceGroup) {
+                this.scene.remove(this.pieceGroup);
+            }
+            if (this.ghostGroup) {
+                this.scene.remove(this.ghostGroup);
+            }
+
+            this.renderLockedBlocks();
+            if (this.currentPiece) {
+                this.renderPiece();
+                this.renderGhostPiece();
+            }
+            this.renderNextPieces();
+            this.renderHeldPiece();
+
+            this.playSound('rewind');
+        }
+        
+        // Timeline Collection Methods (Matrix-Editor Style)
+        updateTimelineCollection() {
+            const timelineClips = document.getElementById('timelineClips');
+            const timelineCollection = document.getElementById('timelineCollection');
+            
+            if (!timelineClips) return;
+            
+            // Show collection if we have fragments
+            if (this.collectedFragments.length > 0) {
+                timelineCollection.classList.add('active');
+            }
+            
+            // Clear and rebuild
+            timelineClips.innerHTML = '';
+            
+            this.collectedFragments.forEach((fragment, index) => {
+                const clip = document.createElement('div');
+                clip.classList.add('timeline-clip');
+                clip.dataset.index = index;
+                
+                const title = document.createElement('div');
+                title.classList.add('timeline-clip-title');
+                title.textContent = fragment.concept.title;
+                
+                const category = document.createElement('div');
+                category.classList.add('timeline-clip-category');
+                category.textContent = fragment.concept.category;
+                
+                const time = document.createElement('div');
+                time.classList.add('timeline-clip-time');
+                time.textContent = `${fragment.concept.start}s`;
+                
+                // Add match count badge (3+ match indicator)
+                if (fragment.matchCount) {
+                    const matchBadge = document.createElement('div');
+                    matchBadge.style.position = 'absolute';
+                    matchBadge.style.top = '4px';
+                    matchBadge.style.left = '4px';
+                    matchBadge.style.background = '#e94560';
+                    matchBadge.style.color = '#fff';
+                    matchBadge.style.padding = '2px 6px';
+                    matchBadge.style.borderRadius = '10px';
+                    matchBadge.style.fontSize = '9px';
+                    matchBadge.style.fontWeight = '700';
+                    matchBadge.textContent = `×${fragment.matchCount}`;
+                    clip.appendChild(matchBadge);
+                }
+                
+                clip.appendChild(time);
+                clip.appendChild(title);
+                clip.appendChild(category);
+                
+                // Click to preview
+                clip.addEventListener('click', () => {
+                    this.previewFragment(fragment);
+                });
+                
+                timelineClips.appendChild(clip);
+            });
+        }
+        
+        previewFragment(fragment) {
+            console.log('Preview fragment:', fragment.concept.title);
+            // Could open a modal or highlight the concept
+            alert(`${fragment.concept.title}\n\n${fragment.concept.category}\n\nTimestamp: ${fragment.concept.start}-${fragment.concept.end}s`);
+        }
+        
+        playTimeline() {
+            if (this.collectedFragments.length === 0) {
+                alert('No fragments collected yet! Clear lines to collect fragments.');
+                return;
+            }
+            
+            console.log('Playing timeline with', this.collectedFragments.length, 'fragments');
+            alert(`Timeline assembled!\n\n${this.collectedFragments.length} fragments collected.\n\nThis would play your assembled narrative in sequence.`);
+        }
+        
+        clearTimeline() {
+            if (confirm('Clear all collected fragments?')) {
+                this.collectedFragments = [];
+                this.updateTimelineCollection();
+                document.getElementById('timelineCollection').classList.remove('active');
+            }
+        }
+
+    }
+
+    // Initialize game on window load
+    window.addEventListener('load', () => {
+        const game = new QuantumTetris();
+
+        // Add event listeners to faction buttons
+        document.querySelectorAll('.faction-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const difficulty = btn.getAttribute('data-difficulty');
+                // Hide title screen with animation
+                const titleScreen = document.getElementById('titleScreen');
+                if (titleScreen) {
+                    titleScreen.classList.add('hidden');
+                    setTimeout(() => {
+                        titleScreen.style.display = 'none';
+                    }, 800);
+                }
+                game.startGame(difficulty);
+            });
+        });
+
+        // Expose resetGame to global scope for the Restart button
+        window.resetGame = () => game.resetGame();
+        // Expose hideQuoteModal to global scope for the Continue button
+        window.hideQuoteModal = () => game.hideQuoteModal();
+        
+        // Timeline collection event listeners
+        document.getElementById('playTimelineBtn').addEventListener('click', () => {
+            game.playTimeline();
+        });
+        
+        document.getElementById('clearTimelineBtn').addEventListener('click', () => {
+            game.clearTimeline();
+        });
+        
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            themeToggle.textContent = isLight ? 'DARK' : 'LIGHT';
+            
+            // Update Three.js scene background
+            if (game.scene) {
+                game.scene.background = new THREE.Color(isLight ? 0xf5f5f5 : 0x16213e);
+            }
+        });
+    });
+    </script>
+</body>
+</html>

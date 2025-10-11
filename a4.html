@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VIDEO TETRIS — Bauhaus Timeline</title>
+  <meta name="theme-color" content="#ffffff" />
+  <style>
+    :root{ --paper:#fff; --ink:#000; --accent:#c40000; --muted:#8a8a8a; --line:#e6e6e6; --tap:44px; }
+    *{box-sizing:border-box; margin:0; padding:0}
+    html,body{height:100%}
+    body{ font-family: Helvetica, "Helvetica Neue", Arial, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--paper); color:var(--ink); overflow:hidden; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+
+    /* Stage */
+    #stage{position:fixed; inset:0}
+    #webgl, #css3d{position:absolute; inset:0; touch-action:none}
+    #css3d{pointer-events:none}
+    #css3d > *{pointer-events:auto}
+
+    /* Minimal HUD */
+    .hud{position:fixed; z-index:30; display:flex; gap:14px; align-items:center; background:rgba(255,255,255,.9); border:1px solid var(--line); padding:10px 12px; border-radius:10px}
+    #status{top:12px; left:12px}
+    #views{top:12px; right:12px}
+    #controls{bottom:16px; left:50%; transform:translateX(-50%);}
+
+    .sep{width:1px; height:18px; background:var(--line)}
+    .pill{padding:6px 10px; border:1px solid var(--ink); border-radius:2px; font-size:.9rem; background:#fff; cursor:pointer; user-select:none; text-transform:uppercase; letter-spacing:0.5px; font-weight:600}
+    .pill[aria-pressed="true"]{background:var(--ink); color:#fff}
+    .btn{min-width:84px; text-align:center}
+    .small{font-size:.85rem; color:var(--muted)}
+    .stack{display:flex; gap:8px}
+
+    input[type="range"]{appearance:none; width:160px; height:2px; background:var(--line); outline:none}
+    input[type="range"]::-webkit-slider-thumb{appearance:none; width:12px; height:12px; background:var(--ink); border-radius:50%}
+
+    /* Previews */
+    #next{position:fixed; right:12px; top:72px; z-index:30; background:rgba(255,255,255,.9); border:1px solid var(--line); padding:10px 12px; border-radius:10px; min-width:180px}
+    #next h3{font-size:.9rem; font-weight:600; margin-bottom:6px}
+    #next .card{border:1px solid var(--line); padding:8px; border-radius:8px; font-size:.9rem}
+
+    /* Modals (minimal) */
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:60; background:rgba(255,255,255,.8);}
+    .modal .panel{background:#fff; border:1px solid var(--ink); padding:18px; border-radius:12px; width:min(520px,92vw)}
+    .modal h1{font-weight:700; font-size:1.25rem; margin-bottom:12px}
+    .modal .row{display:flex; gap:8px; flex-wrap:wrap}
+
+    /* Label chips */
+    .chip{font-size:.75rem; border:1px solid var(--ink); border-radius:999px; padding:4px 8px}
+
+    /* Error banner */
+    #err{position:fixed; left:50%; top:10px; transform:translateX(-50%); background:#fff; color:#000; border:1px solid #d00; padding:10px 12px; border-radius:10px; font-size:.9rem; z-index:100; display:none}
+
+    /* Accessibility */
+    @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto} }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="webgl"></div>
+    <div id="css3d"></div>
+  </div>
+
+  <div id="status" class="hud">
+    <div>Score: <strong id="score">0</strong></div>
+    <div class="sep"></div>
+    <div>Level: <strong id="level">1</strong></div>
+    <div class="sep"></div>
+    <label class="small" for="speed">Fall</label>
+    <input id="speed" type="range" min="0.2" max="2.0" step="0.1" value="0.6" title="Fall speed" />
+    <div class="sep"></div>
+    <label class="small" for="study">Study</label>
+    <button id="study" class="pill" aria-pressed="false">Off</button>
+  </div>
+
+  <div id="views" class="hud">
+    <div class="stack">
+      <button class="pill btn" data-view="iso">Iso (1)</button>
+      <button class="pill btn" data-view="top">Top (2)</button>
+      <button class="pill btn" data-view="side">Side (3)</button>
+      <button class="pill btn" data-view="front">Front (4)</button>
+      <div class="sep"></div>
+      <button class="pill btn" id="pause">Pause</button>
+      <button class="pill btn" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div id="controls" class="hud">
+    <div class="stack">
+      <button class="pill btn" id="left">Left</button>
+      <button class="pill btn" id="rotate">Rotate</button>
+      <button class="pill btn" id="right">Right</button>
+      <button class="pill btn" id="drop">Drop</button>
+    </div>
+  </div>
+
+  <div id="next">
+    <h3>Next</h3>
+    <div class="card">
+      <div id="nextTitle">–</div>
+      <div class="small" id="nextType">–</div>
+    </div>
+  </div>
+
+  <div id="startModal" class="modal" style="display:flex">
+    <div class="panel">
+      <h1>VIDEO TETRIS — Bauhaus Study</h1>
+      <p class="small" style="margin-bottom:10px">Select starting level and view.</p>
+      <div class="row" style="margin-bottom:10px">
+        <button class="pill" data-start="1">Level 1</button>
+        <button class="pill" data-start="3">Level 3</button>
+        <button class="pill" data-start="5">Level 5</button>
+      </div>
+      <div class="row">
+        <span class="chip">Keys: Left / Right / Down, R=Rotate, Space=Pause, 1–4=Views</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="err"></div>
+
+  <!-- We load libraries dynamically so errors surface clearly and order is guaranteed. -->
+  <script>
+    (function(){
+      const elErr = document.getElementById('err');
+      const showErr = (msg) => { elErr.textContent = msg; elErr.style.display = 'block'; console.error(msg); };
+
+      // helpful window.onerror so we don't get opaque "Script error."
+      window.addEventListener('error', (e)=>{
+        if(!e.message || e.message === 'Script error.'){
+          showErr('A library failed to execute. Check network/CORS. Attempting fallbacks…');
+        }
+      });
+
+      const sources = {
+        three: [
+          'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+          'https://unpkg.com/three@0.128.0/build/three.min.js'
+        ],
+        css3d: [
+          'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js',
+          'https://unpkg.com/three@0.128.0/examples/js/renderers/CSS3DRenderer.js'
+        ],
+        orbit: [
+          'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
+          'https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js'
+        ],
+        cannon: [
+          'https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js',
+          'https://unpkg.com/cannon@0.6.2/build/cannon.min.js'
+        ]
+      };
+
+      function loadOne(url){
+        return new Promise((resolve, reject)=>{
+          const s = document.createElement('script');
+          s.src = url; s.async = false; s.defer = true; s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer';
+          s.onload = ()=> resolve(url);
+          s.onerror = ()=> reject(new Error('load failed: '+url));
+          document.head.appendChild(s);
+        });
+      }
+
+      async function loadWithFallback(list, name){
+        for(const url of list){
+          try { await loadOne(url); return url; }
+          catch(err){ console.warn('[loader]', name, err.message); }
+        }
+        throw new Error('All fallbacks failed for '+name);
+      }
+
+      (async function boot(){
+        try{
+          await loadWithFallback(sources.three, 'three');
+          await loadWithFallback(sources.css3d, 'css3d');
+          await loadWithFallback(sources.orbit, 'orbit');
+          await loadWithFallback(sources.cannon, 'cannon');
+          if(!window.THREE) throw new Error('THREE not found after load');
+          if(!window.CANNON) throw new Error('CANNON not found after load');
+          startApp();
+        }catch(e){ showErr('Failed to load dependencies: '+ e.message); }
+      })();
+
+      function startApp(){
+        // ======= App code begins (unchanged logic, guarded against missing libs) =======
+        // ————— Constants
+        const CELL = 0.60;                       // base unit width/depth
+        const HEIGHT = 0.40;                     // block height
+        const GRID_COLS = 10;                    // well width in cells
+        const GRID_DEPTH = 8;                    // 3D depth in cells (increased)
+        const WELL_HEIGHT = 18;                  // wall height (physics)
+        const SHOW_WALLS = false;                // visual walls off; physics walls remain
+        const wellSize = () => ({ w: GRID_COLS * CELL, d: GRID_DEPTH * CELL });
+
+        const TYPES = { square:{w:1,d:1}, wide:{w:2,d:1}, tall:{w:1,d:2} };
+        const CONCEPTS = [
+          { title: 'Family of Man', yt: 'BQ2n6SN7gOY', type: 'wide' },
+          { title: 'Individual Self', yt: 'dQw4w9WgXcQ', type: 'square' },
+          { title: 'Utopian Vision', yt: 'ScMzIvxBSi4', type: 'tall' },
+          { title: 'Harsh Reality', yt: 'M7lc1UVf-VE', type: 'wide' },
+          { title: 'Fairyland', yt: 'aqz-KE-bpKQ', type: 'square' }
+        ];
+
+        // ————— State
+        let scene, cssScene, renderer, cssRenderer, camera, controls, world, clock;
+        let current = null, next = null, placed = [];
+        let score = 0, level = 1, paused = false, started = false;
+        let fallScale = 0.6;         // user-controlled fall multiplier
+        let ghostLine = null;        // guide
+
+        // ————— DOM helpers
+        const $ = s => document.querySelector(s);
+        const scoreEl = $('#score');
+        const levelEl = $('#level');
+        const nextTitle = $('#nextTitle');
+        const nextType = $('#nextType');
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') init();
+        else window.addEventListener('load', init);
+
+        function init(){
+          try{
+            clock = new THREE.Clock();
+            scene = new THREE.Scene();
+            cssScene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+
+            // Camera & Controls - eye-level perspective like reference
+            const { w: WELL_W, d: WELL_D } = wellSize();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
+            // Position at eye level, looking INTO the play area (not down on it)
+            const centerX = WELL_W / 2;
+            const centerY = WELL_HEIGHT * CELL * 0.5; // Middle height
+            const centerZ = 0;
+            camera.position.set(centerX, centerY, WELL_D * 1.5); // Behind and at eye level
+            camera.lookAt(new THREE.Vector3(centerX, centerY, centerZ));
+            controls = new THREE.OrbitControls(camera, document.getElementById('webgl'));
+            controls.enableDamping = true; controls.dampingFactor = 0.08; 
+            controls.target.set(centerX, centerY, centerZ);
+            controls.minDistance = WELL_D * 0.8; controls.maxDistance = WELL_D * 3.0;
+            controls.minPolarAngle = 0.3 * Math.PI;  // prevent looking too far down
+            controls.maxPolarAngle = 0.7 * Math.PI;  // prevent looking too far up
+            controls.enablePan = false;
+
+            renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+            renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('webgl').appendChild(renderer.domElement);
+
+            cssRenderer = new THREE.CSS3DRenderer();
+            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+            cssRenderer.domElement.style.pointerEvents = 'none';
+            document.getElementById('css3d').appendChild(cssRenderer.domElement);
+
+            // Lights — neutral white
+            const amb = new THREE.AmbientLight(0xffffff, 0.8);
+            const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+            dir.position.set(8, 12, 6); dir.castShadow = true;
+            scene.add(amb, dir);
+
+            // Physics world - SLOWER gravity for better control
+            world = new CANNON.World();
+            world.gravity.set(0, -2.5 * fallScale, 0);  // Reduced from -4 to -2.5
+            world.broadphase = new CANNON.SAPBroadphase(world);
+            world.allowSleep = true;
+            world.defaultContactMaterial.friction = 0.8;
+            world.defaultContactMaterial.restitution = 0.02;
+
+            // Floor & Guides
+            addFloorAndWalls();
+            addBauhausGrid();
+            addGhostLine();
+
+            bindUI();
+            window.addEventListener('resize', onResize);
+
+            animate();
+          }catch(e){ showErr('Init error: '+ e.message); }
+        }
+
+        // ————— Well geometry & guides
+        function addFloorAndWalls(){
+          const { w: wellW, d: wellD } = wellSize();
+
+          // Floor
+          const floorGeo = new THREE.PlaneGeometry(wellW, wellD);
+          const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness:0.95, metalness:0.02, side: THREE.DoubleSide });
+          const floor = new THREE.Mesh(floorGeo, floorMat);
+          floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; floor.position.y = 0;
+          scene.add(floor);
+
+          const floorBody = new CANNON.Body({ mass:0, shape:new CANNON.Plane() });
+          floorBody.quaternion.setFromEuler(-Math.PI/2, 0, 0);
+          world.addBody(floorBody);
+
+          // Physics perimeter walls - larger room to contain camera
+          const wallH = WELL_HEIGHT * CELL;
+          const halfD = wellD/2, t = 0.2;
+          const depthExtend = wellD * 1.2; // extend back significantly for camera space
+          // left/right physics (extended depth)
+          world.addBody(new CANNON.Body({ mass:0, shape:new CANNON.Box(new CANNON.Vec3(t/2, wallH/2, (wellD + depthExtend)/2)), position:new CANNON.Vec3(-t/2, wallH/2, -depthExtend/2) }));
+          world.addBody(new CANNON.Body({ mass:0, shape:new CANNON.Box(new CANNON.Vec3(t/2, wallH/2, (wellD + depthExtend)/2)), position:new CANNON.Vec3(wellW + t/2, wallH/2, -depthExtend/2) }));
+          // back physics (moved much further back)
+          world.addBody(new CANNON.Body({ mass:0, shape:new CANNON.Box(new CANNON.Vec3((wellW+t*2)/2, wallH/2, t/2)), position:new CANNON.Vec3(wellW/2, wallH/2, -halfD - depthExtend - t/2) }));
+          // front physics (unchanged)
+          world.addBody(new CANNON.Body({ mass:0, shape:new CANNON.Box(new CANNON.Vec3((wellW+t*2)/2, wallH/2, t/2)), position:new CANNON.Vec3(wellW/2, wallH/2, halfD + t/2) }));
+
+          if (SHOW_WALLS){
+            const wallMat = new THREE.MeshStandardMaterial({ color:0xeeeeee, side: THREE.DoubleSide, transparent:true, opacity:0.25, depthWrite:false });
+            const wallXGeo = new THREE.BoxGeometry(t, wallH, wellD);
+            const left = new THREE.Mesh(wallXGeo, wallMat), right = new THREE.Mesh(wallXGeo, wallMat);
+            left.position.set(-t/2, wallH/2, 0); right.position.set(wellW + t/2, wallH/2, 0);
+            scene.add(left, right);
+            const wallZGeo = new THREE.BoxGeometry(wellW + t*2, wallH, t);
+            const back = new THREE.Mesh(wallZGeo, wallMat), front = new THREE.Mesh(wallZGeo, wallMat);
+            back.position.set(wellW/2, wallH/2, -halfD - t/2); front.position.set(wellW/2, wallH/2, halfD + t/2);
+            scene.add(back, front);
+          }
+
+          // Perimeter hairline accent
+          const edge = new THREE.EdgesGeometry(new THREE.BoxGeometry(wellW, 0.01, wellD));
+          const edgeLine = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color:0xc40000 }));
+          edgeLine.position.set(wellW/2, 0.005, 0);
+          scene.add(edgeLine);
+        }
+
+        function addBauhausGrid(){
+          const wellW = GRID_COLS * CELL, wellD = GRID_DEPTH * CELL;
+          const wellH = WELL_HEIGHT * CELL;
+          const g = new THREE.Group();
+          
+          // Floor grid - laser style
+          const materialThin = new THREE.LineBasicMaterial({ color:0x0088ff, transparent:true, opacity:0.25 });
+          const materialBold = new THREE.LineBasicMaterial({ color:0x00ccff, transparent:true, opacity:0.5 });
+          const railMat = new THREE.LineBasicMaterial({ color:0xc40000, transparent:true, opacity:0.6 });
+
+          // x-lines (floor)
+          for(let i=0;i<=GRID_COLS;i++){
+            const x = i*CELL;
+            const geo = new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(x, 0.001, -wellD/2), new THREE.Vector3(x, 0.001, +wellD/2)
+            ]);
+            g.add(new THREE.Line(geo, (i%5===0)?materialBold:materialThin));
+          }
+          // z-lines (floor)
+          for(let k=0;k<=GRID_DEPTH;k++){
+            const z = -wellD/2 + k*CELL;
+            const geo = new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(0, 0.001, z), new THREE.Vector3(wellW, 0.001, z)
+            ]);
+            g.add(new THREE.Line(geo, (k%3===0)?materialBold:materialThin));
+          }
+          
+          // Vertical laser rails - gravity guides at each grid intersection
+          for(let i=0; i<=GRID_COLS; i++){
+            for(let k=0; k<=GRID_DEPTH; k++){
+              const x = i * CELL;
+              const z = -wellD/2 + k * CELL;
+              const railGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(x, 0, z),
+                new THREE.Vector3(x, wellH, z)
+              ]);
+              const rail = new THREE.Line(railGeo, railMat);
+              g.add(rail);
+            }
+          }
+          
+          scene.add(g);
+        }
+
+        function addGhostLine(){
+          const mat = new THREE.LineDashedMaterial({ color:0xc40000, dashSize:0.15, gapSize:0.08, transparent:true, opacity:0.8 });
+          const geo = new THREE.BufferGeometry().setFromPoints([ new THREE.Vector3(), new THREE.Vector3() ]);
+          ghostLine = new THREE.Line(geo, mat); ghostLine.computeLineDistances();
+          scene.add(ghostLine);
+        }
+
+        // ————— Blocks
+        function createVideoBlock(concept){
+          const def = TYPES[concept.type] || TYPES.square;
+          const W = def.w * CELL, D = def.d * CELL, H = HEIGHT;
+
+          const group = new THREE.Group();
+
+          // shell - darker for better contrast with video
+          const shell = new THREE.Mesh(
+            new THREE.BoxGeometry(W,H,D),
+            new THREE.MeshStandardMaterial({ color:0x1a1a1a, roughness:0.7, metalness:0.15, side: THREE.DoubleSide })
+          );
+          shell.castShadow = true; shell.receiveShadow = true; group.add(shell);
+
+          // Enhanced wireframe - bold Bauhaus edges
+          const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(W,H,D));
+          const edgeMat = new THREE.LineBasicMaterial({ color:0xffffff, linewidth:2, transparent:false, opacity:1.0 });
+          const lines = new THREE.LineSegments(edges, edgeMat); 
+          lines.renderOrder = 1; // Render on top
+          group.add(lines);
+          
+          // Corner highlights - red accent dots
+          const cornerGeo = new THREE.SphereGeometry(0.02, 8, 8);
+          const cornerMat = new THREE.MeshBasicMaterial({ color:0xc40000 });
+          const corners = [
+            [-W/2,-H/2,-D/2], [W/2,-H/2,-D/2], [-W/2,H/2,-D/2], [W/2,H/2,-D/2],
+            [-W/2,-H/2,D/2], [W/2,-H/2,D/2], [-W/2,H/2,D/2], [W/2,H/2,D/2]
+          ];
+          corners.forEach(([x,y,z]) => {
+            const dot = new THREE.Mesh(cornerGeo, cornerMat);
+            dot.position.set(x,y,z);
+            group.add(dot);
+          });
+
+          // CSS3D screens — FRONT + BACK with perfect fit
+          const mkScreen = () => {
+            const el = document.createElement('div');
+            // Scale to match block dimensions perfectly
+            const scaleFactor = 400; // Higher resolution for crisp video
+            el.style.width = (W*scaleFactor) + 'px';
+            el.style.height = (H*scaleFactor) + 'px';
+            el.style.background = '#000';
+            el.style.border = 'none';
+            el.style.overflow = 'hidden';
+            el.style.backfaceVisibility = 'hidden';
+            el.style.webkitBackfaceVisibility = 'hidden';
+            el.style.transformStyle = 'preserve-3d';
+            
+            // Title overlay - Bauhaus style
+            const titleBar = document.createElement('div');
+            titleBar.style.position = 'absolute';
+            titleBar.style.bottom = '0';
+            titleBar.style.left = '0';
+            titleBar.style.right = '0';
+            titleBar.style.background = 'rgba(0,0,0,0.8)';
+            titleBar.style.color = '#fff';
+            titleBar.style.padding = '8px';
+            titleBar.style.fontSize = '14px';
+            titleBar.style.fontWeight = '700';
+            titleBar.style.textTransform = 'uppercase';
+            titleBar.style.letterSpacing = '1px';
+            titleBar.style.fontFamily = 'Helvetica, Arial, sans-serif';
+            titleBar.textContent = concept.title;
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube.com/embed/${concept.yt}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0`;
+            iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='none';
+            iframe.setAttribute('allow','autoplay; encrypted-media');
+            el.appendChild(iframe);
+            el.appendChild(titleBar);
+            
+            const obj = new THREE.CSS3DObject(el);
+            obj.scale.set(1/scaleFactor, 1/scaleFactor, 1);
+            return obj;
+          };
+
+          const front = mkScreen(); front.position.set(0, 0, D/2 + 0.003); 
+          const back = mkScreen();  back.position.set(0, 0, -D/2 - 0.003); back.rotation.y = Math.PI;
+          
+          // Attach CSS objects to group for proper cleanup
+          group.add(front);
+          group.add(back);
+
+          // physics
+          const body = new CANNON.Body({ mass: 0.8 * def.w * def.d, shape: new CANNON.Box(new CANNON.Vec3(W/2, H/2, D/2)), linearDamping:0.35, angularDamping:0.35 });
+          const spawnX = (GRID_COLS*CELL)/2;  // center
+          body.position.set(spawnX, WELL_HEIGHT * CELL - H, 0);
+          world.addBody(body);
+
+          return { group, body, cssObj: front, cssObjBack: back, concept, dims:{W,H,D}, orientation: (def.w>=def.d? 'wide':'tall') };
+        }
+
+        // ————— Spawning & flow
+        function spawn(){ if(!next) next = createVideoBlock(randomConcept()); current = next; next = createVideoBlock(randomConcept()); updateNextUI(); }
+        function randomConcept(){ return CONCEPTS[Math.floor(Math.random()*CONCEPTS.length)]; }
+        function updateNextUI(){ if(!next){ nextTitle.textContent='–'; nextType.textContent='–'; return; } nextTitle.textContent = next.concept.title; nextType.textContent = next.concept.type; }
+
+        // ————— Controls
+        function bindUI(){
+          document.querySelectorAll('[data-start]').forEach(btn=>{
+            btn.addEventListener('click', ()=>{ level = parseInt(btn.dataset.start,10) || 1; levelEl.textContent = String(level); $('#startModal').style.display='none'; started = true; spawn(); });
+          });
+
+          document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click', ()=>setView(btn.dataset.view)));
+          window.addEventListener('keydown', (e)=>{ if(e.key==='1') setView('iso'); if(e.key==='2') setView('top'); if(e.key==='3') setView('side'); if(e.key==='4') setView('front'); });
+
+          const moveLeft = ()=>{ if(current) { current.body.position.x = clamp(current.body.position.x - CELL, 0+current.dims.W/2, GRID_COLS*CELL - current.dims.W/2); } };
+          const moveRight= ()=>{ if(current) { current.body.position.x = clamp(current.body.position.x + CELL, 0+current.dims.W/2, GRID_COLS*CELL - current.dims.W/2); } };
+          const softDrop= ()=>{ if(current) { current.body.velocity.y = Math.min(current.body.velocity.y, -1.5*fallScale); } };
+          const rotate  = ()=>{ if(!current) return; current.body.quaternion = current.body.quaternion.mult(new CANNON.Quaternion().setFromEuler(0, Math.PI/2, 0)); };
+
+          $('#left').onclick = moveLeft; $('#right').onclick = moveRight; $('#drop').onclick = softDrop; $('#rotate').onclick = rotate;
+
+          window.addEventListener('keydown', (e)=>{
+            if(e.key==='ArrowLeft'){ e.preventDefault(); moveLeft(); }
+            if(e.key==='ArrowRight'){ e.preventDefault(); moveRight(); }
+            if(e.key==='ArrowDown'){ e.preventDefault(); softDrop(); }
+            if(e.key===' '){ e.preventDefault(); togglePause(); }
+            if(e.key.toLowerCase()==='r'){ e.preventDefault(); rotate(); }
+          });
+
+          $('#pause').onclick = togglePause; $('#reset').onclick = reset;
+
+          const speed = $('#speed');
+          speed.addEventListener('input', ()=>{ fallScale = parseFloat(speed.value); world.gravity.set(0, -4 * fallScale, 0); });
+
+          const studyBtn = $('#study');
+          studyBtn.addEventListener('click', ()=>{ const on = studyBtn.getAttribute('aria-pressed') === 'true'; studyBtn.setAttribute('aria-pressed', String(!on)); studyBtn.textContent = (!on) ? 'On' : 'Off'; setStudyMode(!on); });
+        }
+
+        function setView(mode){
+          const { w: WELL_W, d: WELL_D } = wellSize();
+          const cx = WELL_W/2;
+          const eyeLevel = WELL_HEIGHT * CELL * 0.5; // Eye level at middle of play area
+          
+          if(mode==='iso') {
+            // Isometric view - eye level, angled
+            camera.position.set(cx + WELL_W*0.6, eyeLevel + WELL_W*0.3, WELL_D*1.2);
+            camera.lookAt(cx, eyeLevel, 0);
+          }
+          if(mode==='top') { 
+            // Top-down view
+            camera.position.set(cx, WELL_HEIGHT * CELL * 1.2, 0.1); 
+            camera.lookAt(cx, 0, 0); 
+          }
+          if(mode==='side') {
+            // Side view - eye level
+            camera.position.set(cx + WELL_W*1.2, eyeLevel, 0);
+            camera.lookAt(cx, eyeLevel, 0);
+          }
+          if(mode==='front') {
+            // Front view - eye level, looking straight in
+            camera.position.set(cx, eyeLevel, WELL_D*1.5);
+            camera.lookAt(cx, eyeLevel, 0);
+          }
+          
+          controls.target.set(cx, eyeLevel, 0);
+          controls.update();
+          document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));
+          const active = document.querySelector(`[data-view="${mode}"]`); if(active) active.setAttribute('aria-pressed','true');
+        }
+
+        function togglePause(){ paused = !paused; $('#pause').setAttribute('aria-pressed', String(paused)); }
+
+        function cleanupBlock(block){
+          if(!block) return;
+          // Remove from scenes
+          if(block.group) scene.remove(block.group);
+          // CSS objects are children of group, so they're removed automatically
+          // But also clean up from cssScene if they were added there
+          if(block.cssObj && block.cssObj.parent === cssScene) cssScene.remove(block.cssObj);
+          if(block.cssObjBack && block.cssObjBack.parent === cssScene) cssScene.remove(block.cssObjBack);
+          // Remove iframes to stop video playback
+          if(block.cssObj && block.cssObj.element){
+            const iframes = block.cssObj.element.querySelectorAll('iframe');
+            iframes.forEach(iframe => iframe.src = 'about:blank');
+          }
+          if(block.cssObjBack && block.cssObjBack.element){
+            const iframes = block.cssObjBack.element.querySelectorAll('iframe');
+            iframes.forEach(iframe => iframe.src = 'about:blank');
+          }
+          // Remove physics body
+          if(block.body) world.removeBody(block.body);
+        }
+
+        function reset(){
+          placed.forEach(p => cleanupBlock(p));
+          cleanupBlock(current);
+          cleanupBlock(next);
+          placed = []; current = null; next = null; score = 0; level = 1; scoreEl.textContent='0'; levelEl.textContent='1';
+          started = false; paused = false; updateNextUI(); $('#startModal').style.display='flex';
+        }
+
+        function setStudyMode(on){ [...scene.children].forEach(ch=>{ if(ch.isMesh && ch.material) { ch.material.opacity = on ? 0.08 : 1; ch.material.transparent = on ? true : false; } }); }
+
+        // ————— Loop (guarded)
+        function animate(){
+          try{
+            requestAnimationFrame(animate);
+            const dt = Math.min(0.033, (clock?clock.getDelta():0.016));
+            controls && controls.update();
+            if(started && !paused){
+              world.step(1/60, dt, 3);
+              if(current){
+                syncBlock(current); updateGhost();
+                if(current.body.position.y <= (HEIGHT/2 + 0.01) && Math.abs(current.body.velocity.y) < 0.1){ lockCurrent(); }
+              }
+              placed.forEach(syncBlock);
+            }
+            renderer && renderer.render(scene, camera);
+            cssRenderer && cssRenderer.render(cssScene, camera);
+          }catch(e){ showErr('Runtime error: '+e.message); console.error(e); }
+        }
+
+        function syncBlock(b){ 
+          if(!b.group.__added){ 
+            scene.add(b.group); 
+            // Add CSS objects to cssScene for rendering
+            if(b.cssObj) cssScene.add(b.cssObj);
+            if(b.cssObjBack) cssScene.add(b.cssObjBack);
+            b.group.__added = true; 
+          } 
+          // Sync group with physics body
+          b.group.position.copy(b.body.position); 
+          b.group.quaternion.copy(b.body.quaternion); 
+          // CSS objects inherit transform from group, but need world position for CSS3DRenderer
+          if(b.cssObj){ 
+            b.group.updateMatrixWorld();
+            b.cssObj.position.setFromMatrixPosition(b.group.matrixWorld);
+            b.cssObj.quaternion.copy(b.group.quaternion);
+          } 
+          if(b.cssObjBack){ 
+            b.group.updateMatrixWorld();
+            b.cssObjBack.position.setFromMatrixPosition(b.group.matrixWorld);
+            b.cssObjBack.quaternion.copy(b.group.quaternion);
+          } 
+        }
+
+        function updateGhost(){ if(!current || !ghostLine) return; const from = new THREE.Vector3(current.body.position.x, current.body.position.y - current.dims.H/2, current.body.position.z); const to = new THREE.Vector3(current.body.position.x, 0.001, current.body.position.z); const pos = ghostLine.geometry.getAttribute('position'); pos.setXYZ(0, from.x, from.y, from.z); pos.setXYZ(1, to.x, to.y, to.z); pos.needsUpdate = true; ghostLine.computeLineDistances(); }
+
+        function lockCurrent(){ if(!current) return; current.body.mass = 0; current.body.updateMassProperties(); current.body.velocity.setZero(); current.body.angularVelocity.setZero(); placed.push(current); score += 10 * level; scoreEl.textContent = String(score); current = null; setTimeout(()=>{ spawn(); }, 300); }
+
+        function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+        function onResize(){ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); cssRenderer.setSize(window.innerWidth, window.innerHeight); }
+
+        // ————— Tests (added) —————
+        function runTests(){
+          console.group('%cVideo Tetris — tests','color:#c40000');
+          console.assert(typeof THREE !== 'undefined', 'THREE loaded');
+          console.assert(typeof CANNON !== 'undefined', 'CANNON loaded');
+          console.assert(THREE.REVISION === '128', 'Three.js rev 128');
+          console.assert(typeof THREE.CSS3DRenderer === 'function', 'CSS3DRenderer exists');
+          console.assert(typeof THREE.OrbitControls === 'function', 'OrbitControls exists');
+          console.assert(typeof createVideoBlock === 'function', 'createVideoBlock() exists');
+          console.assert(clamp(5,0,2) === 2, 'clamp upper bound');
+          console.assert(clamp(-1,0,2) === 0, 'clamp lower bound');
+          // spawn + lock smoke test
+          spawn();
+          console.assert(current && next, 'spawn produced current & next');
+          // camera should be inside front/back planes
+          const { d: WELL_D, w: WELL_W } = wellSize();
+          const halfD = WELL_D/2; const margin = 0.01;
+          console.assert(Math.abs(camera.position.z) <= halfD + margin || camera.position.z === 0.0001, 'camera z inside well');
+          console.assert(camera.position.x >= -margin && camera.position.x <= WELL_W + margin, 'camera x within world bounds');
+          // drive one step to sync without rendering errors
+          world.step(1/60);
+          syncBlock(current);
+          console.groupEnd();
+        }
+        setTimeout(()=>{ try{ runTests(); }catch(e){ console.warn('tests failed to run', e); } }, 800);
+      }
+    })();
+  </script>
+</body>
+</html>

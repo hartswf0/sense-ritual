@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>TV SWIPER — Vertical Feed</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg: #000;
+    --card-bg: #1a1a1a;
+    --accent: #0a84ff;
+    --text: #fff;
+    --dim: #666;
+  }
+  body{ 
+    font-family: system-ui, -apple-system, sans-serif; 
+    background: var(--bg); 
+    color: var(--text); 
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  
+  /* VERTICAL FEED CONTAINER */
+  #feed-container{
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  
+  /* TV CARD */
+  .tv-card{
+    position: absolute;
+    width: min(92vw, 600px);
+    max-height: 85vh;
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+    touch-action: pan-y;
+  }
+  
+  .tv-card.swiping{
+    transition: none;
+  }
+  
+  .tv-card.exiting-up{
+    animation: exitUp 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  
+  .tv-card.exiting-down{
+    animation: exitDown 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  
+  @keyframes exitUp{
+    to{ transform: translateY(-120vh); opacity: 0; }
+  }
+  
+  @keyframes exitDown{
+  }
+  
+  /* TV SCREEN */
+  .tv-screen{
+    width: 100%;
+    flex: 0 0 auto;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .tv-screen iframe,
+  .tv-screen video,
+  .tv-screen img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: none;
+  }
+  
+  .tv-screen .placeholder{
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--dim);
+    font-size: 48px;
+  }
+  
+  /* TV INFO */
+  .tv-info{
+    padding: 24px;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .tv-id{
+    font-size: 14px;
+    font-weight: 700;
+    color: #0ff;
+    letter-spacing: 0.5px;
+    font-family: monospace;
+  }
+  
+  .tv-title{
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  
+  .tv-tags{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .tag{
+    padding: 6px 12px;
+    background: rgba(10,132,255,0.2);
+    border: 1px solid rgba(10,132,255,0.4);
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .tv-meta{
+    font-size: 13px;
+    color: var(--dim);
+    margin-top: auto;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.6);
+    font-family: monospace;
+  }
+  
+  /* CARD CHAT AREA (BENEATH CARD) */
+  .card-chat-area{
+    background: #000;
+    border-top: 2px solid #0ff;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    height: 240px;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .card-chat-messages{
+    padding: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #0ff #000;
+  }
+  
+  .card-chat-messages::-webkit-scrollbar{
+    width: 4px;
+  }
+  
+  .card-chat-messages::-webkit-scrollbar-track{
+    background: #000;
+  }
+  
+  .card-chat-messages::-webkit-scrollbar-thumb{
+    background: #0ff;
+    border-radius: 2px;
+  }
+  
+  .card-chat-msg{
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    font-family: 'Courier New', monospace;
+    max-width: 85%;
+    word-wrap: break-word;
+  }
+  
+  .card-chat-msg.user{
+    background: transparent;
+    border-left: 3px solid #0ff;
+    color: #0ff;
+    align-self: flex-end;
+    text-align: left;
+    margin-left: auto;
+  }
+  
+  .card-chat-msg.agent{
+    background: transparent;
+    border-left: 3px solid #fff;
+    color: #fff;
+    align-self: flex-start;
+  }
+  
+  .card-chat-msg.system{
+    background: transparent;
+    color: #666;
+    font-size: 9px;
+    text-align: center;
+    align-self: center;
+    border: none;
+    max-width: 100%;
+  }
+  
+  .card-chat-input{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0;
+    border-top: 1px solid #333;
+    background: #000;
+  }
+  
+  .card-chat-input input{
+    padding: 12px;
+    background: #000;
+    border: none;
+    border-right: 1px solid #333;
+    color: #0ff;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+  }
+  
+  .card-chat-input input:focus{
+    outline: none;
+    background: #0a0a0a;
+  }
+  
+  .card-chat-input input::placeholder{
+    color: #333;
+  }
+  
+  .card-chat-input button{
+    padding: 12px 16px;
+    background: #000;
+    border: none;
+    color: #0ff;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+  }
+  
+  .card-chat-input button:hover{
+    background: #0a0a0a;
+    color: #fff;
+  }
+  
+  .card-chat-input button:active{
+    background: #0ff;
+    color: #000;
+  }
+  
+  .swipe-hint{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 48px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 10;
+  }
+  
+  .swipe-hint.left{
+    left: 40px;
+  }
+  
+  .swipe-hint.right{
+    right: 40px;
+  }
+  
+  .tv-card.swiping-left .swipe-hint.left,
+  .tv-card.swiping-right .swipe-hint.right{
+    opacity: 1;
+  }
+  
+  /* SIDE MENU */
+  #side-menu{
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 100;
+  }
+  
+  .menu-btn{
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(26,26,26,0.9);
+    backdrop-filter: blur(12px);
+    border: 2px solid rgba(255,255,255,0.1);
+    color: var(--text);
+    font-size: 24px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  
+  .menu-btn:active{
+    transform: scale(0.9);
+    background: rgba(10,132,255,0.3);
+  }
+  
+  .menu-btn.active{
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  
+  /* COUNTER */
+  #counter{
+    position: fixed;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(12px);
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 100;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  
+  /* COLLECTION PANEL */
+  #collection-panel{
+    position: fixed;
+    right: -100%;
+    top: 0;
+    width: min(400px, 90vw);
+    height: 100vh;
+    background: rgba(20,20,20,0.95);
+    backdrop-filter: blur(20px);
+    z-index: 200;
+    transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    border-left: 2px solid rgba(255,255,255,0.1);
+  }
+  
+  #collection-panel.open{
+    right: 0;
+  }
+  
+  .panel-header{
+    padding: 24px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .panel-title{
+    font-size: 20px;
+    font-weight: 700;
+  }
+  
+  .close-btn{
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  
+  .panel-content{
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  
+  .collection-item{
+    padding: 12px;
+    background: #1a1a1a;
+    border-left: 3px solid #333;
+    margin-bottom: 2px;
+    cursor: grab;
+    transition: all 0.15s;
+    position: relative;
+    touch-action: none;
+    border-right: 1px solid #0a0a0a;
+  }
+  
+  .collection-item:active{
+    cursor: grabbing;
+  }
+  
+  .collection-item.dragging{
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  
+  .collection-item:hover{
+    background: #222;
+    border-left-color: var(--accent);
+  }
+  
+  .collection-item.accepted{
+    border-left-color: #2ECC71;
+  }
+  
+  .collection-item.rejected{
+    border-left-color: #E74C3C;
+  }
+  
+  .drag-handle{
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    background: #0a0a0a;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    opacity: 0.7;
+    cursor: grab;
+    border-right: 1px solid #333;
+  }
+  
+  .item-content{
+    margin-left: 32px;
+    display: grid;
+    gap: 8px;
+  }
+  
+  .item-header{
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .item-title{
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .item-time{
+    font-family: monospace;
+    color: #666;
+    font-size: 10px;
+  }
+  
+  .item-actions{
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .action-btn{
+    padding: 4px 10px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    color: var(--text);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .action-btn:active{
+    background: #000;
+    border-color: var(--accent);
+  }
+  
+  .label-input{
+    width: 100%;
+    padding: 8px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  
+  .label-badge{
+    display: inline-block;
+    padding: 2px 8px;
+    background: #000;
+    border: 1px solid #ffa500;
+    font-size: 9px;
+    font-weight: 700;
+    color: #ffa500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* CHAT EDITOR (INLINE IN COLLECTION) */
+  .chat-editor{
+    margin-top: 8px;
+    padding: 0;
+    background: #000;
+    border: 1px solid #333;
+    display: none;
+    position: relative;
+    z-index: 10;
+  }
+  
+  .chat-editor.open{
+    display: grid;
+    gap: 0;
+  }
+  
+  .chat-messages{
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    background: #000;
+    border-bottom: 1px solid #333;
+  }
+  
+  .chat-msg{
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    line-height: 1.4;
+    font-family: monospace;
+  }
+  
+  .chat-msg.user{
+    background: #1a1a1a;
+    color: #0ff;
+    text-align: right;
+  }
+  
+  .chat-msg.agent{
+    background: #0a0a0a;
+    color: #fff;
+  }
+  
+  .chat-msg.system{
+    background: transparent;
+    color: #666;
+    font-size: 9px;
+    text-align: center;
+  }
+  
+  .chat-input-row{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0;
+    background: #000;
+  }
+  
+  .chat-input-row input{
+    padding: 8px;
+    background: #0a0a0a;
+    border: none;
+    border-right: 1px solid #333;
+    color: #0ff;
+    font-family: monospace;
+    font-size: 10px;
+  }
+  
+  .chat-input-row button{
+    padding: 8px 12px;
+    background: #0a0a0a;
+    border: none;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .chat-input-row button:active{
+    background: #000;
+  }
+  
+  /* TIMELINE EDITOR */
+  .timeline-editor{
+    margin-top: 8px;
+    padding: 8px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    display: none;
+  }
+  
+  .timeline-editor.open{
+    display: grid;
+    gap: 8px;
+  }
+  
+  .timeline-controls{
+    display: grid;
+    grid-template-columns: 60px 1fr 60px;
+    gap: 4px;
+    align-items: center;
+  }
+  
+  .time-input{
+    padding: 4px 8px;
+    background: #000;
+    border: 1px solid #333;
+    color: #0ff;
+    font-family: monospace;
+    font-size: 11px;
+    text-align: center;
+    width: 60px;
+  }
+  
+  .time-slider{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #333;
+    outline: none;
+  }
+  
+  .time-slider::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  
+  .time-slider::-moz-range-thumb{
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+  }
+  
+  .notes-area{
+    width: 100%;
+    min-height: 60px;
+    padding: 6px;
+    background: #000;
+    border: 1px solid #333;
+    color: var(--text);
+    font-size: 10px;
+    font-family: monospace;
+    resize: vertical;
+  }
+  
+  .url-input{
+    width: 100%;
+    padding: 6px;
+    background: #000;
+    border: 1px solid #333;
+    color: #0ff;
+    font-size: 10px;
+    font-family: monospace;
+  }
+  
+  .timeline-actions{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+  }
+  
+  .timeline-label{
+    font-size: 9px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  
+  .export-section{
+    padding: 12px;
+    border-top: 2px solid #000;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: #0a0a0a;
+  }
+  
+  .export-btn{
+    padding: 10px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .export-btn:active{
+    background: #000;
+    border-color: var(--accent);
+  }
+  
+  .export-btn.secondary{
+    background: #0a0a0a;
+  }
+  
+  /* SETTINGS PANEL */
+  #settings-panel{
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--bg);
+    border-left: 3px solid var(--accent);
+    z-index: 900;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    transition: width 0.3s ease;
+    overflow: hidden;
+  }
+  
+  #settings-panel.open{
+    width: 360px;
+  }
+  
+  /* LOADING */
+  #loading{
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: var(--bg);
+    z-index: 1000;
+    font-size: 14px;
+    color: var(--dim);
+  }
+  
+  #loading.hidden{
+    display: none;
+  }
+  
+  /* MOBILE OPTIMIZATIONS */
+  @media (max-width: 480px){
+    #collection-panel.open{ width: 100vw; }
+    #settings-panel.open{ width: 100vw; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">LOADING...</div>
+
+<div id="counter">
+  <span id="current-index">1</span> / <span id="total-count">0</span>
+</div>
+
+<div id="side-menu">
+  <button class="menu-btn" id="btn-collection" title="Collection">C</button>
+  <button class="menu-btn" id="btn-settings" title="Settings">S</button>
+</div>
+
+<div id="feed-container"></div>
+
+<div id="collection-panel">
+  <div class="panel-header">
+    <div class="panel-title">Collection (<span id="collection-count">0</span>)</div>
+    <button class="close-btn" id="close-collection">✕</button>
+  </div>
+  <div class="panel-content" id="collection-list"></div>
+  <div class="export-section">
+    <button class="export-btn" id="export-a3">Export A3</button>
+    <button class="export-btn secondary" id="export-json">Export JSON</button>
+  </div>
+</div>
+
+<div id="settings-panel">
+  <div class="panel-header">
+    <div class="panel-title">Settings</div>
+    <button class="close-btn" id="close-settings">✕</button>
+  </div>
+  <div class="panel-content" style="padding:16px;">
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">OpenAI API Key</label>
+      <input type="password" id="api-key-input" placeholder="sk-..." style="width:100%;padding:10px;background:#000;border:1px solid #333;color:#0ff;font-family:monospace;font-size:11px;" />
+      <button id="save-api-key" style="margin-top:8px;padding:8px 12px;background:#0a0a0a;border:1px solid #333;color:#fff;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">SAVE</button>
+      <div style="font-size:9px;color:#666;margin-top:8px;line-height:1.4;">Stored locally. Leave blank for simulation mode.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  
+  // --- STATE ---
+  let tvs = [];
+  let currentIndex = 0;
+  let mediaLibrary = [];
+  let collection = []; // Accepted TVs
+  let rejected = []; // Rejected TVs
+  let touchStartY = 0;
+  let touchStartX = 0;
+  let isDragging = false;
+  let currentCard = null;
+  
+  // --- MEDIA LIBRARY ---
+  function initMediaLibrary(){
+    const videos = [
+      // WHERE YOU GO WHEN YOU LEAVE (CODEX) - First version
+      { name: 'Out of Life', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 0, end: 135, tags: ['poem', 'intro'] },
+      { name: 'Flashing Lights', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 136, end: 271, tags: ['poem'] },
+      { name: 'How to Break Off an Engagement', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 272, end: 407, tags: ['poem'] },
+      { name: 'Nevermore', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 408, end: 543, tags: ['poem'] },
+      { name: 'Bloodline', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 544, end: 679, tags: ['poem'] },
+      { name: 'Resurrecting Atlantis', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 680, end: 815, tags: ['poem'] },
+      { name: 'DJ Turn Me Up', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 816, end: 951, tags: ['poem'] },
+      { name: 'Newly Single', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 952, end: 1087, tags: ['poem'] },
+      { name: 'Yet, Heard', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1088, end: 1223, tags: ['poem'] },
+      { name: 'Magic Ride', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1224, end: 1359, tags: ['poem'] },
+      { name: 'Reunion', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1360, end: 1495, tags: ['poem'] },
+      { name: 'How to Win My Heart', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1496, end: 1631, tags: ['poem'] },
+      { name: 'Hot Minute', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 1632, end: 1772, tags: ['poem', 'outro'] },
+      
+      // Standalone videos
+      { name: 'Where You Go When You Leave (Main)', url: 'https://youtu.be/OGp5NDpYV6Y', tags: ['main', 'music'] },
+      { name: 'Pro Segments', url: 'https://youtu.be/6AiCk06MgmQ', tags: ['segments'] },
+      { name: 'Part 2', url: 'https://youtu.be/8I4oqkyTC3o', tags: ['part2'] },
+      { name: 'Visual-Poetry Journey', url: 'https://youtu.be/MT3snSsqcHs', tags: ['journey'] },
+    ];
+    
+    videos.forEach((v, i) => {
+      const videoId = parseYouTubeUrl(v.url);
+      if(videoId){
+        let embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}`;
+        if(v.start !== undefined){
+          embedUrl += `&start=${v.start}`;
+          if(v.end !== undefined){
+            embedUrl += `&end=${v.end}`;
+          }
+        }
+        
+        mediaLibrary.push({
+          id: `TV-${String(i+1).padStart(3,'0')}`,
+          type: 'youtube',
+          name: v.name,
+          videoId: videoId,
+          embedUrl: embedUrl,
+          tags: v.tags || [],
+          start: v.start,
+          end: v.end
+        });
+      }
+    });
+    
+    console.log(`📚 Loaded ${mediaLibrary.length} videos`);
+  }
+  
+  function parseYouTubeUrl(url){
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/,
+      /youtube\.com\/embed\/([^?\s]+)/
+    ];
+    for(let pattern of patterns){
+      const match = url.match(pattern);
+      if(match) return match[1];
+    }
+    return null;
+  }
+  
+  // --- TV CREATION ---
+  function createTVCard(media, index){
+    const card = document.createElement('div');
+    card.className = 'tv-card';
+    card.dataset.index = index;
+    
+    // Screen
+    const screen = document.createElement('div');
+    screen.className = 'tv-screen';
+    
+    if(media.type === 'youtube'){
+      const iframe = document.createElement('iframe');
+      iframe.src = media.embedUrl;
+      iframe.allow = 'autoplay; encrypted-media';
+      iframe.allowFullscreen = true;
+      screen.appendChild(iframe);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'placeholder';
+      placeholder.textContent = '📺';
+      screen.appendChild(placeholder);
+    }
+    
+    // Info
+    const info = document.createElement('div');
+    info.className = 'tv-info';
+    
+    const id = document.createElement('div');
+    id.className = 'tv-id';
+    id.textContent = media.id;
+    
+    const title = document.createElement('div');
+    title.className = 'tv-title';
+    title.textContent = media.name;
+    
+    const tags = document.createElement('div');
+    tags.className = 'tv-tags';
+    media.tags.forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = t;
+      tags.appendChild(tag);
+    });
+    
+    const meta = document.createElement('div');
+    meta.className = 'tv-meta';
+    meta.textContent = media.start !== undefined ? 
+      `${Math.floor(media.start/60)}:${String(media.start%60).padStart(2,'0')} - ${Math.floor(media.end/60)}:${String(media.end%60).padStart(2,'0')}` :
+      'Full video';
+    
+    info.append(id, title, tags, meta);
+    
+    // Chat area (inline)
+    const chatArea = document.createElement('div');
+    chatArea.className = 'card-chat-area';
+    chatArea.id = `chat-area-${index}`;
+    
+    const chatMessages = document.createElement('div');
+    chatMessages.className = 'card-chat-messages';
+    chatMessages.id = `chat-messages-${index}`;
+    
+    const chatInputRow = document.createElement('div');
+    chatInputRow.className = 'card-chat-input';
+    chatInputRow.innerHTML = `
+      <input type="text" id="chat-input-feed-${index}" placeholder="Ask about this clip..." />
+      <button id="chat-send-feed-${index}">SEND</button>
+    `;
+    
+    chatArea.append(chatMessages, chatInputRow);
+    
+    // Initialize chat for this card
+    if(!media.chatHistory){
+      media.chatHistory = [{
+        role: 'system',
+        content: `You are discussing "${media.name}" (${media.id}). Tags: ${media.tags.join(', ')}. Time: ${media.start !== undefined ? `${Math.floor(media.start/60)}:${String(media.start%60).padStart(2,'0')} - ${Math.floor(media.end/60)}:${String(media.end%60).padStart(2,'0')}` : 'full video'}. Be concise.`
+      }, {
+        role: 'assistant',
+        content: `${media.name}. Ask about placement or timing.`
+      }];
+    }
+    
+    // Render initial messages
+    renderFeedChatMessages(index);
+    
+    // Wire up chat input
+    setTimeout(() => {
+      const input = document.getElementById(`chat-input-feed-${index}`);
+      const sendBtn = document.getElementById(`chat-send-feed-${index}`);
+      
+      if(input && sendBtn){
+        const sendMessage = async () => {
+          const message = input.value.trim();
+          if(!message) return;
+          
+          mediaLibrary[index].chatHistory.push({
+            role: 'user',
+            content: message
+          });
+          
+          input.value = '';
+          renderFeedChatMessages(index);
+          
+          const apiKey = localStorage.getItem('openai_api_key');
+          
+          if(!apiKey){
+            setTimeout(() => {
+              mediaLibrary[index].chatHistory.push({
+                role: 'assistant',
+                content: `[SIM] ${getSimulatedResponse(message, mediaLibrary[index])}`
+              });
+              renderFeedChatMessages(index);
+            }, 500);
+            return;
+          }
+          
+          try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: mediaLibrary[index].chatHistory,
+                max_tokens: 150,
+                temperature: 0.7
+              })
+            });
+            
+            const data = await response.json();
+            
+            if(data.choices && data.choices[0]){
+              mediaLibrary[index].chatHistory.push({
+                role: 'assistant',
+                content: data.choices[0].message.content
+              });
+              renderFeedChatMessages(index);
+            }
+          } catch(error){
+            console.error('API error:', error);
+            mediaLibrary[index].chatHistory.push({
+              role: 'system',
+              content: 'API error. Check console.'
+            });
+            renderFeedChatMessages(index);
+          }
+        };
+        
+        sendBtn.onclick = sendMessage;
+        input.onkeydown = (e) => {
+          if(e.key === 'Enter') sendMessage();
+        };
+      }
+    }, 100);
+    
+    // Swipe hints
+    const hintLeft = document.createElement('div');
+    hintLeft.className = 'swipe-hint left';
+    hintLeft.textContent = '❌';
+    
+    const hintRight = document.createElement('div');
+    hintRight.className = 'swipe-hint right';
+    hintRight.textContent = '✅';
+    
+    card.append(screen, info, chatArea, hintLeft, hintRight);
+    
+    // Touch events
+    card.addEventListener('touchstart', onTouchStart);
+    card.addEventListener('touchmove', onTouchMove);
+    card.addEventListener('touchend', onTouchEnd);
+    
+    // Mouse events (desktop)
+    card.addEventListener('mousedown', onMouseDown);
+    
+    return card;
+  }
+  
+  // --- TOUCH HANDLING ---
+  function onTouchStart(e){
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+    isDragging = true;
+    currentCard = e.currentTarget;
+    currentCard.classList.add('swiping');
+  }
+  
+  function onTouchMove(e){
+    if(!isDragging) return;
+    
+    const deltaY = e.touches[0].clientY - touchStartY;
+    const deltaX = e.touches[0].clientX - touchStartX;
+    
+    // Vertical swipe (navigate)
+    if(Math.abs(deltaY) > Math.abs(deltaX)){
+      currentCard.style.transform = `translateY(${deltaY}px) rotate(${deltaY * 0.02}deg)`;
+      currentCard.style.opacity = 1 - Math.abs(deltaY) / 500;
+    }
+    // Horizontal swipe (accept/reject)
+    else {
+      currentCard.style.transform = `translateX(${deltaX}px) rotate(${deltaX * 0.05}deg)`;
+      
+      if(deltaX < -50){
+        currentCard.classList.add('swiping-left');
+        currentCard.classList.remove('swiping-right');
+      } else if(deltaX > 50){
+        currentCard.classList.add('swiping-right');
+        currentCard.classList.remove('swiping-left');
+      } else {
+        currentCard.classList.remove('swiping-left', 'swiping-right');
+      }
+    }
+  }
+  
+  function onTouchEnd(e){
+    if(!isDragging) return;
+    
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    
+    isDragging = false;
+    currentCard.classList.remove('swiping', 'swiping-left', 'swiping-right');
+    
+    const threshold = 100;
+    
+    // Vertical swipe
+    if(Math.abs(deltaY) > Math.abs(deltaX)){
+      if(Math.abs(deltaY) > threshold){
+        if(deltaY < 0){
+          // Swipe up - next
+          nextTV();
+        } else {
+          // Swipe down - previous
+          prevTV();
+        }
+      } else {
+        // Snap back
+        currentCard.style.transform = '';
+        currentCard.style.opacity = '';
+      }
+    }
+    // Horizontal swipe
+    else {
+      if(Math.abs(deltaX) > threshold){
+        if(deltaX < 0){
+          // Swipe left - reject
+          rejectTV();
+        } else {
+          // Swipe right - accept
+          acceptTV();
+        }
+      } else {
+        // Snap back
+        currentCard.style.transform = '';
+      }
+    }
+    
+    currentCard = null;
+  }
+  
+  function onMouseDown(e){
+    touchStartY = e.clientY;
+    touchStartX = e.clientX;
+    isDragging = true;
+    currentCard = e.currentTarget;
+    currentCard.classList.add('swiping');
+    
+    const onMouseMove = (e) => {
+      if(!isDragging) return;
+      
+      const deltaY = e.clientY - touchStartY;
+      const deltaX = e.clientX - touchStartX;
+      
+      if(Math.abs(deltaY) > Math.abs(deltaX)){
+        currentCard.style.transform = `translateY(${deltaY}px) rotate(${deltaY * 0.02}deg)`;
+        currentCard.style.opacity = 1 - Math.abs(deltaY) / 500;
+      } else {
+        currentCard.style.transform = `translateX(${deltaX}px) rotate(${deltaX * 0.05}deg)`;
+        
+        if(deltaX < -50){
+          currentCard.classList.add('swiping-left');
+          currentCard.classList.remove('swiping-right');
+        } else if(deltaX > 50){
+          currentCard.classList.add('swiping-right');
+          currentCard.classList.remove('swiping-left');
+        }
+      }
+    };
+    
+    const onMouseUp = (e) => {
+      if(!isDragging) return;
+      
+      const deltaY = e.clientY - touchStartY;
+      const deltaX = e.clientX - touchStartX;
+      
+      isDragging = false;
+      currentCard.classList.remove('swiping', 'swiping-left', 'swiping-right');
+      
+      const threshold = 100;
+      
+      if(Math.abs(deltaY) > Math.abs(deltaX)){
+        if(Math.abs(deltaY) > threshold){
+          if(deltaY < 0) nextTV();
+          else prevTV();
+        } else {
+          currentCard.style.transform = '';
+          currentCard.style.opacity = '';
+        }
+      } else {
+        if(Math.abs(deltaX) > threshold){
+          if(deltaX < 0) rejectTV();
+          else acceptTV();
+        } else {
+          currentCard.style.transform = '';
+        }
+      }
+      
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      currentCard = null;
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+  
+  // --- NAVIGATION ---
+  function showTV(index){
+    const container = document.getElementById('feed-container');
+    container.innerHTML = '';
+    
+    if(index < 0 || index >= mediaLibrary.length) return;
+    
+    currentIndex = index;
+    const card = createTVCard(mediaLibrary[index], index);
+    container.appendChild(card);
+    
+    updateCounter();
+  }
+  
+  function nextTV(){
+    if(currentIndex < mediaLibrary.length - 1){
+      const card = document.querySelector('.tv-card');
+      if(card){
+        card.classList.add('exiting-up');
+        setTimeout(() => {
+          showTV(currentIndex + 1);
+        }, 300);
+      }
+    }
+  }
+  
+  function prevTV(){
+    if(currentIndex > 0){
+      const card = document.querySelector('.tv-card');
+      if(card){
+        card.classList.add('exiting-down');
+        setTimeout(() => {
+          showTV(currentIndex - 1);
+        }, 300);
+      }
+    }
+  }
+  
+  function acceptTV(){
+    const media = mediaLibrary[currentIndex];
+    collection.push({...media, accepted: true});
+    console.log('✅ Accepted:', media.name);
+    
+    const card = document.querySelector('.tv-card');
+    if(card){
+      card.style.transform = 'translateX(120vw) rotate(20deg)';
+      card.style.opacity = '0';
+      setTimeout(() => {
+        nextTV();
+      }, 300);
+    }
+    
+    updateCollection();
+  }
+  
+  function rejectTV(){
+    const media = mediaLibrary[currentIndex];
+    rejected.push({...media, accepted: false});
+    console.log('❌ Rejected:', media.name);
+    
+    const card = document.querySelector('.tv-card');
+    if(card){
+      card.style.transform = 'translateX(-120vw) rotate(-20deg)';
+      card.style.opacity = '0';
+      setTimeout(() => {
+        nextTV();
+      }, 300);
+    }
+  }
+  
+  function updateCounter(){
+    document.getElementById('current-index').textContent = currentIndex + 1;
+    document.getElementById('total-count').textContent = mediaLibrary.length;
+  }
+  
+  // --- COLLECTION PANEL ---
+  function toggleCollection(){
+    const panel = document.getElementById('collection-panel');
+    panel.classList.toggle('open');
+    updateCollection();
+  }
+  
+  function updateCollection(){
+    const list = document.getElementById('collection-list');
+    const countEl = document.getElementById('collection-count');
+    list.innerHTML = '';
+    countEl.textContent = collection.length;
+    
+    if(collection.length === 0){
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">No accepted TVs yet.<br>Swipe right to add!</div>';
+      return;
+    }
+    
+    collection.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'collection-item accepted';
+      div.draggable = true;
+      div.dataset.index = i;
+      
+      const content = document.createElement('div');
+      content.className = 'item-content';
+      
+      const timeStr = item.start !== undefined ? 
+        `${secondsToTimecode(item.start)} - ${secondsToTimecode(item.end)}` : 
+        'FULL';
+      
+      content.innerHTML = `
+        <div class="drag-handle">::</div>
+        <div class="item-header">
+          <div class="item-id">${item.id}</div>
+          <div class="item-title">${item.name}</div>
+          <div class="item-time">${timeStr}</div>
+        </div>
+        ${item.label ? `<div class="label-badge">${item.label}</div>` : ''}
+        ${item.notes ? `<div style="font-size:10px;color:#888;font-family:monospace;margin-top:4px;">${item.notes.substring(0,60)}${item.notes.length > 60 ? '...' : ''}</div>` : ''}
+      `;
+      
+      const actions = document.createElement('div');
+      actions.className = 'item-actions';
+      
+      const chatBtn = document.createElement('button');
+      chatBtn.className = 'action-btn';
+      chatBtn.textContent = 'CHAT';
+      chatBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleChatEditor(div, i);
+      };
+      
+      const labelBtn = document.createElement('button');
+      labelBtn.className = 'action-btn';
+      labelBtn.textContent = 'LABEL';
+      labelBtn.onclick = (e) => {
+        e.stopPropagation();
+        showLabelInput(div, i);
+      };
+      
+      const viewBtn = document.createElement('button');
+      viewBtn.className = 'action-btn';
+      viewBtn.textContent = 'VIEW';
+      viewBtn.onclick = (e) => {
+        e.stopPropagation();
+        const index = mediaLibrary.findIndex(m => m.id === item.id);
+        if(index >= 0){
+          showTV(index);
+          toggleCollection();
+        }
+      };
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'action-btn';
+      removeBtn.textContent = 'REMOVE';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        collection.splice(i, 1);
+        updateCollection();
+      };
+      
+      actions.append(chatBtn, labelBtn, viewBtn, removeBtn);
+      content.appendChild(actions);
+      div.appendChild(content);
+      
+      // Drag events
+      div.addEventListener('dragstart', handleDragStart);
+      div.addEventListener('dragover', handleDragOver);
+      div.addEventListener('drop', handleDrop);
+      div.addEventListener('dragend', handleDragEnd);
+      
+      // Touch drag for mobile
+      div.addEventListener('touchstart', handleTouchStart);
+      
+      list.appendChild(div);
+    });
+  }
+  
+  // Drag-to-reorder functionality
+  let draggedItem = null;
+  let draggedIndex = null;
+  
+  function handleDragStart(e){
+    draggedItem = e.currentTarget;
+    draggedIndex = parseInt(draggedItem.dataset.index);
+    draggedItem.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  
+  function handleDragOver(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    const target = e.currentTarget;
+    if(target === draggedItem) return;
+    
+    const targetIndex = parseInt(target.dataset.index);
+    if(targetIndex > draggedIndex){
+      target.parentNode.insertBefore(draggedItem, target.nextSibling);
+    } else {
+      target.parentNode.insertBefore(draggedItem, target);
+    }
+  }
+  
+  function handleDrop(e){
+    e.preventDefault();
+    const targetIndex = parseInt(e.currentTarget.dataset.index);
+    
+    // Reorder collection array
+    const item = collection.splice(draggedIndex, 1)[0];
+    collection.splice(targetIndex, 0, item);
+    
+    console.log('Reordered:', draggedIndex, '→', targetIndex);
+  }
+  
+  function handleDragEnd(e){
+    e.currentTarget.classList.remove('dragging');
+    draggedItem = null;
+    draggedIndex = null;
+    updateCollection();
+  }
+  
+  // Touch drag for mobile (collection reorder)
+  let dragTouchStartY = 0;
+  let dragTouchItem = null;
+  
+  function handleTouchStart(e){
+    const handle = e.target.closest('.drag-handle');
+    if(!handle) return;
+    
+    dragTouchStartY = e.touches[0].clientY;
+    dragTouchItem = e.currentTarget;
+    dragTouchItem.style.opacity = '0.5';
+    
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      const deltaY = e.touches[0].clientY - dragTouchStartY;
+      dragTouchItem.style.transform = `translateY(${deltaY}px)`;
+      
+      // Find target position
+      const items = Array.from(dragTouchItem.parentNode.children);
+      const currentY = e.touches[0].clientY;
+      
+      items.forEach(item => {
+        if(item === dragTouchItem) return;
+        const rect = item.getBoundingClientRect();
+        if(currentY > rect.top && currentY < rect.bottom){
+          const currentIndex = items.indexOf(dragTouchItem);
+          const targetIndex = items.indexOf(item);
+          
+          if(targetIndex > currentIndex){
+            item.parentNode.insertBefore(dragTouchItem, item.nextSibling);
+          } else {
+            item.parentNode.insertBefore(dragTouchItem, item);
+          }
+        }
+      });
+    };
+    
+    const onTouchEnd = (e) => {
+      dragTouchItem.style.opacity = '';
+      dragTouchItem.style.transform = '';
+      
+      // Reorder collection array
+      const items = Array.from(dragTouchItem.parentNode.children);
+      const newOrder = items.map(item => parseInt(item.dataset.index));
+      const reordered = newOrder.map(i => collection[i]);
+      collection.length = 0;
+      collection.push(...reordered);
+      
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      
+      updateCollection();
+      console.log('Touch reorder complete');
+    };
+    
+    document.addEventListener('touchmove', onTouchMove, {passive: false});
+    document.addEventListener('touchend', onTouchEnd);
+  }
+  
+  // Helper functions for time conversion
+  function secondsToTimecode(seconds){
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  
+  function timecodeToSeconds(timecode){
+    const parts = timecode.split(':');
+    if(parts.length === 2){
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    return parseInt(timecode) || 0;
+  }
+  
+  // Chat Editor - Inline OpenAI chat
+  function toggleChatEditor(itemDiv, index){
+    const existing = itemDiv.querySelector('.chat-editor');
+    if(existing){
+      existing.remove();
+      return;
+    }
+    
+    const item = collection[index];
+    const editor = document.createElement('div');
+    editor.className = 'chat-editor open';
+    
+    // Initialize chat history if not exists
+    if(!item.chatHistory){
+      item.chatHistory = [{
+        role: 'system',
+        content: `You are discussing the film clip "${item.name}" (${item.id}). Tags: ${item.tags.join(', ')}. Time: ${secondsToTimecode(item.start || 0)} - ${secondsToTimecode(item.end || 0)}. Be concise and focused on editing decisions.`
+      }, {
+        role: 'assistant',
+        content: `Clip: ${item.name}. Ask me about placement, timing, or narrative function.`
+      }];
+    }
+    
+    editor.innerHTML = `
+      <div class="chat-messages" id="chat-messages-${index}"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input-${index}" placeholder="Ask about this clip..." />
+        <button id="chat-send-${index}">SEND</button>
+      </div>
+    `;
+    
+    // Stop propagation on editor to prevent auto-close
+    editor.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    
+    itemDiv.querySelector('.item-content').appendChild(editor);
+    
+    // Render existing messages
+    renderChatMessages(index);
+    
+    // Wire up send button
+    const input = editor.querySelector(`#chat-input-${index}`);
+    const sendBtn = editor.querySelector(`#chat-send-${index}`);
+    
+    const sendMessage = async () => {
+      const message = input.value.trim();
+      if(!message) return;
+      
+      // Add user message
+      collection[index].chatHistory.push({
+        role: 'user',
+        content: message
+      });
+      
+      input.value = '';
+      renderChatMessages(index);
+      
+      // Get API key from localStorage
+      const apiKey = localStorage.getItem('openai_api_key');
+      
+      if(!apiKey){
+        // Simulated response
+        setTimeout(() => {
+          collection[index].chatHistory.push({
+            role: 'assistant',
+            content: `[SIMULATION] Regarding "${item.name}": ${getSimulatedResponse(message, item)}`
+          });
+          renderChatMessages(index);
+        }, 500);
+        return;
+      }
+      
+      // Real OpenAI API call
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: collection[index].chatHistory,
+            max_tokens: 150,
+            temperature: 0.7
+          })
+        });
+        
+        const data = await response.json();
+        
+        if(data.choices && data.choices[0]){
+          collection[index].chatHistory.push({
+            role: 'assistant',
+            content: data.choices[0].message.content
+          });
+          renderChatMessages(index);
+        }
+      } catch(error){
+        console.error('OpenAI API error:', error);
+        collection[index].chatHistory.push({
+          role: 'system',
+          content: 'API error. Check console or use simulation mode.'
+        });
+        renderChatMessages(index);
+      }
+    };
+    
+    sendBtn.onclick = sendMessage;
+    input.onkeydown = (e) => {
+      if(e.key === 'Enter') sendMessage();
+    };
+    
+    input.focus();
+  }
+  
+  function renderChatMessages(index){
+    const messagesDiv = document.getElementById(`chat-messages-${index}`);
+    if(!messagesDiv) return;
+    
+    const item = collection[index];
+    if(!item.chatHistory) return;
+    
+    messagesDiv.innerHTML = item.chatHistory
+      .filter(msg => msg.role !== 'system' || msg.content.includes('API error'))
+      .map(msg => {
+        const className = msg.role === 'user' ? 'user' : msg.role === 'system' ? 'system' : 'agent';
+        return `<div class="chat-msg ${className}">${msg.content}</div>`;
+      }).join('');
+    
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+  
+  function getSimulatedResponse(message, item){
+    const responses = [
+      `This clip works at ${secondsToTimecode(item.start || 0)} because it establishes context.`,
+      `Consider the ${item.tags[0] || 'thematic'} elements when placing this.`,
+      `The timing (${secondsToTimecode(item.start || 0)} - ${secondsToTimecode(item.end || 0)}) creates natural pacing.`,
+      `What comes before this clip? That affects its impact.`,
+      `This moment needs breathing room. Don't rush the cut.`
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+  
+  function renderFeedChatMessages(index){
+    const messagesDiv = document.getElementById(`chat-messages-${index}`);
+    if(!messagesDiv || !mediaLibrary[index]) return;
+    
+    const item = mediaLibrary[index];
+    if(!item.chatHistory) return;
+    
+    messagesDiv.innerHTML = item.chatHistory
+      .filter(msg => msg.role !== 'system' || msg.content.includes('API error'))
+      .map(msg => {
+        const className = msg.role === 'user' ? 'user' : msg.role === 'system' ? 'system' : 'agent';
+        return `<div class="card-chat-msg ${className}">${msg.content}</div>`;
+      }).join('');
+    
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+  
+  // Timeline Editor - Edit times, notes, URLs, swap media
+  function toggleTimelineEditor(itemDiv, index){
+    const existing = itemDiv.querySelector('.timeline-editor');
+    if(existing){
+      existing.remove();
+      return;
+    }
+    
+    const item = collection[index];
+    const editor = document.createElement('div');
+    editor.className = 'timeline-editor open';
+    
+    const startTime = secondsToTimecode(item.start || 0);
+    const endTime = secondsToTimecode(item.end || 0);
+    const maxSeconds = item.end || 300;
+    
+    editor.innerHTML = `
+      <div class="timeline-label">TIMELINE (MM:SS)</div>
+      <div class="timeline-controls">
+        <input type="text" class="time-input" id="start-${index}" value="${startTime}" placeholder="00:00">
+        <input type="range" class="time-slider" id="slider-${index}" min="0" max="${maxSeconds}" value="${item.start || 0}" step="1">
+        <input type="text" class="time-input" id="end-${index}" value="${endTime}" placeholder="00:00">
+      </div>
+      <div class="timeline-label">NOTES</div>
+      <textarea class="notes-area" id="notes-${index}" placeholder="Add editing notes, comments, or instructions...">${item.notes || ''}</textarea>
+      <div class="timeline-label">REFERENCE URL</div>
+      <input type="text" class="url-input" id="url-${index}" value="${item.referenceUrl || ''}" placeholder="https://...">
+      <div class="timeline-actions">
+        <button class="action-btn" id="save-${index}">SAVE</button>
+        <button class="action-btn" id="swap-${index}">SWAP MEDIA</button>
+        <button class="action-btn" id="cancel-${index}">CANCEL</button>
+      </div>
+    `;
+    
+    itemDiv.querySelector('.item-content').appendChild(editor);
+    
+    // Wire up controls
+    const startInput = editor.querySelector(`#start-${index}`);
+    const endInput = editor.querySelector(`#end-${index}`);
+    const slider = editor.querySelector(`#slider-${index}`);
+    const notesArea = editor.querySelector(`#notes-${index}`);
+    const urlInput = editor.querySelector(`#url-${index}`);
+    
+    // Slider updates start time
+    slider.oninput = () => {
+      const seconds = parseInt(slider.value);
+      startInput.value = secondsToTimecode(seconds);
+    };
+    
+    // Time inputs update on blur
+    startInput.onblur = () => {
+      const seconds = timecodeToSeconds(startInput.value);
+      startInput.value = secondsToTimecode(seconds);
+      slider.value = seconds;
+    };
+    
+    endInput.onblur = () => {
+      const seconds = timecodeToSeconds(endInput.value);
+      endInput.value = secondsToTimecode(seconds);
+    };
+    
+    // Save button
+    editor.querySelector(`#save-${index}`).onclick = () => {
+      collection[index].start = timecodeToSeconds(startInput.value);
+      collection[index].end = timecodeToSeconds(endInput.value);
+      collection[index].notes = notesArea.value.trim();
+      collection[index].referenceUrl = urlInput.value.trim();
+      
+      // Update embed URL with new times
+      if(collection[index].videoId){
+        collection[index].embedUrl = `https://www.youtube.com/embed/${collection[index].videoId}?autoplay=1&mute=1&loop=1&playlist=${collection[index].videoId}&start=${collection[index].start}&end=${collection[index].end}`;
+      }
+      
+      updateCollection();
+      console.log('Timeline saved:', collection[index]);
+    };
+    
+    // Swap media button
+    editor.querySelector(`#swap-${index}`).onclick = () => {
+      const newUrl = prompt('Enter new YouTube URL or video ID:');
+      if(newUrl){
+        const videoId = parseYouTubeUrl(newUrl) || newUrl;
+        collection[index].videoId = videoId;
+        collection[index].embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&start=${collection[index].start || 0}&end=${collection[index].end || 0}`;
+        updateCollection();
+        console.log('Media swapped:', videoId);
+      }
+    };
+    
+    // Cancel button
+    editor.querySelector(`#cancel-${index}`).onclick = () => {
+      editor.remove();
+    };
+  }
+  
+  // Label input
+  function showLabelInput(itemDiv, index){
+    const existing = itemDiv.querySelector('.label-input');
+    if(existing){
+      existing.remove();
+      return;
+    }
+    
+    const input = document.createElement('input');
+    input.className = 'label-input';
+    input.type = 'text';
+    input.placeholder = 'Label (Opening, Act 2, Climax)';
+    input.value = collection[index].label || '';
+    
+    input.onkeydown = (e) => {
+      if(e.key === 'Enter'){
+        collection[index].label = input.value.trim();
+        updateCollection();
+        console.log('Label saved:', collection[index].label);
+      }
+      if(e.key === 'Escape'){
+        input.remove();
+      }
+    };
+    
+    input.onblur = () => {
+      collection[index].label = input.value.trim();
+      updateCollection();
+    };
+    
+    itemDiv.querySelector('.item-content').appendChild(input);
+    input.focus();
+  }
+  
+  // --- KEYBOARD ---
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowUp') nextTV();
+    if(e.key === 'ArrowDown') prevTV();
+    if(e.key === 'ArrowRight') acceptTV();
+    if(e.key === 'ArrowLeft') rejectTV();
+    if(e.key === 'c') toggleCollection();
+  });
+  
+  // --- EXPORT FUNCTIONS ---
+  function exportAsA3(){
+    // A3 format: EDL-style text with all metadata
+    let output = '# TV COLLECTION EXPORT\n';
+    output += `# Generated: ${new Date().toISOString()}\n`;
+    output += `# Total Clips: ${collection.length}\n\n`;
+    output += '=' .repeat(80) + '\n\n';
+    
+    collection.forEach((item, i) => {
+      const num = String(i + 1).padStart(3, '0');
+      const label = item.label ? ` [${item.label}]` : '';
+      const duration = item.end && item.start ? item.end - item.start : 0;
+      
+      output += `CLIP ${num}: ${item.name}${label}\n`;
+      output += `${'─'.repeat(80)}\n`;
+      output += `ID:       ${item.id}\n`;
+      output += `SOURCE:   https://www.youtube.com/watch?v=${item.videoId}\n`;
+      
+      if(item.start !== undefined){
+        output += `IN:       ${secondsToTimecode(item.start)}\n`;
+        output += `OUT:      ${secondsToTimecode(item.end)}\n`;
+        output += `DURATION: ${secondsToTimecode(duration)}\n`;
+      }
+      
+      output += `TAGS:     ${item.tags.join(', ')}\n`;
+      
+      if(item.referenceUrl){
+        output += `REF URL:  ${item.referenceUrl}\n`;
+      }
+      
+      if(item.notes){
+        output += `NOTES:\n`;
+        output += `  ${item.notes.replace(/\n/g, '\n  ')}\n`;
+      }
+      
+      output += '\n';
+    });
+    
+    downloadFile('collection-edl.txt', output);
+    console.log('Exported EDL format');
+  }
+  
+  function exportAsJSON(){
+    // OTI.json format: Structured data with all editing metadata
+    const oti = {
+      version: '1.0.0',
+      type: 'tv-collection-edl',
+      metadata: {
+        title: 'TV Swiper Collection',
+        created: new Date().toISOString(),
+        count: collection.length,
+        totalDuration: collection.reduce((sum, item) => {
+          return sum + (item.end && item.start ? item.end - item.start : 0);
+        }, 0)
+      },
+      items: collection.map((item, i) => ({
+        index: i + 1,
+        id: item.id,
+        name: item.name,
+        label: item.label || null,
+        tags: item.tags,
+        type: item.type,
+        videoId: item.videoId,
+        embedUrl: item.embedUrl,
+        timeRange: item.start !== undefined ? {
+          start: item.start,
+          end: item.end,
+          duration: item.end - item.start,
+          inPoint: secondsToTimecode(item.start),
+          outPoint: secondsToTimecode(item.end)
+        } : null,
+        filepath: `https://www.youtube.com/watch?v=${item.videoId}${item.start !== undefined ? `&t=${item.start}s` : ''}`,
+        notes: item.notes || null,
+        referenceUrl: item.referenceUrl || null,
+        accepted: item.accepted,
+        modified: new Date().toISOString()
+      }))
+    };
+    
+    const json = JSON.stringify(oti, null, 2);
+    downloadFile('collection-oti.json', json);
+    console.log('Exported OTI.json format');
+  }
+  
+  function downloadFile(filename, content){
+    const blob = new Blob([content], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  
+  
+  function toggleSettings(){
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('open');
+  }
+  
+  function saveApiKey(){
+    const input = document.getElementById('api-key-input');
+    const key = input.value.trim();
+    
+    if(key){
+      localStorage.setItem('openai_api_key', key);
+      console.log('API key saved');
+    } else {
+      localStorage.removeItem('openai_api_key');
+      console.log('API key removed - using simulation mode');
+    }
+    
+    toggleSettings();
+  }
+  
+  // --- UI EVENTS ---
+  function init(){
+    initMediaLibrary();
+    showTV(0);
+    document.getElementById('loading').classList.add('hidden');
+    
+    // --- UI EVENTS ---
+    document.getElementById('btn-collection').onclick = toggleCollection;
+    document.getElementById('close-collection').onclick = toggleCollection;
+    document.getElementById('btn-settings').onclick = toggleSettings;
+    document.getElementById('close-settings').onclick = toggleSettings;
+    document.getElementById('save-api-key').onclick = saveApiKey;
+    document.getElementById('export-a3').onclick = exportAsA3;
+    document.getElementById('export-json').onclick = exportAsJSON;
+    
+    // Load saved API key
+    const savedKey = localStorage.getItem('openai_api_key');
+    if(savedKey){
+      document.getElementById('api-key-input').value = savedKey;
+    }
+    
+    console.log(`
+%cTV SWIPER - AI Chat Editor%c
+
+%cNAVIGATION:%c
+↑ / Swipe Up - Next TV
+↓ / Swipe Down - Previous TV
+→ / Swipe Right - Accept (add to collection)
+← / Swipe Left - Reject
+C - Toggle collection
+S - Settings (API key)
+
+%cCHAT (INLINE):%c
+CHAT - Opens inline chat below clip
+  • OpenAI API integration
+  • Context-aware responses
+  • Persistent chat history per clip
+  • Simulation mode (no API key)
+
+%cOTHER ACTIONS:%c
+LABEL - Add structural labels
+VIEW - Jump to clip in feed
+REMOVE - Delete from collection
+:: Handle - Drag to reorder
+
+%cEXPORT:%c
+EDL.txt - Edit decision list with timecodes
+OTI.json - Structured metadata + chat history
+
+%cSETTINGS:%c
+Configure OpenAI API key for real AI chat
+Leave blank for simulation mode
+    `,
+    'color:#0ff;font-size:16px;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', '',
+    'color:#0a84ff;font-weight:bold', ''
+    );
+  }
+  
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(init, 0);
+  } else {
+    window.addEventListener('load', init);
+  }
+  
+})();
+</script>
+</body>
+</html>

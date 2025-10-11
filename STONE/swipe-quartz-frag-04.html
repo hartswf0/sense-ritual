@@ -630,15 +630,28 @@
       background: var(--card); border: 2px solid var(--ink); aspect-ratio: 1; 
       display: grid; grid-template-rows: 1fr auto; position: relative; overflow: hidden; 
       border-radius: 10px; cursor: pointer; /* Enable clicking on the whole item */
+      transition: all 0.2s ease;
+    }
+    .grid-item:nth-child(1), .grid-item:nth-child(2) {
+      border-width: 3px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .grid-item:nth-child(1) .grid-item-visual, .grid-item:nth-child(2) .grid-item-visual {
+      font-size: 32px;
+    }
+    .grid-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
     }
     .grid-item.selected { border-color: var(--info); outline: 2px solid var(--info); outline-offset: 0; } /* Visual for selected item */
     .grid-item.dragging { z-index: 2; transform: scale(1.04); box-shadow: var(--shadow); }
-    .grid-item-visual { display: grid; place-items:center; font-size: 28px; font-weight: 900; color: var(--paper); }
+    .grid-item-visual { display: grid; place-items:center; font-size: 28px; font-weight: 900; color: var(--paper); transition: font-size 0.2s ease; }
     .grid-item-chip { padding: 6px 8px; border-top: 2px solid var(--ink); display: grid; gap: 2px; background: var(--paper); }
     .grid-item-number { font-size: 10px; font-weight: 900; letter-spacing: 1px; }
     .grid-item-name { font-size: 9px; opacity: .8; letter-spacing: .4px; line-height: 1.2; }
     .grid-placeholder { border: 2px dashed var(--ink); border-radius: 10px; }
-    .grid-item-remove { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; background: var(--paper); border: 2px solid var(--ink); display: grid; place-items:center; cursor: pointer; font-weight: 900; font-size: 12px; border-radius: 6px; }
+    .grid-item-remove { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; background: var(--paper); border: 2px solid var(--ink); display: grid; place-items:center; cursor: pointer; font-weight: 900; font-size: 12px; border-radius: 6px; transition: all 0.2s ease; }
+    .grid-item-remove:hover { background: var(--bad); color: var(--paper); border-color: var(--bad); transform: scale(1.1); }
 
     /* CHAT PANEL */
     .chat-mini-profile{ padding:12px; border-bottom:2px solid var(--ink); background:var(--paper); font-size:11px; flex-shrink: 0; }
@@ -887,15 +900,32 @@
   <div class="landing-overlay" id="landingOverlay">
     <div class="landing-title">Sense Ritual</div>
     <div class="landing-subtitle">
-      A procedural rhetoric engine for persuasive film assembly. 
-      Negotiate with autonomous clip agents to build your sequence through dialogue.
+      A system for persuasive film assembly through dialogue with autonomous clip agents.
+    </div>
+    
+    <div style="max-width: 600px; margin: 2rem auto; padding: 0 1.5rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: #fff;">The Ritual</h3>
+      <div style="display: grid; gap: 1rem; text-align: left; font-size: 0.95rem; line-height: 1.6; color: #ccc;">
+        <p><strong style="color: #fff;">1. Encounter</strong> — Swipe through film fragments. Right to collect, left to skip.</p>
+        <p><strong style="color: #fff;">2. Compile</strong> — Transform a fragment into an autonomous agent with rhetorical positions and decision logic.</p>
+        <p><strong style="color: #fff;">3. Negotiate</strong> — Chat with the agent. You have 5 turns to persuade it to join your sequence.</p>
+        <p><strong style="color: #fff;">4. Assemble</strong> — Build your film from the agents who accept your vision.</p>
+      </div>
+      
+      <div style="margin-top: 2rem; padding: 1.25rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+        <p style="font-size: 0.9rem; line-height: 1.6; color: #ddd; margin: 0;">
+          <strong style="color: #F1C40F;">⚡ Quick Start:</strong> Launch in <strong>Simulation Mode</strong> (no API key needed). 
+          The system uses pre-scripted responses to demonstrate the ritual. 
+          For real AI-powered negotiations, configure your OpenAI API key in settings.
+        </p>
+      </div>
     </div>
     
     <div class="landing-buttons">
-      <button class="landing-btn primary" id="landingLaunch">Launch</button>
-      <button class="landing-btn" id="landingHow">How It Works</button>
-      <button class="landing-btn" id="landingAbout">About</button>
+      <button class="landing-btn primary" id="landingLaunch">Begin Ritual</button>
       <button class="landing-btn" id="landingConfig">⚙ Configure API</button>
+      <button class="landing-btn" id="landingHow">Full Documentation</button>
+      <button class="landing-btn" id="landingAbout">About</button>
     </div>
     <div class="landing-credit">Developed by Watson Hartsoe</div>
   </div>
@@ -906,14 +936,25 @@
       <button class="landing-modal-close" onclick="document.getElementById('configModal').classList.remove('visible')">✕</button>
       <h2>API Configuration</h2>
       
-      <p style="color: #ccc; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
-        Configure OpenAI API integration for real AI-powered compilation and chat. 
-        Leave blank to use simulation mode (pre-scripted responses).
-      </p>
+      <div style="background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <p style="color: #F1C40F; font-size: 0.9rem; line-height: 1.6; margin: 0;">
+          <strong>🎭 Simulation Mode (Default)</strong><br>
+          No API key needed. The system demonstrates the ritual using pre-scripted agent responses. 
+          Perfect for understanding how the system works.
+        </p>
+      </div>
+      
+      <div style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <p style="color: #2ECC71; font-size: 0.9rem; line-height: 1.6; margin: 0;">
+          <strong>🤖 AI Mode (Advanced)</strong><br>
+          Requires OpenAI API key. Agents use GPT-4 to generate dynamic, context-aware responses. 
+          Each negotiation becomes unique and unpredictable.
+        </p>
+      </div>
       
       <div class="landing-config">
         <div class="config-group">
-          <label class="config-label">OpenAI API Key</label>
+          <label class="config-label">OpenAI API Key (Optional)</label>
           <input 
             type="password" 
             id="landingApiKey" 
@@ -921,21 +962,20 @@
             placeholder="sk-proj-..."
           />
           <div class="config-info">
-            Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #3498DB;">platform.openai.com</a>
+            Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #3498DB; text-decoration: underline;">platform.openai.com/api-keys</a>
           </div>
         </div>
         
         <label class="config-toggle">
           <input type="checkbox" id="landingSimulate" checked />
-          <span class="config-toggle-label">Use Simulation Mode (No API calls)</span>
+          <span class="config-toggle-label">Use Simulation Mode</span>
         </label>
         <div class="config-info" style="margin-top: -0.5rem;">
-          When enabled, the system uses pre-scripted responses instead of calling OpenAI. 
-          Uncheck this if you want to use your API key.
+          Uncheck this box only if you have entered an API key above and want to use real AI.
         </div>
         
-        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-          <button class="test-btn" id="testApiBtn">Test Connection</button>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+          <button class="test-btn" id="testApiBtn">Test API Key</button>
           <button class="landing-btn primary" id="saveConfigBtn" style="margin: 0; flex: 1;">Save & Close</button>
         </div>
         
@@ -946,28 +986,316 @@
 
   <!-- HOW IT WORKS MODAL -->
   <div class="landing-modal" id="howModal">
-    <div class="landing-modal-content">
+    <div class="landing-modal-content" style="max-width: 900px; padding: 3rem;">
       <button class="landing-modal-close" onclick="document.getElementById('howModal').classList.remove('visible')">✕</button>
-      <h2>How It Works</h2>
       
-      <h3>Practical Steps</h3>
-      <p><strong>1. Encounter:</strong> Swipe through film fragments. Right to collect, left to skip. Each clip is a potential agent in your sequence.</p>
+      <div style="border-left: 4px solid #000; padding-left: 2rem; margin-bottom: 3rem;">
+        <h2 style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.02em; margin: 0 0 0.5rem 0;">DOCUMENTATION</h2>
+        <p style="font-size: 1rem; color: #666; margin: 0; font-weight: 400;">Sense Ritual — Procedural Rhetoric Engine</p>
+      </div>
       
-      <p><strong>2. Compilation:</strong> Select a fragment from your collection. Choose a compiler strategy (Stanislavski, PlotDynamics, etc.) and compile it into an autonomous agent with its own rhetorical position, vulnerabilities, and decision logic.</p>
+      <nav style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 4rem; padding: 2rem; background: #f5f5f5; border: 1px solid #ddd;">
+        <a href="#tutorial" style="color: #000; text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='transparent'">Tutorial</a>
+        <a href="#ui-guide" style="color: #000; text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='transparent'">Interface</a>
+        <a href="#negotiation" style="color: #000; text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='transparent'">Examples</a>
+        <a href="#compilers" style="color: #000; text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='transparent'">Compilers</a>
+        <a href="#theory" style="color: #000; text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='transparent'">Theory</a>
+      </nav>
       
-      <p><strong>3. Negotiation:</strong> Chat with the compiled agent. You have 5 turns to persuade it to join your film sequence. Reference its context, quote, tags, and temporal window. The agent evaluates your pitch based on narrative fit, thematic resonance, and temporal continuity.</p>
+      <section id="tutorial" style="margin-bottom: 4rem;">
+        <h3 style="font-size: 1.75rem; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 2rem 0; border-bottom: 3px solid #000; padding-bottom: 0.5rem;">Tutorial</h3>
+        
+        <div style="display: grid; gap: 2.5rem;">
+          <div style="border-left: 3px solid #000; padding-left: 1.5rem;">
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; letter-spacing: 0.03em;">01 — Encounter</h4>
+            <p style="margin: 0 0 0.75rem 0; line-height: 1.6; color: #333;">Film fragment cards display video player, title, quote, tags, and time codes.</p>
+            <dl style="margin: 0; display: grid; gap: 0.5rem;">
+              <div style="display: grid; grid-template-columns: 120px 1fr; gap: 1rem; align-items: baseline;">
+                <dt style="font-weight: 700; font-size: 0.85rem;">Swipe Right</dt>
+                <dd style="margin: 0; color: #666;">Collect fragment</dd>
+              </div>
+              <div style="display: grid; grid-template-columns: 120px 1fr; gap: 1rem; align-items: baseline;">
+                <dt style="font-weight: 700; font-size: 0.85rem;">Swipe Left</dt>
+                <dd style="margin: 0; color: #666;">Skip fragment</dd>
+              </div>
+              <div style="display: grid; grid-template-columns: 120px 1fr; gap: 1rem; align-items: baseline;">
+                <dt style="font-weight: 700; font-size: 0.85rem;">Swipe Up</dt>
+                <dd style="margin: 0; color: #666;">View full video</dd>
+              </div>
+              <div style="display: grid; grid-template-columns: 120px 1fr; gap: 1rem; align-items: baseline;">
+                <dt style="font-weight: 700; font-size: 0.85rem;">Swipe Down</dt>
+                <dd style="margin: 0; color: #666;">Mark for later</dd>
+              </div>
+            </dl>
+          </div>
+          
+          <div style="border-left: 3px solid #000; padding-left: 1.5rem;">
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; letter-spacing: 0.03em;">02 — Collection</h4>
+            <p style="margin: 0 0 0.75rem 0; line-height: 1.6; color: #333;">Access via ⊞ button. Two view modes available.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+              <div>
+                <p style="font-weight: 700; margin: 0 0 0.5rem 0; font-size: 0.9rem;">List View</p>
+                <p style="margin: 0; font-size: 0.85rem; color: #666;">Detailed info with actions</p>
+              </div>
+              <div>
+                <p style="font-weight: 700; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Grid View</p>
+                <p style="margin: 0; font-size: 0.85rem; color: #666;">Visual matrix, drag to reorder</p>
+              </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #f9f9f9; border: 1px solid #ddd;">
+              <p style="font-weight: 700; margin: 0 0 0.75rem 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Status</p>
+              <div style="display: grid; gap: 0.5rem; font-size: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;"><span style="width: 12px; height: 12px; background: #ffa500; display: inline-block;"></span><span style="font-weight: 700;">PENDING</span><span style="color: #666;">Not compiled</span></div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;"><span style="width: 12px; height: 12px; background: #3498DB; display: inline-block;"></span><span style="font-weight: 700;">COMPILED</span><span style="color: #666;">Agent ready</span></div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;"><span style="width: 12px; height: 12px; background: #2ECC71; display: inline-block;"></span><span style="font-weight: 700;">JOINED</span><span style="color: #666;">Accepted pitch</span></div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;"><span style="width: 12px; height: 12px; background: #E74C3C; display: inline-block;"></span><span style="font-weight: 700;">UNMATCHED</span><span style="color: #666;">Rejected pitch</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="border-left: 3px solid #000; padding-left: 1.5rem;">
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; letter-spacing: 0.03em;">03 — Compilation</h4>
+            <p style="margin: 0 0 0.75rem 0; line-height: 1.6; color: #333;">Access via ∞ button. Transform fragment into autonomous agent.</p>
+            <ol style="margin: 1rem 0 0 0; padding-left: 1.5rem; display: grid; gap: 0.5rem; color: #666; line-height: 1.6;">
+              <li>Select fragment from collection</li>
+              <li>Choose compiler strategy</li>
+              <li>Add hydration hints (optional)</li>
+              <li>Execute compilation</li>
+            </ol>
+          </div>
+          
+          <div style="border-left: 3px solid #000; padding-left: 1.5rem;">
+            <h4 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; letter-spacing: 0.03em;">04 — Negotiation</h4>
+            <p style="margin: 0 0 0.75rem 0; line-height: 1.6; color: #333;">Access via ◊ button. Five turns to persuade agent.</p>
+            <div style="margin-top: 1rem; padding: 1rem; background: #f9f9f9; border: 1px solid #ddd;">
+              <div style="display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem; font-size: 0.85rem;">
+                <span style="font-weight: 700;">Turn Limit</span><span style="color: #666;">5 maximum</span>
+                <span style="font-weight: 700;">Conviction Meter</span><span style="color: #666;">0-100% progress indicator</span>
+                <span style="font-weight: 700;">Final Decision</span><span style="color: #666;">JOINED or UNMATCHED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       
-      <p><strong>4. Decision:</strong> After 5 turns, the agent decides: <strong>Join</strong> (matched) or <strong>Unmatch</strong> (rejected). Conviction builds or erodes based on your rhetorical moves.</p>
+      <div style="height: 3px; background: #000; margin: 3rem 0;"></div>
       
-      <h3>Procedural Rhetoric</h3>
-      <p>This is not a database query interface. It's a <strong>persuasive game</strong> where clips have agency. Each fragment becomes a procedural argument—you must sense its conceptual core and perform the ritual of persuasion through language.</p>
+      <section id="ui-guide" style="margin-bottom: 4rem;">
+        <h3 style="font-size: 1.75rem; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 2rem 0; border-bottom: 3px solid #000; padding-bottom: 0.5rem;">Interface</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+          <div style="padding: 1.5rem; background: #f9f9f9; border: 1px solid #ddd;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; margin: 0 0 1rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Menu</h4>
+            <dl style="margin: 0; display: grid; gap: 0.75rem; font-size: 0.85rem;">
+              <div><dt style="font-weight: 700;">◊</dt><dd style="margin: 0; color: #666;">Chat / Matches</dd></div>
+              <div><dt style="font-weight: 700;">⊞</dt><dd style="margin: 0; color: #666;">Collection</dd></div>
+              <div><dt style="font-weight: 700;">∞</dt><dd style="margin: 0; color: #666;">Prompt Lab</dd></div>
+              <div><dt style="font-weight: 700;">⚙</dt><dd style="margin: 0; color: #666;">Settings</dd></div>
+            </dl>
+            <p style="margin: 1rem 0 0 0; font-size: 0.75rem; color: #999; border-top: 1px solid #ddd; padding-top: 0.75rem;">Press M to toggle visibility</p>
+          </div>
+          
+          <div style="padding: 1.5rem; background: #f9f9f9; border: 1px solid #ddd;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; margin: 0 0 1rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Collection</h4>
+            <dl style="margin: 0; display: grid; gap: 0.75rem; font-size: 0.85rem;">
+              <div><dt style="font-weight: 700;">View Toggle</dt><dd style="margin: 0; color: #666;">List / Grid modes</dd></div>
+              <div><dt style="font-weight: 700;">Filters</dt><dd style="margin: 0; color: #666;">Status, category</dd></div>
+              <div><dt style="font-weight: 700;">Actions</dt><dd style="margin: 0; color: #666;">Chat, remove</dd></div>
+            </dl>
+          </div>
+          
+          <div style="padding: 1.5rem; background: #f9f9f9; border: 1px solid #ddd;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; margin: 0 0 1rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Grid</h4>
+            <dl style="margin: 0; display: grid; gap: 0.75rem; font-size: 0.85rem;">
+              <div><dt style="font-weight: 700;">Drag & Drop</dt><dd style="margin: 0; color: #666;">Reorder sequence</dd></div>
+              <div><dt style="font-weight: 700;">Visual Hierarchy</dt><dd style="margin: 0; color: #666;">Top 2 emphasized</dd></div>
+              <div><dt style="font-weight: 700;">Audio</dt><dd style="margin: 0; color: #666;">Cinema feedback</dd></div>
+            </dl>
+          </div>
+        </div>
+      </section>
       
-      <p>The system uses <strong>concept-driven compilation</strong>: tags, quotes, and categories generate rhetorical positions (vulnerability, need, dimensional tensions, failure modes). You're not selecting clips; you're <strong>convincing autonomous agents</strong> to participate in your vision.</p>
+      <div style="height: 3px; background: #000; margin: 3rem 0;"></div>
       
-      <h3>Sensing & Ritual</h3>
-      <p>The interface demands <strong>attunement</strong>: read the fragment's essence, wound, and latent axes. The chat is a <strong>ritual space</strong> where you perform persuasion through grounded, specific language tied to the clip's anchors (quote text, named entities, time codes).</p>
+      <section id="negotiation" style="margin-bottom: 4rem;">
+        <h3 style="font-size: 1.75rem; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 2rem 0; border-bottom: 3px solid #000; padding-bottom: 0.5rem;">Negotiation Examples</h3>
+        
+        <div style="margin-bottom: 3rem;">
+          <h4 style="font-size: 1.2rem; font-weight: 700; margin: 0 0 1.5rem 0;">Case Study 01 — Successful Persuasion</h4>
+          
+          <div style="padding: 1.5rem; background: #f9f9f9; border: 1px solid #ddd; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem; font-size: 0.85rem;">
+              <span style="font-weight: 700;">Fragment</span><span style="color: #666;">Surveillance State</span>
+              <span style="font-weight: 700;">Category</span><span style="color: #666;">Concept</span>
+              <span style="font-weight: 700;">Tags</span><span style="color: #666;">privacy, control, panopticon</span>
+              <span style="font-weight: 700;">Compiler</span><span style="color: #666;">Stanislavski</span>
+              <span style="font-weight: 700;">Essence</span><span style="color: #666;">The Watcher Who Fears Being Watched</span>
+              <span style="font-weight: 700;">Wound</span><span style="color: #666;">Exposure of its own mechanisms</span>
+            </div>
+          </div>
+          
+          <div style="display: grid; gap: 1.5rem;">
+            <div style="border-left: 4px solid #000; padding-left: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Turn 01</span>
+                <span style="font-size: 0.75rem; color: #999;">Conviction: 0% → 35%</span>
+              </div>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #fff; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6;">"Your quote mentions 'the panopticon effect'—I want to place you early in the sequence to establish the film's central tension: who watches the watchers?"</p>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #f9f9f9; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6; font-style: italic;">"Interesting. You're acknowledging my core paradox. But why should I trust you won't reduce me to a simple villain?"</p>
+              <div style="padding: 1rem; background: #f0f0f0; border: 1px solid #ccc; font-size: 0.8rem;">
+                <p style="margin: 0; font-weight: 700; margin-bottom: 0.5rem;">Reasoning:</p>
+                <p style="margin: 0; color: #666; line-height: 1.5;">+35% — Referenced specific quote text ("panopticon effect"). Identified core tension (watcher/watched paradox). Proposed narrative function (establish tension). Agent recognizes conceptual engagement but remains skeptical of reductive treatment.</p>
+              </div>
+            </div>
+            
+            <div style="border-left: 4px solid #000; padding-left: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Turn 03</span>
+                <span style="font-size: 0.75rem; color: #999;">Conviction: 35% → 72%</span>
+              </div>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #fff; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6;">"I'm not making you a villain. I'm using your vulnerability—the fear of exposure—to create dramatic irony. The audience will see your mechanisms before you realize they're visible."</p>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #f9f9f9; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6; font-style: italic;">"You've sensed my wound. That's... compelling. Show me how this irony serves the larger narrative."</p>
+              <div style="padding: 1rem; background: #f0f0f0; border: 1px solid #ccc; font-size: 0.8rem;">
+                <p style="margin: 0; font-weight: 700; margin-bottom: 0.5rem;">Reasoning:</p>
+                <p style="margin: 0; color: #666; line-height: 1.5;">+37% — Directly addressed agent's wound (fear of exposure). Explained rhetorical strategy (dramatic irony). Demonstrated understanding of agent's vulnerability. Major conviction increase due to wound recognition.</p>
+              </div>
+            </div>
+            
+            <div style="border-left: 4px solid #000; padding-left: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Turn 05</span>
+                <span style="font-size: 0.75rem; color: #999;">Conviction: 72% → 94%</span>
+              </div>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #fff; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6;">"Your timestamp (2:15-2:50) shows the surveillance grid. I'll follow you with a fragment about resistance movements at 3:10. The temporal gap creates suspense—what happens in those 20 seconds? The audience fills it with dread."</p>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #2ECC71; color: #fff; border: 1px solid #27AE60; font-size: 0.9rem; line-height: 1.6; font-weight: 700;">JOINED — "You understand my function. I'll anchor your sequence."</p>
+              <div style="padding: 1rem; background: #f0f0f0; border: 1px solid #ccc; font-size: 0.8rem;">
+                <p style="margin: 0; font-weight: 700; margin-bottom: 0.5rem;">Reasoning:</p>
+                <p style="margin: 0; color: #666; line-height: 1.5;">+22% — Cited specific timestamps (2:15-2:50, 3:10). Explained temporal logic and sequencing. Described audience experience (suspense, dread). Demonstrated complete understanding of fragment's structural role. Threshold exceeded (>80%), agent accepts.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 3rem;">
+          <h4 style="font-size: 1.2rem; font-weight: 700; margin: 0 0 1.5rem 0;">Case Study 02 — Failed Persuasion</h4>
+          
+          <div style="display: grid; gap: 1.5rem;">
+            <div style="border-left: 4px solid #ccc; padding-left: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Turn 01</span>
+                <span style="font-size: 0.75rem; color: #999;">Conviction: 0% → 15%</span>
+              </div>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #fff; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6;">"I think you'd be great in my film about technology."</p>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #f9f9f9; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6; font-style: italic;">"That's vague. What specifically about me fits your vision?"</p>
+              <div style="padding: 1rem; background: #f0f0f0; border: 1px solid #ccc; font-size: 0.8rem;">
+                <p style="margin: 0; font-weight: 700; margin-bottom: 0.5rem;">Reasoning:</p>
+                <p style="margin: 0; color: #666; line-height: 1.5;">+15% — Generic statement with no specifics. No reference to tags, quote, or category. "Technology" is too broad. Agent detects lack of engagement. Minimal conviction increase (courtesy baseline).</p>
+              </div>
+            </div>
+            
+            <div style="border-left: 4px solid #ccc; padding-left: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Turn 03</span>
+                <span style="font-size: 0.75rem; color: #999;">Conviction: 15% → 8%</span>
+              </div>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #fff; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6;">"You have good visuals and the quote is interesting."</p>
+              <p style="margin: 0 0 0.75rem 0; padding: 1rem; background: #f9f9f9; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.6; font-style: italic;">"Generic praise doesn't persuade me. You haven't engaged with my conceptual core."</p>
+              <div style="padding: 1rem; background: #f0f0f0; border: 1px solid #ccc; font-size: 0.8rem;">
+                <p style="margin: 0; font-weight: 700; margin-bottom: 0.5rem;">Reasoning:</p>
+                <p style="margin: 0; color: #666; line-height: 1.5;">-7% — Surface-level aesthetic praise. No engagement with essence or wound. "Interesting" is meaningless. Agent loses trust. Conviction decreases.</p>
+              </div>
+            </div>
+            
+            <div style="border-left: 4px solid #ccc; padding-left: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Final</span>
+                <span style="font-size: 0.75rem; color: #999;">Conviction: 8%</span>
+              </div>
+              <p style="margin: 0; padding: 1rem; background: #E74C3C; color: #fff; border: 1px solid #C0392B; font-size: 0.9rem; line-height: 1.6; font-weight: 700;">UNMATCHED — "You never addressed my wound or need. I don't trust your vision."</p>
+              <div style="padding: 1rem; background: #f0f0f0; border: 1px solid #ccc; font-size: 0.8rem;">
+                <p style="margin: 0; font-weight: 700; margin-bottom: 0.5rem;">Reasoning:</p>
+                <p style="margin: 0; color: #666; line-height: 1.5;">Threshold not met (<80%). No wound recognition. No temporal logic. No narrative function explained. Agent rejects.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="padding: 2rem; background: #000; color: #fff;">
+          <h4 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem 0; text-transform: uppercase; letter-spacing: 0.05em;">Persuasion Criteria</h4>
+          <dl style="margin: 0; display: grid; gap: 1rem; font-size: 0.85rem;">
+            <div style="border-left: 2px solid #fff; padding-left: 1rem;">
+              <dt style="font-weight: 700; margin-bottom: 0.25rem;">Specificity</dt>
+              <dd style="margin: 0; opacity: 0.8;">Quote text, tags, time codes, category</dd>
+            </div>
+            <div style="border-left: 2px solid #fff; padding-left: 1rem;">
+              <dt style="font-weight: 700; margin-bottom: 0.25rem;">Wound Recognition</dt>
+              <dd style="margin: 0; opacity: 0.8;">Address vulnerability directly</dd>
+            </div>
+            <div style="border-left: 2px solid #fff; padding-left: 1rem;">
+              <dt style="font-weight: 700; margin-bottom: 0.25rem;">Narrative Function</dt>
+              <dd style="margin: 0; opacity: 0.8;">Explain role in larger sequence</dd>
+            </div>
+            <div style="border-left: 2px solid #fff; padding-left: 1rem;">
+              <dt style="font-weight: 700; margin-bottom: 0.25rem;">Temporal Logic</dt>
+              <dd style="margin: 0; opacity: 0.8;">Justify position and timing</dd>
+            </div>
+            <div style="border-left: 2px solid #fff; padding-left: 1rem;">
+              <dt style="font-weight: 700; margin-bottom: 0.25rem;">Conceptual Attunement</dt>
+              <dd style="margin: 0; opacity: 0.8;">Speak to essence, not aesthetics</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
       
-      <p>Generic praise fails. Vague pitches fail. You must <strong>sense the concept's vulnerability</strong> and speak to it directly.</p>
+      <div style="height: 3px; background: #000; margin: 3rem 0;"></div>
+      
+      <h3 id="compilers">⚙️ Compiler Strategies</h3>
+      
+      <h4>Stanislavski (Psychological Realism)</h4>
+      <p><strong>Focus:</strong> Character motivation, emotional truth, inner life</p>
+      <p><strong>Agent Type:</strong> Psychological entities with desires, fears, and contradictions</p>
+      <p><strong>Best For:</strong> Character-driven narratives, emotional arcs, human stories</p>
+      <p><strong>Example Essence:</strong> "The Exile Who Yearns for Home But Fears Return"</p>
+      
+      <h4>PlotDynamics (Structural Function)</h4>
+      <p><strong>Focus:</strong> Narrative position, causal links, story mechanics</p>
+      <p><strong>Agent Type:</strong> Structural components with specific narrative functions</p>
+      <p><strong>Best For:</strong> Plot-heavy films, thrillers, cause-and-effect sequences</p>
+      <p><strong>Example Essence:</strong> "The Inciting Incident That Cannot Be Undone"</p>
+      
+      <h4>StateBureaucracy (Procedural Logic)</h4>
+      <p><strong>Focus:</strong> Rules, permissions, jurisdictional boundaries</p>
+      <p><strong>Agent Type:</strong> Institutional entities with protocols and constraints</p>
+      <p><strong>Best For:</strong> Political films, institutional critique, systems analysis</p>
+      <p><strong>Example Essence:</strong> "The Regulation That Protects By Restricting"</p>
+      
+      <h4>MagicCompiler07 (Hypothetical Thinking)</h4>
+      <p><strong>Focus:</strong> "Magic If" scenarios, counterfactuals, alternative possibilities</p>
+      <p><strong>Agent Type:</strong> Speculative entities exploring "what if?"</p>
+      <p><strong>Best For:</strong> Experimental films, sci-fi, philosophical inquiry</p>
+      <p><strong>Example Essence:</strong> "The Future That Might Have Been"</p>
+      
+      <hr style="margin: 2rem 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
+      
+      <h3 id="theory">🧠 Theoretical Framework</h3>
+      
+      <h4>Procedural Rhetoric</h4>
+      <p>Drawing on Ian Bogost's concept of <strong>procedural rhetoric</strong>—persuasion through rule-based systems—Sense Ritual treats film fragments as entities that must be <strong>convinced</strong> rather than commanded.</p>
+      
+      <h4>Concept-Driven Compilation</h4>
+      <p>Each agent's rhetorical position is <strong>generated from the fragment's semantic context</strong>: tags, quotes, category, temporal position. The system performs concept-driven cultivation—every vulnerability, need, and decision rule grows from the clip's inherent properties.</p>
+      
+      <h4>The Ritual of Sensing</h4>
+      <p>The interface demands <strong>attunement</strong>: you must read the fragment's essence, wound, and latent axes. The chat is a <strong>ritual space</strong> where you perform persuasion through grounded, specific language tied to the clip's anchors.</p>
+      
+      <p><strong>Generic praise fails. Vague pitches fail. You must sense the concept's vulnerability and speak to it directly.</strong></p>
+      
+      <hr style="margin: 2rem 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
+      
+      <p style="text-align: center; color: #999; font-size: 0.9rem;">
+        Developed by <strong>Watson Hartsoe</strong><br>
+        An exploration of procedural rhetoric, persuasive games, and computational film theory
+      </p>
     </div>
   </div>
 
@@ -1588,7 +1916,7 @@
     function buildEmbed(c){
       const videoId = 'BQ2n6SN7gOY'; // Placeholder video ID
       const start = Math.floor(c.start || 0);
-      const end = Math.floor(c.end || start + 30);
+      const end = Math.floor(c.end || start + 35); // +5 seconds for better endings
       return `https://www.youtube.com/embed/${videoId}?start=${start}&end=${end}&playsinline=1&autoplay=1&mute=0&rel=0&modestbranding=1`;
     }
 
@@ -1728,6 +2056,11 @@
     let audioContext = null;
     const getAudioContext = ()=>{ if(!audioContext) audioContext = new (window.AudioContext||window.webkitAudioContext)(); return audioContext; }
     function playSwipeSound(type){ try{ const ctx=getAudioContext(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); const env=(t,f1,f2,d)=>{ o.frequency.setValueAtTime(f1,t); o.frequency.exponentialRampToValueAtTime(f2,t+d); g.gain.setValueAtTime(.18,t); g.gain.exponentialRampToValueAtTime(.01,t+d); o.start(t); o.stop(t+d); }; if(type==='accept') env(now,800,1200,.15); else if(type==='reject') env(now,400,220,.18); else if(type==='info') env(now,600,900,.10); else if(type==='predict') env(now,520,640,.12); }catch(e){} }
+    
+    // Cinema-inspired subtle audio feedback
+    function playCinemaTick(pitch=1){ try{ const ctx=getAudioContext(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=800*pitch; o.type='square'; g.gain.setValueAtTime(.02,now); g.gain.exponentialRampToValueAtTime(.001,now+.04); o.start(now); o.stop(now+.04); }catch(e){} }
+    function playCinemaClick(){ try{ const ctx=getAudioContext(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=200; o.type='square'; g.gain.setValueAtTime(.015,now); g.gain.exponentialRampToValueAtTime(.001,now+.025); o.start(now); o.stop(now+.025); }catch(e){} }
+    function playCinemaSelect(){ try{ const ctx=getAudioContext(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=440; o.type='sine'; g.gain.setValueAtTime(.03,now); g.gain.exponentialRampToValueAtTime(.001,now+.12); o.start(now); o.stop(now+.12); }catch(e){} }
 
     async function swipeRight(fragment){
       createFlash('accept'); playSwipeSound('accept');
@@ -2029,6 +2362,7 @@ ${compilerOptions}`);
                 const fragId = itemEl.dataset.fragId;
                 const fragment = state.story.find(f => f.id === fragId);
                 if (fragment) {
+                    playCinemaSelect();
                     selectFragment(fragment);
                 }
             }
@@ -2037,6 +2371,7 @@ ${compilerOptions}`);
         // Handle remove button within the item
         itemEl.querySelectorAll('.grid-item-remove').forEach(btn=> btn.addEventListener('click', (e)=>{ 
             e.stopPropagation(); // Prevent item selection if remove button is clicked
+            playCinemaClick();
             const fragId = btn.dataset.fragId; 
             const fragIndex = state.story.findIndex(f => f.id === fragId);
             if (fragIndex > -1) {
@@ -2058,13 +2393,17 @@ ${compilerOptions}`);
       let dragItem = null;
       grid.querySelectorAll('.grid-item').forEach(tile=>{
         tile.addEventListener('dragstart', e=>{ 
+            playCinemaTick(1.2);
             tile.classList.add('dragging'); 
             const fragId = tile.dataset.fragId;
             dragItem = state.story.find(f => f.id === fragId);
             e.dataTransfer.effectAllowed='move'; 
         });
         tile.addEventListener('dragend',   ()=>{ 
-            if(dragItem) tile.classList.remove('dragging'); 
+            if(dragItem) {
+              playCinemaTick(0.8);
+              tile.classList.remove('dragging');
+            }
             dragItem=null; 
             saveAppState(); 
             updateCollection(); // Full refresh after dragend 
