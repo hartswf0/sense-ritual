@@ -103,6 +103,64 @@ const state={
   snap:true
 }
 
+// Auto-load all media files from MEDIA folder
+const mediaFiles = [
+  'video_0443d3f46b1f433597e8d9d89469cad8.mp4',
+  'video_06ac4003fedc438588cf48eb594c8f22.mp4',
+  'video_0e770098e193417596602ae22ae3ab30.mp4',
+  'video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4',
+  'video_14c639e88a2c4718aee990049945815c.mp4',
+  'video_219ff5b76d874686bcfecbe4d10f5c83.mp4',
+  'video_27b3377368254f1babcfb96a0c47859a.mp4',
+  'video_29245c98b1904304bdaa5513eb2ddc76.mp4',
+  'video_3250a9cf85244759a18a4db13c37d174.mp4',
+  'video_37ed60eedd054e2aaa8bb1448f65d760.mp4',
+  'video_3ca5a80acfde4d4cbd79d94d7605320d.mp4',
+  'video_3cff4bd16de5427894d5cba1e1e385fb.mp4',
+  'video_4dd2ee3dbd36497084a52af94e3da979.mp4',
+  'video_4e317f6ef333499997fb40ac8257b521.mp4',
+  'video_63ff0f9940cc4592b4441f2154e7d123.mp4',
+  'video_6579a780ae594edb83a690b0dc3468d6.mp4',
+  'video_660de41592134e2489e5e0664ca3ac57.mp4',
+  'video_66eb582f7c3c4322823fce3ab08cd1af.mp4',
+  'video_6b720ebb7d604cf5a1162ade16ef45fa.mp4',
+  'video_7404528be4e546dd96305460876438c3.mp4',
+  'video_7421c0db16f34650b3a4e035793cd128.mp4',
+  'video_742d9608b41f474fbed54ef2f8c408aa.mp4',
+  'video_7a3cebeef6544f778247918c5a820e47.mp4',
+  'video_7b94990ada2744bb8fdc631159bf3e89.mp4',
+  'video_7dd04a1baf2441ff88096efe9cfa9c14.mp4',
+  'video_8040315874d14fd7ab34d1a8960eebb0.mp4',
+  'video_85db0227eea74a2d95191d74497ea214.mp4',
+  'video_8d84e63bb7524b1a850612a7eecd1d1e.mp4',
+  'video_8f1a7f1e1a334cdf9208b5946969b691.mp4',
+  'video_97f853e665434903b8768b5f3430b93d.mp4',
+  'video_98e8654eabe3436e9d44c67916c14d28.mp4',
+  'video_9fc306d9816c48e782063216a09a3a74.mp4',
+  'video_9fd24d09d52e42d5beae9952ddd0444c.mp4',
+  'video_adc91bd7f5384d1297042833675813d9.mp4',
+  'video_ae6bc654fa724459ab6ad31f08342d29.mp4',
+  'video_b3d9fe27233c477292aab4239eed1b08.mp4',
+  'video_b481340670b64d4189f8fe0270436329.mp4',
+  'video_b538c7ec6b634707af8b6a5b4aabdb6f.mp4',
+  'video_b7c4908b702f4d77986d03ccbf4ee9d7.mp4',
+  'video_c02fccca1a264aaf86cddc620b16ca5b.mp4',
+  'video_c1e680e7523647a9ab441d66c0ea8200.mp4',
+  'video_c4906e0b3da24f11be68dde4c4c59cca.mp4',
+  'video_c7387ae6b119498588975e54c3991097.mp4',
+  'video_c9d18827c251421499c0c679665fcb6b.mp4',
+  'video_d119202594d54f6baeb084b9f918682e.mp4',
+  'video_d216d4ed13a74083bc1414427d93b6ef.mp4',
+  'video_d8c1e1812f3f4477ad1ea5afba750261.mp4',
+  'video_ddb407bcc9b24ef9ae0e3dfcfd99fb72.mp4',
+  'video_e12fb3631ca341a78bc30a14f94615b6.mp4',
+  'video_e2a01bc15607456a9abb5a16960969c0.mp4',
+  'video_e7795f8fa691488b99f32331190288fa.mp4',
+  'video_e9e1880a62da45b4b812f68c764e350d.mp4',
+  'video_ea4c944bddee440f9c39fed7d8c0f431.mp4',
+  'video_f3530daa37604db896e2109af55a1c2e.mp4'
+]
+
 state.stack[0].events = buildLayerLedger('years', state.stack[0].domain)
 
 const viz=document.getElementById('viz')
@@ -433,8 +491,68 @@ function loadProject(p){
   render(); toast('Project loaded (re‑import media)')
 }
 
+// ===== Auto-load media files =====
+async function autoLoadMedia(){
+  toast('Loading 54 video files...')
+  let loaded = 0
+  
+  for(const filename of mediaFiles){
+    const url = `MEDIA/${filename}`
+    const el = document.createElement('video')
+    el.src = url
+    el.preload = 'metadata'
+    el.crossOrigin = 'anonymous'
+    el.muted = true
+    
+    // Keep elements around (but not displayed)
+    document.body.appendChild(el)
+    el.style.display = 'none'
+    
+    await new Promise(res => {
+      el.onloadedmetadata = () => {
+        loaded++
+        const id = 'm' + Math.random().toString(36).slice(2)
+        state.media.push({id, type:'video', el, duration:el.duration||0, name:filename})
+        
+        // Auto-create clips distributed across hours layer
+        if(state.stack.length > 0){
+          const L = state.stack.length - 1
+          const layer = state.stack[L]
+          const span = layer.domain[1] - layer.domain[0]
+          const pos = layer.domain[0] + (loaded / mediaFiles.length) * span
+          const lenUnits = Math.min(0.5, el.duration / 3600) // scale to hours
+          const clip = {
+            id: 'c' + Math.random().toString(36).slice(2),
+            layerIndex: L,
+            track: 0,
+            start: pos,
+            end: pos + lenUnits,
+            type: 'video',
+            title: filename.slice(0, 20),
+            color: '#FFC107',
+            mediaId: id,
+            mediaOffset: 0
+          }
+          state.clips.push(clip)
+        }
+        
+        res()
+      }
+      el.onerror = () => res()
+      
+      // Timeout fallback
+      setTimeout(() => res(), 2000)
+    })
+  }
+  
+  render()
+  toast(`Loaded ${loaded} video files`)
+  console.log('✓ Auto-loaded', loaded, 'media files')
+}
+
 // ===== Init =====
 render()
+autoLoadMedia()
 </script>
 </body>
 </html>

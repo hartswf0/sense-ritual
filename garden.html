@@ -89,18 +89,23 @@ body { margin:0; overflow:hidden; background:#000; }
 .recursive-container { flex:1; overflow:hidden; position:relative; }
 .recursive-columns { position:absolute; inset:0; display:flex; transition:transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change:transform; }
 .recursive-column { min-width:100%; height:100%; overflow-y:auto; overflow-x:hidden;
-  padding:20px; display:flex; flex-direction:column; gap:12px; }
-.layer-header { color:#0ff; font-size:14px; font-weight:bold; text-transform:uppercase;
-  padding:8px 12px; border-bottom:1px solid #333; }
-.time-block { background:#0a0a0a; border:1px solid #333; border-radius:4px;
-  padding:12px; cursor:pointer; transition:all 0.2s; }
-.time-block:active { background:#1a1a1a; transform:scale(0.98); }
-.time-block-header { color:#0ff; font-size:11px; font-weight:bold; margin-bottom:8px;
-  display:flex; justify-content:space-between; }
-.time-block-thumbs { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
-.time-block-thumbs.single { grid-template-columns:1fr; }
-.time-thumb { width:100%; aspect-ratio:1; object-fit:cover; border-radius:2px;
-  border:1px solid rgba(0,255,255,0.3); }
+  padding:12px 8px; display:flex; flex-direction:column; gap:6px; }
+.layer-header { color:#0ff; font-size:12px; font-weight:bold; text-transform:uppercase;
+  padding:6px 8px; border-bottom:1px solid #333; position:sticky; top:0; background:#000; z-index:10; }
+.time-lane { width:100%; border:1px solid #0ff; display:flex; flex-direction:column; 
+  background:#000; padding:6px; cursor:pointer; transition:all 0.2s; margin-bottom:4px; }
+.time-lane:hover { transform:scale(1.01); box-shadow:0 0 10px rgba(0,255,255,0.5); }
+.time-lane:active { transform:scale(0.99); }
+.time-lane.playing { background:#0ff; color:#000; border-color:#0ff; }
+.time-lane.playing .lane-header { color:#000; }
+.time-lane.playing .lane-info { color:#000; }
+.time-lane.selected { border:2px solid #0ff; box-shadow:0 0 15px rgba(0,255,255,0.6); }
+.time-lane.connected { border:2px solid rgba(0,255,255,0.4); background:rgba(0,255,255,0.1); }
+.lane-header { font-size:9px; color:#0ff; text-transform:uppercase; 
+  font-weight:bold; margin-bottom:4px; letter-spacing:1px; text-align:center; }
+.lane-thumbs { display:flex; gap:2px; justify-content:center; flex-wrap:wrap; }
+.lane-thumbs img { width:50px; height:50px; object-fit:cover; border:1px solid rgba(0,255,255,0.3); }
+.lane-info { font-size:8px; color:#888; text-align:center; margin-top:4px; }
 .nav-hint { position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
   color:#666; font-size:12px; text-align:center; pointer-events:none; }
 .recursive-nav-arrows { position:absolute; top:50%; transform:translateY(-50%); width:100%;
@@ -155,9 +160,23 @@ body { margin:0; overflow:hidden; background:#000; }
 </div>
 <div class="preview-panel" id="previewPanel">
   <div class="close-preview" onclick="closePreview()">×</div>
-  <video id="previewVideo" controls></video>
+  <div class="preview-title" id="previewTitle">Video Preview</div>
+  <video id="previewVideo"></video>
+  <div class="preview-scrubber" id="previewScrubber">
+    <div class="scrubber-thumbnails" id="scrubberThumbs"></div>
+    <div class="scrubber-progress" id="scrubberProgress"></div>
+    <div class="scrubber-playhead" id="scrubberPlayhead"></div>
+  </div>
+  <div class="temporal-position" id="temporalPosition">
+    <div>Time: <span id="currentTime">0.0s</span> / <span id="totalTime">0.0s</span></div>
+    <div>Scale: <span id="scaleInfo">—</span></div>
+  </div>
+  <textarea class="preview-annotation" id="previewAnnotation" placeholder="Add notes, thoughts, or temporal observations..."></textarea>
   <div class="preview-controls">
-    <button class="preview-btn" onclick="exportEDL()">⤓ EXPORT EDL</button>
+    <button class="preview-btn" onclick="togglePlayPreview()">⏯ Play/Pause</button>
+    <button class="preview-btn" onclick="skipBack()">⏪ -5s</button>
+    <button class="preview-btn" onclick="skipForward()">⏩ +5s</button>
+    <button class="preview-btn" onclick="saveAnnotation()">💾 Save Note</button>
   </div>
 </div>
 <div class="export-menu" id="exportMenu">
@@ -1439,6 +1458,77 @@ function showRecursiveView(){
 function closeRecursiveView(){
   document.getElementById('recursiveView').classList.remove('active');
   playSound('unfocus', 400);
+  
+  // Stop any playing recursive video
+  const previewPanel = document.getElementById('previewPanel');
+  if(previewPanel){
+    const vid = previewPanel.querySelector('video');
+    if(vid) vid.pause();
+  }
+  
+  // Clear playing state and highlights from all lanes
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('playing', 'selected', 'connected');
+  });
+  
+  // Reset selection
+  recursiveSelectedSegment = null;
+}
+
+function highlightCrossLayers(unitStart, unitEnd){
+  console.log('✓ Highlighting cross-layers:', unitStart, '->', unitEnd);
+  
+  // Clear all previous highlights
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('selected', 'connected');
+  });
+  
+  // Highlight all lanes that overlap with this time range
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    const laneStart = parseFloat(lane.dataset.unitStart);
+    const laneEnd = parseFloat(lane.dataset.unitEnd);
+    
+    // Check if this lane overlaps with selected time range
+    const overlaps = laneEnd > unitStart && laneStart < unitEnd;
+    
+    if(overlaps){
+      // Exact match = selected, partial = connected
+      const isExact = Math.abs(laneStart - unitStart) < 0.01 && Math.abs(laneEnd - unitEnd) < 0.01;
+      if(isExact){
+        lane.classList.add('selected');
+      } else {
+        lane.classList.add('connected');
+      }
+    }
+  });
+}
+
+function playRecursiveSegment(segment, laneElement){
+  console.log('✓ Playing segment:', segment.media.title);
+  
+  // Highlight playing lane (like segment strips)
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('playing');
+  });
+  if(laneElement){
+    laneElement.classList.add('playing');
+  }
+  
+  // Use the preview panel to play the video
+  const previewPanel = document.getElementById('previewPanel');
+  const previewVideo = previewPanel.querySelector('video');
+  const previewTitle = previewPanel.querySelector('.preview-title');
+  
+  // Set video source and play
+  previewVideo.src = segment.media.url;
+  previewVideo.currentTime = segment.sourceStart || 0;
+  previewTitle.textContent = `${segment.media.title} (${segment.duration.toFixed(1)}s)`;
+  
+  previewPanel.classList.add('active');
+  previewVideo.play();
+  
+  playSound('focus', 600);
+  haptic(15);
 }
 
 function navigateRecursiveLayer(direction){
@@ -1464,6 +1554,7 @@ function updateRecursiveArrows(){
 }
 
 let recursiveCurrentLayer = 0;
+let recursiveSelectedSegment = null; // Track selected segment for cross-layer highlighting
 
 function renderRecursiveTimeline(){
   const container = document.getElementById('recursiveColumns');
@@ -1490,13 +1581,13 @@ function renderRecursiveTimeline(){
   document.getElementById('recursiveBreadcrumb').textContent =
     layers.map(l => l.label).join(' › ');
   
-  // Create columns for each layer
+  // Create columns for each layer (like sequence viewer but horizontal lanes)
   layers.forEach((layer, layerIdx) => {
     const column = document.createElement('div');
     column.className = 'recursive-column';
     column.dataset.layer = layerIdx;
     
-    // Layer header
+    // Layer header (sticky)
     const header = document.createElement('div');
     header.className = 'layer-header';
     header.textContent = `${layer.label} — ${layer.desc}`;
@@ -1504,7 +1595,7 @@ function renderRecursiveTimeline(){
     
     const unitDuration = baseUnit * (48 / layer.units);
     
-    // Create time blocks for this layer
+    // Create lane for each time unit (like segment strips)
     for(let unitIdx = 0; unitIdx < layer.units; unitIdx++){
       const unitStart = unitIdx * unitDuration;
       const unitEnd = (unitIdx + 1) * unitDuration;
@@ -1523,12 +1614,19 @@ function renderRecursiveTimeline(){
         timeAccum += seg.duration;
       }
       
-      // Only create blocks with content
+      // Only create lanes with content
       if(overlappingSegments.length > 0){
-        const block = document.createElement('div');
-        block.className = 'time-block';
+        const lane = document.createElement('div');
+        lane.className = 'time-lane';
         
-        // Collect all thumbnails in this range
+        // Lane header (like strip-header)
+        const laneHeader = document.createElement('div');
+        laneHeader.className = 'lane-header';
+        const dominant = overlappingSegments[0];
+        laneHeader.textContent = `#${unitIdx + 1} ${dominant.media.title} ${dominant.duration.toFixed(1)}s`;
+        lane.appendChild(laneHeader);
+        
+        // Thumbnails (like thumbnails-grid)
         const allThumbs = [];
         overlappingSegments.forEach(seg => {
           if(seg.thumbnails){
@@ -1538,48 +1636,74 @@ function renderRecursiveTimeline(){
           }
         });
         
-        // Block header
-        const blockHeader = document.createElement('div');
-        blockHeader.className = 'time-block-header';
-        const dominant = overlappingSegments[0];
-        blockHeader.innerHTML = `
-          <span>${layer.label} #${unitIdx + 1}</span>
-          <span style="color:#${dominant.media.color.toString(16).padStart(6,'0')}">${dominant.media.title}</span>
-        `;
-        block.appendChild(blockHeader);
-        
-        // Thumbnails grid
         if(allThumbs.length > 0){
           const thumbsContainer = document.createElement('div');
-          thumbsContainer.className = allThumbs.length === 1 ? 'time-block-thumbs single' : 'time-block-thumbs';
+          thumbsContainer.className = 'lane-thumbs';
           
-          // Show HEAD thumbnail
-          const headImg = document.createElement('img');
-          headImg.className = 'time-thumb';
-          headImg.src = allThumbs[0].toDataURL();
-          headImg.alt = 'Head frame';
-          thumbsContainer.appendChild(headImg);
-          
-          // Show TAIL thumbnail if different
-          if(allThumbs.length > 1){
-            const tailImg = document.createElement('img');
-            tailImg.className = 'time-thumb';
-            tailImg.src = allThumbs[allThumbs.length - 1].toDataURL();
-            tailImg.alt = 'Tail frame';
-            thumbsContainer.appendChild(tailImg);
+          // Show up to 4 thumbnails evenly spaced
+          const step = Math.max(1, Math.floor(allThumbs.length / 4));
+          for(let i = 0; i < Math.min(4, allThumbs.length); i++){
+            const idx = Math.min(i * step, allThumbs.length - 1);
+            const img = document.createElement('img');
+            img.src = allThumbs[idx].toDataURL();
+            img.alt = `Frame ${idx + 1}`;
+            thumbsContainer.appendChild(img);
           }
           
-          block.appendChild(thumbsContainer);
+          lane.appendChild(thumbsContainer);
         }
         
-        // Click to expand/show details
-        block.onclick = () => {
-          haptic(8);
-          playSound('focus', 400 + unitIdx * 20);
-          console.log(`Unit ${unitIdx + 1} of ${layer.label}:`, overlappingSegments);
+        // Lane info
+        const info = document.createElement('div');
+        info.className = 'lane-info';
+        info.textContent = `${unitStart.toFixed(1)}s - ${unitEnd.toFixed(1)}s`;
+        lane.appendChild(info);
+        
+        // Store metadata on lane element for cross-layer highlighting
+        lane.dataset.unitStart = unitStart;
+        lane.dataset.unitEnd = unitEnd;
+        lane.dataset.layerIdx = layerIdx;
+        
+        // Single click: highlight across layers
+        // Double click/tap: play video
+        let clickCount = 0;
+        let clickTimer = null;
+        
+        lane.onclick = (e) => {
+          clickCount++;
+          
+          if(clickCount === 1){
+            // Wait to see if it's a double click
+            clickTimer = setTimeout(() => {
+              // Single click - highlight across layers
+              haptic(8);
+              playSound('move', 400 + unitIdx * 20);
+              console.log(`Selected lane ${unitIdx + 1} of ${layer.label}:`, overlappingSegments);
+              
+              if(overlappingSegments.length > 0){
+                recursiveSelectedSegment = overlappingSegments[0];
+                highlightCrossLayers(unitStart, unitEnd);
+              }
+              
+              clickCount = 0;
+            }, 300);
+          } else if(clickCount === 2){
+            // Double click - play video
+            clearTimeout(clickTimer);
+            haptic(15);
+            playSound('focus', 600);
+            console.log(`Playing lane ${unitIdx + 1} of ${layer.label}:`, overlappingSegments);
+            
+            if(overlappingSegments.length > 0){
+              const segment = overlappingSegments[0];
+              playRecursiveSegment(segment, lane);
+            }
+            
+            clickCount = 0;
+          }
         };
         
-        column.appendChild(block);
+        column.appendChild(lane);
       }
     }
     
