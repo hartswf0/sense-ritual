@@ -33,7 +33,7 @@ body { margin:0; overflow:hidden; background:#000; }
 .dot.on { background:#0ff; box-shadow:0 0 10px #0ff; }
 .bar { position:fixed; bottom:0; left:0; right:0; height:2px; background:#0ff; 
   box-shadow:0 0 10px #0ff; }
-.timeline-player { position:fixed; top:60px; right:0; bottom:0; width:80px; 
+.timeline-player { position:fixed; top:60px; right:100px; bottom:0; width:80px; 
   background:rgba(0,0,0,0.8); border-left:2px solid #0ff; display:none; z-index:5; 
   padding:10px 5px; overflow-y:auto; overflow-x:hidden; }
 .timeline-player.active { display:flex; flex-direction:column; gap:8px; align-items:center; }
@@ -56,16 +56,31 @@ body { margin:0; overflow:hidden; background:#000; }
   text-shadow:0 0 10px #0ff; z-index:10; font-weight:bold; display:none; }
 .seq-count.active { display:block; }
 .preview-panel { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
-  width:90%; max-width:500px; height:60vh; max-height:400px; background:rgba(0,0,0,0.95); border:2px solid #0ff;
-  display:none; z-index:100; padding:20px; }
-.preview-panel.active { display:flex; flex-direction:column; align-items:center; }
-.preview-panel video { width:100%; height:80%; object-fit:contain; background:#000; }
-.preview-controls { display:flex; gap:10px; margin-top:10px; }
-.preview-btn { padding:8px 16px; background:#0ff; color:#000; border:none;
-  cursor:pointer; font-weight:bold; text-transform:uppercase; font-size:11px; }
-.preview-btn:hover { background:#fff; }
+  width:95%; max-width:700px; height:88vh; background:rgba(0,0,0,0.98); border:3px solid #0ff;
+  display:none; z-index:250; padding:20px; box-shadow:0 0 40px rgba(0,255,255,0.5); }
+.preview-panel.active { display:flex; flex-direction:column; }
+.preview-title { color:#0ff; font-size:14px; font-weight:bold; margin-bottom:10px; text-align:center; }
+.preview-panel video { width:100%; height:45%; object-fit:contain; background:#000; border:1px solid #333; }
+.preview-scrubber { width:100%; height:50px; background:#111; border:1px solid #0ff; 
+  margin-top:10px; position:relative; cursor:pointer; overflow:hidden; }
+.scrubber-progress { position:absolute; left:0; top:0; height:100%; background:rgba(0,255,255,0.2); 
+  pointer-events:none; }
+.scrubber-playhead { position:absolute; left:0; top:0; width:3px; height:100%; background:#0ff; 
+  box-shadow:0 0 10px #0ff; pointer-events:none; z-index:2; }
+.scrubber-thumbnails { position:absolute; inset:0; display:flex; pointer-events:none; opacity:0.4; }
+.scrubber-thumb { flex:1; background-size:cover; background-position:center; border-right:1px solid #222; }
+.temporal-position { font-size:10px; color:#888; margin-top:8px; padding:8px; background:#0a0a0a;
+  border:1px solid #222; font-family:monospace; line-height:1.8; }
+.temporal-position span { color:#0ff; font-weight:bold; }
+.preview-annotation { width:100%; margin-top:8px; padding:10px; background:#0a0a0a; border:1px solid #333;
+  color:#0ff; font-size:11px; resize:vertical; min-height:70px; font-family:monospace; }
+.preview-annotation::placeholder { color:#555; }
+.preview-controls { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
+.preview-btn { padding:8px 14px; background:rgba(0,255,255,0.2); color:#0ff; border:1px solid #0ff;
+  cursor:pointer; font-weight:bold; font-size:10px; transition:all 0.2s; }
+.preview-btn:hover { background:#0ff; color:#000; }
 .close-preview { position:absolute; top:10px; right:10px; color:#0ff; cursor:pointer;
-  font-size:24px; }
+  font-size:24px; z-index:10; }
 .segment-strip.playing { background:#0ff; color:#000; }
 .export-menu { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
   background:rgba(0,0,0,0.95); border:2px solid #0ff; padding:20px; z-index:200;
@@ -161,7 +176,7 @@ body { margin:0; overflow:hidden; background:#000; }
 <div class="preview-panel" id="previewPanel">
   <div class="close-preview" onclick="closePreview()">×</div>
   <div class="preview-title" id="previewTitle">Video Preview</div>
-  <video id="previewVideo"></video>
+  <video id="previewVideo" playsinline></video>
   <div class="preview-scrubber" id="previewScrubber">
     <div class="scrubber-thumbnails" id="scrubberThumbs"></div>
     <div class="scrubber-progress" id="scrubberProgress"></div>
@@ -1383,14 +1398,21 @@ function closePreview(){
   // Clear all handlers
   video.onended = null;
   video.ontimeupdate = null;
+  video.removeEventListener('timeupdate', updateScrubber);
   
   video.pause();
   video.src = '';
   panel.classList.remove('active');
   
+  // Clear playing state from segment strips and time lanes
   document.querySelectorAll('.segment-strip').forEach(s => {
     s.classList.remove('playing');
   });
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('playing');
+  });
+  
+  currentPreviewSegment = null;
 }
 
 function exportEDL(){
@@ -1503,8 +1525,13 @@ function highlightCrossLayers(unitStart, unitEnd){
   });
 }
 
+let currentPreviewSegment = null;
+let segmentAnnotations = {}; // Store annotations by segment ID
+
 function playRecursiveSegment(segment, laneElement){
   console.log('✓ Playing segment:', segment.media.title);
+  
+  currentPreviewSegment = segment;
   
   // Highlight playing lane (like segment strips)
   document.querySelectorAll('.time-lane').forEach(lane => {
@@ -1516,19 +1543,147 @@ function playRecursiveSegment(segment, laneElement){
   
   // Use the preview panel to play the video
   const previewPanel = document.getElementById('previewPanel');
-  const previewVideo = previewPanel.querySelector('video');
-  const previewTitle = previewPanel.querySelector('.preview-title');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewTitle = document.getElementById('previewTitle');
+  const scaleInfo = document.getElementById('scaleInfo');
+  const totalTime = document.getElementById('totalTime');
+  const annotation = document.getElementById('previewAnnotation');
   
   // Set video source and play
   previewVideo.src = segment.media.url;
   previewVideo.currentTime = segment.sourceStart || 0;
-  previewTitle.textContent = `${segment.media.title} (${segment.duration.toFixed(1)}s)`;
+  
+  // Update UI
+  previewTitle.textContent = `${segment.media.title}`;
+  totalTime.textContent = segment.duration.toFixed(1) + 's';
+  scaleInfo.textContent = `Film time: ${(segment.sourceStart || 0).toFixed(1)}s - ${((segment.sourceStart || 0) + segment.duration).toFixed(1)}s`;
+  
+  // Load annotation if exists
+  const segmentKey = `${segment.media.url}_${segment.sourceStart}`;
+  annotation.value = segmentAnnotations[segmentKey] || '';
+  
+  // Render thumbnails in scrubber
+  renderScrubberThumbnails(segment);
+  
+  // Set up scrubber interaction
+  setupScrubber(previewVideo);
+  
+  // Update playhead continuously
+  previewVideo.addEventListener('timeupdate', updateScrubber);
   
   previewPanel.classList.add('active');
-  previewVideo.play();
+  
+  // Play with error handling
+  previewVideo.play().then(() => {
+    console.log('✓ Video playing successfully');
+  }).catch(err => {
+    console.error('✗ Video play error:', err);
+    // Try muting and playing again (browser autoplay policy)
+    previewVideo.muted = true;
+    previewVideo.play().then(() => {
+      console.log('✓ Video playing (muted)');
+      // Unmute after a moment
+      setTimeout(() => {
+        previewVideo.muted = false;
+      }, 100);
+    }).catch(err2 => {
+      console.error('✗ Video play failed even when muted:', err2);
+    });
+  });
   
   playSound('focus', 600);
   haptic(15);
+}
+
+function renderScrubberThumbnails(segment){
+  const scrubberThumbs = document.getElementById('scrubberThumbs');
+  scrubberThumbs.innerHTML = '';
+  
+  if(segment.thumbnails && segment.thumbnails.length > 0){
+    // Show up to 10 thumbnails evenly spaced
+    const step = Math.max(1, Math.floor(segment.thumbnails.length / 10));
+    for(let i = 0; i < Math.min(10, segment.thumbnails.length); i++){
+      const idx = Math.min(i * step, segment.thumbnails.length - 1);
+      const thumb = document.createElement('div');
+      thumb.className = 'scrubber-thumb';
+      thumb.style.backgroundImage = `url(${segment.thumbnails[idx].toDataURL()})`;
+      scrubberThumbs.appendChild(thumb);
+    }
+  }
+}
+
+function setupScrubber(video){
+  const scrubber = document.getElementById('previewScrubber');
+  
+  scrubber.onclick = (e) => {
+    const rect = scrubber.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percent = x / rect.width;
+    video.currentTime = video.duration * percent;
+    haptic(5);
+  };
+}
+
+function updateScrubber(){
+  const video = document.getElementById('previewVideo');
+  const progress = document.getElementById('scrubberProgress');
+  const playhead = document.getElementById('scrubberPlayhead');
+  const currentTime = document.getElementById('currentTime');
+  
+  if(!video.duration) return;
+  
+  const percent = (video.currentTime / video.duration) * 100;
+  progress.style.width = percent + '%';
+  playhead.style.left = percent + '%';
+  currentTime.textContent = video.currentTime.toFixed(1) + 's';
+}
+
+function togglePlayPreview(){
+  const video = document.getElementById('previewVideo');
+  if(video.paused){
+    video.play();
+    playSound('move', 400);
+  } else {
+    video.pause();
+    playSound('move', 300);
+  }
+  haptic(8);
+}
+
+function skipBack(){
+  const video = document.getElementById('previewVideo');
+  video.currentTime = Math.max(0, video.currentTime - 5);
+  playSound('move', 350);
+  haptic(8);
+}
+
+function skipForward(){
+  const video = document.getElementById('previewVideo');
+  video.currentTime = Math.min(video.duration, video.currentTime + 5);
+  playSound('move', 450);
+  haptic(8);
+}
+
+function saveAnnotation(){
+  if(!currentPreviewSegment) return;
+  
+  const annotation = document.getElementById('previewAnnotation');
+  const segmentKey = `${currentPreviewSegment.media.url}_${currentPreviewSegment.sourceStart}`;
+  
+  segmentAnnotations[segmentKey] = annotation.value;
+  console.log('✓ Saved annotation for', currentPreviewSegment.media.title);
+  console.log('  Note:', annotation.value);
+  
+  playSound('lock', 500);
+  haptic(20);
+  
+  // Flash the annotation box
+  annotation.style.borderColor = '#0ff';
+  annotation.style.boxShadow = '0 0 20px rgba(0,255,255,0.8)';
+  setTimeout(() => {
+    annotation.style.borderColor = '#333';
+    annotation.style.boxShadow = 'none';
+  }, 300);
 }
 
 function navigateRecursiveLayer(direction){
