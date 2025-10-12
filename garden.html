@@ -115,15 +115,15 @@ body { margin:0; overflow:hidden; background:#000; }
   .recursive-column { min-width:33.333%; }
   .recursive-columns { transition:transform 0.4s ease; }
 }
-.mobile-controls { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-  display:none; gap:10px; z-index:15; }
+.mobile-controls { position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+  display:none; gap:12px; z-index:150; }
 .mobile-controls.active { display:flex; }
-.mobile-btn { width:50px; height:50px; background:rgba(0,255,255,0.15); 
-  border:2px solid #0ff; border-radius:50%; color:#0ff; font-size:24px;
+.mobile-btn { width:60px; height:60px; background:rgba(0,255,255,0.2); 
+  border:3px solid #0ff; border-radius:50%; color:#0ff; font-size:28px;
   display:flex; align-items:center; justify-content:center; cursor:pointer;
-  transition:all 0.2s; user-select:none; }
-.mobile-btn:active { background:rgba(0,255,255,0.4); transform:scale(0.95); }
-.mobile-btn.center { width:60px; height:60px; font-size:28px; }
+  transition:all 0.2s; user-select:none; box-shadow:0 0 20px rgba(0,255,255,0.4); }
+.mobile-btn:active { background:rgba(0,255,255,0.5); transform:scale(0.9); }
+.mobile-btn.center { width:70px; height:70px; font-size:32px; }
 @media (min-width: 768px) { .mobile-controls { display:none !important; } }
 </style>
 </head>
@@ -428,8 +428,21 @@ function init(){
   renderer.domElement.addEventListener('click', onClick);
   
   // Show mobile controls on touch devices
-  if('ontouchstart' in window){
-    document.getElementById('mobileControls').classList.add('active');
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const mobileControls = document.getElementById('mobileControls');
+  
+  if(isMobile){
+    mobileControls.classList.add('active');
+    console.log('✓ Mobile controls activated (Touch device detected)');
+  } else {
+    console.log('✓ Desktop mode - mobile controls hidden');
+    console.log('  Tip: To test mobile controls on desktop, run: document.getElementById("mobileControls").classList.add("active")');
+  }
+  
+  // FORCE SHOW on small screens (width < 768px)
+  if(window.innerWidth < 768){
+    mobileControls.classList.add('active');
+    console.log('✓ Mobile controls activated (Small screen detected)');
   }
   
   // MOBILE CONTROLS
