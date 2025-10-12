@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Recursive Time Alley — Mk II (Real Media)</title>
+<style>
+  :root{ --bg:#000; --fg:#fff; --accent:#E24A4A; --grid:#B7B7B7; --ghost:#777; }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+  #app{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
+  #vizWrap{position:relative;overflow:hidden}
+  svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+  #breadcrumbs{padding:8px 12px;border-top:1px solid #111;background:rgba(0,0,0,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);padding:8px 10px;border:1px solid #333;background:#111;color:#ddd;border-radius:8px;opacity:0;transition:opacity .2s}
+  .toast.show{opacity:1}
+  /* Transport / project controls */
+  #transport{position:absolute;right:12px;top:12px;display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.6);border:1px solid #222;padding:6px 8px;border-radius:10px}
+  #transport button{appearance:none;background:transparent;color:var(--fg);border:1px solid #444;border-radius:16px;padding:4px 10px;cursor:pointer}
+  #transport input[type=file]{display:none}
+  #transport label{border:1px solid #444;border-radius:16px;padding:4px 10px;cursor:pointer}
+  #tc{font-family:monospace;font-size:12px;color:#ddd}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="vizWrap">
+    <svg id="viz" viewBox="0 0 1200 1000" preserveAspectRatio="none" aria-label="time alley" role="img"></svg>
+    <div id="transport">
+      <button id="btnPlay" title="Play/Pause">▶︎</button>
+      <button id="btnStop" title="Stop">■</button>
+      <label for="fileIn" title="Import media">＋ media</label>
+      <input id="fileIn" type="file" accept="audio/*,video/*" multiple />
+      <button id="btnSave">Save</button>
+      <button id="btnOpen">Open</button>
+      <span id="tc">00:00:00.0</span>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+  <div id="breadcrumbs">Years</div>
+</div>
+<script>
+// ===== Seed Threads (cross-scale appearances) =====
+const seedThreads={
+  'radiocarbon-spike': {
+    color: '#E24A4A',
+    appearances:[
+      { unit:'years', range:[1964.5,1966.8], title:'Radiocarbon spike (bomb peak)' },
+      { unit:'months', of:1965, range:[0,12], title:'Bomb peak envelope' }
+    ]
+  },
+  'apollo-11': {
+    color:'#4AA3FF',
+    appearances:[
+      { unit:'years', range:[1969,1969.5], title:'Apollo 11' },
+      { unit:'months', of:1969, range:[6.5,7.5], title:'July Window' },
+      { unit:'days', of:'1969-07', range:[19,21], title:'Landing Window' },
+      { unit:'hours', of:'1969-07-20', range:[20,21], title:'20:17 UTC' }
+    ]
+  }
+}
+
+// ===== Utilities =====
+const lerp=(a,b,t)=>a+(b-a)*t
+function el(tag,attrs={},parent){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs){if(k==='text')e.textContent=attrs[k];else e.setAttribute(k,attrs[k])}parent&&parent.appendChild(e);return e}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+const pad2 = n=>String(n).padStart(2,'0')
+function fmtTime(sec){ const s=Math.max(0,sec); const h=Math.floor(s/3600); const m=Math.floor(s%3600/60); const sc=(s%60).toFixed(1); return `${pad2(h)}:${pad2(m)}:${sc.padStart(4,'0')}` }
+
+// Unit definitions (display spans) and media mapping scales
+const unitDefs={
+  years:{ span:10, major:1, minor:.25, label:v=>v.toFixed(0), next:'months', media:false },
+  months:{ span:12, major:1, minor:.25, label:m=>['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Math.round((m%12+12)%12)], next:'days', media:false },
+  days:{ span:31, major:5, minor:1, label:d=>String(Math.max(1,Math.floor(d))).padStart(2,'0'), next:'hours', media:false },
+  hours:{ span:24, major:2, minor:1, label:h=>String(Math.floor((h%24+24)%24)).padStart(2,'0')+':00', next:'seconds', media:true, secondsPerUnit:3600 },
+  seconds:{ span:60, major:5, minor:1, label:s=>String(Math.floor((s%60+60)%60)), media:true, secondsPerUnit:1 }
+}
+
+function buildLayerLedger(unit, domain){
+  const events=[]
+  Object.entries(seedThreads).forEach(([tid, t])=>{
+    t.appearances.forEach(ap=>{
+      if(ap.unit!==unit) return
+      let a=ap.range?.[0], b=ap.range?.[1]
+      if(b==null||a==null) return
+      if(b<domain[0]||a>domain[1]) return
+      events.push({ id:tid, title:ap.title, threadId:tid, color:seedThreads[tid].color, range:[Math.max(a,domain[0]), Math.min(b,domain[1])], kind:'native' })
+    })
+  })
+  return events
+}
+
+// ===== Project / State =====
+const state={
+  stack:[ { unit:'years', domain:[1963,1968], sel:[1965,1966], events:[], transclusions:[], tracks:[{id:'t0',name:'Plan'}] } ],
+  lastHapticTick:null,
+  playing:false,
+  playheadAbs:0, // seconds in active layer space mapped by secondsPerUnit
+  media:[], // {id,type:'audio'|'video',el,duration,name}
+  clips:[], // {id, layerIndex, track, start, end, type:'note'|'cue'|'audio'|'video', color, title, mediaId?, mediaOffset?}
+  selection:null, // active clip id
+  snap:true
+}
+
+state.stack[0].events = buildLayerLedger('years', state.stack[0].domain)
+
+const viz=document.getElementById('viz')
+const breadcrumbs=document.getElementById('breadcrumbs')
+const toastEl=document.getElementById('toast')
+const btnPlay=document.getElementById('btnPlay')
+const btnStop=document.getElementById('btnStop')
+const fileIn=document.getElementById('fileIn')
+const btnSave=document.getElementById('btnSave')
+const btnOpen=document.getElementById('btnOpen')
+const tc=document.getElementById('tc')
+
+function current(){return state.stack[state.stack.length-1]}
+
+// ===== Rendering (columns + tracks + clips + threads) =====
+function render(){
+  viz.innerHTML=''
+  const w=viz.viewBox.baseVal.width, h=viz.viewBox.baseVal.height
+  const g=el('g',{},viz)
+
+  const n=state.stack.length
+  const weights=state.stack.map((_,i)=> i===n-1?2:1)
+  const total=weights.reduce((a,b)=>a+b,0)
+  let x=40
+  const columns=[]
+  for(let i=0;i<n;i++){
+    const cw=(w-80)*weights[i]/total
+    columns.push({x, y:40, w:cw, h:h-80})
+    x+=cw
+  }
+
+  const centersByThread={}
+
+  for(let i=0;i<n;i++){
+    const rect=columns[i]
+    const layer=state.stack[i]
+    drawAlleyColumn(g, rect, layer, i===n-1)
+    if(i===n-1){ drawTracksGrid(g, rect, layer) }
+    const evCenters = drawEventsInRect(g, rect, layer)
+    evCenters.forEach(c=>{ (centersByThread[c.threadId] ||= []).push({...c, colIndex:i}) })
+    drawClips(g, rect, i)
+  }
+
+  Object.entries(centersByThread).forEach(([tid, arr])=>{ arr.sort((a,b)=>a.colIndex-b.colIndex); for(let i=0;i<arr.length-1;i++) drawThread(g, arr[i], arr[i+1]) })
+
+  drawPlayhead(g, columns[n-1])
+  renderBreadcrumbs()
+}
+
+function drawAlleyColumn(g, rect, s, isActive){
+  const {x,y,w,h}=rect
+  el('rect',{x,y,width:w,height:h,fill:isActive?'#0b0b0b':'#070707',stroke:isActive?'#3a3a3a':'#222'},g)
+  const rails=isActive?8:6
+  for(let i=0;i<rails;i++){
+    const rx=x+lerp(18,w-18,i/(rails-1))
+    const p=`M ${rx} ${y+h-16} C ${rx} ${y+h*.66}, ${lerp(x+w/2,rx,.5)} ${y+h*.35}, ${lerp(x+w/2,rx,.12)} ${y+18}`
+    el('path',{d:p,stroke:isActive?'#262626':'#1c1c1c','stroke-width':1,fill:'none'},g)
+  }
+  drawTicksInRect(g, rect, s.unit, s.domain)
+  if(s.sel){ const y1=yForRect(s.sel[0], s.domain, rect), y2=yForRect(s.sel[1], s.domain, rect); el('rect',{x:x+8,y:y2,width:w-16,height:(y1-y2),fill:'rgba(226,74,74,.12)',stroke:'rgba(226,74,74,.45)'},g) }
+  el('text',{x:x+10,y:y+16,fill:'#aaa','font-size':11,text:s.unit.toUpperCase()},g)
+}
+
+function drawTracksGrid(g, rect, layer){
+  const {x,y,w,h}=rect
+  const tracks = layer.tracks || (layer.tracks=[{id:'t0',name:'V1'},{id:'t1',name:'A1'}])
+  const rows = tracks.length
+  for(let r=0;r<rows;r++){
+    const yy = y + 28 + r*(h-56)/rows
+    el('line',{x1:x+8,y1:yy,x2:x+w-8,y2:yy,stroke:'#222','stroke-width':1},g)
+    el('text',{x:x+12,y:yy-6,fill:'#888','font-size':10,text:tracks[r].name},g)
+  }
+}
+
+function drawTicksInRect(g, rect, unit, domain){
+  const {x,y,w,h}=rect
+  const def=unitDefs[unit]
+  const major=def.major, minor=def.minor
+  for(let v=Math.ceil(domain[0]/minor)*minor; v<=domain[1]; v+=minor){ const yy=yForRect(v,domain,rect); el('line',{x1:x+20,y1:yy,x2:x+w-20,y2:yy,stroke:'#161616','stroke-width':1,'stroke-dasharray':'2 8'},g) }
+  for(let v=Math.ceil(domain[0]/major)*major; v<=domain[1]; v+=major){ const yy=yForRect(v,domain,rect); el('line',{x1:x+28,y1:yy,x2:x+w-28,y2:yy,stroke:'#444','stroke-width':1.4},g); el('text',{x:x+w/2+6,y:yy+4,fill:'#ddd','font-size':12,text:def.label(v)},g) }
+}
+
+function yForRect(v, domain, rect){ const {y,h}=rect; return lerp(y+20, y+h-20, 1 - (v-domain[0])/(domain[1]-domain[0])) }
+function vFromY(yy, domain, rect){ const {y,h}=rect; const t = clamp((yy-(y+20))/((h-40)),0,1); return lerp(domain[1],domain[0],t) }
+
+function drawEventsInRect(g, rect, layer){
+  const {x,w}=rect
+  const centers=[]
+  const drawSet=(arr, ghost=false)=>{
+    arr.forEach(ev=>{
+      const y1=yForRect(ev.range[0], layer.domain, rect), y2=yForRect(ev.range[1], layer.domain, rect)
+      const fx=x+(ghost? (w*0.55) : (w*0.5))
+      const width = ghost? Math.max(8,w*0.18) : Math.max(12,w*0.22)
+      el('rect',{x:fx-width/2,y:y2,width:width,height:(y1-y2),fill:ghost? 'rgba(200,200,200,.08)' : ev.color, opacity: ghost? 0.35:0.85, stroke: ghost? '#444' : ev.color},g)
+      centers.push({threadId:ev.threadId, x:fx, y:(y1+y2)/2, color:ev.color})
+    })
+  }
+  drawSet(layer.transclusions||[], true)
+  drawSet(layer.events||[], false)
+  return centers
+}
+
+function drawThread(g, A, B){
+  const mx=lerp(A.x,B.x,.5)
+  const d=`M ${A.x} ${A.y} C ${mx} ${A.y}, ${mx} ${B.y}, ${B.x} ${B.y}`
+  el('path',{d, stroke:A.color, 'stroke-width':1.2, 'stroke-dasharray':'4 4', fill:'none', opacity:0.8}, g)
+}
+
+function drawClips(g, rect, layerIndex){
+  const {x,y,w,h}=rect
+  const tracks = state.stack[layerIndex].tracks || []
+  const rows = Math.max(1, tracks.length)
+  state.clips.filter(c=>c.layerIndex===layerIndex).forEach(clip=>{
+    const row = clamp(clip.track,0,rows-1)
+    const trackYTop = y + 28 + row*(h-56)/rows
+    const y1 = yForRect(clip.start, state.stack[layerIndex].domain, rect)
+    const y2 = yForRect(clip.end, state.stack[layerIndex].domain, rect)
+    const cx = x + w*0.25 + row*(w*0.5/rows)
+    const cw = Math.max(14, w*0.38/rows)
+    const r = el('rect',{x:cx-cw/2,y:y2,width:cw,height:(y1-y2),fill:clip.color||'#8BC34A',stroke: state.selection===clip.id? '#fff':'#cfcfcf','stroke-width': state.selection===clip.id? 1.2:0.6,rx:5,ry:5},g)
+    el('text',{x:cx-cw/2+4,y:y2+12,fill:'#111','font-size':10,text:(clip.title||clip.type).slice(0,24)},g)
+    r.dataset.clipId = clip.id
+  })
+}
+
+function drawPlayhead(g, rect){
+  const layer=current()
+  const def=unitDefs[layer.unit]
+  const {x,y,w,h}=rect
+  const tUnit = def.media? (def.secondsPerUnit||1) : 1
+  const domainSec = (layer.domain[1]-layer.domain[0]) * tUnit
+  const t = clamp(domainSec? state.playheadAbs/domainSec:0, 0, 1)
+  const yy = lerp(y+h-20, y+20, t)
+  el('line',{x1:x+10,y1:yy,x2:x+w-10,y2:yy,stroke:'#F5F5F5','stroke-width':1.5},g)
+  el('circle',{cx:x+w-18,cy:yy,r:3,fill:'#F5F5F5'},g)
+  tc.textContent = fmtTime(state.playheadAbs)
+}
+
+function renderBreadcrumbs(){ const parts=state.stack.map(s=>s.unit[0].toUpperCase()+s.unit.slice(1)); breadcrumbs.textContent=parts.join(' › ') }
+
+// ===== Haptics =====
+function haptic(ms=8){ if('vibrate' in navigator) try{ navigator.vibrate(ms) }catch(e){} }
+function hapticTick(){ const s=current(); const major=unitDefs[s.unit].major; const mid=(s.domain[0]+s.domain[1])/2; const idx=Math.floor(mid/major); if(idx!==state.lastHapticTick){ state.lastHapticTick=idx; haptic(10) } }
+
+// ===== Interactions: pan, swipe, clip drag/trim =====
+let dragging=false,lastX=0,lastY=0,gestureMode=null
+const SWIPE_THRESH=24
+let dragClip=null, dragMode=null, dragLayerIndex=null, dragRect=null
+
+viz.addEventListener('pointerdown',e=>{
+  const target=e.target
+  if(target && target.dataset && target.dataset.clipId){
+    // Begin clip drag/resize
+    state.selection=target.dataset.clipId
+    const clip = state.clips.find(c=>c.id===state.selection)
+    const layerIndex = clip.layerIndex
+    const rectInfo = getLayerRect(layerIndex)
+    const yTop = yForRect(clip.start, state.stack[layerIndex].domain, rectInfo)
+    const yBot = yForRect(clip.end, state.stack[layerIndex].domain, rectInfo)
+    const edgePad=10
+    const yRel=e.clientY - viz.getBoundingClientRect().top
+    if(Math.abs(yRel - yTop) < edgePad) dragMode='resizeStart'
+    else if(Math.abs(yRel - yBot) < edgePad) dragMode='resizeEnd'
+    else dragMode='move'
+    dragClip=clip; dragLayerIndex=layerIndex; dragRect=rectInfo
+    dragging=true; lastX=e.clientX; lastY=e.clientY; viz.setPointerCapture(e.pointerId)
+    render(); return
+  }
+  // blank space → start pan
+  dragging=true; lastX=e.clientX; lastY=e.clientY; gestureMode=null; viz.setPointerCapture(e.pointerId)
+})
+
+viz.addEventListener('pointermove',e=>{
+  if(!dragging) return
+  if(dragClip){
+    const dy=e.clientY-lastY; lastY=e.clientY
+    const layer=state.stack[dragLayerIndex]
+    const span=layer.domain[1]-layer.domain[0]
+    const delta=dy/span*0.5
+    if(dragMode==='move'){
+      dragClip.start += delta; dragClip.end += delta
+      if(state.snap){ snapClip(dragClip, layer) }
+    } else if(dragMode==='resizeStart'){
+      dragClip.start += delta
+      if(state.snap){ dragClip.start = snapValue(dragClip.start, layer) }
+      if(dragClip.start>dragClip.end-0.01) dragClip.start=dragClip.end-0.01
+    } else if(dragMode==='resizeEnd'){
+      dragClip.end += delta
+      if(state.snap){ dragClip.end = snapValue(dragClip.end, layer) }
+      if(dragClip.end<dragClip.start+0.01) dragClip.end=dragClip.start+0.01
+    }
+    render(); return
+  }
+  const dx=e.clientX-lastX, dy=e.clientY-lastY
+  if(!gestureMode){ gestureMode = Math.abs(dx)>Math.abs(dy)?'h':'v' }
+  if(gestureMode==='v'){ lastY=e.clientY; panAll(dy) } else { lastX=e.clientX }
+})
+
+viz.addEventListener('pointerup',e=>{
+  if(!dragging) return; dragging=false; viz.releasePointerCapture(e.pointerId)
+  if(dragClip){ dragClip=null; dragMode=null; dragLayerIndex=null; dragRect=null; return }
+  const dx=e.clientX-lastX, dy=e.clientY-lastY
+  if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>SWIPE_THRESH){ if(dx>0) diveCenter(); else stepUp() }
+})
+
+function getLayerRect(i){
+  const w=viz.viewBox.baseVal.width, h=viz.viewBox.baseVal.height
+  const n=state.stack.length
+  const weights=state.stack.map((_,idx)=> idx===n-1?2:1)
+  const total=weights.reduce((a,b)=>a+b,0)
+  let x=40, rect=null
+  for(let idx=0; idx<n; idx++){
+    const cw=(w-80)*weights[idx]/total
+    const r={x, y:40, w:cw, h:h-80}
+    if(idx===i){ rect=r; break }
+    x+=cw
+  }
+  return rect
+}
+
+function panAll(dy){ state.stack.forEach(layer=>{ const span=layer.domain[1]-layer.domain[0]; const delta=dy/span*0.5; layer.domain=[layer.domain[0]+delta, layer.domain[1]+delta] }); hapticTick(); render() }
+
+function diveCenter(){
+  const s=current(); const def=unitDefs[s.unit]; if(!def.next) return toast('Deepest level')
+  const range=[ lerp(s.domain[0],s.domain[1],.33), lerp(s.domain[0],s.domain[1],.66) ]; s.sel=range
+  const childUnit=def.next; const childSpan=unitDefs[childUnit].span
+  const child={ unit:childUnit, domain:[0,childSpan], sel:[childSpan*.3, childSpan*.7], events:[], transclusions:[], tracks:[{id:'t0',name:(unitDefs[childUnit].media?'Media':'Plan')}] }
+  child.events = buildLayerLedger(childUnit, child.domain)
+  child.transclusions = (s.events||[]).filter(ev => overlaps(range, ev.range)).map(ev=> ({...ev, kind:'transclusion'}))
+  state.stack.push(child)
+  state.lastHapticTick=null; render(); haptic(22)
+}
+
+function stepUp(){ if(state.stack.length>1){ state.stack.pop(); state.lastHapticTick=null; render(); haptic(16) } else toast('Top level') }
+
+function overlaps(a,b){ return Math.max(a[0],b[0]) <= Math.min(a[1],b[1]) }
+
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),900) }
+
+// ===== Snapping =====
+function snapValue(val, layer){ const def=unitDefs[layer.unit]; const step=def.minor||0.25; return Math.round(val/step)*step }
+function snapClip(clip, layer){ const mid=(clip.start+clip.end)/2; const len=clip.end-clip.start; const m=snapValue(mid, layer); clip.start=m-len/2; clip.end=m+len/2 }
+
+// ===== Media: import, multi-track, playback sync =====
+fileIn.onchange = async (e)=>{
+  const files=[...e.target.files]; if(!files.length) return
+  for(const f of files){
+    const url=URL.createObjectURL(f)
+    let type='audio', el
+    if(f.type.startsWith('video')){ type='video'; el=document.createElement('video') }
+    else { type='audio'; el=document.createElement('audio') }
+    el.src=url; el.preload='auto'; el.crossOrigin='anonymous'; el.muted=true
+    // Keep elements around (but not displayed)
+    document.body.appendChild(el); el.style.display='none'
+    await new Promise(res=>{ el.onloadedmetadata=()=>res(); el.onerror=()=>res() })
+    const id='m'+Math.random().toString(36).slice(2)
+    state.media.push({id,type,el,duration:el.duration||0,name:f.name})
+    // Drop a clip centered in current view (active layer only)
+    const L = state.stack.length-1
+    const layer = state.stack[L]
+    const span = layer.domain[1]-layer.domain[0]
+    const mid = (layer.domain[0]+layer.domain[1])/2
+    const lenUnits = Math.min(span*0.2, span*0.8)
+    const color = type==='video'? '#FFC107' : '#8BC34A'
+    const clip={ id:'c'+Math.random().toString(36).slice(2), layerIndex:L, track:0, start:mid-lenUnits/2, end:mid+lenUnits/2, type:type, title:f.name, color, mediaId:id, mediaOffset:0 }
+    state.clips.push(clip)
+  }
+  render(); toast('Media added')
+}
+
+btnPlay.onclick=()=>{ state.playing=!state.playing; btnPlay.textContent = state.playing?'⏸':'▶︎'; if(state.playing){ tick() } else pauseMedia() }
+btnStop.onclick=()=>{ state.playing=false; btnPlay.textContent='▶︎'; state.playheadAbs=0; pauseMedia(true); render() }
+
+function pauseMedia(reset=false){ state.media.forEach(m=>{ try{ m.el.pause(); if(reset) m.el.currentTime=0 }catch(e){} }) }
+
+function tick(){
+  if(!state.playing) return
+  const layer=current(); const def=unitDefs[layer.unit]
+  const tUnit=def.media? (def.secondsPerUnit||1) : 1
+  const domainSec=(layer.domain[1]-layer.domain[0])*tUnit
+  state.playheadAbs = (state.playheadAbs + 0.033) % Math.max(1,domainSec)
+  const tUnits = state.playheadAbs / tUnit + layer.domain[0]
+  // determine active clips and play all overlapping media
+  const activeClips = state.clips.filter(c=>c.layerIndex===state.stack.length-1 && tUnits>=c.start && tUnits<=c.end)
+  const activeMediaIds = new Set(activeClips.map(c=>c.mediaId).filter(Boolean))
+  state.media.forEach(m=>{
+    const shouldPlay = activeMediaIds.has(m.id)
+    if(shouldPlay){
+      // compute relative time inside the clip
+      const clip = activeClips.find(c=>c.mediaId===m.id)
+      const relUnits = (tUnits - clip.start)
+      const relSec = relUnits * tUnit + (clip.mediaOffset||0)
+      try{ if(Math.abs((m.el.currentTime||0)-relSec)>0.05) m.el.currentTime=relSec; m.el.muted=false; m.el.play().catch(()=>{}) }catch(e){}
+    } else {
+      try{ m.el.pause() }catch(e){}
+    }
+  })
+  render(); requestAnimationFrame(tick)
+}
+
+// ===== Project Save / Open =====
+btnSave.onclick = async ()=>{
+  const project={ stack:state.stack, clips:state.clips, mediaMeta: state.media.map(m=>({id:m.id,type:m.type,name:m.name,duration:m.duration})) }
+  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'})
+  if('showSaveFilePicker' in window){
+    try{
+      const handle=await window.showSaveFilePicker({suggestedName:'timeline.json', types:[{description:'Timeline JSON', accept:{'application/json':['.json']}}]})
+      const writable=await handle.createWritable(); await writable.write(blob); await writable.close(); toast('Saved')
+    }catch(e){ downloadBlob(blob,'timeline.json') }
+  }else{ downloadBlob(blob,'timeline.json') }
+}
+
+btnOpen.onclick = async ()=>{
+  try{
+    let file
+    if('showOpenFilePicker' in window){ const [handle]=await window.showOpenFilePicker({types:[{description:'Timeline JSON', accept:{'application/json':['.json']}}]}); file=await handle.getFile() }
+    else{ const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange=async ev=>{ const f=ev.target.files[0]; const txt=await f.text(); loadProject(JSON.parse(txt)) }; inp.click(); return }
+    const txt=await file.text(); loadProject(JSON.parse(txt))
+  }catch(e){ toast('Open canceled') }
+}
+
+function downloadBlob(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click() }
+
+function loadProject(p){
+  // do not load media files automatically (paths unknown); keep metadata
+  state.stack=p.stack; state.clips=p.clips||[]; // media kept as-is; user must re-import files
+  state.selection=null; state.playing=false; state.playheadAbs=0
+  render(); toast('Project loaded (re‑import media)')
+}
+
+// ===== Init =====
+render()
+</script>
+</body>
+</html>

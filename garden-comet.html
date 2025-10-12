@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Garden Comet — Film Editor</title>
+<style>
+body { margin:0; overflow:hidden; background:#000; font-family:monospace; }
+.bar { position:fixed; top:10px; left:10px; color:#0ff; font-size:14px; z-index:10; 
+  text-shadow:0 0 10px #0ff; background:rgba(0,0,0,0.8); padding:8px; border-radius:4px; }
+.dot { display:inline-block; width:8px; height:8px; background:#333; margin:2px; 
+  border-radius:50%; transition:all 0.3s; }
+.dot.on { background:#0ff; box-shadow:0 0 10px #0ff; }
+.glyph { position:fixed; bottom:20px; font-size:32px; color:#0ff; cursor:pointer; 
+  text-shadow:0 0 15px #0ff; z-index:10; user-select:none; transition:all 0.2s; }
+.glyph:hover { transform:scale(1.2); text-shadow:0 0 25px #0ff; }
+#g1 { left:20px; }
+#g2 { left:70px; }
+#g3 { left:120px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div>FRAGMENTS: <span id="count">0</span>/49</div>
+  <div style="margin-top:4px">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="dot"></span>
+  </div>
+</div>
+<div class="glyph" id="g1">⏸</div>
+<div class="glyph" id="g2">◎</div>
+<div class="glyph" id="g3">⎌</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// COMET GARDEN: Blocks leave light trails, project video as they fall
+
+const W=10, H=20, S=1;
+let scene, camera, renderer, grid=[], current, paused=false, hold=null;
+let score=0, fragments=[], focusBlock=null, cameraTarget={}, cameraLerp=false;
+
+// Audio context for subtle sounds
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  
+  switch(type){
+    case 'move': 
+      osc.frequency.value = 220; 
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+      break;
+    case 'rotate':
+      osc.frequency.value = 330;
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+      break;
+    case 'lock':
+      osc.frequency.value = 440;
+      osc.type = 'triangle';
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+      break;
+    case 'clearLine':
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+      break;
+  }
+}
+
+// MEDIA
+const MEDIA = [
+  {id:'fom',title:'Family',color:0xC8E6C9,file:'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4'},
+  {id:'self',title:'Self',color:0xAED581,file:'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4'},
+  {id:'utopia',title:'Utopia',color:0x9CCC65,file:'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4'},
+  {id:'tupac',title:'Stories',color:0xF44336,file:'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4'},
+  {id:'harsh',title:'Harsh',color:0xEF5350,file:'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4'},
+  {id:'fairy',title:'Fairy',color:0xFFCDD2,file:'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4'},
+  {id:'civil',title:'Civil',color:0xBDBDBD,file:'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4'}
+];
+
+// INIT
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0a);
+  
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(W/2, H/2, H*1.2);
+  camera.lookAt(W/2, H/2, 0);
+  
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+  
+  // GRID
+  const gridHelper = new THREE.GridHelper(W, W, 0x222, 0x111);
+  gridHelper.rotation.x = Math.PI/2;
+  gridHelper.position.set(W/2, H/2, -0.1);
+  scene.add(gridHelper);
+  
+  // PROJECTION WALL
+  const projWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, H),
+    new THREE.MeshBasicMaterial({
+      transparent:true, 
+      opacity:0, 
+      side:THREE.DoubleSide,
+      blending:THREE.AdditiveBlending
+    })
+  );
+  projWall.position.set(W/2, H/2, -1.5);
+  scene.add(projWall);
+  window.projWall = projWall;
+  
+  // LIGHTS with glow
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  const light = new THREE.DirectionalLight(0xffffff, 1.2);
+  light.position.set(5,5,5);
+  scene.add(light);
+  
+  // Back light for rim lighting
+  const backLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+  backLight.position.set(-5, 0, -10);
+  scene.add(backLight);
+  
+  // GRID ARRAY
+  for(let y=0; y<H; y++) grid[y] = Array(W).fill(null);
+  
+  // TRAIL PARTICLES
+  window.trails = [];
+  const trailGeo = new THREE.SphereGeometry(0.15, 8, 8);
+  const trailMat = new THREE.MeshBasicMaterial({
+    color:0x00ffff, 
+    transparent:true, 
+    opacity:0.8,
+    blending:THREE.AdditiveBlending
+  });
+  for(let i=0; i<50; i++){
+    const particle = new THREE.Mesh(trailGeo, trailMat.clone());
+    particle.visible = false;
+    scene.add(particle);
+    window.trails.push(particle);
+  }
+  window.trailIndex = 0;
+  
+  // GLYPHS
+  document.getElementById('g1').onclick = ()=> paused=!paused;
+  document.getElementById('g2').onclick = ()=> holdPiece();
+  document.getElementById('g3').onclick = ()=> console.log('rewind');
+  
+  // KEYS
+  addEventListener('keydown', e=>{
+    if(e.key==='ArrowLeft'){ e.preventDefault(); movePiece(-1); }
+    if(e.key==='ArrowRight'){ e.preventDefault(); movePiece(1); }
+    if(e.key==='ArrowUp'){ e.preventDefault(); rotatePiece(); }
+    if(e.key==='ArrowDown'){ e.preventDefault(); moveDown(); }
+    if(e.key===' '){ e.preventDefault(); hardDrop(); }
+    if(e.key==='c') holdPiece();
+    if(e.key==='Escape' && focusBlock) unfocusBlock();
+  });
+  
+  spawnPiece();
+  animate();
+}
+
+// SPAWN
+function spawnPiece(){
+  const media = MEDIA[Math.floor(Math.random()*MEDIA.length)];
+  const shapes = [
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]]
+  ];
+  const shape = shapes[Math.floor(Math.random()*shapes.length)];
+  
+  current = {
+    shape: shape,
+    x: Math.floor(W/2-shape[0].length/2),
+    y: H-1,
+    media: media,
+    mesh: createPieceMesh(shape, media)
+  };
+  
+  scene.add(current.mesh);
+  updatePiecePosition();
+}
+
+function createPieceMesh(shape, media){
+  const group = new THREE.Group();
+  
+  // ONE VIDEO for entire piece
+  let sharedVideoTex = null;
+  if(media.file){
+    const video = document.createElement('video');
+    video.src = media.file;
+    video.loop = true;
+    video.muted = true;
+    video.play();
+    sharedVideoTex = new THREE.VideoTexture(video);
+  }
+  
+  shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if(!cell) return;
+      
+      const geo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+      
+      // Glowing emissive material
+      const mat = new THREE.MeshPhongMaterial({
+        color: media.color,
+        emissive: media.color,
+        emissiveIntensity: 0.6,
+        shininess: 100,
+        map: sharedVideoTex,
+        transparent: true,
+        opacity: 0.95
+      });
+      
+      const cube = new THREE.Mesh(geo, mat);
+      cube.position.set(x, -y, 0);
+      
+      // GLOW halo
+      const haloGeo = new THREE.SphereGeometry(0.6, 16, 16);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: media.color,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending
+      });
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      halo.position.copy(cube.position);
+      group.add(halo);
+      
+      group.add(cube);
+    });
+  });
+  
+  group.userData = {media, sharedVideo: sharedVideoTex};
+  return group;
+}
+
+function updatePiecePosition(){
+  if(!current) return;
+  const newPos = new THREE.Vector3(current.x + 0.5, current.y + 0.5, 0);
+  
+  // Create comet trail
+  if(current.mesh.position.length() > 0){
+    const trail = window.trails[window.trailIndex];
+    trail.position.copy(current.mesh.position);
+    trail.material.color.setHex(current.media.color);
+    trail.material.opacity = 0.8;
+    trail.visible = true;
+    window.trailIndex = (window.trailIndex + 1) % window.trails.length;
+  }
+  
+  current.mesh.position.copy(newPos);
+  
+  // VIDEO PROJECTION - zoomed detail on wall
+  if(current.mesh.userData.sharedVideo && window.projWall){
+    const zoomFactor = 3.0;
+    const centerX = current.x / W;
+    const centerY = current.y / H;
+    
+    const tex = current.mesh.userData.sharedVideo.clone();
+    tex.repeat.set(1 / zoomFactor, 1 / zoomFactor);
+    tex.offset.set(
+      centerX - (0.5 / zoomFactor),
+      centerY - (0.5 / zoomFactor)
+    );
+    
+    window.projWall.material.map = tex;
+    window.projWall.material.opacity = 0.4 + (H - current.y) / H * 0.3; // Brighter near bottom
+    window.projWall.material.needsUpdate = true;
+  }
+}
+
+// MOVEMENT
+function movePiece(dx){
+  if(!current || paused) return;
+  current.x += dx;
+  if(collision()) current.x -= dx;
+  else {
+    updatePiecePosition();
+    playSound('move');
+  }
+}
+
+function rotatePiece(){
+  if(!current || paused) return;
+  const old = current.shape;
+  current.shape = current.shape[0].map((_, i) => current.shape.map(row => row[i]).reverse());
+  if(collision()) current.shape = old;
+  else {
+    scene.remove(current.mesh);
+    current.mesh = createPieceMesh(current.shape, current.media);
+    scene.add(current.mesh);
+    updatePiecePosition();
+    playSound('rotate');
+  }
+}
+
+function moveDown(){
+  if(!current || paused) return;
+  current.y--;
+  if(collision()){
+    current.y++;
+    lockPiece();
+  } else {
+    updatePiecePosition();
+  }
+}
+
+function hardDrop(){
+  if(!current || paused) return;
+  while(!collision()){
+    current.y--;
+    updatePiecePosition();
+  }
+  current.y++;
+  updatePiecePosition();
+  lockPiece();
+}
+
+function collision(){
+  if(!current) return false;
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(!current.shape[y][x]) continue;
+      const gx = current.x + x;
+      const gy = current.y - y;
+      if(gx<0 || gx>=W) return true;
+      if(gy<0) return true; // Hit bottom
+      if(gy>=0 && gy<H && grid[gy] && grid[gy][gx]) return true;
+    }
+  }
+  return false;
+}
+
+function lockPiece(){
+  if(!current) return;
+  
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(!current.shape[y][x]) continue;
+      const gx = current.x + x;
+      const gy = current.y - y;
+      if(gy>=0 && gy<H && gx>=0 && gx<W){
+        grid[gy][gx] = {media: current.media, color: current.media.color};
+      }
+    }
+  }
+  
+  clearLines();
+  scene.remove(current.mesh);
+  current = null;
+  playSound('lock');
+  spawnPiece();
+}
+
+function clearLines(){
+  let cleared = 0;
+  for(let y=0; y<H; y++){
+    if(grid[y].every(c=>c)){
+      cleared++;
+      
+      // Collect fragments
+      for(let x=0; x<W; x++){
+        if(grid[y][x]) fragments.push(grid[y][x].media);
+      }
+      
+      // EXPLOSION effect
+      for(let x=0; x<W; x++){
+        const particle = window.trails[window.trailIndex];
+        particle.position.set(x + 0.5, y + 0.5, Math.random() * 2);
+        particle.material.color.setHex(grid[y][x].color);
+        particle.material.opacity = 1.0;
+        particle.visible = true;
+        window.trailIndex = (window.trailIndex + 1) % window.trails.length;
+      }
+      
+      // Shift down
+      for(let ay=y; ay<H-1; ay++){
+        grid[ay] = grid[ay+1];
+      }
+      grid[H-1] = Array(W).fill(null);
+      y--;
+    }
+  }
+  
+  if(cleared > 0){
+    score += cleared;
+    document.querySelectorAll('.dot')[Math.min(score-1, 6)]?.classList.add('on');
+    document.getElementById('count').textContent = fragments.length;
+    renderLockedBlocks();
+    playSound('clearLine');
+  }
+}
+
+function renderLockedBlocks(){
+  // Remove old locked blocks
+  scene.children.filter(c => c.userData.locked).forEach(c => scene.remove(c));
+  
+  // Redraw grid with glow
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      if(grid[y][x]){
+        const geo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+        const mat = new THREE.MeshPhongMaterial({
+          color: grid[y][x].color,
+          emissive: grid[y][x].color,
+          emissiveIntensity: 0.4,
+          shininess: 100
+        });
+        const cube = new THREE.Mesh(geo, mat);
+        cube.position.set(x+0.5, y+0.5, 0);
+        cube.userData.locked = true;
+        scene.add(cube);
+        
+        // Rim glow
+        const edgeGeo = new THREE.EdgesGeometry(geo);
+        const edgeMat = new THREE.LineBasicMaterial({color:0x00ffff, linewidth:2});
+        const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+        edges.position.copy(cube.position);
+        edges.userData.locked = true;
+        scene.add(edges);
+      }
+    }
+  }
+}
+
+function holdPiece(){
+  if(!current || !hold) return;
+  const temp = hold;
+  hold = current;
+  current = temp;
+  current.x = Math.floor(W/2-current.shape[0].length/2);
+  current.y = H-1;
+  scene.remove(hold.mesh);
+  scene.add(current.mesh);
+  updatePiecePosition();
+}
+
+function updateCamera(){
+  if(!cameraLerp) return;
+  camera.position.lerp(cameraTarget.position, 0.1);
+  if(camera.position.distanceTo(cameraTarget.position) < 0.1) cameraLerp = false;
+}
+
+// GAME LOOP
+let lastDrop = 0, time = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  time += 0.016;
+  
+  // Fade out trails
+  window.trails.forEach(t => {
+    if(t.visible){
+      t.material.opacity *= 0.95;
+      t.position.z -= 0.05;
+      if(t.material.opacity < 0.05) t.visible = false;
+    }
+  });
+  
+  if(!paused && current){
+    const now = Date.now();
+    if(now - lastDrop > 1000){
+      moveDown();
+      lastDrop = now;
+    }
+  }
+  
+  updateCamera();
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+init();
+</script>
+</body>
+</html>

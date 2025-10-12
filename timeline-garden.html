@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⟿ TIMELINE GARDEN</title>
+<style>
+body { margin:0; overflow:hidden; background:#000; touch-action:none; }
+canvas { display:block; }
+.glyph { position:fixed; font-size:48px; color:#AED581; cursor:pointer; user-select:none; transition:transform 0.2s; }
+.glyph:hover { transform:scale(1.2); }
+.glyph:active { transform:scale(0.9); }
+#g1 { left:20px; top:20px; }
+#g2 { left:20px; top:80px; }
+#g3 { left:20px; top:140px; }
+#speed { right:20px; bottom:80px; font-size:24px; }
+.bar { position:fixed; bottom:0; left:0; right:0; height:60px; background:rgba(0,0,0,0.8); pointer-events:none; display:flex; align-items:center; justify-content:center; color:#AED581; font-size:14px; letter-spacing:2px; }
+</style>
+</head>
+<body>
+<div class="glyph" id="g1">⏯</div>
+<div class="glyph" id="g2">◎</div>
+<div class="glyph" id="g3">⎌</div>
+<div class="glyph" id="speed">▶▶</div>
+<div class="bar" id="status">TIMELINE: 0s | FRAGMENTS: 0</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// TIMELINE GARDEN: Grid sweeps through spacetime, building extends leftward
+
+const W=10, H=20, S=1;
+let scene, camera, renderer, grid=[], current, paused=false;
+let timelineOffset=0, timelineSpeed=0.05, fragments=[];
+
+// MEDIA with durations (end - start)
+const MEDIA = [
+  {id:'fom',title:'Family',color:0xC8E6C9,file:'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4',start:27,end:53,duration:26},
+  {id:'self',title:'Self',color:0xAED581,file:'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4',start:67,end:78,duration:11},
+  {id:'utopia',title:'Utopia',color:0x9CCC65,file:'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4',start:91,end:97,duration:6},
+  {id:'tupac',title:'Stories',color:0xF44336,file:'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4',start:143,end:148,duration:5},
+  {id:'harsh',title:'Harsh',color:0xEF5350,file:'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4',start:183,end:190,duration:7},
+  {id:'fairy',title:'Fairy',color:0xFFCDD2,file:'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4',start:197,end:204,duration:7},
+  {id:'civil',title:'Civil',color:0xBDBDBD,file:'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4',start:244,end:251,duration:7}
+];
+
+// INIT
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0a);
+  
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(W/2, H/2, H*1.5);
+  camera.lookAt(W/2, H/2, 0);
+  
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+  
+  // LIGHTS
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const light = new THREE.DirectionalLight(0xffffff, 0.8);
+  light.position.set(5,5,5);
+  scene.add(light);
+  
+  // GRID (just visual reference, actual grid is in memory)
+  for(let y=0; y<H; y++) grid[y] = Array(W).fill(null);
+  
+  // TIMELINE BACKGROUND
+  const timelinePlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(W*2, H),
+    new THREE.MeshBasicMaterial({color:0x1a1a1a, transparent:true, opacity:0.3})
+  );
+  timelinePlane.position.set(W/2, H/2, -2);
+  scene.add(timelinePlane);
+  window.timelinePlane = timelinePlane;
+  
+  // GLYPHS
+  document.getElementById('g1').onclick = ()=> paused=!paused;
+  document.getElementById('g2').onclick = ()=> console.log('hold');
+  document.getElementById('g3').onclick = ()=> console.log('rewind');
+  document.getElementById('speed').onclick = ()=> {
+    timelineSpeed = timelineSpeed === 0.05 ? 0.15 : 0.05;
+    document.getElementById('speed').textContent = timelineSpeed === 0.05 ? '▶▶' : '▶▶▶';
+  };
+  
+  // KEYS
+  addEventListener('keydown', e=>{
+    if(e.key==='ArrowLeft') movePiece(-1);
+    if(e.key==='ArrowRight') movePiece(1);
+    if(e.key==='ArrowUp') rotatePiece();
+    if(e.key==='ArrowDown') dropPiece();
+    if(e.key===' ') paused=!paused;
+  });
+  
+  spawnPiece();
+  animate();
+}
+
+// SPAWN
+function spawnPiece(){
+  const media = MEDIA[Math.floor(Math.random()*MEDIA.length)];
+  const shapes = [
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]]
+  ];
+  const shape = shapes[Math.floor(Math.random()*shapes.length)];
+  
+  current = {
+    shape: shape,
+    x: Math.floor(W/2-shape[0].length/2),
+    y: H-shape.length,
+    media: media,
+    mesh: createPieceMesh(shape, media),
+    fallSpeed: 1 / (media.duration * 60), // Fall slower for longer clips (60fps)
+    startTime: Date.now()
+  };
+  
+  scene.add(current.mesh);
+  updatePiecePosition();
+  
+  console.log(`${media.title}: ${media.duration}s clip = ${(1/current.fallSpeed/60).toFixed(1)}s fall time`);
+}
+
+function createPieceMesh(shape, media){
+  const group = new THREE.Group();
+  
+  // ONE VIDEO MOSAIC
+  let sharedVideoTex = null;
+  if(media.file){
+    const video = document.createElement('video');
+    video.src = media.file;
+    video.loop = true;
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.play().catch(()=>{});
+    
+    sharedVideoTex = new THREE.VideoTexture(video);
+    sharedVideoTex.minFilter = THREE.LinearFilter;
+    sharedVideoTex.magFilter = THREE.LinearFilter;
+  }
+  
+  const pieceWidth = shape[0].length;
+  const pieceHeight = shape.length;
+  
+  for(let y=0; y<shape.length; y++){
+    for(let x=0; x<shape[y].length; x++){
+      if(!shape[y][x]) continue;
+      
+      const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+      
+      let mat;
+      if(sharedVideoTex){
+        const tex = sharedVideoTex.clone();
+        tex.needsUpdate = true;
+        tex.repeat.set(1/pieceWidth, 1/pieceHeight);
+        tex.offset.set(x/pieceWidth, (pieceHeight-1-y)/pieceHeight);
+        
+        mat = new THREE.MeshBasicMaterial({
+          map: tex,
+          emissive: media.color,
+          emissiveIntensity: 0.2
+        });
+      } else {
+        mat = new THREE.MeshPhongMaterial({
+          color: media.color,
+          emissive: media.color,
+          emissiveIntensity: 0.3
+        });
+      }
+      
+      const cube = new THREE.Mesh(geo, mat);
+      cube.position.set(x*S, -y*S, 0);
+      group.add(cube);
+    }
+  }
+  
+  group.userData = {media, sharedVideo: sharedVideoTex};
+  return group;
+}
+
+function updatePiecePosition(){
+  if(!current) return;
+  current.mesh.position.set(current.x*S + 0.5, current.y*S + 0.5, 0);
+}
+
+// MOVEMENT
+function movePiece(dx){
+  if(!current || paused) return;
+  current.x += dx;
+  if(collision()) current.x -= dx;
+  updatePiecePosition();
+}
+
+function rotatePiece(){
+  if(!current || paused) return;
+  const old = current.shape;
+  current.shape = current.shape[0].map((_, i) => current.shape.map(row => row[i]).reverse());
+  if(collision()) current.shape = old;
+  else {
+    scene.remove(current.mesh);
+    current.mesh = createPieceMesh(current.shape, current.media);
+    scene.add(current.mesh);
+    updatePiecePosition();
+  }
+}
+
+function dropPiece(){
+  if(!current || paused) return;
+  while(!collision()){
+    current.y--;
+    updatePiecePosition();
+  }
+  current.y++;
+  updatePiecePosition();
+  lockPiece();
+}
+
+function collision(){
+  if(!current) return false;
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(!current.shape[y][x]) continue;
+      const gx = current.x + x;
+      const gy = Math.floor(current.y + y);
+      if(gx<0 || gx>=W || gy<0) return true;
+      if(gy<H && grid[gy] && grid[gy][gx]) return true;
+    }
+  }
+  return false;
+}
+
+function lockPiece(){
+  if(!current) return;
+  
+  // Lock into grid WITH current timeOffset
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(!current.shape[y][x]) continue;
+      const gx = Math.floor(current.x) + x;
+      const gy = Math.floor(current.y) + y;
+      if(gy>=0 && gy<H && gx>=0 && gx<W){
+        grid[gy][gx] = {
+          media: current.media,
+          mesh: current.mesh,
+          timePosition: timeOffset,
+          x: gx,
+          y: gy
+        };
+      }
+    }
+  }
+  
+  checkCompleteRows();
+  scene.remove(current.mesh);
+  current = null;
+  spawnPiece();
+  renderGrid();
+}
+
+function checkCompleteRows(){
+  for(let y=0; y<H; y++){
+    if(grid[y].every(c=>c)){
+      // COMPLETE ROW - Lock to timeline
+      const row = grid[y].map(c => ({
+        media: c.media,
+        timePosition: timeOffset,
+        y: y
+      }));
+      
+      timeline.push({
+        y: y,
+        time: timeOffset,
+        fragments: row
+      });
+      
+      fragments.push(...row.map(r => r.media));
+      
+      // Clear row
+      for(let x=0; x<W; x++){
+        grid[y][x] = null;
+      }
+      
+      // Apply gravity
+      for(let ay=y+1; ay<H; ay++){
+        for(let x=0; x<W; x++){
+          grid[ay-1][x] = grid[ay][x];
+        }
+      }
+      grid[H-1] = Array(W).fill(null);
+      
+      console.log(`Timeline extended: ${timeline.length} complete rows`);
+      document.getElementById('status').textContent = 
+        `TIMELINE: ${(timeOffset/10).toFixed(1)}s | FRAGMENTS: ${fragments.length}`;
+      
+      y--; // Check same row again
+    }
+  }
+}
+
+function renderGrid(){
+  // Remove old locked blocks
+  scene.children.filter(c => c.userData.locked).forEach(c => scene.remove(c));
+  
+  // Render current grid state
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      const cell = grid[y][x];
+      if(cell){
+        const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+        const mat = new THREE.MeshPhongMaterial({
+          color: cell.media.color,
+          emissive: cell.media.color,
+          emissiveIntensity: 0.3
+        });
+        const cube = new THREE.Mesh(geo, mat);
+        cube.position.set(x*S - timeOffset, y*S, 0);
+        cube.userData.locked = true;
+        scene.add(cube);
+      }
+    }
+  }
+  
+  // Render timeline (completed rows in spacetime)
+  timeline.forEach(row => {
+    row.fragments.forEach((frag, x) => {
+      const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+      const mat = new THREE.MeshPhongMaterial({
+        color: frag.media.color,
+        emissive: frag.media.color,
+        emissiveIntensity: 0.5,
+        opacity: 0.8,
+        transparent: true
+      });
+      const cube = new THREE.Mesh(geo, mat);
+      // Timeline blocks stay at their locked time position
+      cube.position.set(x*S - row.time, row.y*S, -0.5);
+      cube.userData.locked = true;
+      cube.userData.timeline = true;
+      scene.add(cube);
+    });
+  });
+}
+
+// GAME LOOP
+function animate(){
+  requestAnimationFrame(animate);
+  
+  if(!paused){
+    // Timeline scrolls behind
+    timelineOffset += timelineSpeed;
+    if(window.timelinePlane){
+      window.timelinePlane.position.x = W/2 - timelineOffset;
+    }
+    
+    // Piece falls based on clip duration
+    if(current){
+      current.y -= current.fallSpeed;
+      
+      if(collision()){
+        current.y += current.fallSpeed;
+        lockPiece();
+      }
+      updatePiecePosition();
+    }
+    
+    renderGrid();
+  }
+  
+  renderer.render(scene, camera);
+}
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+init();
+</script>
+</body>
+</html>

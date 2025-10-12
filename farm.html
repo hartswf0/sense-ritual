@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>TV SWIPER — Minimal Diegetic Build</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg: #000;
+    --card-bg: #1a1a1a;
+    --accent: #0a84ff;
+    --text: #fff;
+    --dim: #666;
+  }
+  body{ 
+    font-family: system-ui, -apple-system, sans-serif; 
+    background: var(--bg); 
+    color: var(--text); 
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  
+  /* VERTICAL FEED CONTAINER */
+  #feed-container{
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  
+  /* TV CARD */
+  .tv-card{
+    position: absolute;
+    width: min(92vw, 600px);
+    max-height: 85vh;
+    background: var(--card-bg); /* FIX: use defined var */
+    border: 2px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, box-shadow 0.22s ease;
+    touch-action: pan-y;
+  }
+  
+  .tv-card.swiping{ transition: none; }
+  .tv-card.exiting-up{ animation: exitUp var(--exit,0.4s) cubic-bezier(0.4,0,0.2,1) forwards; }
+  .tv-card.exiting-down{ animation: exitDown var(--exit,0.4s) cubic-bezier(0.4,0,0.2,1) forwards; }
+  @keyframes exitUp{ to{ transform: translateY(-120vh); opacity: 0; } }
+  @keyframes exitDown{ to{ transform: translateY(120vh); opacity: 0; } }
+
+  /* Diegetic cues */
+  /* Breath: subtle periodic scale/opacity reflecting dwell-derived tempo */
+  @keyframes breath { 0%{transform:scale(1)} 50%{transform:scale(1.012)} 100%{transform:scale(1)} }
+  .tv-card.next { animation: breath var(--breath, 2s) ease-in-out infinite; }
+  /* Fit halo appears only when resonance exceeds threshold */
+  .tv-card::after{
+    content:""; position:absolute; inset:6px; border-radius:8px; pointer-events:none;
+    border:1px dashed rgba(10,132,255,0.0); box-shadow:0 0 0 0 rgba(10,132,255,0);
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .tv-card[data-fit="good"]::after{ border-color: rgba(10,132,255,.28); box-shadow: 0 0 0 2px rgba(10,132,255,.06) inset; }
+  /* Edge whisper: a slim shimmer hinting biased direction */
+  .edge-whisper{ position:absolute; top:12px; bottom:12px; width:3px; right:0; 
+    background: linear-gradient(180deg, transparent, rgba(10,132,255,.35), transparent);
+    opacity:0; transition: opacity .25s ease; pointer-events:none; border-radius:2px; }
+  .edge-whisper.on{ opacity:.22; }
+
+  /* TV SCREEN */
+  .tv-screen{ width: 100%; flex: 0 0 auto; aspect-ratio: 16 / 9; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+  .tv-screen iframe, .tv-screen video, .tv-screen img{ width: 100%; height: 100%; object-fit: cover; border: none; }
+  .tv-screen .placeholder{ width: 100%; height: 100%; display: grid; place-items: center; color: var(--dim); font-size: 48px; }
+
+  /* TV INFO (kept minimal) */
+  .tv-info{ padding: 10px 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; background: rgba(0,0,0,0.72); }
+  .tv-id{ font-size: 10px; font-weight: 700; color: #0ff; letter-spacing: 0.5px; font-family: monospace; }
+  .tv-title{ font-size: 13px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tv-tags{ display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .tv-tags::-webkit-scrollbar{ display: none; }
+  .tag{ padding: 3px 8px; background: rgba(10,132,255,0.18); border: 1px solid rgba(10,132,255,0.35); border-radius: 8px; font-size: 9px; font-weight: 600; white-space: nowrap; }
+  .tv-meta{ font-size: 10px; color: var(--dim); font-family: monospace; white-space: nowrap; }
+
+  /* Swipe hints (kept) */
+  .swipe-hint{ position: absolute; top: 50%; transform: translateY(-50%); font-size: 48px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 10; }
+  .swipe-hint.left{ left: 40px; } .swipe-hint.right{ right: 40px; }
+  .tv-card.swiping-left .swipe-hint.left, .tv-card.swiping-right .swipe-hint.right{ opacity: 1; }
+
+  /* Minimal counter */
+  #counter{ position: fixed; top: 28px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 16px; font-size: 12px; font-weight: 700; z-index: 100; border: 1px solid rgba(255,255,255,0.08); }
+
+  /* Loading */
+  #loading{ position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 1000; font-size: 14px; color: var(--dim); }
+  #loading.hidden{ display: none; }
+
+  /* Mobile */
+  @media (max-width: 480px){ .tv-card{ width: 96vw; } }
+</style>
+</head>
+<body>
+
+<div id="loading">LOADING...</div>
+<div id="counter"><span id="current-index">1</span> / <span id="total-count">0</span></div>
+<div id="feed-container"></div>
+
+<script>
+(function(){
+  'use strict';
+  
+  // --- STATE ---
+  let currentIndex = 0;
+  let mediaLibrary = [];
+  let touchStartY = 0, touchStartX = 0, isDragging = false, currentCard = null;
+
+  // Minimal salience/dwell
+  let tagDwell = Object.create(null); // {tag: ms}
+  let lastShowTs = 0;
+
+  // --- MEDIA LIBRARY ---
+  function initMediaLibrary(){
+    const videos = [
+      { name: 'Out of Life', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 0, end: 135, tags: ['poem','intro'] },
+      { name: 'Flashing Lights', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 136, end: 271, tags: ['poem'] },
+      { name: 'How to Break Off an Engagement', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 272, end: 407, tags: ['poem'] },
+      { name: 'Nevermore', url: 'https://www.youtube.com/watch?v=uDUoMnp1z_g', start: 408, end: 543, tags: ['poem'] },
+      { name: 'Where You Go When You Leave (Main)', url: 'https://youtu.be/OGp5NDpYV6Y', tags: ['main','music'] },
+      { name: 'Pro Segments', url: 'https://youtu.be/6AiCk06MgmQ', tags: ['segments'] },
+      { name: 'Part 2', url: 'https://youtu.be/8I4oqkyTC3o', tags: ['part2'] }
+    ];
+
+    videos.forEach((v, i) => {
+      const videoId = parseYouTubeUrl(v.url);
+      if(videoId){
+        let embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&enablejsapi=1`;
+        if(v.start !== undefined){ embedUrl += `&start=${v.start}`; if(v.end !== undefined){ embedUrl += `&end=${v.end}`; } }
+        mediaLibrary.push({ id: `TV-${String(i+1).padStart(3,'0')}`, type: 'youtube', name: v.name, videoId, embedUrl, tags: v.tags||[], start: v.start, end: v.end });
+      }
+    });
+  }
+
+  function parseYouTubeUrl(url){
+    const patterns = [/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/, /youtube\.com\/embed\/([^?\s]+)/];
+    for(let p of patterns){ const m = url.match(p); if(m) return m[1]; }
+    return null;
+  }
+
+  // --- CARD CREATION ---
+  function createTVCard(media, index){
+    const card = document.createElement('div'); card.className = 'tv-card'; card.dataset.index = index;
+
+    // Screen
+    const screen = document.createElement('div'); screen.className = 'tv-screen';
+    if(media.type === 'youtube'){
+      const iframe = document.createElement('iframe');
+      iframe.src = media.embedUrl; iframe.allow = 'autoplay; encrypted-media'; iframe.allowFullscreen = true;
+      screen.appendChild(iframe);
+    } else { const ph = document.createElement('div'); ph.className = 'placeholder'; ph.textContent = '📺'; screen.appendChild(ph); }
+
+    // Info (minimal)
+    const info = document.createElement('div'); info.className = 'tv-info';
+    const id = document.createElement('div'); id.className = 'tv-id'; id.textContent = media.id;
+    const title = document.createElement('div'); title.className = 'tv-title'; title.textContent = media.name;
+    const tags = document.createElement('div'); tags.className = 'tv-tags'; (media.tags||[]).forEach(t=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=t; tags.appendChild(s); });
+    const meta = document.createElement('div'); meta.className='tv-meta'; meta.textContent = media.start!==undefined? fmtRange(media.start, media.end):'Full';
+    info.append(id, title, tags, meta);
+
+    // Edge whisper cue
+    const whisper = document.createElement('div'); whisper.className = 'edge-whisper';
+
+    // Swipe hints
+    const hintLeft = document.createElement('div'); hintLeft.className='swipe-hint left'; hintLeft.textContent = '❌';
+    const hintRight = document.createElement('div'); hintRight.className='swipe-hint right'; hintRight.textContent = '✅';
+
+    card.append(screen, info, whisper, hintLeft, hintRight);
+
+    // Tap / Long-press (peek + pause)
+    const PRESS_MS = 300; let pressTimer=null, pressed=false;
+    screen.addEventListener('pointerdown', ()=>{ pressed=false; pressTimer = setTimeout(()=>{ pressed=true; enterPeek(card); }, PRESS_MS); });
+    screen.addEventListener('pointerup', ()=>{ clearTimeout(pressTimer); if(!pressed){ focusCard(card); } });
+
+    // Touch / Mouse swipes
+    card.addEventListener('touchstart', onTouchStart); card.addEventListener('touchmove', onTouchMove); card.addEventListener('touchend', onTouchEnd);
+    card.addEventListener('mousedown', onMouseDown);
+
+    return card;
+  }
+
+  function focusCard(el){
+    el.style.transition = 'transform .22s cubic-bezier(.4,0,.2,1)';
+    el.style.transform = 'scale(1.02)';
+    el.dataset.fit = el.dataset.fit || '';
+    setTimeout(()=>{ el.style.transform=''; }, 220);
+  }
+
+  function enterPeek(card){
+    card.classList.add('peeking');
+    card.style.transform = 'translateY(-6px) scale(1.04)'; card.style.boxShadow='0 20px 60px rgba(0,0,0,.6)';
+    controlYouTube(card, 'pauseVideo');
+    // exit on click anywhere on card
+    card.addEventListener('click', exitPeek, { once:true });
+  }
+  function exitPeek(e){ const card = e.currentTarget; card.classList.remove('peeking'); card.style.transform=''; card.style.boxShadow=''; controlYouTube(card, 'playVideo'); }
+
+  function controlYouTube(cardEl, cmd){ const iframe = cardEl.querySelector('iframe'); if(!iframe) return; iframe.contentWindow?.postMessage(JSON.stringify({event:'command', func:cmd, args:[]}), '*'); }
+
+  // --- TOUCH HANDLING ---
+  function onTouchStart(e){ touchStartY = e.touches[0].clientY; touchStartX = e.touches[0].clientX; isDragging = true; currentCard = e.currentTarget; currentCard.classList.add('swiping'); }
+  function onTouchMove(e){ if(!isDragging) return; const dy = e.touches[0].clientY - touchStartY; const dx = e.touches[0].clientX - touchStartX; if(Math.abs(dy) > Math.abs(dx)){ currentCard.style.transform = `translateY(${dy}px) rotate(${dy * 0.02}deg)`; currentCard.style.opacity = 1 - Math.abs(dy) / 500; } else { currentCard.style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`; if(dx < -50){ currentCard.classList.add('swiping-left'); currentCard.classList.remove('swiping-right'); } else if(dx > 50){ currentCard.classList.add('swiping-right'); currentCard.classList.remove('swiping-left'); } else { currentCard.classList.remove('swiping-left','swiping-right'); } } }
+  function onTouchEnd(e){ if(!isDragging) return; const dy = e.changedTouches[0].clientY - touchStartY; const dx = e.changedTouches[0].clientX - touchStartX; isDragging = false; currentCard.classList.remove('swiping','swiping-left','swiping-right'); const threshold = 100; if(Math.abs(dy) > Math.abs(dx)){ if(Math.abs(dy) > threshold){ if(dy < 0) nextTV(); else prevTV(); } else { currentCard.style.transform=''; currentCard.style.opacity=''; } } else { if(Math.abs(dx) > threshold){ if(dx < 0) rejectTV(); else acceptTV(); } else { currentCard.style.transform=''; } } currentCard = null; }
+
+  function onMouseDown(e){ touchStartY = e.clientY; touchStartX = e.clientX; isDragging = true; currentCard = e.currentTarget; currentCard.classList.add('swiping');
+    const onMouseMove = (e)=>{ if(!isDragging) return; const dy = e.clientY - touchStartY; const dx = e.clientX - touchStartX; if(Math.abs(dy) > Math.abs(dx)){ currentCard.style.transform = `translateY(${dy}px) rotate(${dy * 0.02}deg)`; currentCard.style.opacity = 1 - Math.abs(dy) / 500; } else { currentCard.style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`; if(dx < -50){ currentCard.classList.add('swiping-left'); currentCard.classList.remove('swiping-right'); } else if(dx > 50){ currentCard.classList.add('swiping-right'); currentCard.classList.remove('swiping-left'); } } };
+    const onMouseUp = (e)=>{ if(!isDragging) return; const dy = e.clientY - touchStartY; const dx = e.clientX - touchStartX; isDragging=false; currentCard.classList.remove('swiping','swiping-left','swiping-right'); const threshold=100; if(Math.abs(dy) > Math.abs(dx)){ if(Math.abs(dy) > threshold){ if(dy < 0) nextTV(); else prevTV(); } else { currentCard.style.transform=''; currentCard.style.opacity=''; } } else { if(Math.abs(dx) > threshold){ if(dx < 0) rejectTV(); else acceptTV(); } else { currentCard.style.transform=''; } } document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); currentCard=null; };
+    document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
+  }
+
+  // --- NAVIGATION & DIEGETIC UPDATES ---
+  function showTV(index){
+    // accumulate dwell for previous card's tags
+    const now = performance.now();
+    if(mediaLibrary[currentIndex] && lastShowTs){ const dt = now - lastShowTs; (mediaLibrary[currentIndex].tags||[]).forEach(t=>{ tagDwell[t] = (tagDwell[t]||0) + dt; }); }
+    lastShowTs = now;
+
+    const container = document.getElementById('feed-container'); container.innerHTML = '';
+    if(index < 0 || index >= mediaLibrary.length) return;
+    currentIndex = index;
+
+    const card = createTVCard(mediaLibrary[index], index);
+    decorateDiegetics(card, mediaLibrary[index]);
+    container.appendChild(card);
+
+    updateCounter();
+  }
+
+  function decorateDiegetics(card, media){
+    // Breath speed derived from rolling dwell average
+    const avgDwell = rollingDwellMs();
+    const breath = clamp(map(avgDwell, [200, 4000], [0.6, 2.6]));
+    card.style.setProperty('--breath', breath + 's');
+    card.classList.add('next');
+
+    // Resonance / fit halo
+    const resonance = (media.tags||[]).reduce((s,t)=> s + (tagDwell[t]||0), 0);
+    const threshold = 3000; // 3s cumulative dwell across tags
+    if(resonance > threshold) card.dataset.fit = 'good'; else card.removeAttribute('data-fit');
+
+    // Edge whisper if upcoming bias leans right (i.e., top dwell tag appears in next few items)
+    const whisper = card.querySelector('.edge-whisper');
+    const topTag = Object.entries(tagDwell).sort((a,b)=>b[1]-a[1])[0]?.[0];
+    const ahead = mediaLibrary.slice(currentIndex+1, currentIndex+6);
+    const biasRight = topTag ? ahead.some(m => (m.tags||[]).includes(topTag)) : false;
+    if(biasRight) whisper.classList.add('on'); else whisper.classList.remove('on');
+  }
+
+  function rollingDwellMs(){
+    // crude: mean of top 3 tag dwell values (gives stable pace)
+    const vals = Object.values(tagDwell).sort((a,b)=>b-a).slice(0,3);
+    if(!vals.length) return 1500; // default
+    const mean = vals.reduce((a,b)=>a+b,0) / vals.length; return clamp(mean, 200, 4000);
+  }
+
+  // accept/reject animations + light salience bias (bubble similar tags forward)
+  function acceptTV(){ biasUpcoming(); animateAndNext('right'); }
+  function rejectTV(){ animateAndNext('left'); }
+
+  function animateAndNext(dir){
+    const card = document.querySelector('.tv-card'); if(card){ card.style.transform = dir==='right' ? 'translateX(120vw) rotate(20deg)' : 'translateX(-120vw) rotate(-20deg)'; card.style.opacity='0'; setTimeout(()=>{ nextTV(); }, 300); }
+  }
+
+  function nextTV(){ if(currentIndex < mediaLibrary.length - 1){ showTV(currentIndex + 1); } }
+  function prevTV(){ if(currentIndex > 0){ showTV(currentIndex - 1); } }
+
+  function biasUpcoming(){
+    const top = Object.entries(tagDwell).sort((a,b)=>b[1]-a[1])[0]; if(!top) return; const topTag = top[0];
+    const lookAhead = mediaLibrary.slice(currentIndex+1, currentIndex+8);
+    const matches = [];
+    lookAhead.forEach((m,i)=>{ if((m.tags||[]).includes(topTag)) matches.push({i}); });
+    matches.slice(0,2).forEach(({i},k)=>{ const from = currentIndex+1+i; const to = currentIndex+1+k; mediaLibrary.splice(to,0, mediaLibrary.splice(from,1)[0]); });
+  }
+
+  function updateCounter(){ document.getElementById('current-index').textContent = currentIndex + 1; document.getElementById('total-count').textContent = mediaLibrary.length; }
+
+  // Helpers
+  function fmtRange(s,e){ const toTC = x=>{ const m=Math.floor(x/60), ss = x%60; return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; }; return `${toTC(s)} - ${toTC(e)}`; }
+  function clamp(v,min=0,max=1){ return Math.max(min, Math.min(max, v)); }
+  function map(v, [a,b], [c,d]){ const t = (v-a)/(b-a); return c + (d-c)*t; }
+
+  // --- INIT ---
+  function init(){ initMediaLibrary(); showTV(0); document.getElementById('loading').classList.add('hidden'); }
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){ setTimeout(init, 0); } else { window.addEventListener('load', init); }
+})();
+</script>
+</body>
+</html>

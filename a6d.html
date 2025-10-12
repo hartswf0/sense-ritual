@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VIDEO TETRIS — Garden Editor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            overflow: hidden; 
+            background: #000;
+            font-family: monospace;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        canvas { 
+            display: block; 
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        /* DIEGETIC SYMBOLS - Floating, no panels */
+        .symbol-btn {
+            position: fixed;
+            width: 54px;
+            height: 54px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid rgba(174,213,129,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            user-select: none;
+        }
+        
+        .symbol-btn:hover {
+            background: rgba(174,213,129,0.15);
+            border-color: #AED581;
+            box-shadow: 0 0 20px rgba(174,213,129,0.4);
+            transform: scale(1.08);
+        }
+        
+        .symbol-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Positioned at screen edges */
+        #pauseBtn { top: 20px; left: 20px; }
+        #holdBtn { top: 20px; right: 20px; }
+        #rewindBtn { bottom: 20px; left: 20px; }
+        
+        /* Gravity & Magnet Dials - Icon only */
+        .dial-control {
+            position: fixed;
+            right: 20px;
+            width: 54px;
+            height: 120px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid rgba(174,213,129,0.4);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+        }
+        
+        #gravityDial { bottom: 160px; }
+        #magnetDial { bottom: 20px; }
+        
+        .dial-icon {
+            font-size: 20px;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
+        
+        .dial-track {
+            flex: 1;
+            width: 4px;
+            background: #222;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .dial-thumb {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #AED581;
+            border-radius: 50%;
+            left: -5px;
+            cursor: grab;
+            box-shadow: 0 0 8px rgba(174,213,129,0.6);
+        }
+        
+        .dial-thumb:active {
+            cursor: grabbing;
+        }
+        
+        /* Fall Meter - Vertical line at screen right */
+        #fallMeter {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, rgba(174,213,129,0) 0%, #AED581 50%, rgba(174,213,129,0) 100%);
+            opacity: 0.3;
+            z-index: 90;
+            transition: opacity 0.2s;
+        }
+        
+        #fallMeter.pulse {
+            animation: meterPulse 0.4s ease-out;
+        }
+        
+        @keyframes meterPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; transform: scaleX(2); }
+        }
+        
+        /* Chain Charge Line - appears on potential clear */
+        .chain-line {
+            position: absolute;
+            height: 3px;
+            background: linear-gradient(to right, transparent, #AED581);
+            box-shadow: 0 0 8px #AED581;
+            cursor: pointer;
+            z-index: 80;
+            transition: width 0.3s ease-out;
+            pointer-events: auto;
+        }
+        
+        .chain-line:hover {
+            height: 5px;
+            box-shadow: 0 0 15px #AED581;
+        }
+        
+        /* Halo Rings - show alignment fitness */
+        .block-halo {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+        
+        .halo-time {
+            border: 2px solid rgba(174,213,129,0.5);
+        }
+        
+        .halo-adjacent {
+            border: 2px solid rgba(233,69,96,0.5);
+        }
+        
+        /* Micro-glyphs on block corners */
+        .block-glyph {
+            position: absolute;
+            font-size: 10px;
+            opacity: 0.6;
+            pointer-events: none;
+            color: #AED581;
+        }
+        
+        /* Seed Cards - bottom shelf */
+        #seedShelf {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(0,0,0,0.8);
+            border-top: 2px solid rgba(174,213,129,0.3);
+            z-index: 90;
+            max-width: 90%;
+            overflow-x: auto;
+        }
+        
+        .seed-card {
+            min-width: 60px;
+            height: 60px;
+            border: 2px solid #AED581;
+            background: rgba(174,213,129,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #AED581;
+            position: relative;
+        }
+        
+        .seed-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(174,213,129,0.5);
+            background: rgba(174,213,129,0.2);
+        }
+        
+        .seed-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        /* Knot Icon - appears when 3 constraints agree */
+        .knot-commit {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(174,213,129,0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 85;
+            animation: knotPulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(174,213,129,0.8);
+        }
+        
+        @keyframes knotPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        /* Ghost Frame - previous camera position */
+        #ghostFrame {
+            position: fixed;
+            border: 1px dashed rgba(174,213,129,0.2);
+            pointer-events: none;
+            z-index: 70;
+            transition: all 0.3s;
+        }
+        
+        /* Score overlay - minimal */
+        #scoreOverlay {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: rgba(174,213,129,0.6);
+            letter-spacing: 3px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        /* Title screen */
+        #titleScreen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+        
+        #titleScreen.hidden {
+            animation: fadeOut 0.6s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; pointer-events: none; }
+        }
+        
+        .title-text {
+            font-size: 42px;
+            color: #AED581;
+            letter-spacing: 12px;
+            font-weight: 100;
+        }
+        
+        .difficulty-symbol {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #AED581;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .difficulty-symbol:hover {
+            background: #AED581;
+            color: #000;
+            transform: scale(1.1);
+        }
+        
+        /* Game over */
+        #gameOverModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        #gameOverModal.active {
+            display: flex;
+            animation: fadeIn 0.4s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            text-align: center;
+            color: #AED581;
+        }
+        
+        .modal-score {
+            font-size: 64px;
+            margin: 20px 0;
+            letter-spacing: 8px;
+        }
+        
+        .modal-symbol {
+            font-size: 48px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        
+        .modal-symbol:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Fall Meter -->
+    <div id="fallMeter"></div>
+    
+    <!-- Score Overlay - minimal -->
+    <div id="scoreOverlay">
+        <span id="scoreDisplay">0</span> • <span id="fragmentCount">0</span>
+    </div>
+    
+    <!-- Diegetic Symbol Buttons -->
+    <div class="symbol-btn" id="pauseBtn">⏯</div>
+    <div class="symbol-btn" id="holdBtn">◎</div>
+    <div class="symbol-btn" id="rewindBtn">⎌</div>
+    
+    <!-- Dial Controls -->
+    <div class="dial-control" id="gravityDial">
+        <div class="dial-icon">●</div>
+        <div class="dial-track">
+            <div class="dial-thumb" style="bottom: 50%"></div>
+        </div>
+    </div>
+    
+    <div class="dial-control" id="magnetDial">
+        <div class="dial-icon">⊂⊃</div>
+        <div class="dial-track">
+            <div class="dial-thumb" style="bottom: 50%"></div>
+        </div>
+    </div>
+    
+    <!-- Ghost Frame - shows previous camera position -->
+    <div id="ghostFrame"></div>
+    
+    <!-- Seed Shelf - stores edit patterns -->
+    <div id="seedShelf"></div>
+    
+    <!-- Title Screen -->
+    <div id="titleScreen">
+        <div class="title-text">GARDEN</div>
+        <div style="display: flex; gap: 20px;">
+            <div class="difficulty-symbol" data-difficulty="beginner">◇</div>
+            <div class="difficulty-symbol" data-difficulty="medium">◈</div>
+            <div class="difficulty-symbol" data-difficulty="expert">◆</div>
+        </div>
+    </div>
+    
+    <!-- Game Over -->
+    <div id="gameOverModal">
+        <div class="modal-content">
+            <div class="modal-score" id="finalScore">0</div>
+            <div class="modal-symbol" id="restartBtn">↻</div>
+        </div>
+    </div>
+    
+    <canvas id="tetrisCanvas"></canvas>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+    <script>
+    class GardenEditor {
+        constructor() {
+            this.GRID_WIDTH = 10;
+            this.GRID_HEIGHT = 20;
+            this.grid = Array.from({ length: this.GRID_HEIGHT }, () => Array(this.GRID_WIDTH).fill(null));
+            
+            // Garden parameters
+            this.dropInterval = 1000;
+            this.gravityStrength = 1.0;
+            this.magnetStrength = 0.5;
+            this.salience = {}; // Track which fragments user dwells on
+            
+            this.nextPieces = [];
+            this.holdPiece = null;
+            this.canHold = true;
+            this.isGameOver = false;
+            this.isPaused = false;
+            this.score = 0;
+            this.collectedFragments = [];
+            this.seedCards = [];
+            
+            // Camera spring system
+            this.cameraTarget = null;
+            this.cameraLerp = null;
+            this.camDamping = 0.12;
+            this.focusedBlock = null;
+            
+            // Chain detection
+            this.potentialChains = [];
+            
+            // History for rewind
+            this.history = [];
+            this.maxHistory = 8;
+            
+            this.MEDIA_FOLDER = './MEDIA/';
+            this.USE_LOCAL_MEDIA = true;
+            
+            this.VIDEO_FILE_MAP = {
+                'fom-exhibition-1950s': 'video_0443d3f46b1f433597e8d9d89469cad8.mp4',
+                'bayer-individual-self': 'video_06ac4003fedc438588cf48eb594c8f22.mp4',
+                'bayer-utopian-vision': 'video_0e770098e193417596602ae22ae3ab30.mp4',
+                'tupac-grand-stories': 'video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4',
+                'afeni-harsh-reality': 'video_14c639e88a2c4718aee990049945815c.mp4',
+                'afeni-fairyland-conceal': 'video_219ff5b76d874686bcfecbe4d10f5c83.mp4',
+                'civil-rights-promises-broken': 'video_27b3377368254f1babcfb96a0c47859a.mp4'
+            };
+            
+            this.VIDEO_CONCEPTS = [
+                { id: 'fom-exhibition-1950s', title: 'Family of Man', category: 'Media', color: 0xC8E6C9, start: 27, end: 53, glyph: '◴' },
+                { id: 'bayer-individual-self', title: 'Individual Self', category: 'Concept', color: 0xAED581, start: 67, end: 78, glyph: '◵' },
+                { id: 'bayer-utopian-vision', title: 'Utopian Vision', category: 'Theory', color: 0x9CCC65, start: 91, end: 97, glyph: '∿' },
+                { id: 'tupac-grand-stories', title: 'Grand Stories', category: 'Concept', color: 0xF44336, start: 143, end: 148, glyph: '◴' },
+                { id: 'afeni-harsh-reality', title: 'Harsh Reality', category: 'Critique', color: 0xEF5350, start: 183, end: 190, glyph: '◵' },
+                { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', category: 'Critique', color: 0xFFCDD2, start: 197, end: 204, glyph: '∿' },
+                { id: 'civil-rights-promises-broken', title: 'Civil Rights', category: 'Event', color: 0xBDBDBD, start: 244, end: 251, glyph: '◴' }
+            ];
+            
+            this.PIECE_TOKENS = {
+                'I': { shape: [[1,1,1,1]], concept: this.VIDEO_CONCEPTS[0] },
+                'O': { shape: [[1,1],[1,1]], concept: this.VIDEO_CONCEPTS[1] },
+                'T': { shape: [[0,1,0],[1,1,1]], concept: this.VIDEO_CONCEPTS[2] },
+                'L': { shape: [[0,0,1],[1,1,1]], concept: this.VIDEO_CONCEPTS[3] },
+                'J': { shape: [[1,0,0],[1,1,1]], concept: this.VIDEO_CONCEPTS[4] },
+                'S': { shape: [[0,1,1],[1,1,0]], concept: this.VIDEO_CONCEPTS[5] },
+                'Z': { shape: [[1,1,0],[0,1,1]], concept: this.VIDEO_CONCEPTS[6] }
+            };
+            
+            this.fragmentQueue = [...this.VIDEO_CONCEPTS];
+            this.usedFragments = new Set();
+            
+            this.initGarden();
+        }
+        
+        initGarden() {
+            this.setupScene();
+            this.setupCamera();
+            this.setupRenderer();
+            this.setupLighting();
+            this.setupControls();
+            this.setupDials();
+            this.fillNextQueue();
+        }
+        
+        setupScene() {
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x050505);
+            
+            // Subtle grid with parallax shimmer
+            const gridHelper = new THREE.GridHelper(this.GRID_WIDTH, this.GRID_WIDTH, 0x1a1a1a, 0x0d0d0d);
+            gridHelper.rotation.x = Math.PI / 2;
+            gridHelper.position.set(this.GRID_WIDTH / 2, this.GRID_HEIGHT / 2, -0.1);
+            this.scene.add(gridHelper);
+            
+            this.gridGroup = new THREE.Group();
+            this.scene.add(this.gridGroup);
+        }
+        
+        setupCamera() {
+            this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            // Center on grid cluster
+            this.defaultCameraPos = new THREE.Vector3(
+                this.GRID_WIDTH / 2,
+                this.GRID_HEIGHT / 2,
+                this.GRID_HEIGHT * 1.3
+            );
+            this.defaultLookAt = new THREE.Vector3(
+                this.GRID_WIDTH / 2,
+                this.GRID_HEIGHT / 2,
+                0
+            );
+            
+            this.camera.position.copy(this.defaultCameraPos);
+            this.camera.lookAt(this.defaultLookAt);
+            
+            // Store ghost frame
+            this.updateGhostFrame();
+            
+            this.raycaster = new THREE.Raycaster();
+            this.mouse = new THREE.Vector2();
+            
+            // Touch tracking for press-and-hold
+            this.touchStartTime = 0;
+            this.touchStartPos = null;
+        }
+        
+        setupRenderer() {
+            const canvas = document.getElementById('tetrisCanvas');
+            this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            this.cssScene = new THREE.Scene();
+            this.cssRenderer = new THREE.CSS3DRenderer();
+            this.cssRenderer.setSize(window.innerWidth, window.innerHeight);
+            this.cssRenderer.domElement.style.position = 'absolute';
+            this.cssRenderer.domElement.style.top = '0';
+            this.cssRenderer.domElement.style.pointerEvents = 'none';
+            document.body.insertBefore(this.cssRenderer.domElement, canvas);
+            
+            window.addEventListener('resize', () => this.onWindowResize());
+            
+            // Click/touch handlers for focus
+            canvas.addEventListener('mousedown', (e) => this.handlePointerDown(e));
+            canvas.addEventListener('mouseup', (e) => this.handlePointerUp(e));
+            canvas.addEventListener('touchstart', (e) => this.handlePointerDown(e.touches[0]));
+            canvas.addEventListener('touchend', (e) => this.handlePointerUp(e.changedTouches[0]));
+        }
+        
+        setupLighting() {
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            const directional = new THREE.DirectionalLight(0xffffff, 0.6);
+            directional.position.set(5, 5, 5);
+            this.scene.add(ambient, directional);
+        }
+        
+        setupControls() {
+            const keyMap = {
+                'ArrowLeft': () => this.movePiece(-1),
+                'ArrowRight': () => this.movePiece(1),
+                'ArrowDown': () => this.dropPiece(),
+                'ArrowUp': () => this.rotatePiece(),
+                'c': () => this.holdPieceFunction(),
+                ' ': () => this.togglePause()
+            };
+            
+            window.addEventListener('keydown', (e) => {
+                const action = keyMap[e.key];
+                if (action) action();
+            });
+            
+            // Symbol buttons
+            document.getElementById('pauseBtn').addEventListener('click', () => {
+                this.togglePause();
+                this.animateSymbol('pauseBtn');
+            });
+            
+            document.getElementById('holdBtn').addEventListener('click', () => {
+                this.holdPieceFunction();
+                this.animateSymbol('holdBtn');
+            });
+            
+            document.getElementById('rewindBtn').addEventListener('click', () => {
+                this.rewindStep();
+                this.animateSymbol('rewindBtn', 'backward');
+            });
+            
+            // Difficulty selection
+            document.querySelectorAll('.difficulty-symbol').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const difficulty = btn.dataset.difficulty;
+                    this.startGarden(difficulty);
+                    document.getElementById('titleScreen').classList.add('hidden');
+                });
+            });
+            
+            document.getElementById('restartBtn').addEventListener('click', () => this.resetGarden());
+        }
+        
+        setupDials() {
+            this.setupDial('gravityDial', (value) => {
+                this.gravityStrength = value * 2;
+                this.dropInterval = Math.max(200, 1000 / this.gravityStrength);
+                this.pulseFallMeter();
+            });
+            
+            this.setupDial('magnetDial', (value) => {
+                this.magnetStrength = value;
+                // Apply magnetic attraction to nearby pieces
+                this.applyMagneticForces();
+            });
+        }
+        
+        setupDial(dialId, callback) {
+            const dial = document.getElementById(dialId);
+            const track = dial.querySelector('.dial-track');
+            const thumb = dial.querySelector('.dial-thumb');
+            
+            let isDragging = false;
+            
+            const updateDial = (clientY) => {
+                const rect = track.getBoundingClientRect();
+                const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
+                const percent = 1 - (y / rect.height); // Inverted (bottom = 0, top = 1)
+                
+                thumb.style.bottom = (percent * 100) + '%';
+                callback(percent);
+            };
+            
+            thumb.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                e.stopPropagation();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) updateDial(e.clientY);
+            });
+            
+            document.addEventListener('mouseup', () => isDragging = false);
+            
+            track.addEventListener('click', (e) => updateDial(e.clientY));
+        }
+        
+        pulseFallMeter() {
+            const meter = document.getElementById('fallMeter');
+            meter.classList.remove('pulse');
+            setTimeout(() => meter.classList.add('pulse'), 10);
+        }
+        
+        applyMagneticForces() {
+            // Subtle magnetic pull between adjacent compatible blocks
+            // (Visual effect only - doesn't change game logic)
+            if (!this.currentPiece) return;
+            
+            // Check adjacent blocks for theme/category compatibility
+            this.currentPiece.shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (!cell) return;
+                    const x = this.currentPiece.x + dx;
+                    const y = Math.floor(this.currentPiece.y - dy);
+                    
+                    // Check neighbors
+                    const neighbors = [
+                        [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                    ];
+                    
+                    neighbors.forEach(([nx, ny]) => {
+                        if (nx < 0 || nx >= this.GRID_WIDTH || ny < 0 || ny >= this.GRID_HEIGHT) return;
+                        const neighbor = this.grid[ny][nx];
+                        if (neighbor && neighbor.concept) {
+                            const compatibility = this.checkCompatibility(
+                                this.currentPiece.concept,
+                                neighbor.concept
+                            );
+                            
+                            if (compatibility > this.magnetStrength) {
+                                // Visual indicator: draw subtle connection line
+                                this.showMagneticLink(x, y, nx, ny, compatibility);
+                            }
+                        }
+                    });
+                });
+            });
+        }
+        
+        checkCompatibility(conceptA, conceptB) {
+            // Compatibility based on category match and temporal proximity
+            let score = 0;
+            
+            if (conceptA.category === conceptB.category) score += 0.5;
+            
+            const timeDiff = Math.abs(conceptA.start - conceptB.end);
+            if (timeDiff < 30) score += 0.3;
+            if (timeDiff < 10) score += 0.2;
+            
+            return score;
+        }
+        
+        showMagneticLink(x1, y1, x2, y2, strength) {
+            // Draw subtle line between compatible blocks
+            // (Implemented via CSS line elements or Three.js LineBasicMaterial)
+            // For now, just visual feedback
+        }
+        
+        animateSymbol(btnId, direction = 'forward') {
+            const btn = document.getElementById(btnId);
+            const distance = direction === 'backward' ? -12 : 12;
+            
+            btn.style.transform = `translateX(${distance}px)`;
+            setTimeout(() => {
+                btn.style.transform = '';
+            }, 200);
+        }
+        
+        handlePointerDown(e) {
+            this.touchStartTime = Date.now();
+            this.touchStartPos = { x: e.clientX, y: e.clientY };
+        }
+        
+        handlePointerUp(e) {
+            const duration = Date.now() - this.touchStartTime;
+            const moved = this.touchStartPos && (
+                Math.abs(e.clientX - this.touchStartPos.x) > 10 ||
+                Math.abs(e.clientY - this.touchStartPos.y) > 10
+            );
+            
+            if (moved) return; // Ignore if dragged
+            
+            this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+            
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj.parent && obj.parent.userData.concept) {
+                    const block = obj.parent;
+                    
+                    if (duration > 300) {
+                        // Press-and-hold: focus + promote
+                        this.focusAndPromote(block);
+                    } else {
+                        // Tap: just focus
+                        this.focusBlock(block);
+                    }
+                    
+                    // Track salience
+                    const conceptId = block.userData.concept.id;
+                    this.salience[conceptId] = (this.salience[conceptId] || 0) + 1;
+                }
+            } else if (this.focusedBlock) {
+                this.unfocusBlock();
+            }
+        }
+        
+        focusBlock(block) {
+            if (this.focusedBlock === block) return;
+            
+            this.focusedBlock = block;
+            const pos = block.position.clone();
+            
+            // Smooth camera dolly
+            this.easeCameraTo(pos, 6);
+            
+            // Context dim
+            this.gridGroup.children.forEach(child => {
+                if (child !== block) {
+                    child.traverse(obj => {
+                        if (obj.material && obj.material.emissive) {
+                            obj.material.emissiveIntensity = 0.1;
+                        }
+                    });
+                }
+            });
+            
+            // Pause while focused
+            this.isPaused = true;
+        }
+        
+        focusAndPromote(block) {
+            this.focusBlock(block);
+            
+            // Promote: pull slightly toward camera
+            const originalZ = block.position.z;
+            block.userData.originalZ = originalZ;
+            block.userData.promoted = true;
+            
+            const targetZ = originalZ + 0.5;
+            this.animateBlockZ(block, targetZ, 220);
+        }
+        
+        animateBlockZ(block, targetZ, duration) {
+            const startZ = block.position.z;
+            const startTime = Date.now();
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = this.easeInOutCubic(progress);
+                
+                block.position.z = startZ + (targetZ - startZ) * eased;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+        }
+        
+        unfocusBlock() {
+            if (!this.focusedBlock) return;
+            
+            // Restore promoted block
+            if (this.focusedBlock.userData.promoted) {
+                const originalZ = this.focusedBlock.userData.originalZ || 0;
+                this.animateBlockZ(this.focusedBlock, originalZ, 220);
+                this.focusedBlock.userData.promoted = false;
+            }
+            
+            // Restore context brightness
+            this.gridGroup.children.forEach(child => {
+                child.traverse(obj => {
+                    if (obj.material && obj.material.emissive) {
+                        obj.material.emissiveIntensity = 0.3;
+                    }
+                });
+            });
+            
+            // Return camera to default
+            this.easeCameraTo(this.defaultLookAt, this.GRID_HEIGHT * 1.3);
+            
+            this.focusedBlock = null;
+            this.isPaused = false;
+        }
+        
+        easeCameraTo(targetPos, distance = 6) {
+            this.updateGhostFrame(); // Store current position
+            
+            const lookAt = targetPos.clone();
+            const dir = this.camera.position.clone().sub(lookAt).normalize();
+            const desiredPos = lookAt.clone().add(dir.multiplyScalar(distance));
+            
+            this.cameraTarget = { position: desiredPos, lookAt };
+            this.cameraLerp = true;
+        }
+        
+        updateCameraSpring() {
+            if (!this.cameraLerp || !this.cameraTarget) return;
+            
+            const dist = this.camera.position.distanceTo(this.cameraTarget.position);
+            
+            if (dist < 0.01) {
+                this.camera.position.copy(this.cameraTarget.position);
+                this.camera.lookAt(this.cameraTarget.lookAt);
+                this.cameraLerp = false;
+            } else {
+                this.camera.position.lerp(this.cameraTarget.position, this.camDamping);
+                this.camera.lookAt(this.cameraTarget.lookAt);
+            }
+        }
+        
+        updateGhostFrame() {
+            const ghostFrame = document.getElementById('ghostFrame');
+            if (!ghostFrame) return;
+            
+            // Project camera frustum corners to screen space
+            const corners = this.getFrustumCorners();
+            
+            if (corners.length === 4) {
+                const minX = Math.min(...corners.map(c => c.x));
+                const maxX = Math.max(...corners.map(c => c.x));
+                const minY = Math.min(...corners.map(c => c.y));
+                const maxY = Math.max(...corners.map(c => c.y));
+                
+                ghostFrame.style.left = minX + 'px';
+                ghostFrame.style.top = minY + 'px';
+                ghostFrame.style.width = (maxX - minX) + 'px';
+                ghostFrame.style.height = (maxY - minY) + 'px';
+            }
+        }
+        
+        getFrustumCorners() {
+            // Get visible grid bounds in screen space
+            const corners = [
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(this.GRID_WIDTH, 0, 0),
+                new THREE.Vector3(0, this.GRID_HEIGHT, 0),
+                new THREE.Vector3(this.GRID_WIDTH, this.GRID_HEIGHT, 0)
+            ];
+            
+            return corners.map(v => {
+                const projected = v.clone().project(this.camera);
+                return {
+                    x: (projected.x + 1) / 2 * window.innerWidth,
+                    y: (-projected.y + 1) / 2 * window.innerHeight
+                };
+            });
+        }
+        
+        easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+        
+        fillNextQueue() {
+            while (this.nextPieces.length < 3) {
+                this.nextPieces.push(this.selectPieceWithSalience());
+            }
+        }
+        
+        selectPieceWithSalience() {
+            // Re-seed toward fragments user dwells on
+            if (this.fragmentQueue.length === 0) {
+                this.fragmentQueue = this.reseedBySalience();
+            }
+            
+            const concept = this.fragmentQueue.shift();
+            this.usedFragments.add(concept.id);
+            
+            const pieceTypes = Object.keys(this.PIECE_TOKENS);
+            const randomType = pieceTypes[Math.floor(Math.random() * pieceTypes.length)];
+            const pieceShape = this.PIECE_TOKENS[randomType].shape;
+            
+            return new Piece(randomType, pieceShape, concept, this.GRID_WIDTH, this.GRID_HEIGHT);
+        }
+        
+        reseedBySalience() {
+            const concepts = [...this.VIDEO_CONCEPTS];
+            
+            // Weight by salience (how often user focused on this category/concept)
+            const weighted = concepts.map(c => {
+                const score = (this.salience[c.id] || 0) + 
+                              (this.salience[c.category] || 0) * 0.5;
+                return { concept: c, weight: score + 1 }; // +1 to ensure all have chance
+            });
+            
+            // Weighted shuffle
+            const total = weighted.reduce((sum, w) => sum + w.weight, 0);
+            const shuffled = [];
+            
+            for (let i = 0; i < concepts.length; i++) {
+                let rand = Math.random() * total;
+                for (let j = 0; j < weighted.length; j++) {
+                    rand -= weighted[j].weight;
+                    if (rand <= 0) {
+                        shuffled.push(weighted[j].concept);
+                        weighted.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+            
+            return shuffled;
+        }
+        
+        spawnPiece() {
+            if (this.nextPieces.length === 0) this.fillNextQueue();
+            
+            this.currentPiece = this.nextPieces.shift();
+            this.currentPiece.x = Math.floor(this.GRID_WIDTH / 2) - Math.ceil(this.currentPiece.shape[0].length / 2);
+            this.currentPiece.y = this.GRID_HEIGHT - 1;
+            
+            this.fillNextQueue();
+            
+            if (this.currentPiece.checkCollision(this.grid)) {
+                this.showGameOver();
+                return;
+            }
+            
+            this.renderPiece();
+            this.detectPotentialChains();
+            
+            if (!this.gameLoopStarted) {
+                this.startGameLoop();
+                this.gameLoopStarted = true;
+            }
+        }
+        
+        renderPiece() {
+            if (this.pieceGroup) this.scene.remove(this.pieceGroup);
+            this.pieceGroup = new THREE.Group();
+            
+            this.currentPiece.shape.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        const block = this.renderBlock(
+                            this.currentPiece.x + x,
+                            this.currentPiece.y - y,
+                            this.currentPiece.concept.color,
+                            0.8,
+                            this.currentPiece.concept
+                        );
+                        this.pieceGroup.add(block);
+                    }
+                });
+            });
+            
+            this.scene.add(this.pieceGroup);
+        }
+        
+        renderBlock(x, y, color, opacity = 1, concept = null) {
+            const geometry = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.3,
+                opacity: opacity,
+                transparent: opacity < 1
+            });
+            
+            const cube = new THREE.Mesh(geometry, material);
+            
+            const edges = new THREE.LineSegments(
+                new THREE.EdgesGeometry(geometry),
+                new THREE.LineBasicMaterial({ color: 0xffffff, opacity: opacity * 0.6, transparent: true })
+            );
+            
+            const blockGroup = new THREE.Group();
+            blockGroup.add(cube);
+            blockGroup.add(edges);
+            blockGroup.position.set(x + 0.5, y + 0.5, 0);
+            blockGroup.userData.concept = concept;
+            blockGroup.userData.position = { x, y };
+            blockGroup.name = 'lockedBlock';
+            
+            // Add halo rings if locked (show compatibility)
+            if (opacity === 1 && concept) {
+                this.addHaloRings(blockGroup, x, y, concept);
+            }
+            
+            this.gridGroup.add(blockGroup);
+            return blockGroup;
+        }
+        
+        addHaloRings(block, x, y, concept) {
+            // Check time compatibility with neighbors
+            const neighbors = [
+                [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+            ];
+            
+            let timeCompat = 0;
+            let adjacentCompat = 0;
+            
+            neighbors.forEach(([nx, ny]) => {
+                if (nx < 0 || nx >= this.GRID_WIDTH || ny < 0 || ny >= this.GRID_HEIGHT) return;
+                const cell = this.grid[ny][nx];
+                if (cell && cell.concept) {
+                    adjacentCompat++;
+                    const timeDiff = Math.abs(concept.start - cell.concept.end);
+                    if (timeDiff < 30) timeCompat++;
+                }
+            });
+            
+            // Visual feedback via glow intensity
+            if (timeCompat > 0) {
+                block.children[0].material.emissiveIntensity = 0.3 + timeCompat * 0.1;
+            }
+        }
+        
+        createVideoScreen(concept) {
+            const el = document.createElement('div');
+            const size = 300;
+            el.style.width = size + 'px';
+            el.style.height = size + 'px';
+            el.style.background = '#000';
+            el.style.overflow = 'hidden';
+            el.style.position = 'relative';
+            
+            if (this.USE_LOCAL_MEDIA && this.VIDEO_FILE_MAP[concept.id]) {
+                const video = document.createElement('video');
+                video.src = this.MEDIA_FOLDER + this.VIDEO_FILE_MAP[concept.id];
+                video.loop = true;
+                video.muted = true;
+                video.autoplay = true;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.play().catch(e => console.log('Autoplay prevented'));
+                el.appendChild(video);
+            }
+            
+            // Add micro-glyph overlay
+            const glyph = document.createElement('div');
+            glyph.className = 'block-glyph';
+            glyph.textContent = concept.glyph || '◆';
+            glyph.style.top = '4px';
+            glyph.style.right = '4px';
+            el.appendChild(glyph);
+            
+            const obj = new THREE.CSS3DObject(el);
+            obj.scale.set(1/size, 1/size, 1);
+            obj.userData.concept = concept;
+            return obj;
+        }
+        
+        detectPotentialChains() {
+            // Scan for rows that could form complete chains
+            this.potentialChains = [];
+            
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                const filled = this.grid[y].filter(c => c !== null).length;
+                if (filled >= this.GRID_WIDTH - 4) {
+                    // Near-complete row - show charge line
+                    this.showChargeLine(y, filled / this.GRID_WIDTH);
+                    this.potentialChains.push(y);
+                }
+            }
+        }
+        
+        showChargeLine(y, progress) {
+            // Create or update charge line
+            const lineId = `charge-${y}`;
+            let line = document.getElementById(lineId);
+            
+            if (!line) {
+                line = document.createElement('div');
+                line.id = lineId;
+                line.className = 'chain-line';
+                document.body.appendChild(line);
+                
+                line.addEventListener('click', () => {
+                    this.commitChainEdit(y);
+                });
+            }
+            
+            // Position at row Y
+            const screenY = this.projectYToScreen(y);
+            line.style.top = screenY + 'px';
+            line.style.left = '0';
+            line.style.width = (progress * 100) + '%';
+        }
+        
+        projectYToScreen(y) {
+            const vec = new THREE.Vector3(0, y + 0.5, 0);
+            vec.project(this.camera);
+            return (-vec.y + 1) / 2 * window.innerHeight;
+        }
+        
+        commitChainEdit(y) {
+            // User clicked charge line - commit the edit!
+            this.clearLine(y);
+            
+            // Create seed card from this chain
+            this.createSeedCard({
+                gravity: this.gravityStrength,
+                magnet: this.magnetStrength,
+                fragments: this.grid[y].filter(c => c).map(c => c.concept.id)
+            });
+            
+            // Visual feedback: shutter blink
+            this.shutterBlink();
+        }
+        
+        shutterBlink() {
+            const canvas = this.renderer.domElement;
+            canvas.style.filter = 'brightness(1.5)';
+            setTimeout(() => {
+                canvas.style.filter = '';
+            }, 100);
+        }
+        
+        createSeedCard(params) {
+            const card = document.createElement('div');
+            card.className = 'seed-card';
+            
+            const icon = document.createElement('div');
+            icon.className = 'seed-icon';
+            icon.textContent = '⚛';
+            
+            const label = document.createElement('div');
+            label.textContent = `G${params.gravity.toFixed(1)} M${params.magnet.toFixed(1)}`;
+            
+            card.appendChild(icon);
+            card.appendChild(label);
+            
+            card.addEventListener('click', () => {
+                this.applySeedCard(params);
+            });
+            
+            document.getElementById('seedShelf').appendChild(card);
+            this.seedCards.push(params);
+        }
+        
+        applySeedCard(params) {
+            // Replay seed conditions
+            this.gravityStrength = params.gravity;
+            this.magnetStrength = params.magnet;
+            
+            // Update dial positions
+            this.updateDialPosition('gravityDial', params.gravity / 2);
+            this.updateDialPosition('magnetDial', params.magnet);
+            
+            this.pulseFallMeter();
+        }
+        
+        updateDialPosition(dialId, percent) {
+            const thumb = document.querySelector(`#${dialId} .dial-thumb`);
+            if (thumb) {
+                thumb.style.bottom = (percent * 100) + '%';
+            }
+        }
+        
+        movePiece(direction) {
+            if (this.isPaused || this.isGameOver) return;
+            this.currentPiece.x += direction;
+            if (this.currentPiece.checkCollision(this.grid)) {
+                this.currentPiece.x -= direction;
+            } else {
+                this.renderPiece();
+                this.applyMagneticForces();
+            }
+        }
+        
+        rotatePiece() {
+            if (this.isPaused || this.isGameOver) return;
+            const rotated = this.currentPiece.attemptRotate(this.grid);
+            if (rotated) {
+                this.renderPiece();
+                this.applyMagneticForces();
+            }
+        }
+        
+        dropPiece() {
+            if (this.isPaused || this.isGameOver) return;
+            this.currentPiece.y -= 1;
+            if (this.currentPiece.checkCollision(this.grid)) {
+                this.currentPiece.y += 1;
+                this.saveState();
+                this.lockPiece();
+                this.clearLines();
+                this.updateScore();
+                this.spawnPiece();
+            } else {
+                this.renderPiece();
+            }
+        }
+        
+        holdPieceFunction() {
+            if (this.isPaused || this.isGameOver || !this.canHold) return;
+            this.canHold = false;
+            
+            if (this.holdPiece) {
+                const temp = this.holdPiece;
+                this.holdPiece = this.currentPiece;
+                this.currentPiece = new Piece(
+                    temp.type,
+                    JSON.parse(JSON.stringify(temp.shape)),
+                    temp.concept,
+                    this.GRID_WIDTH,
+                    this.GRID_HEIGHT
+                );
+                this.currentPiece.x = Math.floor(this.GRID_WIDTH / 2) - Math.ceil(this.currentPiece.shape[0].length / 2);
+                this.currentPiece.y = this.GRID_HEIGHT - 1;
+                
+                if (this.currentPiece.checkCollision(this.grid)) {
+                    this.showGameOver();
+                    return;
+                }
+                
+                this.renderPiece();
+            } else {
+                this.holdPiece = this.currentPiece;
+                this.spawnPiece();
+            }
+        }
+        
+        lockPiece() {
+            this.currentPiece.shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        const x = this.currentPiece.x + dx;
+                        const y = Math.floor(this.currentPiece.y - dy);
+                        
+                        if (y >= 0 && y < this.GRID_HEIGHT && x >= 0 && x < this.GRID_WIDTH) {
+                            this.grid[y][x] = {
+                                color: this.currentPiece.concept.color,
+                                concept: this.currentPiece.concept
+                            };
+                            
+                            if (this.currentPiece.concept) {
+                                const videoScreen = this.createVideoScreen(this.currentPiece.concept);
+                                videoScreen.position.set(x + 0.5, y + 0.5, 0.5);
+                                videoScreen.name = `video_${x}_${y}`;
+                                this.cssScene.add(videoScreen);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            this.canHold = true;
+            this.renderLockedBlocks();
+            this.detectPotentialChains();
+        }
+        
+        clearLines() {
+            const linesToClear = [];
+            
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                if (this.grid[y].every(cell => cell !== null)) {
+                    linesToClear.push(y);
+                }
+            }
+            
+            if (linesToClear.length > 0) {
+                linesToClear.forEach(y => {
+                    this.clearLine(y);
+                    
+                    // Check for knot (3 constraints agree)
+                    if (this.checkKnotConstraints(y)) {
+                        this.showKnotIcon(y);
+                    }
+                });
+                
+                this.applyGravity();
+                this.renderLockedBlocks();
+            }
+        }
+        
+        clearLine(y) {
+            for (let x = 0; x < this.GRID_WIDTH; x++) {
+                const cell = this.grid[y][x];
+                if (cell && cell.concept) {
+                    this.collectedFragments.push({
+                        concept: cell.concept,
+                        timestamp: Date.now(),
+                        lineY: y,
+                        x: x
+                    });
+                }
+                
+                const videoKey = `video_${x}_${y}`;
+                const video = this.cssScene.children.find(c => c.name === videoKey);
+                if (video) this.cssScene.remove(video);
+                
+                this.grid[y][x] = null;
+            }
+            
+            // Remove charge line
+            const line = document.getElementById(`charge-${y}`);
+            if (line) line.remove();
+            
+            this.updateFragmentCount();
+        }
+        
+        checkKnotConstraints(y) {
+            // Check if line has: adjacency + time continuity + theme coherence
+            const cells = this.grid[y].filter(c => c !== null);
+            if (cells.length < 3) return false;
+            
+            let hasAdjacency = true; // All adjacent by definition in a line
+            let hasTimeContinuity = false;
+            let hasThemeCoherence = false;
+            
+            // Time continuity: check if concepts flow temporally
+            const sorted = cells.map(c => c.concept).sort((a, b) => a.start - b.start);
+            let continuous = true;
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i].start - sorted[i-1].end > 60) {
+                    continuous = false;
+                    break;
+                }
+            }
+            hasTimeContinuity = continuous;
+            
+            // Theme coherence: majority same category
+            const categories = cells.map(c => c.concept.category);
+            const mostCommon = categories.sort((a,b) =>
+                categories.filter(v => v === a).length - categories.filter(v => v === b).length
+            ).pop();
+            hasThemeCoherence = categories.filter(c => c === mostCommon).length >= cells.length * 0.6;
+            
+            return hasAdjacency && hasTimeContinuity && hasThemeCoherence;
+        }
+        
+        showKnotIcon(y) {
+            const knot = document.createElement('div');
+            knot.className = 'knot-commit';
+            knot.textContent = '⚯';
+            
+            const screenY = this.projectYToScreen(y);
+            knot.style.top = screenY + 'px';
+            knot.style.left = '50%';
+            knot.style.transform = 'translateX(-50%)';
+            
+            knot.addEventListener('click', () => {
+                this.commitChainEdit(y);
+                knot.remove();
+            });
+            
+            document.body.appendChild(knot);
+            
+            // Auto-remove after 3s
+            setTimeout(() => knot.remove(), 3000);
+        }
+        
+        applyGravity() {
+            for (let x = 0; x < this.GRID_WIDTH; x++) {
+                const blocks = [];
+                for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                    if (this.grid[y][x] !== null) {
+                        blocks.push(this.grid[y][x]);
+                    }
+                }
+                
+                for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                    this.grid[y][x] = null;
+                }
+                
+                for (let i = 0; i < blocks.length; i++) {
+                    this.grid[i][x] = blocks[i];
+                }
+            }
+            
+            // Recreate videos
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                for (let x = 0; x < this.GRID_WIDTH; x++) {
+                    const cell = this.grid[y][x];
+                    if (cell && cell.concept) {
+                        const videoScreen = this.createVideoScreen(cell.concept);
+                        videoScreen.position.set(x + 0.5, y + 0.5, 0.5);
+                        videoScreen.name = `video_${x}_${y}`;
+                        this.cssScene.add(videoScreen);
+                    }
+                }
+            }
+        }
+        
+        renderLockedBlocks() {
+            // Clear old blocks
+            while (this.gridGroup.children.length > 0) {
+                this.gridGroup.remove(this.gridGroup.children[0]);
+            }
+            
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                for (let x = 0; x < this.GRID_WIDTH; x++) {
+                    const cell = this.grid[y][x];
+                    if (cell !== null) {
+                        const color = typeof cell === 'object' ? cell.color : cell;
+                        const concept = typeof cell === 'object' ? cell.concept : null;
+                        this.renderBlock(x, y, color, 1, concept);
+                    }
+                }
+            }
+        }
+        
+        saveState() {
+            const state = {
+                grid: this.grid.map(row => row.slice()),
+                score: this.score,
+                timestamp: Date.now()
+            };
+            
+            this.history.push(state);
+            if (this.history.length > this.maxHistory) {
+                this.history.shift();
+            }
+        }
+        
+        rewindStep() {
+            if (this.history.length === 0) return;
+            
+            const state = this.history.pop();
+            this.grid = state.grid.map(row => row.slice());
+            this.score = state.score;
+            
+            document.getElementById('scoreDisplay').textContent = this.score;
+            
+            this.renderLockedBlocks();
+            
+            // Clear videos
+            this.cssScene.children.forEach(c => {
+                if (c.name && c.name.startsWith('video_')) {
+                    this.cssScene.remove(c);
+                }
+            });
+            
+            // Recreate videos
+            for (let y = 0; y < this.GRID_HEIGHT; y++) {
+                for (let x = 0; x < this.GRID_WIDTH; x++) {
+                    const cell = this.grid[y][x];
+                    if (cell && cell.concept) {
+                        const videoScreen = this.createVideoScreen(cell.concept);
+                        videoScreen.position.set(x + 0.5, y + 0.5, 0.5);
+                        videoScreen.name = `video_${x}_${y}`;
+                        this.cssScene.add(videoScreen);
+                    }
+                }
+            }
+        }
+        
+        updateFragmentCount() {
+            document.getElementById('fragmentCount').textContent = this.collectedFragments.length;
+        }
+        
+        updateScore() {
+            this.score += 10;
+            document.getElementById('scoreDisplay').textContent = this.score;
+        }
+        
+        togglePause() {
+            if (this.isGameOver) return;
+            this.isPaused = !this.isPaused;
+        }
+        
+        showGameOver() {
+            this.isGameOver = true;
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('gameOverModal').classList.add('active');
+        }
+        
+        resetGarden() {
+            this.grid = Array.from({ length: this.GRID_HEIGHT }, () => Array(this.GRID_WIDTH).fill(null));
+            this.score = 0;
+            this.collectedFragments = [];
+            this.seedCards = [];
+            this.salience = {};
+            this.history = [];
+            this.isGameOver = false;
+            
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('fragmentCount').textContent = '0';
+            document.getElementById('gameOverModal').classList.remove('active');
+            document.getElementById('seedShelf').innerHTML = '';
+            
+            if (this.pieceGroup) this.scene.remove(this.pieceGroup);
+            
+            while (this.gridGroup.children.length > 0) {
+                this.gridGroup.remove(this.gridGroup.children[0]);
+            }
+            
+            this.cssScene.children.forEach(c => {
+                if (c.name && c.name.startsWith('video_')) {
+                    this.cssScene.remove(c);
+                }
+            });
+            
+            this.nextPieces = [];
+            this.holdPiece = null;
+            this.fillNextQueue();
+            this.spawnPiece();
+        }
+        
+        startGarden(difficulty) {
+            const intervals = { beginner: 1000, medium: 700, expert: 400 };
+            this.dropInterval = intervals[difficulty] || 1000;
+            this.spawnPiece();
+        }
+        
+        startGameLoop() {
+            this.lastDropTime = Date.now();
+            const animate = () => {
+                requestAnimationFrame(animate);
+                
+                if (!this.isPaused && !this.isGameOver) {
+                    const now = Date.now();
+                    if (now - this.lastDropTime > this.dropInterval) {
+                        this.dropPiece();
+                        this.lastDropTime = now;
+                    }
+                }
+                
+                this.updateCameraSpring();
+                this.renderer.render(this.scene, this.camera);
+                if (this.cssRenderer) this.cssRenderer.render(this.cssScene, this.camera);
+            };
+            animate();
+        }
+        
+        onWindowResize() {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.cssRenderer.setSize(window.innerWidth, window.innerHeight);
+            this.updateGhostFrame();
+        }
+    }
+    
+    class Piece {
+        constructor(type, shape, concept, gridWidth, gridHeight) {
+            this.type = type;
+            this.shape = shape;
+            this.concept = concept;
+            this.color = concept.color;
+            this.gridWidth = gridWidth;
+            this.gridHeight = gridHeight;
+            this.x = 0;
+            this.y = 0;
+            this.rotationState = 0;
+        }
+        
+        rotate() {
+            this.shape = this.shape[0].map((_, index) =>
+                this.shape.map(row => row[index]).reverse()
+            );
+            this.rotationState = (this.rotationState + 1) % 4;
+        }
+        
+        attemptRotate(grid) {
+            const originalShape = JSON.parse(JSON.stringify(this.shape));
+            const originalX = this.x;
+            const originalY = this.y;
+            const originalRotation = this.rotationState;
+            
+            this.rotate();
+            
+            const wallKicks = [[0,0], [1,0], [-1,0], [0,1], [0,-1]];
+            
+            for (const [kickX, kickY] of wallKicks) {
+                this.x += kickX;
+                this.y += kickY;
+                if (!this.checkCollision(grid)) {
+                    return true;
+                }
+                this.x = originalX;
+                this.y = originalY;
+            }
+            
+            this.shape = originalShape;
+            this.rotationState = originalRotation;
+            return false;
+        }
+        
+        checkCollision(grid) {
+            return this.shape.some((row, dy) =>
+                row.some((cell, dx) => {
+                    if (!cell) return false;
+                    const x = this.x + dx;
+                    const y = Math.floor(this.y - dy);
+                    return (
+                        x < 0 || x >= this.gridWidth ||
+                        y < 0 || y >= this.gridHeight ||
+                        (y >= 0 && grid[y] && grid[y][x])
+                    );
+                })
+            );
+        }
+    }
+    
+    window.addEventListener('load', () => {
+        new GardenEditor();
+    });
+    </script>
+</body>
+</html>
