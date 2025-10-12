@@ -33,10 +33,16 @@ body { margin:0; overflow:hidden; background:#000; }
 .dot.on { background:#0ff; box-shadow:0 0 10px #0ff; }
 .bar { position:fixed; bottom:0; left:0; right:0; height:2px; background:#0ff; 
   box-shadow:0 0 10px #0ff; }
-.timeline-player { position:fixed; top:60px; right:100px; bottom:0; width:80px; 
-  background:rgba(0,0,0,0.8); border-left:2px solid #0ff; display:none; z-index:5; 
-  padding:10px 5px; overflow-y:auto; overflow-x:hidden; }
+.timeline-player { position:fixed; top:60px; right:0; bottom:0; width:72px; 
+  background:rgba(0,0,0,0.78); border-left:2px solid #0ff; display:none; z-index:5; 
+  padding:8px 4px; overflow-y:auto; overflow-x:hidden; }
 .timeline-player.active { display:flex; flex-direction:column; gap:8px; align-items:center; }
+.timeline-player.collapsed { width:0; padding:0; border-left:none; pointer-events:none; }
+.timeline-handle { position:fixed; right:0; top:50%; transform:translateY(-50%);
+  width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff;
+  color:#0ff; display:flex; align-items:center; justify-content:center; z-index:6; cursor:pointer;
+  backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); }
+.timeline-handle:active { background:rgba(0,255,255,0.25); }
 .close-timeline { position:absolute; top:5px; right:5px; color:#0ff; cursor:pointer; 
   font-size:16px; z-index:10; padding:2px 6px; }
 .close-timeline:hover { color:#fff; background:rgba(0,255,255,0.2); }
@@ -81,6 +87,19 @@ body { margin:0; overflow:hidden; background:#000; }
 .preview-btn:hover { background:#0ff; color:#000; }
 .close-preview { position:absolute; top:10px; right:10px; color:#0ff; cursor:pointer;
   font-size:24px; z-index:10; }
+
+/* Hide side play controls when timeline is collapsed (mobile) */
+.timeline-collapsed #playControls { display:none !important; }
+.timeline-player.collapsed ~ .play-controls { display:none !important; }
+.timeline-collapsed .play-controls { display:none !important; }
+
+/* Mobile alley tightening */
+@media (max-width: 768px) {
+  .timeline-player { width:56px; padding:6px 3px; background:rgba(0,0,0,0.74); }
+  .segment-strip { margin-bottom:6px; padding:3px; }
+  .strip-header { display:none; }
+  .thumbnails-grid canvas { width:44px !important; height:44px !important; }
+}
 .segment-strip.playing { background:#0ff; color:#000; }
 .export-menu { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
   background:rgba(0,0,0,0.95); border:2px solid #0ff; padding:20px; z-index:200;
@@ -116,6 +135,8 @@ body { margin:0; overflow:hidden; background:#000; }
 .time-lane.playing .lane-info { color:#000; }
 .time-lane.selected { border:2px solid #0ff; box-shadow:0 0 15px rgba(0,255,255,0.6); }
 .time-lane.connected { border:2px solid rgba(0,255,255,0.4); background:rgba(0,255,255,0.1); }
+@keyframes pulseGlow { 0%{ box-shadow:0 0 0 rgba(0,255,255,0.0);} 50%{ box-shadow:0 0 20px rgba(0,255,255,0.9);} 100%{ box-shadow:0 0 0 rgba(0,255,255,0.0);} }
+.time-lane.selected { animation:pulseGlow 1.2s ease-out 1; }
 .lane-header { font-size:9px; color:#0ff; text-transform:uppercase; 
   font-weight:bold; margin-bottom:4px; letter-spacing:1px; text-align:center; }
 .lane-thumbs { display:flex; gap:2px; justify-content:center; flex-wrap:wrap; }
@@ -173,6 +194,7 @@ body { margin:0; overflow:hidden; background:#000; }
   <div class="close-timeline" onclick="closeTimeline()">×</div>
   <div class="timeline-label">SEQ</div>
 </div>
+<div class="timeline-handle" id="timelineHandle">❯</div>
 <div class="preview-panel" id="previewPanel">
   <div class="close-preview" onclick="closePreview()">×</div>
   <div class="preview-title" id="previewTitle">Video Preview</div>
@@ -200,6 +222,7 @@ body { margin:0; overflow:hidden; background:#000; }
   <div class="export-option" onclick="showRecursiveView()">🌀 Recursive Timeline View</div>
   <div class="export-option" onclick="exportSequenceA4()">📄 Sequence Timeline (A4)</div>
   <div class="export-option" onclick="exportGridMosaic()">🖼 Grid Mosaic (A4)</div>
+  <div class="export-option" onclick="exportGridMosaicWithBG()">🖼 Grid Mosaic + Background (A4)</div>
   <div class="export-option" onclick="exportEDL()">📝 Edit Decision List</div>
 </div>
 <div class="recursive-view" id="recursiveView">
@@ -1819,44 +1842,23 @@ function renderRecursiveTimeline(){
         lane.dataset.unitEnd = unitEnd;
         lane.dataset.layerIdx = layerIdx;
         
-        // Single click: highlight across layers
-        // Double click/tap: play video
-        let clickCount = 0;
-        let clickTimer = null;
-        
-        lane.onclick = (e) => {
-          clickCount++;
-          
-          if(clickCount === 1){
-            // Wait to see if it's a double click
-            clickTimer = setTimeout(() => {
-              // Single click - highlight across layers
-              haptic(8);
-              playSound('move', 400 + unitIdx * 20);
-              console.log(`Selected lane ${unitIdx + 1} of ${layer.label}:`, overlappingSegments);
-              
-              if(overlappingSegments.length > 0){
-                recursiveSelectedSegment = overlappingSegments[0];
-                highlightCrossLayers(unitStart, unitEnd);
-              }
-              
-              clickCount = 0;
-            }, 300);
-          } else if(clickCount === 2){
-            // Double click - play video
-            clearTimeout(clickTimer);
-            haptic(15);
-            playSound('focus', 600);
-            console.log(`Playing lane ${unitIdx + 1} of ${layer.label}:`, overlappingSegments);
-            
-            if(overlappingSegments.length > 0){
-              const segment = overlappingSegments[0];
-              playRecursiveSegment(segment, lane);
-            }
-            
-            clickCount = 0;
+        // On mobile/touch: single tap plays immediately. On desktop: single click plays, dblclick also plays.
+        lane.onclick = () => {
+          haptic(10);
+          playSound('focus', 600);
+          if(overlappingSegments.length > 0){
+            const segment = overlappingSegments[0];
+            // Also reflect selection across layers for context
+            recursiveSelectedSegment = segment;
+            highlightCrossLayers(unitStart, unitEnd);
+            playRecursiveSegment(segment, lane);
           }
         };
+        lane.addEventListener('dblclick', () => {
+          if(overlappingSegments.length > 0){
+            playRecursiveSegment(overlappingSegments[0], lane);
+          }
+        });
         
         column.appendChild(lane);
       }
@@ -1871,6 +1873,21 @@ function renderRecursiveTimeline(){
   // Update arrow states
   updateRecursiveArrows();
 }
+
+// Mobile: collapse timeline alley by default and toggle with handle
+(() => {
+  const handle = document.getElementById('timelineHandle');
+  const panel = document.getElementById('timelinePlayer');
+  if(!handle || !panel) return;
+  const isSmall = window.innerWidth <= 768;
+  if(isSmall){ panel.classList.add('collapsed'); document.body.classList.add('timeline-collapsed'); }
+  handle.addEventListener('click', () => {
+    const collapsed = panel.classList.toggle('collapsed');
+    document.body.classList.toggle('timeline-collapsed', collapsed);
+    handle.textContent = collapsed ? '❯' : '❮';
+    haptic(8);
+  });
+})();
 
 function setupRecursiveSwipe(){
   const container = document.getElementById('recursiveColumns');
