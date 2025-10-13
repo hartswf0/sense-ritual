@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NARRATIVE GARDEN v0.3 — Visual Upgrade (Act Structure)</title>
+  <style>
+    :root{--bg:#0a0a0a;--ui:#111;--line:#222;--accent:#00ff41;--act1:#4ECDC4;--act2a:#FFE66D;--act2b:#F38181;--act3:#AA96DA;}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg);color:#f5f5f5;font-family:'SF Mono','Monaco',monospace;font-size:13px;}
+    .wrap{display:flex;flex-direction:column;height:100vh;}
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ui);border-bottom:2px solid var(--line);}
+    .brand{font-weight:900;letter-spacing:3px;font-size:16px;color:var(--accent);}
+    .version{font-size:10px;color:#666;letter-spacing:1px;margin-top:2px;}
+    .stats{display:flex;gap:16px;font-size:12px;font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:var(--accent);}
+    #gameArea{position:relative;flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+    canvas{background:#0d0d0d;border:2px solid var(--line);border-radius:8px;touch-action:none;cursor:pointer;}
+    
+    /* ACT TRACKER - Visual hierarchy */
+    .act-tracker{position:fixed;left:20px;top:80px;width:240px;background:rgba(17,17,17,0.95);border:2px solid var(--line);padding:12px;border-radius:4px;max-height:calc(100vh - 200px);overflow-y:auto;}
+    .act-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+    .act-section:last-child{border:none;}
+    .act-title{font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:1px;}
+    .act-title.act1{color:var(--act1);}
+    .act-title.act2a{color:var(--act2a);}
+    .act-title.act2b{color:var(--act2b);}
+    .act-title.act3{color:var(--act3);}
+    .beat-item{padding:6px 8px;margin:4px 0;background:rgba(255,255,255,0.03);border-left:3px solid var(--line);font-size:10px;transition:all 0.3s;}
+    .beat-item.collected{background:rgba(0,255,65,0.15);border-left-color:var(--accent);transform:translateX(4px);}
+    .beat-item.act1.collected{border-left-color:var(--act1);}
+    .beat-item.act2a.collected{border-left-color:var(--act2a);}
+    .beat-item.act2b.collected{border-left-color:var(--act2b);}
+    .beat-item.act3.collected{border-left-color:var(--act3);}
+    .beat-num{color:#666;margin-right:6px;font-weight:700;font-size:9px;}
+    .beat-name{color:#999;}
+    .beat-item.collected .beat-name{color:#fff;font-weight:600;}
+    .syntagma-badge{display:inline-block;margin-left:6px;padding:2px 6px;background:rgba(255,230,109,0.2);border-radius:3px;font-size:8px;color:var(--act2a);}
+    .act-progress{margin-top:8px;display:flex;align-items:center;gap:8px;}
+    .act-progress-bar{flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;}
+    .act-progress-fill{height:100%;transition:width 0.3s;}
+    .act-progress-fill.act1{background:var(--act1);}
+    .act-progress-fill.act2a{background:var(--act2a);}
+    .act-progress-fill.act2b{background:var(--act2b);}
+    .act-progress-fill.act3{background:var(--act3);}
+    .act-progress-label{font-size:9px;color:#666;}
+    
+    .instructions{position:fixed;right:20px;top:80px;width:250px;background:rgba(17,17,17,0.95);border:2px solid var(--line);padding:12px;border-radius:4px;}
+    .instructions h3{font-size:11px;color:var(--accent);margin-bottom:8px;letter-spacing:2px;}
+    .instructions p{font-size:10px;color:#999;line-height:1.5;margin-bottom:8px;}
+    .goal{background:rgba(0,255,65,0.05);padding:8px;border-left:2px solid var(--accent);margin-top:8px;}
+    .toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:10px;background:rgba(0,0,0,0.85);border-top:2px solid var(--line);}
+    .btn{padding:8px 16px;border:1px solid var(--line);background:rgba(255,255,255,0.05);color:#f5f5f5;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+    .btn:hover{background:rgba(0,255,65,0.1);border-color:var(--accent);color:var(--accent);}
+    .btn.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);}
+    .syntagma-selector{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;}
+    .syntagma-selector.active{display:flex;}
+    .selector-panel{background:var(--ui);border:2px solid var(--accent);padding:24px;border-radius:8px;max-width:600px;}
+    .selector-title{font-size:16px;color:var(--accent);margin-bottom:8px;letter-spacing:2px;text-align:center;}
+    .selector-subtitle{font-size:11px;color:#666;text-align:center;margin-bottom:16px;}
+    .syntagma-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+    .syntagma-option{padding:16px;background:rgba(255,255,255,0.05);border:2px solid var(--line);cursor:pointer;transition:all 0.2s;position:relative;}
+    .syntagma-option:hover{border-color:var(--accent);background:rgba(0,255,65,0.1);transform:scale(1.05);}
+    .syntagma-option.suggested{border-color:var(--act2a);background:rgba(255,230,109,0.1);}
+    .syntagma-option.suggested::after{content:'SUGGESTED';position:absolute;top:4px;right:4px;font-size:8px;color:var(--act2a);padding:2px 4px;background:rgba(255,230,109,0.2);border-radius:2px;}
+    .syntagma-code{font-size:14px;color:var(--accent);font-weight:700;margin-bottom:4px;}
+    .syntagma-name{font-size:10px;color:#999;}
+    .syntagma-bonus{font-size:9px;color:var(--act2a);margin-top:4px;}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;}
+    .modal.active{display:flex;}
+    .modal-content{background:var(--ui);border:2px solid var(--accent);padding:40px;border-radius:8px;text-align:center;max-width:500px;}
+    .modal-title{font-size:24px;color:var(--accent);margin-bottom:16px;letter-spacing:3px;}
+    .modal-text{font-size:14px;color:#999;line-height:1.6;margin-bottom:24px;}
+    .modal-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+    .modal-stat{padding:16px;background:rgba(255,255,255,0.05);border:1px solid var(--line);}
+    .modal-stat-value{font-size:24px;color:var(--accent);font-weight:700;}
+    .modal-stat-label{font-size:10px;color:#666;margin-top:4px;text-transform:uppercase;letter-spacing:1px;}
+    .modal-breakdown{text-align:left;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--line);margin-bottom:24px;font-size:11px;}
+    .breakdown-row{display:flex;justify-content:space-between;margin:4px 0;color:#999;}
+    .breakdown-row strong{color:var(--accent);}
+    @media (max-width:768px){.act-tracker,.instructions{display:none;}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">NARRATIVE GARDEN</div>
+      <div class="version">v0.3 VISUAL UPGRADE — Act Structure Visualization</div>
+    </div>
+    <div class="stats">
+      <div class="stat">BEATS <span class="stat-value" id="beatsCollected">0/15</span></div>
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">ACT BONUS <span class="stat-value" id="actBonus">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">50</span></div>
+    </div>
+  </header>
+  
+  <div id="gameArea"><canvas id="game"></canvas></div>
+  
+  <div class="act-tracker">
+    <div class="act-section">
+      <div class="act-title act1">ACT 1: SETUP</div>
+      <div id="act1Beats"></div>
+      <div class="act-progress">
+        <div class="act-progress-bar"><div class="act-progress-fill act1" id="act1Progress" style="width:0%"></div></div>
+        <div class="act-progress-label" id="act1Label">0/5</div>
+      </div>
+    </div>
+    <div class="act-section">
+      <div class="act-title act2a">ACT 2A: CONFRONTATION</div>
+      <div id="act2aBeats"></div>
+      <div class="act-progress">
+        <div class="act-progress-bar"><div class="act-progress-fill act2a" id="act2aProgress" style="width:0%"></div></div>
+        <div class="act-progress-label" id="act2aLabel">0/5</div>
+      </div>
+    </div>
+    <div class="act-section">
+      <div class="act-title act2b">ACT 2B: CRISIS</div>
+      <div id="act2bBeats"></div>
+      <div class="act-progress">
+        <div class="act-progress-bar"><div class="act-progress-fill act2b" id="act2bProgress" style="width:0%"></div></div>
+        <div class="act-progress-label" id="act2bLabel">0/2</div>
+      </div>
+    </div>
+    <div class="act-section">
+      <div class="act-title act3">ACT 3: RESOLUTION</div>
+      <div id="act3Beats"></div>
+      <div class="act-progress">
+        <div class="act-progress-bar"><div class="act-progress-fill act3" id="act3Progress" style="width:0%"></div></div>
+        <div class="act-progress-label" id="act3Label">0/3</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="instructions">
+    <h3>HOW TO PLAY</h3>
+    <p>Build a <strong>3-act structure</strong> beat by beat. Complete acts earn bonuses.</p>
+    <p><strong>Suggested syntagmas</strong> appear highlighted for +50 bonus.</p>
+    <div class="goal">
+      <strong>WIN BONUSES</strong><br>
+      ✓ Act 1 complete: +200<br>
+      ✓ Act 2A complete: +300<br>
+      ✓ Act 2B complete: +200<br>
+      ✓ Act 3 complete: +400<br>
+      ✓ Full structure: +1000
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="restartBtn">RESTART</button>
+    <button class="btn primary" id="exportBtn" style="display:none;">EXPORT STORYMAP</button>
+  </div>
+</div>
+
+<div class="syntagma-selector" id="syntagmaSelector">
+  <div class="selector-panel">
+    <div class="selector-title" id="selectorBeatTitle">SELECT SYNTAGMA</div>
+    <div class="selector-subtitle" id="selectorBeatAct"></div>
+    <div class="syntagma-grid" id="syntagmaGrid"></div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">3-ACT STRUCTURE COMPLETE!</div>
+    <div class="modal-text">You've assembled a complete cinematic narrative with proper act structure.</div>
+    <div class="modal-stats">
+      <div class="modal-stat">
+        <div class="modal-stat-value" id="modalScore">0</div>
+        <div class="modal-stat-label">Total Score</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-value" id="modalActBonus">0</div>
+        <div class="modal-stat-label">Act Bonuses</div>
+      </div>
+    </div>
+    <div class="modal-breakdown" id="modalBreakdown"></div>
+    <button class="btn primary" onclick="location.reload()">NEW STRUCTURE</button>
+  </div>
+</div>
+
+<script>
+console.log('🎬 NARRATIVE GARDEN v0.3 — Visual Upgrade Loading...');
+
+const BEATS=[
+  {id:1,name:'Opening Image',act:'act1',actName:'Act 1',suggestedSyntagma:'DS'},
+  {id:2,name:'Theme Stated',act:'act1',actName:'Act 1',suggestedSyntagma:'AS'},
+  {id:3,name:'Set-Up',act:'act1',actName:'Act 1',suggestedSyntagma:'DS'},
+  {id:4,name:'Catalyst',act:'act1',actName:'Act 1',suggestedSyntagma:'SC'},
+  {id:5,name:'Debate',act:'act1',actName:'Act 1',suggestedSyntagma:'PS'},
+  {id:6,name:'Break into Two',act:'act2a',actName:'Act 2A',suggestedSyntagma:'SC'},
+  {id:7,name:'B Story',act:'act2a',actName:'Act 2A',suggestedSyntagma:'ALT'},
+  {id:8,name:'Fun and Games',act:'act2a',actName:'Act 2A',suggestedSyntagma:'ES'},
+  {id:9,name:'Midpoint',act:'act2a',actName:'Act 2A',suggestedSyntagma:'SC'},
+  {id:10,name:'Bad Guys Close In',act:'act2a',actName:'Act 2A',suggestedSyntagma:'OS'},
+  {id:11,name:'All Is Lost',act:'act2b',actName:'Act 2B',suggestedSyntagma:'AS'},
+  {id:12,name:'Dark Night',act:'act2b',actName:'Act 2B',suggestedSyntagma:'BS'},
+  {id:13,name:'Break into Three',act:'act3',actName:'Act 3',suggestedSyntagma:'SC'},
+  {id:14,name:'Finale',act:'act3',actName:'Act 3',suggestedSyntagma:'OS'},
+  {id:15,name:'Final Image',act:'act3',actName:'Act 3',suggestedSyntagma:'AS'}
+];
+
+const SYNTAGMAS=[
+  {code:'AS',name:'Autonomous Shot',bonus:100},
+  {code:'PS',name:'Parallel Syntagma',bonus:100},
+  {code:'BS',name:'Bracket Syntagma',bonus:100},
+  {code:'DS',name:'Descriptive Syntagma',bonus:100},
+  {code:'ALT',name:'Alternating Syntagma',bonus:150},
+  {code:'SC',name:'Scene',bonus:100},
+  {code:'ES',name:'Episodic Sequence',bonus:150},
+  {code:'OS',name:'Ordinary Sequence',bonus:100}
+];
+
+const ACT_BONUSES={act1:200,act2a:300,act2b:200,act3:400,complete:1000};
+const GRID_SIZE=8,CELL_SIZE=64;
+const COLORS=['#FF6B6B','#4ECDC4','#FFE66D','#95E1D3','#F38181','#AA96DA'];
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+
+const game={grid:[],selected:null,score:0,actBonus:0,moves:50,beatsCollected:[],busy:false,pendingBeatId:null,actProgress:{act1:0,act2a:0,act2b:0,act3:0}};
+
+function init(){
+  canvas.width=GRID_SIZE*CELL_SIZE;
+  canvas.height=GRID_SIZE*CELL_SIZE;
+  renderBeatList();
+  createGrid();
+  draw();
+  canvas.addEventListener('click',handleClick);
+  document.getElementById('restartBtn').addEventListener('click',()=>location.reload());
+}
+
+function createGrid(){for(let r=0;r<GRID_SIZE;r++){game.grid[r]=[];for(let c=0;c<GRID_SIZE;c++){game.grid[r][c]=Math.floor(Math.random()*COLORS.length);}}while(findMatches().length>0){clearMatches(findMatches());dropCells();refillGrid();}}
+function draw(){ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,canvas.width,canvas.height);for(let r=0;r<GRID_SIZE;r++){for(let c=0;c<GRID_SIZE;c++){const x=c*CELL_SIZE,y=r*CELL_SIZE,type=game.grid[r][c];ctx.fillStyle=COLORS[type];ctx.fillRect(x+4,y+4,CELL_SIZE-8,CELL_SIZE-8);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=2;ctx.strokeRect(x+4,y+4,CELL_SIZE-8,CELL_SIZE-8);if(game.selected&&game.selected.r===r&&game.selected.c===c){ctx.strokeStyle='#00ff41';ctx.lineWidth=4;ctx.strokeRect(x+2,y+2,CELL_SIZE-4,CELL_SIZE-4);}}}requestAnimationFrame(draw);}
+function handleClick(e){if(game.busy)return;const rect=canvas.getBoundingClientRect();const x=e.clientX-rect.left,y=e.clientY-rect.top;const col=Math.floor((x/rect.width)*GRID_SIZE);const row=Math.floor((y/rect.height)*GRID_SIZE);if(row<0||row>=GRID_SIZE||col<0||col>=GRID_SIZE)return;if(!game.selected){game.selected={r:row,c:col};}else{const dr=Math.abs(game.selected.r-row),dc=Math.abs(game.selected.c-col);if((dr===1&&dc===0)||(dr===0&&dc===1)){swapCells(game.selected.r,game.selected.c,row,col);}game.selected=null;}}
+function swapCells(r1,c1,r2,c2){[game.grid[r1][c1],game.grid[r2][c2]]=[game.grid[r2][c2],game.grid[r1][c1]];const matches=findMatches();if(matches.length>0){game.moves--;document.getElementById('moves').textContent=game.moves;processMatches(matches);}else{[game.grid[r1][c1],game.grid[r2][c2]]=[game.grid[r2][c2],game.grid[r1][c1]];}}
+function findMatches(){const matches=[];for(let r=0;r<GRID_SIZE;r++){for(let c=0;c<GRID_SIZE-2;c++){const type=game.grid[r][c];let count=1;for(let i=1;c+i<GRID_SIZE&&game.grid[r][c+i]===type;i++)count++;if(count>=3){for(let i=0;i<count;i++)matches.push({r,c:c+i});}}}for(let c=0;c<GRID_SIZE;c++){for(let r=0;r<GRID_SIZE-2;r++){const type=game.grid[r][c];let count=1;for(let i=1;r+i<GRID_SIZE&&game.grid[r+i][c]===type;i++)count++;if(count>=3){for(let i=0;i<count;i++)matches.push({r:r+i,c});}}}const unique=[];matches.forEach(m=>{if(!unique.find(u=>u.r===m.r&&u.c===m.c))unique.push(m);});return unique;}
+function processMatches(matches){game.busy=true;if(game.beatsCollected.length<15){game.pendingBeatId=game.beatsCollected.length+1;showSyntagmaSelector();}else{game.score+=matches.length*10;finishProcessing(matches);}}
+function showSyntagmaSelector(){const beat=BEATS[game.pendingBeatId-1];document.getElementById('selectorBeatTitle').textContent=`Beat ${beat.id}: ${beat.name}`;document.getElementById('selectorBeatAct').textContent=beat.actName;renderSyntagmaGrid(beat.suggestedSyntagma);document.getElementById('syntagmaSelector').classList.add('active');}
+function renderSyntagmaGrid(suggested){const grid=document.getElementById('syntagmaGrid');grid.innerHTML='';SYNTAGMAS.forEach(syn=>{const opt=document.createElement('div');opt.className='syntagma-option';if(syn.code===suggested)opt.classList.add('suggested');opt.innerHTML=`<div class="syntagma-code">${syn.code}</div><div class="syntagma-name">${syn.name}</div><div class="syntagma-bonus">+${syn.bonus} pts</div>`;opt.onclick=()=>selectSyntagma(syn.code);grid.appendChild(opt);});}
+function selectSyntagma(code){const beat=BEATS[game.pendingBeatId-1];const syntagma=SYNTAGMAS.find(s=>s.code===code);game.beatsCollected.push({beatId:game.pendingBeatId,syntagma:code,act:beat.act});game.score+=100;let bonus=syntagma.bonus;if(code===beat.suggestedSyntagma)bonus+=50;game.score+=bonus;game.actProgress[beat.act]++;updateActProgress();checkActCompletion(beat.act);updateBeatList();document.getElementById('score').textContent=game.score;document.getElementById('actBonus').textContent=game.actBonus;document.getElementById('beatsCollected').textContent=`${game.beatsCollected.length}/15`;document.getElementById('syntagmaSelector').classList.remove('active');if(game.beatsCollected.length===15){game.actBonus+=ACT_BONUSES.complete;game.score+=ACT_BONUSES.complete;showWinModal();}finishProcessing(findMatches());}
+function checkActCompletion(act){const counts={act1:5,act2a:5,act2b:2,act3:3};if(game.actProgress[act]===counts[act]){game.actBonus+=ACT_BONUSES[act];game.score+=ACT_BONUSES[act];document.getElementById('actBonus').textContent=game.actBonus;}}
+function updateActProgress(){['act1','act2a','act2b','act3'].forEach(act=>{const counts={act1:5,act2a:5,act2b:2,act3:3};const pct=(game.actProgress[act]/counts[act])*100;document.getElementById(`${act}Progress`).style.width=`${pct}%`;document.getElementById(`${act}Label`).textContent=`${game.actProgress[act]}/${counts[act]}`;});}
+function finishProcessing(matches){clearMatches(matches);setTimeout(()=>{dropCells();refillGrid();const newMatches=findMatches();if(newMatches.length>0){processMatches(newMatches);}else{game.busy=false;checkGameOver();}},300);}
+function clearMatches(matches){matches.forEach(({r,c})=>{game.grid[r][c]=null;});}
+function dropCells(){for(let c=0;c<GRID_SIZE;c++){let writeRow=GRID_SIZE-1;for(let r=GRID_SIZE-1;r>=0;r--){if(game.grid[r][c]!==null){game.grid[writeRow][c]=game.grid[r][c];if(writeRow!==r)game.grid[r][c]=null;writeRow--;}}}}
+function refillGrid(){for(let c=0;c<GRID_SIZE;c++){for(let r=0;r<GRID_SIZE;r++){if(game.grid[r][c]===null){game.grid[r][c]=Math.floor(Math.random()*COLORS.length);}}}}
+function renderBeatList(){['act1','act2a','act2b','act3'].forEach(act=>{const container=document.getElementById(`${act}Beats`);BEATS.filter(b=>b.act===act).forEach(beat=>{const item=document.createElement('div');item.className=`beat-item ${act}`;item.id=`beat-${beat.id}`;item.innerHTML=`<span class="beat-num">${beat.id}</span><span class="beat-name">${beat.name}</span>`;container.appendChild(item);});});}
+function updateBeatList(){game.beatsCollected.forEach(({beatId,syntagma})=>{const item=document.getElementById(`beat-${beatId}`);if(item){item.classList.add('collected');const badge=document.createElement('span');badge.className='syntagma-badge';badge.textContent=syntagma;item.appendChild(badge);}});}
+function checkGameOver(){if(game.moves<=0&&game.beatsCollected.length<15){alert('Out of moves!');location.reload();}}
+function showWinModal(){document.getElementById('modalScore').textContent=game.score;document.getElementById('modalActBonus').textContent=game.actBonus;const breakdown=document.getElementById('modalBreakdown');breakdown.innerHTML=`
+<div class="breakdown-row"><span>Beat Points:</span><strong>+${game.beatsCollected.length*100}</strong></div>
+<div class="breakdown-row"><span>Act 1 Bonus:</span><strong>+200</strong></div>
+<div class="breakdown-row"><span>Act 2A Bonus:</span><strong>+300</strong></div>
+<div class="breakdown-row"><span>Act 2B Bonus:</span><strong>+200</strong></div>
+<div class="breakdown-row"><span>Act 3 Bonus:</span><strong>+400</strong></div>
+<div class="breakdown-row"><span>Completion Bonus:</span><strong>+1000</strong></div>
+`;document.getElementById('modal').classList.add('active');document.getElementById('exportBtn').style.display='inline-block';}
+init();
+</script>
+</body>
+</html>

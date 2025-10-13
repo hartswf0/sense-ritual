@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>MESHWORK — Video Topology Series</title>
+<style>
+  :root{ --bg:#0a0a0a; --fg:#0ff; --accent:#FFC107; --grid:#222; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+  
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+  
+  h1{font-size:48px;font-weight:900;letter-spacing:8px;color:var(--fg);margin-bottom:12px;text-align:center}
+  .subtitle{font-size:14px;color:#666;text-align:center;margin-bottom:60px;letter-spacing:2px}
+  
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:1200px;width:100%}
+  
+  .card{background:#111;border:2px solid var(--grid);border-radius:12px;padding:24px;transition:all .3s;cursor:pointer;position:relative;overflow:hidden}
+  .card:hover{border-color:var(--fg);transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,255,255,.2)}
+  
+  .card-number{position:absolute;top:12px;right:12px;font-size:48px;font-weight:900;color:rgba(0,255,255,.1);line-height:1}
+  
+  .card-title{font-size:20px;font-weight:900;color:var(--fg);margin-bottom:8px}
+  .card-desc{font-size:13px;color:#666;line-height:1.6;margin-bottom:16px}
+  
+  .card-tags{display:flex;gap:8px;flex-wrap:wrap}
+  .tag{background:rgba(0,255,255,.1);border:1px solid rgba(0,255,255,.3);color:var(--fg);padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px}
+  
+  .status{position:absolute;bottom:12px;right:12px;font-size:10px;font-weight:700;padding:4px 8px;border-radius:4px}
+  .status.ready{background:rgba(0,255,100,.2);color:#0f0;border:1px solid #0f0}
+  .status.wip{background:rgba(255,193,7,.2);color:var(--accent);border:1px solid var(--accent)}
+  
+  footer{margin-top:80px;text-align:center;color:#444;font-size:11px}
+  footer a{color:#666;text-decoration:none}
+  footer a:hover{color:var(--fg)}
+  
+  @media (max-width: 768px) {
+    h1{font-size:32px;letter-spacing:4px}
+    .grid{grid-template-columns:1fr;gap:16px}
+  }
+</style>
+</head>
+<body>
+
+<h1>MESHWORK</h1>
+<div class="subtitle">VIDEO TOPOLOGY SERIES</div>
+
+<div class="grid">
+  
+  <a href="narrative-meshwork-organic.html" style="text-decoration:none">
+    <div class="card">
+      <div class="card-number">⭐</div>
+      <div class="card-title">Narrative Meshwork Organic</div>
+      <div class="card-desc">PRIMARY TOOL. Organic Voronoi cells with auto-playing videos. Match-3 → auto-collect narrative beats. Clip alley. Film assembly. Cellular automata mode. No interruptions.</div>
+      <div class="card-tags">
+        <span class="tag">NARRATIVE</span>
+        <span class="tag">ORGANIC</span>
+        <span class="tag">AUTOMATE</span>
+        <span class="tag">FILM</span>
+      </div>
+      <div class="status ready">PRIMARY</div>
+    </div>
+  </a>
+  
+  <a href="meshwork-725.html" style="text-decoration:none">
+    <div class="card">
+      <div class="card-number">725</div>
+      <div class="card-title">Meshwork 725 — Visual Controls</div>
+      <div class="card-desc">Advanced breathing meshwork with bloom, edge softness, blend modes. Settings panel with real-time sliders. Mobile-optimized. Wavy Voronoi geometry.</div>
+      <div class="card-tags">
+        <span class="tag">BLOOM</span>
+        <span class="tag">BLEND</span>
+        <span class="tag">BREATHING</span>
+        <span class="tag">CONTROLS</span>
+      </div>
+      <div class="status ready">STABLE</div>
+    </div>
+  </a>
+  
+  <a href="meshwork-865.html" style="text-decoration:none">
+    <div class="card">
+      <div class="card-number">865</div>
+      <div class="card-title">Meshwork 865 — Simplified</div>
+      <div class="card-desc">Clean, simplified breathing meshwork. Maximum video visibility. Unicode symbols. Minimal overlays. Breathing synchronized across grid.</div>
+      <div class="card-tags">
+        <span class="tag">CLEAN</span>
+        <span class="tag">SIMPLE</span>
+        <span class="tag">BREATHING</span>
+      </div>
+      <div class="status ready">STABLE</div>
+    </div>
+  </a>
+  
+  <a href="narrative-garden-v03.html" style="text-decoration:none">
+    <div class="card">
+      <div class="card-number">V03</div>
+      <div class="card-title">Narrative Garden — Learning Tool</div>
+      <div class="card-desc">15-beat Save the Cat structure builder. Syntagma selection. Act tracking. Match-3 gameplay. Visual beat list. Great for understanding narrative structure.</div>
+      <div class="card-tags">
+        <span class="tag">15 BEATS</span>
+        <span class="tag">SYNTAGMA</span>
+        <span class="tag">LEARNING</span>
+      </div>
+      <div class="status ready">COMPLETE</div>
+    </div>
+  </a>
+  
+  <a href="time-alley.html" style="text-decoration:none">
+    <div class="card">
+      <div class="card-number">⏱️</div>
+      <div class="card-title">Time Alley — Temporal Navigation</div>
+      <div class="card-desc">Recursive timeline view. Navigate video clips across temporal scales. Zoom into moments, step up to overview. Transclusion system.</div>
+      <div class="card-tags">
+        <span class="tag">TEMPORAL</span>
+        <span class="tag">RECURSIVE</span>
+        <span class="tag">ALLEY</span>
+      </div>
+      <div class="status wip">NEEDS WORK</div>
+    </div>
+  </a>
+  
+  <a href="MANIFEST.md" style="text-decoration:none">
+    <div class="card">
+      <div class="card-number">📄</div>
+      <div class="card-title">Project Manifest</div>
+      <div class="card-desc">Complete documentation. All features, all files, technical specs. Narrative structure reference. Breathing animation system. Usage guide.</div>
+      <div class="card-tags">
+        <span class="tag">DOCS</span>
+        <span class="tag">REFERENCE</span>
+        <span class="tag">GUIDE</span>
+      </div>
+      <div class="status ready">CURRENT</div>
+    </div>
+  </a>
+
+</div>
+
+<footer>
+  <a href="time-alley.html">← TIME ALLEY</a> | 
+  MESHWORK Series — Video Topology Experiments | 
+  <a href="chain-collector.html">CHAIN COLLECTOR →</a>
+</footer>
+
+</body>
+</html>

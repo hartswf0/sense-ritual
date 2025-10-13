@@ -3,42 +3,204 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>Recursive Time Alley — Mk II (Real Media)</title>
+<title>⏱ TIME ALLEY — Difference That Makes a Difference</title>
 <style>
-  :root{ --bg:#000; --fg:#fff; --accent:#E24A4A; --grid:#B7B7B7; --ghost:#777; }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
-  #app{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
-  #vizWrap{position:relative;overflow:hidden}
-  svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-  #breadcrumbs{padding:8px 12px;border-top:1px solid #111;background:rgba(0,0,0,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);padding:8px 10px;border:1px solid #333;background:#111;color:#ddd;border-radius:8px;opacity:0;transition:opacity .2s}
+  :root{ --bg:#0a0a0a; --fg:#fff; --accent:#FFC107; --grid:#333; --ghost:#555; --panel:#1a1a1a; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%}
+  body{background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+  
+  /* Main Layout */
+  #app{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr auto auto}
+  
+  /* Color Coding - Narrative Categories */
+  .clip-media-apparatus{fill:#4A90E2 !important}
+  .clip-core-concept{fill:#62ff87 !important}
+  .clip-systemic-critique{fill:#E24A4A !important}
+  .clip-systemic-control{fill:#ff9ecb !important}
+  .clip-systemic-event{fill:#ffd166 !important}
+  .clip-personal{fill:#bd9cff !important}
+  .clip-transition{fill:#FFC107 !important}
+  .clip-difference{fill:#fff !important;stroke:#FFC107 !important;stroke-width:3 !important}
+  
+  /* Header */
+  #header{background:var(--panel);border-bottom:1px solid #222;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  #header h1{font-size:18px;font-weight:700;color:var(--accent);margin:0}
+  #stats{display:flex;gap:16px;font-size:12px;color:#999}
+  #stats .stat{display:flex;align-items:center;gap:6px}
+  #stats .stat-label{color:#666}
+  #stats .stat-value{color:#fff;font-weight:600;font-family:monospace}
+  
+  /* Visualization */
+  #vizWrap{position:relative;overflow:auto;background:#000;scroll-behavior:smooth}
+  svg{position:absolute;inset:0;width:100%;min-height:100%;touch-action:pan-y}
+  
+  /* Transport Controls */
+  #transport{background:var(--panel);border-top:1px solid #222;padding:12px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center}
+  #playControls{display:flex;gap:8px}
+  #playControls button{appearance:none;background:#222;color:#fff;border:1px solid #333;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+  #playControls button:hover{background:#2a2a2a;border-color:#444}
+  #playControls button:active{background:#1a1a1a}
+  #playControls button.active{background:var(--accent);color:#000;border-color:var(--accent)}
+  
+  #timeline{flex:1;display:flex;align-items:center;gap:12px}
+  #timeDisplay{font-family:monospace;font-size:16px;font-weight:700;color:var(--accent);min-width:100px}
+  #progress{flex:1;height:6px;background:#222;border-radius:3px;position:relative;cursor:pointer}
+  #progress .bar{height:100%;background:var(--accent);border-radius:3px;transition:width .1s linear}
+  #durationDisplay{font-family:monospace;font-size:12px;color:#666}
+  
+  #fileControls{display:flex;gap:8px}
+  #fileControls button, #fileControls label{appearance:none;background:#222;color:#fff;border:1px solid #333;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:12px;transition:all .2s}
+  #fileControls button:hover, #fileControls label:hover{background:#2a2a2a;border-color:#444}
+  input[type=file]{display:none}
+  
+  /* Breadcrumbs */
+  #breadcrumbs{background:var(--panel);border-top:1px solid #222;padding:8px 16px;font-size:12px;color:#666;display:flex;align-items:center;gap:8px}
+  #breadcrumbs .crumb{color:#999;cursor:pointer;transition:color .2s}
+  #breadcrumbs .crumb:hover{color:#fff}
+  #breadcrumbs .crumb.active{color:var(--accent);font-weight:600}
+  #breadcrumbs .sep{color:#444}
+  
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);padding:12px 20px;border:1px solid #333;background:rgba(26,26,26,.95);color:#fff;border-radius:8px;opacity:0;transition:opacity .2s;backdrop-filter:blur(10px);font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.5)}
   .toast.show{opacity:1}
-  /* Transport / project controls */
-  #transport{position:absolute;right:12px;top:12px;display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.6);border:1px solid #222;padding:6px 8px;border-radius:10px}
-  #transport button{appearance:none;background:transparent;color:var(--fg);border:1px solid #444;border-radius:16px;padding:4px 10px;cursor:pointer}
-  #transport input[type=file]{display:none}
-  #transport label{border:1px solid #444;border-radius:16px;padding:4px 10px;cursor:pointer}
-  #tc{font-family:monospace;font-size:12px;color:#ddd}
+  
+  /* Video Preview Panel */
+  #videoPreview{position:absolute;bottom:16px;right:16px;width:400px;height:300px;background:#000;border:2px solid var(--accent);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.8);display:none}
+  #videoPreview.show{display:block}
+  #videoPreview video{width:100%;height:100%;object-fit:contain}
+  #videoPreview .preview-label{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.8);color:var(--accent);padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700}
+  #videoPreview .preview-info{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(0,0,0,.9);color:#fff;padding:6px 8px;border-radius:4px;font-size:10px;font-family:monospace}
+  
+  /* Clip Context Menu */
+  #clipMenu{position:absolute;background:rgba(26,26,26,.98);border:1px solid #444;border-radius:6px;padding:4px;display:none;z-index:1000;backdrop-filter:blur(10px)}
+  #clipMenu.show{display:block}
+  #clipMenu button{display:block;width:100%;appearance:none;background:transparent;color:#fff;border:none;padding:8px 12px;text-align:left;cursor:pointer;font-size:12px;border-radius:4px}
+  #clipMenu button:hover{background:#333}
+  #clipMenu .divider{height:1px;background:#333;margin:4px 0}
+  
+  /* Clip Info Panel */
+  #clipInfo{position:absolute;top:60px;right:16px;width:280px;background:rgba(26,26,26,.95);border:1px solid #333;border-radius:8px;padding:16px;backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .2s}
+  #clipInfo.show{opacity:1;pointer-events:auto}
+  #clipInfo h3{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:700}
+  #clipInfo .info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222;font-size:12px}
+  #clipInfo .info-row:last-child{border-bottom:none}
+  #clipInfo .info-label{color:#666}
+  #clipInfo .info-value{color:#fff;font-family:monospace}
+  
+  /* Navigation Controls */
+  #navControls{position:absolute;bottom:16px;left:16px;display:flex;flex-direction:column;gap:8px}
+  #navControls button{appearance:none;background:rgba(26,26,26,.95);color:#fff;border:1px solid #333;border-radius:6px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;backdrop-filter:blur(10px);min-width:120px}
+  #navControls button:hover{background:#2a2a2a;border-color:var(--accent)}
+  #navControls button:active{background:#1a1a1a}
+  #navControls button:disabled{opacity:.3;cursor:not-allowed}
+  #navControls .scale-indicator{background:rgba(255,193,7,.2);color:var(--accent);border:1px solid var(--accent);padding:8px 12px;border-radius:6px;font-size:11px;text-align:center;font-weight:700}
+  
+  /* Mobile Optimizations */
+  @media (max-width: 768px) {
+    #header{flex-direction:column;align-items:flex-start;padding:10px 12px}
+    #stats{flex-wrap:wrap;gap:8px}
+    #transport{grid-template-columns:1fr;gap:12px}
+    #timeline{flex-direction:column;gap:8px}
+    #timeDisplay{min-width:auto}
+    #clipInfo{width:calc(100% - 24px);right:12px;left:12px;top:auto;bottom:340px}
+    #fileControls{width:100%}
+    #fileControls button, #fileControls label{flex:1}
+    #videoPreview{width:calc(100% - 24px);left:12px;right:12px;height:200px}
+    #navControls{left:12px;bottom:220px}
+  }
+  
+  /* Touch Targets */
+  @media (pointer: coarse) {
+    #playControls button{padding:12px 20px;font-size:16px}
+    #fileControls button, #fileControls label{padding:12px 16px}
+    #progress{height:12px}
+  }
 </style>
 </head>
 <body>
 <div id="app">
-  <div id="vizWrap">
-    <svg id="viz" viewBox="0 0 1200 1000" preserveAspectRatio="none" aria-label="time alley" role="img"></svg>
-    <div id="transport">
-      <button id="btnPlay" title="Play/Pause">▶︎</button>
-      <button id="btnStop" title="Stop">■</button>
-      <label for="fileIn" title="Import media">＋ media</label>
-      <input id="fileIn" type="file" accept="audio/*,video/*" multiple />
-      <button id="btnSave">Save</button>
-      <button id="btnOpen">Open</button>
-      <span id="tc">00:00:00.0</span>
+  <!-- Header -->
+  <div id="header">
+    <h1>⏱ TIME ALLEY</h1>
+    <div id="stats">
+      <div class="stat">
+        <span class="stat-label">Clips:</span>
+        <span class="stat-value" id="clipCount">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Total:</span>
+        <span class="stat-value" id="totalDuration">00:00:00</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">View:</span>
+        <span class="stat-value" id="currentView">Collection</span>
+      </div>
     </div>
+  </div>
+  
+  <!-- Visualization -->
+  <div id="vizWrap">
+    <svg id="viz" viewBox="0 0 1200 1000" preserveAspectRatio="none"></svg>
+    
+    <!-- Navigation Controls -->
+    <div id="navControls">
+      <div class="scale-indicator" id="scaleIndicator">COLLECTION</div>
+      <button id="btnDive" title="Zoom into selection">↓ Dive In</button>
+      <button id="btnUp" title="Zoom out one level">↑ Zoom Out</button>
+      <button id="btnFit" title="Fit entire collection">Fit All</button>
+    </div>
+    
+    <!-- Video Preview -->
+    <div id="videoPreview">
+      <div class="preview-label">PREVIEW</div>
+      <video id="previewVideo" muted></video>
+      <div class="preview-info" id="previewInfo"></div>
+    </div>
+    
+    <!-- Clip Context Menu -->
+    <div id="clipMenu">
+      <button id="menuColor">🎨 Change Color</button>
+      <button id="menuWeld">🔗 Weld to Next</button>
+      <button id="menuSplit">✂️ Split at Playhead</button>
+      <div class="divider"></div>
+      <button id="menuDelete">🗑️ Delete</button>
+    </div>
+    
+    <!-- Clip Info Panel -->
+    <div id="clipInfo">
+      <h3>Clip Details</h3>
+      <div id="clipInfoContent"></div>
+    </div>
+    
     <div class="toast" id="toast"></div>
   </div>
-  <div id="breadcrumbs">Years</div>
+  
+  <!-- Transport Controls -->
+  <div id="transport">
+    <div id="playControls">
+      <button id="btnPlay">▶ Play</button>
+      <button id="btnStop">■ Stop</button>
+    </div>
+    <div id="timeline">
+      <div id="timeDisplay">00:00:00.0</div>
+      <div id="progress">
+        <div class="bar" style="width:0%"></div>
+      </div>
+      <div id="durationDisplay">00:00:00.0</div>
+    </div>
+    <div id="fileControls">
+      <label for="fileIn">+ Add Media</label>
+      <input id="fileIn" type="file" accept="audio/*,video/*" multiple />
+      <button id="btnSave">💾 Save</button>
+      <button id="btnOpen">📂 Open</button>
+    </div>
+  </div>
+  
+  <!-- Breadcrumbs -->
+  <div id="breadcrumbs">
+    <span class="crumb active">Collection</span>
+  </div>
 </div>
 <script>
 // ===== Seed Threads (cross-scale appearances) =====
@@ -68,39 +230,35 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 const pad2 = n=>String(n).padStart(2,'0')
 function fmtTime(sec){ const s=Math.max(0,sec); const h=Math.floor(s/3600); const m=Math.floor(s%3600/60); const sc=(s%60).toFixed(1); return `${pad2(h)}:${pad2(m)}:${sc.padStart(4,'0')}` }
 
-// Unit definitions (display spans) and media mapping scales
+// TEMPORAL MEDIA BASIS - Each level divides by 6, down to frames (1/48s)
+const ZOOM_FACTOR = 6  // Each level is 6x more detailed
+const FRAME_RATE = 48  // Frames per second at deepest level
+
 const unitDefs={
-  years:{ span:10, major:1, minor:.25, label:v=>v.toFixed(0), next:'months', media:false },
-  months:{ span:12, major:1, minor:.25, label:m=>['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Math.round((m%12+12)%12)], next:'days', media:false },
-  days:{ span:31, major:5, minor:1, label:d=>String(Math.max(1,Math.floor(d))).padStart(2,'0'), next:'hours', media:false },
-  hours:{ span:24, major:2, minor:1, label:h=>String(Math.floor((h%24+24)%24)).padStart(2,'0')+':00', next:'seconds', media:true, secondsPerUnit:3600 },
-  seconds:{ span:60, major:5, minor:1, label:s=>String(Math.floor((s%60+60)%60)), media:true, secondsPerUnit:1 }
+  collection:{ name:'Collection', divider:ZOOM_FACTOR, label:v=>fmtTime(v), next:'sequence', media:true, secondsPerUnit:1 },
+  sequence:{ name:'Sequence', divider:ZOOM_FACTOR, label:v=>fmtTime(v), next:'section', media:true, secondsPerUnit:1 },
+  section:{ name:'Section', divider:ZOOM_FACTOR, label:v=>fmtTime(v), next:'moment', media:true, secondsPerUnit:1 },
+  moment:{ name:'Moment', divider:ZOOM_FACTOR, label:v=>fmtTime(v), next:'seconds', media:true, secondsPerUnit:1 },
+  seconds:{ name:'Seconds', divider:FRAME_RATE, label:v=>v.toFixed(2)+'s', next:'frames', media:true, secondsPerUnit:1 },
+  frames:{ name:'Frames', divider:1, label:v=>'f'+Math.floor(v*FRAME_RATE), next:null, media:true, secondsPerUnit:1/FRAME_RATE }
 }
 
 function buildLayerLedger(unit, domain){
-  const events=[]
-  Object.entries(seedThreads).forEach(([tid, t])=>{
-    t.appearances.forEach(ap=>{
-      if(ap.unit!==unit) return
-      let a=ap.range?.[0], b=ap.range?.[1]
-      if(b==null||a==null) return
-      if(b<domain[0]||a>domain[1]) return
-      events.push({ id:tid, title:ap.title, threadId:tid, color:seedThreads[tid].color, range:[Math.max(a,domain[0]), Math.min(b,domain[1])], kind:'native' })
-    })
-  })
-  return events
+  // Remove fake demo events - only show real media
+  return []
 }
 
 // ===== Project / State =====
 const state={
-  stack:[ { unit:'years', domain:[1963,1968], sel:[1965,1966], events:[], transclusions:[], tracks:[{id:'t0',name:'Plan'}] } ],
+  stack:[ { unit:'collection', domain:[0,100], sel:[0,100], events:[], transclusions:[], tracks:[{id:'t0',name:'Media'}] } ],
   lastHapticTick:null,
   playing:false,
-  playheadAbs:0, // seconds in active layer space mapped by secondsPerUnit
-  media:[], // {id,type:'audio'|'video',el,duration,name}
-  clips:[], // {id, layerIndex, track, start, end, type:'note'|'cue'|'audio'|'video', color, title, mediaId?, mediaOffset?}
+  playheadAbs:0, // seconds absolute
+  media:[], // {id,type:'audio'|'video',el,duration,name,headFrame,tailFrame}
+  clips:[], // {id, layerIndex, track, start, end, type:'note'|'cue'|'audio'|'video', color, title, mediaId?, mediaOffset?, duration?, headThumb?, tailThumb?}
   selection:null, // active clip id
-  snap:true
+  snap:false, // No snapping - media defines time
+  totalDuration:0 // Total media duration
 }
 
 // Auto-load all media files from MEDIA folder
@@ -171,7 +329,157 @@ const btnStop=document.getElementById('btnStop')
 const fileIn=document.getElementById('fileIn')
 const btnSave=document.getElementById('btnSave')
 const btnOpen=document.getElementById('btnOpen')
-const tc=document.getElementById('tc')
+
+// New UI elements
+const timeDisplay=document.getElementById('timeDisplay')
+const durationDisplay=document.getElementById('durationDisplay')
+const progressBar=document.getElementById('progress').querySelector('.bar')
+const clipCount=document.getElementById('clipCount')
+const totalDurationEl=document.getElementById('totalDuration')
+const currentView=document.getElementById('currentView')
+const clipInfo=document.getElementById('clipInfo')
+const clipInfoContent=document.getElementById('clipInfoContent')
+const videoPreview=document.getElementById('videoPreview')
+const previewVideo=document.getElementById('previewVideo')
+const scaleIndicator=document.getElementById('scaleIndicator')
+const btnDive=document.getElementById('btnDive')
+const btnUp=document.getElementById('btnUp')
+const btnFit=document.getElementById('btnFit')
+const clipMenu=document.getElementById('clipMenu')
+const previewInfo=document.getElementById('previewInfo')
+
+// Narrative Categories (from Matrix Crush)
+const NARRATIVE_CATEGORIES = [
+  {name:'Media Apparatus', value:'#4A90E2', icon:'◯', desc:'Ways of seeing & representing'},
+  {name:'Core Concept', value:'#62ff87', icon:'◐', desc:'Central ideas & beliefs'},
+  {name:'Systemic Critique', value:'#E24A4A', icon:'◑', desc:'Revealing power structures'},
+  {name:'Systemic Control', value:'#ff9ecb', icon:'◒', desc:'Forces that constrain'},
+  {name:'Systemic Event', value:'#ffd166', icon:'◓', desc:'Historical ruptures'},
+  {name:'Personal', value:'#bd9cff', icon:'◔', desc:'Individual experience'},
+  {name:'Transition', value:'#FFC107', icon:'↔', desc:'Between states'},
+  {name:'Difference', value:'#fff', icon:'⚡', desc:'The moment that changes everything'}
+]
+let currentColorIndex = 0
+
+// Update UI stats
+function updateStats(){
+  clipCount.textContent = state.clips.filter(c=>!c.isGhost).length
+  totalDurationEl.textContent = fmtTime(state.totalDuration)
+  const def = unitDefs[current().unit]
+  const viewName = def.name
+  currentView.textContent = viewName
+  scaleIndicator.textContent = viewName.toUpperCase()
+  
+  // Update navigation button states
+  btnDive.disabled = !def.next
+  btnUp.disabled = state.stack.length <= 1
+}
+
+// Update progress bar
+function updateProgress(){
+  const layer=current(); const def=unitDefs[layer.unit]
+  const tUnit = def.media? (def.secondsPerUnit||1) : 1
+  const domainSec = (layer.domain[1]-layer.domain[0]) * tUnit
+  const percent = domainSec > 0 ? (state.playheadAbs / domainSec * 100) : 0
+  progressBar.style.width = Math.min(100, Math.max(0, percent)) + '%'
+  timeDisplay.textContent = fmtTime(state.playheadAbs)
+  durationDisplay.textContent = fmtTime(domainSec)
+}
+
+// Show clip info panel
+function showClipInfo(clip){
+  if(!clip){
+    clipInfo.classList.remove('show')
+    return
+  }
+  const media = state.media.find(m=>m.id===clip.mediaId)
+  clipInfoContent.innerHTML = `
+    <div class="info-row">
+      <span class="info-label">Title</span>
+      <span class="info-value">${clip.title||'Untitled'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Type</span>
+      <span class="info-value">${clip.type.toUpperCase()}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Start</span>
+      <span class="info-value">${fmtTime(clip.start)}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">End</span>
+      <span class="info-value">${fmtTime(clip.end)}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Duration</span>
+      <span class="info-value">${fmtTime(clip.end - clip.start)}</span>
+    </div>
+    ${media ? `<div class="info-row">
+      <span class="info-label">File</span>
+      <span class="info-value">${media.name.slice(0,20)}</span>
+    </div>` : ''}
+  `
+  clipInfo.classList.add('show')
+}
+
+// Update video preview with context
+function updateVideoPreview(){
+  if(!state.playing && !state.selection){
+    videoPreview.classList.remove('show')
+    return
+  }
+  
+  const layer=current()
+  const def=unitDefs[layer.unit]
+  const tUnit=def.media? (def.secondsPerUnit||1) : 1
+  const tUnits = state.playheadAbs / tUnit + layer.domain[0]
+  
+  // Find active clips (non-ghost)
+  const activeClips = state.clips.filter(c=>
+    !c.isGhost &&
+    c.layerIndex===state.stack.length-1 && 
+    tUnits>=c.start && 
+    tUnits<=c.end
+  )
+  
+  // Or show selected clip
+  let clip = activeClips[0]
+  if(!clip && state.selection){
+    clip = state.clips.find(c=>c.id===state.selection && !c.isGhost)
+  }
+  
+  if(clip){
+    const media = state.media.find(m=>m.id===clip.mediaId)
+    if(media && media.el){
+      // Show this video in preview
+      if(previewVideo.src !== media.el.src){
+        previewVideo.src = media.el.src
+      }
+      
+      // Update preview info
+      const clipDuration = clip.end - clip.start
+      const clipProgress = state.playing ? tUnits - clip.start : 0
+      const currentScale = def.name
+      previewInfo.innerHTML = `
+        ${currentScale} | ${media.name.slice(0,20)}<br>
+        Clip: ${fmtTime(clip.start)} → ${fmtTime(clip.end)} (${fmtTime(clipDuration)})
+        ${state.playing ? `<br>Progress: ${fmtTime(clipProgress)}` : ''}
+      `
+      
+      if(state.playing){
+        previewVideo.currentTime = media.el.currentTime
+        previewVideo.play().catch(()=>{})
+      } else {
+        // Show frame at playhead position
+        const relTime = (tUnits - clip.start) * tUnit + (clip.mediaOffset||0)
+        previewVideo.currentTime = relTime
+      }
+      videoPreview.classList.add('show')
+    }
+  } else {
+    videoPreview.classList.remove('show')
+  }
+}
 
 function current(){return state.stack[state.stack.length-1]}
 
@@ -208,81 +516,221 @@ function render(){
 
   drawPlayhead(g, columns[n-1])
   renderBreadcrumbs()
+  updateStats()
+  updateProgress()
 }
 
 function drawAlleyColumn(g, rect, s, isActive){
   const {x,y,w,h}=rect
-  el('rect',{x,y,width:w,height:h,fill:isActive?'#0b0b0b':'#070707',stroke:isActive?'#3a3a3a':'#222'},g)
-  const rails=isActive?8:6
-  for(let i=0;i<rails;i++){
-    const rx=x+lerp(18,w-18,i/(rails-1))
-    const p=`M ${rx} ${y+h-16} C ${rx} ${y+h*.66}, ${lerp(x+w/2,rx,.5)} ${y+h*.35}, ${lerp(x+w/2,rx,.12)} ${y+18}`
-    el('path',{d:p,stroke:isActive?'#262626':'#1c1c1c','stroke-width':1,fill:'none'},g)
-  }
+  el('rect',{x,y,width:w,height:h,fill:isActive?'#0b0b0b':'#050505',stroke:isActive?'#2a2a2a':'#111'},g)
+  // Remove decorative rails - focus on media
   drawTicksInRect(g, rect, s.unit, s.domain)
-  if(s.sel){ const y1=yForRect(s.sel[0], s.domain, rect), y2=yForRect(s.sel[1], s.domain, rect); el('rect',{x:x+8,y:y2,width:w-16,height:(y1-y2),fill:'rgba(226,74,74,.12)',stroke:'rgba(226,74,74,.45)'},g) }
-  el('text',{x:x+10,y:y+16,fill:'#aaa','font-size':11,text:s.unit.toUpperCase()},g)
+  if(s.sel){ const y1=yForRect(s.sel[0], s.domain, rect), y2=yForRect(s.sel[1], s.domain, rect); el('rect',{x:x+8,y:y2,width:w-16,height:(y1-y2),fill:'rgba(226,74,74,.08)',stroke:'rgba(226,74,74,.3)'},g) }
+  // Show time range instead of unit name
+  const rangeText = `${fmtTime(s.domain[0])} - ${fmtTime(s.domain[1])}`
+  el('text',{x:x+10,y:y+16,fill:'#777','font-size':10,text:rangeText},g)
 }
 
 function drawTracksGrid(g, rect, layer){
   const {x,y,w,h}=rect
   const tracks = layer.tracks || (layer.tracks=[{id:'t0',name:'V1'},{id:'t1',name:'A1'}])
   const rows = tracks.length
+  // Make track lines very subtle
   for(let r=0;r<rows;r++){
     const yy = y + 28 + r*(h-56)/rows
-    el('line',{x1:x+8,y1:yy,x2:x+w-8,y2:yy,stroke:'#222','stroke-width':1},g)
-    el('text',{x:x+12,y:yy-6,fill:'#888','font-size':10,text:tracks[r].name},g)
+    el('line',{x1:x+20,y1:yy,x2:x+w-20,y2:yy,stroke:'#151515','stroke-width':0.5,'stroke-dasharray':'4 8'},g)
+    el('text',{x:x+24,y:yy-6,fill:'#555','font-size':9,text:tracks[r].name},g)
   }
 }
 
 function drawTicksInRect(g, rect, unit, domain){
   const {x,y,w,h}=rect
   const def=unitDefs[unit]
-  const major=def.major, minor=def.minor
-  for(let v=Math.ceil(domain[0]/minor)*minor; v<=domain[1]; v+=minor){ const yy=yForRect(v,domain,rect); el('line',{x1:x+20,y1:yy,x2:x+w-20,y2:yy,stroke:'#161616','stroke-width':1,'stroke-dasharray':'2 8'},g) }
-  for(let v=Math.ceil(domain[0]/major)*major; v<=domain[1]; v+=major){ const yy=yForRect(v,domain,rect); el('line',{x1:x+28,y1:yy,x2:x+w-28,y2:yy,stroke:'#444','stroke-width':1.4},g); el('text',{x:x+w/2+6,y:yy+4,fill:'#ddd','font-size':12,text:def.label(v)},g) }
+  const span = domain[1] - domain[0]
+  const major = span / 10  // Always 10 major ticks
+  // Only draw major ticks, make them subtle
+  if(major > 0){
+    for(let i=0; i<=10; i++){
+      const v = domain[0] + i*major
+      const yy = yForRect(v, domain, rect)
+      el('line',{x1:x+20,y1:yy,x2:x+w-20,y2:yy,stroke:'#1a1a1a','stroke-width':0.5},g)
+      el('text',{x:x+w-60,y:yy+4,fill:'#666','font-size':10,text:def.label(v)},g)
+    }
+  }
 }
 
 function yForRect(v, domain, rect){ const {y,h}=rect; return lerp(y+20, y+h-20, 1 - (v-domain[0])/(domain[1]-domain[0])) }
 function vFromY(yy, domain, rect){ const {y,h}=rect; const t = clamp((yy-(y+20))/((h-40)),0,1); return lerp(domain[1],domain[0],t) }
 
 function drawEventsInRect(g, rect, layer){
-  const {x,w}=rect
-  const centers=[]
-  const drawSet=(arr, ghost=false)=>{
-    arr.forEach(ev=>{
-      const y1=yForRect(ev.range[0], layer.domain, rect), y2=yForRect(ev.range[1], layer.domain, rect)
-      const fx=x+(ghost? (w*0.55) : (w*0.5))
-      const width = ghost? Math.max(8,w*0.18) : Math.max(12,w*0.22)
-      el('rect',{x:fx-width/2,y:y2,width:width,height:(y1-y2),fill:ghost? 'rgba(200,200,200,.08)' : ev.color, opacity: ghost? 0.35:0.85, stroke: ghost? '#444' : ev.color},g)
-      centers.push({threadId:ev.threadId, x:fx, y:(y1+y2)/2, color:ev.color})
-    })
-  }
-  drawSet(layer.transclusions||[], true)
-  drawSet(layer.events||[], false)
-  return centers
+  // No longer draw fake events - only real media clips
+  return []
 }
 
 function drawThread(g, A, B){
-  const mx=lerp(A.x,B.x,.5)
-  const d=`M ${A.x} ${A.y} C ${mx} ${A.y}, ${mx} ${B.y}, ${B.x} ${B.y}`
-  el('path',{d, stroke:A.color, 'stroke-width':1.2, 'stroke-dasharray':'4 4', fill:'none', opacity:0.8}, g)
+  // No threads needed - media clips are self-contained
 }
 
 function drawClips(g, rect, layerIndex){
   const {x,y,w,h}=rect
-  const tracks = state.stack[layerIndex].tracks || []
+  const layer = state.stack[layerIndex]
+  const tracks = layer.tracks || []
   const rows = Math.max(1, tracks.length)
-  state.clips.filter(c=>c.layerIndex===layerIndex).forEach(clip=>{
-    const row = clamp(clip.track,0,rows-1)
-    const trackYTop = y + 28 + row*(h-56)/rows
-    const y1 = yForRect(clip.start, state.stack[layerIndex].domain, rect)
-    const y2 = yForRect(clip.end, state.stack[layerIndex].domain, rect)
-    const cx = x + w*0.25 + row*(w*0.5/rows)
-    const cw = Math.max(14, w*0.38/rows)
-    const r = el('rect',{x:cx-cw/2,y:y2,width:cw,height:(y1-y2),fill:clip.color||'#8BC34A',stroke: state.selection===clip.id? '#fff':'#cfcfcf','stroke-width': state.selection===clip.id? 1.2:0.6,rx:5,ry:5},g)
-    el('text',{x:cx-cw/2+4,y:y2+12,fill:'#111','font-size':10,text:(clip.title||clip.type).slice(0,24)},g)
-    r.dataset.clipId = clip.id
+  
+  // Draw ALL media clips that should appear at this scale
+  state.clips.forEach(clip=>{
+    // Only draw clips assigned to this layer OR clips that fit this time scale
+    if(clip.layerIndex !== layerIndex) return
+    
+    const row = clamp(clip.track || 0, 0, rows-1)
+    const y1 = yForRect(clip.start, layer.domain, rect)
+    const y2 = yForRect(clip.end, layer.domain, rect)
+    
+    // Skip if outside visible domain
+    if(clip.end < layer.domain[0] || clip.start > layer.domain[1]) return
+    
+    // Clip to visible domain
+    const visStart = Math.max(clip.start, layer.domain[0])
+    const visEnd = Math.min(clip.end, layer.domain[1])
+    const vy1 = yForRect(visStart, layer.domain, rect)
+    const vy2 = yForRect(visEnd, layer.domain, rect)
+    
+    // Show clips across ALL layers - wider in deeper layers
+    const isCurrentLayer = layerIndex === state.stack.length - 1
+    const cx = x + w*0.5
+    const cw = isCurrentLayer ? Math.max(w*0.75, 100) : Math.max(w*0.6, 80)
+    const clipHeight = Math.max(vy1-vy2, 3)
+    
+    // Create container group for this clip
+    const container = el('g', {}, g)
+    
+    // Background block
+    const r = el('rect',{
+      x:cx-cw/2,
+      y:vy2,
+      width:cw,
+      height:clipHeight,
+      fill: clip.isGhost? 'rgba(100,100,100,0.15)' : (clip.color||'#FFC107'),
+      stroke: clip.isGhost? '#444' : (state.selection===clip.id? '#FFE66D':'rgba(255,255,255,0.4)'),
+      'stroke-width': state.selection===clip.id? 3 : (clip.isGhost? 1 : 2),
+      'stroke-dasharray': clip.isGhost? '4 4' : 'none',
+      rx:4,
+      ry:4,
+      opacity: clip.isGhost? 0.4 : (isCurrentLayer? 0.6 : 0.4)
+    },container)
+    
+    // HEAD FRAME (top of clip)
+    if(clip.headThumb && clipHeight > 40){
+      const thumbSize = Math.min(cw*0.8, clipHeight*0.35, 60)
+      const thumbY = vy2 + 6
+      el('image',{
+        'xlink:href': clip.headThumb,
+        x: cx - thumbSize/2,
+        y: thumbY,
+        width: thumbSize,
+        height: thumbSize,
+        preserveAspectRatio: 'xMidYMid slice',
+        opacity: clip.isGhost? 0.5 : (isCurrentLayer? 1 : 0.8)
+      },container)
+      // Label
+      if(clipHeight > 50){
+        el('text',{
+          x:cx,
+          y:thumbY + thumbSize + 12,
+          fill:'#fff',
+          'font-size':9,
+          'font-weight':'600',
+          'text-anchor':'middle',
+          text:'▲ START',
+          opacity:0.7
+        },container)
+      }
+    }
+    
+    // TAIL FRAME (bottom of clip)
+    if(clip.tailThumb && clipHeight > 40){
+      const thumbSize = Math.min(cw*0.8, clipHeight*0.35, 60)
+      const thumbY = vy1 - thumbSize - 6
+      el('image',{
+        'xlink:href': clip.tailThumb,
+        x: cx - thumbSize/2,
+        y: thumbY,
+        width: thumbSize,
+        height: thumbSize,
+        preserveAspectRatio: 'xMidYMid slice',
+        opacity: clip.isGhost? 0.5 : (isCurrentLayer? 1 : 0.8)
+      },container)
+      // Label
+      if(clipHeight > 50){
+        el('text',{
+          x:cx,
+          y:thumbY - 3,
+          fill:'#fff',
+          'font-size':9,
+          'font-weight':'600',
+          'text-anchor':'middle',
+          text:'▼ END',
+          opacity:0.7
+        },container)
+      }
+    }
+    
+    // Show title in middle (if no frames or very tall)
+    if(clipHeight > 100 || (!clip.headThumb && !clip.tailThumb && clipHeight > 24)){
+      el('text',{
+        x:cx,
+        y:(vy1+vy2)/2+5,
+        fill:'#fff',
+        'font-size':11,
+        'font-weight':'600',
+        'text-anchor':'middle',
+        text:(clip.title||clip.name||clip.type).slice(0,20),
+        opacity:0.9
+      },container)
+    }
+    
+    // Show duration in middle
+    if(clipHeight > 120){
+      el('text',{
+        x:cx,
+        y:(vy1+vy2)/2+20,
+        fill:'rgba(255,255,255,0.8)',
+        'font-size':10,
+        'font-weight':'600',
+        'text-anchor':'middle',
+        text:fmtTime(clip.duration)
+      },container)
+    }
+    
+    // Make entire container interactive
+    container.dataset.clipId = clip.id
+    container.style.cursor = clip.isGhost? 'pointer' : 'grab'
+    container.addEventListener('pointerdown', e=>e.stopPropagation())
+    container.addEventListener('contextmenu', e=>{
+      e.preventDefault()
+      e.stopPropagation()
+      if(!clip.isGhost){
+        showClipMenu(clip.id, e.clientX, e.clientY)
+      }
+    })
+    container.addEventListener('click', e=>{
+      if(clip.isGhost){
+        // Click ghost to jump to its parent layer
+        const parentLayer = clip.isGhost ? state.clips.findIndex(c=>c.id===clip.parentClipId) : -1
+        if(parentLayer >= 0){
+          const parentClip = state.clips.find(c=>c.id===clip.parentClipId)
+          if(parentClip){
+            // Jump to parent's layer
+            while(state.stack.length > parentClip.layerIndex + 1){
+              state.stack.pop()
+            }
+            state.selection = parentClip.id
+            render()
+            toast('↑ Jumped to source layer')
+          }
+        }
+      }
+    })
   })
 }
 
@@ -296,10 +744,32 @@ function drawPlayhead(g, rect){
   const yy = lerp(y+h-20, y+20, t)
   el('line',{x1:x+10,y1:yy,x2:x+w-10,y2:yy,stroke:'#F5F5F5','stroke-width':1.5},g)
   el('circle',{cx:x+w-18,cy:yy,r:3,fill:'#F5F5F5'},g)
-  tc.textContent = fmtTime(state.playheadAbs)
 }
 
-function renderBreadcrumbs(){ const parts=state.stack.map(s=>s.unit[0].toUpperCase()+s.unit.slice(1)); breadcrumbs.textContent=parts.join(' › ') }
+function renderBreadcrumbs(){ 
+  const parts=state.stack.map((s,i)=>{
+    const def = unitDefs[s.unit]
+    const name = def.name
+    const active = i === state.stack.length-1
+    return `<span class="crumb${active?' active':''}" data-index="${i}">${name}</span>`
+  })
+  breadcrumbs.innerHTML = parts.join('<span class="sep">›</span>')
+  
+  // Make breadcrumbs clickable
+  breadcrumbs.querySelectorAll('.crumb').forEach(crumb=>{
+    crumb.onclick = ()=>{
+      const idx = parseInt(crumb.dataset.index)
+      if(idx < state.stack.length - 1){
+        // Remove all ghost clips from removed layers
+        const removedLayers = state.stack.slice(idx+1).map((_,i)=>idx+1+i)
+        state.clips = state.clips.filter(c=>!removedLayers.includes(c.layerIndex))
+        state.stack = state.stack.slice(0, idx+1)
+        render()
+        haptic(16)
+      }
+    }
+  })
+}
 
 // ===== Haptics =====
 function haptic(ms=8){ if('vibrate' in navigator) try{ navigator.vibrate(ms) }catch(e){} }
@@ -315,6 +785,9 @@ viz.addEventListener('pointerdown',e=>{
   if(target && target.dataset && target.dataset.clipId){
     // Begin clip drag/resize
     state.selection=target.dataset.clipId
+    const selectedClip = state.clips.find(c=>c.id===state.selection)
+    showClipInfo(selectedClip)
+    updateVideoPreview()
     const clip = state.clips.find(c=>c.id===state.selection)
     const layerIndex = clip.layerIndex
     const rectInfo = getLayerRect(layerIndex)
@@ -385,20 +858,122 @@ function panAll(dy){ state.stack.forEach(layer=>{ const span=layer.domain[1]-lay
 
 function diveCenter(){
   const s=current(); const def=unitDefs[s.unit]; if(!def.next) return toast('Deepest level')
-  const range=[ lerp(s.domain[0],s.domain[1],.33), lerp(s.domain[0],s.domain[1],.66) ]; s.sel=range
-  const childUnit=def.next; const childSpan=unitDefs[childUnit].span
-  const child={ unit:childUnit, domain:[0,childSpan], sel:[childSpan*.3, childSpan*.7], events:[], transclusions:[], tracks:[{id:'t0',name:(unitDefs[childUnit].media?'Media':'Plan')}] }
+  
+  // Zoom into center third of current view
+  const span = s.domain[1] - s.domain[0]
+  const center = (s.domain[0] + s.domain[1]) / 2
+  const zoomSpan = span / def.divider  // Divide by zoom factor
+  const range = [center - zoomSpan/2, center + zoomSpan/2]
+  s.sel = range
+  
+  const childUnit = def.next
+  const child = { 
+    unit: childUnit, 
+    domain: [range[0], range[1]], 
+    sel: [range[0], range[1]], 
+    events:[], 
+    transclusions:[], 
+    tracks:[{id:'t0',name:'Media'}] 
+  }
   child.events = buildLayerLedger(childUnit, child.domain)
+  
+  // TRANSCLUSION: Bring clips from parent into child as ghosts
+  const parentClips = state.clips.filter(c=>
+    c.layerIndex===state.stack.length-1 && 
+    !c.isGhost &&
+    overlaps(range, [c.start, c.end])
+  )
+  parentClips.forEach(pc=>{
+    const ghost = {
+      ...pc,
+      id: 'g'+Math.random().toString(36).slice(2),
+      layerIndex: state.stack.length,
+      isGhost: true,
+      parentClipId: pc.id
+    }
+    state.clips.push(ghost)
+  })
+  
   child.transclusions = (s.events||[]).filter(ev => overlaps(range, ev.range)).map(ev=> ({...ev, kind:'transclusion'}))
   state.stack.push(child)
   state.lastHapticTick=null; render(); haptic(22)
 }
 
-function stepUp(){ if(state.stack.length>1){ state.stack.pop(); state.lastHapticTick=null; render(); haptic(16) } else toast('Top level') }
+function fitAll(){
+  // Reset to top level, show ALL media (auto-fit)
+  // Remove all ghost clips (only layer 0 remains)
+  state.clips = state.clips.filter(c=>c.layerIndex === 0)
+  state.stack = [state.stack[0]]
+  // Top alley ALWAYS fits entire collection
+  state.stack[0].domain = [0, Math.max(state.totalDuration, 10)]
+  state.stack[0].sel = [0, Math.max(state.totalDuration, 10)]
+  state.lastHapticTick=null
+  render()
+  haptic(16)
+  toast('Fit all clips')
+}
+
+function stepUp(){ 
+  if(state.stack.length>1){ 
+    const removedLayer = state.stack.length - 1
+    // Remove all ghost clips from layer being removed
+    state.clips = state.clips.filter(c=>c.layerIndex !== removedLayer)
+    state.stack.pop()
+    state.lastHapticTick=null
+    render()
+    haptic(16)
+  } else {
+    toast('Top level')
+  }
+}
 
 function overlaps(a,b){ return Math.max(a[0],b[0]) <= Math.min(a[1],b[1]) }
 
 function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),900) }
+
+// Extract head and tail frame thumbnails from video
+function extractFrames(clip, videoEl){
+  if(!videoEl || videoEl.tagName !== 'VIDEO') return
+  
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  canvas.width = 160
+  canvas.height = 90
+  
+  // Extract HEAD frame (0.5s in)
+  const extractHead = ()=>{
+    videoEl.currentTime = Math.min(0.5, clip.duration * 0.05)
+    videoEl.onseeked = ()=>{
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
+      clip.headThumb = canvas.toDataURL('image/jpeg', 0.7)
+      videoEl.onseeked = null
+      render()
+      extractTail()
+    }
+  }
+  
+  // Extract TAIL frame (0.5s before end)
+  const extractTail = ()=>{
+    videoEl.currentTime = Math.max(clip.duration - 0.5, clip.duration * 0.95)
+    videoEl.onseeked = ()=>{
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
+      clip.tailThumb = canvas.toDataURL('image/jpeg', 0.7)
+      videoEl.onseeked = null
+      videoEl.currentTime = 0
+      render()
+    }
+  }
+  
+  // Start extraction when video is ready
+  if(videoEl.readyState >= 2){
+    extractHead()
+  } else {
+    videoEl.onloadeddata = ()=>{
+      extractHead()
+      videoEl.onloadeddata = null
+    }
+  }
+}
 
 // ===== Snapping =====
 function snapValue(val, layer){ const def=unitDefs[layer.unit]; const step=def.minor||0.25; return Math.round(val/step)*step }
@@ -417,22 +992,66 @@ fileIn.onchange = async (e)=>{
     document.body.appendChild(el); el.style.display='none'
     await new Promise(res=>{ el.onloadedmetadata=()=>res(); el.onerror=()=>res() })
     const id='m'+Math.random().toString(36).slice(2)
-    state.media.push({id,type,el,duration:el.duration||0,name:f.name})
-    // Drop a clip centered in current view (active layer only)
-    const L = state.stack.length-1
-    const layer = state.stack[L]
-    const span = layer.domain[1]-layer.domain[0]
-    const mid = (layer.domain[0]+layer.domain[1])/2
-    const lenUnits = Math.min(span*0.2, span*0.8)
+    const duration = el.duration || 0
+    state.media.push({id,type,el,duration,name:f.name})
+    
+    // AUTO-PLACE SEQUENTIALLY - no overlap
     const color = type==='video'? '#FFC107' : '#8BC34A'
-    const clip={ id:'c'+Math.random().toString(36).slice(2), layerIndex:L, track:0, start:mid-lenUnits/2, end:mid+lenUnits/2, type:type, title:f.name, color, mediaId:id, mediaOffset:0 }
+    const L = state.stack.length-1
+    
+    // Find the end of the last clip (sequential placement)
+    let startTime = 0
+    if(state.clips.length > 0){
+      const lastClip = state.clips[state.clips.length - 1]
+      startTime = lastClip.end
+    }
+    
+    const clip={ 
+      id:'c'+Math.random().toString(36).slice(2), 
+      layerIndex:L, 
+      track:0, 
+      start:startTime,
+      end:startTime + duration, // Actual duration in seconds
+      type:type, 
+      title:f.name.slice(0,30), 
+      color, 
+      mediaId:id, 
+      mediaOffset:0,
+      duration,
+      headThumb: null,
+      tailThumb: null
+    }
     state.clips.push(clip)
+    
+    // Extract head and tail frames
+    extractFrames(clip, m.el)
+    
+    // Update total duration
+    state.totalDuration = Math.max(state.totalDuration, clip.end)
+    
+    // Top alley ALWAYS auto-fits all media
+    state.stack[0].domain = [0, Math.max(state.totalDuration, 10)]
+    state.stack[0].sel = [0, Math.max(state.totalDuration, 10)]
   }
-  render(); toast('Media added')
+  updateStats()
+  render()
+  toast(`Added ${files.length} file${files.length>1?'s':''}`) 
 }
 
-btnPlay.onclick=()=>{ state.playing=!state.playing; btnPlay.textContent = state.playing?'⏸':'▶︎'; if(state.playing){ tick() } else pauseMedia() }
-btnStop.onclick=()=>{ state.playing=false; btnPlay.textContent='▶︎'; state.playheadAbs=0; pauseMedia(true); render() }
+btnPlay.onclick=()=>{ 
+  state.playing=!state.playing
+  btnPlay.textContent = state.playing?'⏸ Pause':'▶ Play'
+  btnPlay.classList.toggle('active', state.playing)
+  if(state.playing){ tick() } else pauseMedia()
+}
+btnStop.onclick=()=>{ 
+  state.playing=false
+  btnPlay.textContent='▶ Play'
+  btnPlay.classList.remove('active')
+  state.playheadAbs=0
+  pauseMedia(true)
+  render()
+}
 
 function pauseMedia(reset=false){ state.media.forEach(m=>{ try{ m.el.pause(); if(reset) m.el.currentTime=0 }catch(e){} }) }
 
@@ -458,7 +1077,9 @@ function tick(){
       try{ m.el.pause() }catch(e){}
     }
   })
-  render(); requestAnimationFrame(tick)
+  updateVideoPreview()
+  render()
+  requestAnimationFrame(tick)
 }
 
 // ===== Project Save / Open =====
@@ -512,28 +1133,46 @@ async function autoLoadMedia(){
       el.onloadedmetadata = () => {
         loaded++
         const id = 'm' + Math.random().toString(36).slice(2)
-        state.media.push({id, type:'video', el, duration:el.duration||0, name:filename})
+        const duration = el.duration || 0
+        state.media.push({id, type:'video', el, duration, name:filename})
         
-        // Auto-create clips distributed across hours layer
+        // AUTO-PLACE SEQUENTIALLY - no overlap
         if(state.stack.length > 0){
           const L = state.stack.length - 1
-          const layer = state.stack[L]
-          const span = layer.domain[1] - layer.domain[0]
-          const pos = layer.domain[0] + (loaded / mediaFiles.length) * span
-          const lenUnits = Math.min(0.5, el.duration / 3600) // scale to hours
+          
+          // Find the end of the last clip
+          let startTime = 0
+          if(state.clips.length > 0){
+            const lastClip = state.clips[state.clips.length - 1]
+            startTime = lastClip.end
+          }
+          
           const clip = {
             id: 'c' + Math.random().toString(36).slice(2),
             layerIndex: L,
             track: 0,
-            start: pos,
-            end: pos + lenUnits,
+            start: startTime,
+            end: startTime + duration, // Actual duration
             type: 'video',
-            title: filename.slice(0, 20),
+            title: filename.slice(0,25),
             color: '#FFC107',
             mediaId: id,
-            mediaOffset: 0
+            mediaOffset: 0,
+            duration,
+            headThumb: null,
+            tailThumb: null
           }
           state.clips.push(clip)
+          
+          // Extract head and tail frames
+          extractFrames(clip, el)
+          
+          // Update total duration
+          state.totalDuration = Math.max(state.totalDuration, clip.end)
+          
+          // Top alley ALWAYS auto-fits all media
+          state.stack[0].domain = [0, Math.max(state.totalDuration, 10)]
+          state.stack[0].sel = [0, Math.max(state.totalDuration, 10)]
         }
         
         res()
@@ -545,10 +1184,155 @@ async function autoLoadMedia(){
     })
   }
   
+  updateStats()
   render()
   toast(`Loaded ${loaded} video files`)
   console.log('✓ Auto-loaded', loaded, 'media files')
 }
+
+// Navigation button handlers
+btnDive.onclick = ()=> diveCenter()
+btnUp.onclick = ()=> stepUp()
+btnFit.onclick = ()=> fitAll()
+
+// Progress bar scrubbing
+document.getElementById('progress').addEventListener('click', e=>{
+  const rect = e.target.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const percent = x / rect.width
+  const layer=current(); const def=unitDefs[layer.unit]
+  const tUnit = def.media? (def.secondsPerUnit||1) : 1
+  const domainSec = (layer.domain[1]-layer.domain[0]) * tUnit
+  state.playheadAbs = percent * domainSec
+  render()
+})
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName === 'INPUT') return
+  if(e.key === ' '){
+    e.preventDefault()
+    btnPlay.click()
+  } else if(e.key === 'ArrowDown' || e.key === 'd'){
+    e.preventDefault()
+    if(!btnDive.disabled) diveCenter()
+  } else if(e.key === 'ArrowUp' || e.key === 'u'){
+    e.preventDefault()
+    if(!btnUp.disabled) stepUp()
+  } else if(e.key === 'f'){
+    e.preventDefault()
+    fitAll()
+  }
+})
+
+// Clip context menu
+function showClipMenu(clipId, x, y){
+  state.selection = clipId
+  clipMenu.style.left = x + 'px'
+  clipMenu.style.top = y + 'px'
+  clipMenu.classList.add('show')
+}
+
+function hideClipMenu(){
+  clipMenu.classList.remove('show')
+}
+
+// Narrative category cycling
+document.getElementById('menuColor').onclick = ()=>{
+  const clip = state.clips.find(c=>c.id===state.selection && !c.isGhost)
+  if(clip){
+    currentColorIndex = (currentColorIndex + 1) % NARRATIVE_CATEGORIES.length
+    const cat = NARRATIVE_CATEGORIES[currentColorIndex]
+    clip.color = cat.value
+    clip.category = cat.name
+    render()
+    toast(`${cat.icon} ${cat.name}: ${cat.desc}`)
+  }
+  hideClipMenu()
+}
+
+// Weld to next clip
+document.getElementById('menuWeld').onclick = ()=>{
+  const clip = state.clips.find(c=>c.id===state.selection && !c.isGhost)
+  if(clip){
+    // Find next clip in same layer with same media
+    const nextClip = state.clips.find(c=>
+      !c.isGhost &&
+      c.layerIndex === clip.layerIndex &&
+      c.mediaId === clip.mediaId &&
+      c.start === clip.end
+    )
+    if(nextClip){
+      // Merge: extend clip.end to nextClip.end
+      clip.end = nextClip.end
+      clip.duration = clip.end - clip.start
+      // Remove next clip
+      state.clips = state.clips.filter(c=>c.id !== nextClip.id)
+      render()
+      toast('Clips welded')
+    } else {
+      toast('No adjacent clip to weld')
+    }
+  }
+  hideClipMenu()
+}
+
+// Split clip at playhead
+document.getElementById('menuSplit').onclick = ()=>{
+  const clip = state.clips.find(c=>c.id===state.selection && !c.isGhost)
+  if(clip){
+    const layer = current()
+    const def = unitDefs[layer.unit]
+    const tUnit = def.media? (def.secondsPerUnit||1) : 1
+    const splitPoint = state.playheadAbs / tUnit + layer.domain[0]
+    
+    if(splitPoint > clip.start && splitPoint < clip.end){
+      // Create new clip for right side
+      const newClip = {
+        ...clip,
+        id: 'c'+Math.random().toString(36).slice(2),
+        start: splitPoint,
+        duration: clip.end - splitPoint
+      }
+      // Adjust original clip
+      clip.end = splitPoint
+      clip.duration = clip.end - clip.start
+      state.clips.push(newClip)
+      render()
+      toast('Clip split')
+    } else {
+      toast('Playhead not in clip')
+    }
+  }
+  hideClipMenu()
+}
+
+// Delete clip
+document.getElementById('menuDelete').onclick = ()=>{
+  const clip = state.clips.find(c=>c.id===state.selection && !c.isGhost)
+  if(clip){
+    state.clips = state.clips.filter(c=>c.id !== clip.id)
+    state.selection = null
+    showClipInfo(null)
+    render()
+    toast('Clip deleted')
+  }
+  hideClipMenu()
+}
+
+// Click outside clip info/menu to close  
+let closeInfoTimeout
+document.addEventListener('click', e=>{
+  clearTimeout(closeInfoTimeout)
+  // Close clip menu if clicking elsewhere
+  if(!clipMenu.contains(e.target) && !e.target.closest('rect[data-clip-id]')){
+    hideClipMenu()
+  }
+  // Close clip info if clicking elsewhere
+  if(!clipInfo.contains(e.target) && !e.target.closest('rect[data-clip-id]')){
+    closeInfoTimeout = setTimeout(()=>showClipInfo(null), 100)
+  }
+})
 
 // ===== Init =====
 render()

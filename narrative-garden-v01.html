@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NARRATIVE GARDEN v0.1 — Genesis (Beat Collection)</title>
+  <style>
+    :root{--bg:#0a0a0a;--ui:#111;--line:#222;--accent:#00ff41;--beat-color:#4ECDC4;}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg);color:#f5f5f5;font-family:'SF Mono','Monaco',monospace;font-size:13px;}
+    
+    .wrap{display:flex;flex-direction:column;height:100vh;}
+    
+    /* Header */
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ui);border-bottom:2px solid var(--line);}
+    .brand{font-weight:900;letter-spacing:3px;font-size:16px;color:var(--accent);}
+    .version{font-size:10px;color:#666;letter-spacing:1px;margin-top:2px;}
+    .stats{display:flex;gap:16px;font-size:12px;font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:var(--accent);}
+    
+    /* Game Area */
+    #gameArea{position:relative;flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+    canvas{background:#0d0d0d;border:2px solid var(--line);border-radius:8px;touch-action:none;cursor:pointer;}
+    
+    /* Beat Tracker */
+    .beat-tracker{position:fixed;left:20px;top:80px;width:200px;background:rgba(17,17,17,0.95);border:2px solid var(--line);padding:12px;border-radius:4px;max-height:calc(100vh - 200px);overflow-y:auto;}
+    .tracker-title{font-size:11px;color:var(--accent);margin-bottom:8px;letter-spacing:2px;font-weight:700;}
+    .beat-item{padding:8px;margin:4px 0;background:rgba(255,255,255,0.05);border:1px solid var(--line);font-size:10px;display:flex;justify-content:space-between;align-items:center;}
+    .beat-item.collected{background:rgba(0,255,65,0.2);border-color:var(--accent);}
+    .beat-num{color:#666;margin-right:8px;}
+    .beat-name{flex:1;color:#999;}
+    .beat-item.collected .beat-name{color:var(--accent);}
+    .beat-check{color:var(--accent);display:none;}
+    .beat-item.collected .beat-check{display:inline;}
+    
+    /* Progress */
+    .progress-bar{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+    .progress-label{font-size:10px;color:#666;margin-bottom:4px;}
+    .progress-fill-wrap{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+    .progress-fill{height:100%;background:var(--accent);transition:width 0.3s;}
+    
+    /* Instructions */
+    .instructions{position:fixed;right:20px;top:80px;width:250px;background:rgba(17,17,17,0.95);border:2px solid var(--line);padding:12px;border-radius:4px;}
+    .instructions h3{font-size:11px;color:var(--accent);margin-bottom:8px;letter-spacing:2px;}
+    .instructions p{font-size:10px;color:#999;line-height:1.5;margin-bottom:8px;}
+    .instructions .goal{background:rgba(0,255,65,0.1);padding:8px;border-left:2px solid var(--accent);margin-top:8px;}
+    
+    /* Toolbar */
+    .toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:10px;background:rgba(0,0,0,0.85);border-top:2px solid var(--line);}
+    .btn{padding:8px 16px;border:1px solid var(--line);background:rgba(255,255,255,0.05);color:#f5f5f5;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+    .btn:hover{background:rgba(0,255,65,0.1);border-color:var(--accent);color:var(--accent);}
+    .btn.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);}
+    .btn.primary:hover{background:#00cc33;}
+    
+    /* Win Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px);}
+    .modal.active{display:flex;}
+    .modal-content{background:var(--ui);border:2px solid var(--accent);padding:40px;border-radius:8px;text-align:center;max-width:500px;}
+    .modal-title{font-size:24px;color:var(--accent);margin-bottom:16px;letter-spacing:3px;}
+    .modal-text{font-size:14px;color:#999;line-height:1.6;margin-bottom:24px;}
+    .modal-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+    .modal-stat{padding:12px;background:rgba(255,255,255,0.05);border:1px solid var(--line);}
+    .modal-stat-value{font-size:20px;color:var(--accent);font-weight:700;}
+    .modal-stat-label{font-size:10px;color:#666;margin-top:4px;}
+    
+    @media (max-width:768px){.beat-tracker,.instructions{display:none;}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">NARRATIVE GARDEN</div>
+      <div class="version">v0.1 GENESIS — Beat Collection</div>
+    </div>
+    <div class="stats">
+      <div class="stat">BEATS <span class="stat-value" id="beatsCollected">0/15</span></div>
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">50</span></div>
+    </div>
+  </header>
+  
+  <div id="gameArea">
+    <canvas id="game"></canvas>
+  </div>
+  
+  <!-- Beat Tracker -->
+  <div class="beat-tracker">
+    <div class="tracker-title">NARRATIVE BEATS</div>
+    <div id="beatList"></div>
+    <div class="progress-bar">
+      <div class="progress-label">STORY COMPLETION</div>
+      <div class="progress-fill-wrap">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Instructions -->
+  <div class="instructions">
+    <h3>HOW TO PLAY</h3>
+    <p>Match 3+ fragments to collect narrative beats. Each match unlocks the next beat in sequence.</p>
+    <p><strong>GOAL:</strong> Collect all 15 beats to complete a full story arc.</p>
+    <div class="goal">
+      <strong>WIN CONDITION</strong><br>
+      ✓ 15 beats collected<br>
+      ✓ +100 pts per beat<br>
+      ✓ +500 completion bonus
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="restartBtn">RESTART</button>
+    <button class="btn primary" id="exportBtn" style="display:none;">EXPORT STORY</button>
+  </div>
+</div>
+
+<!-- Win Modal -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">STORY COMPLETE!</div>
+    <div class="modal-text">
+      You've assembled a complete 15-beat narrative structure.<br>
+      Your fragments now form a cinematic arc.
+    </div>
+    <div class="modal-stats">
+      <div class="modal-stat">
+        <div class="modal-stat-value" id="modalScore">0</div>
+        <div class="modal-stat-label">TOTAL SCORE</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-value" id="modalBeats">0</div>
+        <div class="modal-stat-label">BEATS COLLECTED</div>
+      </div>
+    </div>
+    <button class="btn primary" onclick="location.reload()">NEW STORY</button>
+  </div>
+</div>
+
+<script>
+console.log('🎬 NARRATIVE GARDEN v0.1 — Genesis Loading...');
+
+// 15-BEAT STRUCTURE (Save the Cat)
+const BEATS = [
+  {id:1,name:'Opening Image',act:'Act 1'},
+  {id:2,name:'Theme Stated',act:'Act 1'},
+  {id:3,name:'Set-Up',act:'Act 1'},
+  {id:4,name:'Catalyst',act:'Act 1'},
+  {id:5,name:'Debate',act:'Act 1'},
+  {id:6,name:'Break into Two',act:'Act 2A'},
+  {id:7,name:'B Story',act:'Act 2A'},
+  {id:8,name:'Fun and Games',act:'Act 2A'},
+  {id:9,name:'Midpoint',act:'Act 2A'},
+  {id:10,name:'Bad Guys Close In',act:'Act 2A'},
+  {id:11,name:'All Is Lost',act:'Act 2B'},
+  {id:12,name:'Dark Night',act:'Act 2B'},
+  {id:13,name:'Break into Three',act:'Act 3'},
+  {id:14,name:'Finale',act:'Act 3'},
+  {id:15,name:'Final Image',act:'Act 3'}
+];
+
+const GRID_SIZE = 8;
+const CELL_SIZE = 64;
+const COLORS = ['#FF6B6B','#4ECDC4','#FFE66D','#95E1D3','#F38181','#AA96DA'];
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const game = {
+  grid:[],
+  selected:null,
+  score:0,
+  moves:50,
+  beatsCollected:new Set(),
+  busy:false
+};
+
+function init(){
+  canvas.width = GRID_SIZE * CELL_SIZE;
+  canvas.height = GRID_SIZE * CELL_SIZE;
+  
+  renderBeatList();
+  createGrid();
+  draw();
+  
+  canvas.addEventListener('click',handleClick);
+  document.getElementById('restartBtn').addEventListener('click',()=>location.reload());
+}
+
+function createGrid(){
+  for(let r=0;r<GRID_SIZE;r++){
+    game.grid[r]=[];
+    for(let c=0;c<GRID_SIZE;c++){
+      game.grid[r][c]=randomType();
+    }
+  }
+  // Clear initial matches
+  while(findMatches().length>0){
+    clearMatches(findMatches());
+    dropCells();
+    refillGrid();
+  }
+}
+
+function randomType(){
+  return Math.floor(Math.random()*COLORS.length);
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  
+  // Draw grid
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE;c++){
+      const x=c*CELL_SIZE;
+      const y=r*CELL_SIZE;
+      const type=game.grid[r][c];
+      
+      // Cell
+      ctx.fillStyle=COLORS[type];
+      ctx.fillRect(x+4,y+4,CELL_SIZE-8,CELL_SIZE-8);
+      
+      // Border
+      ctx.strokeStyle='rgba(255,255,255,0.2)';
+      ctx.lineWidth=2;
+      ctx.strokeRect(x+4,y+4,CELL_SIZE-8,CELL_SIZE-8);
+      
+      // Selection
+      if(game.selected && game.selected.r===r && game.selected.c===c){
+        ctx.strokeStyle='#00ff41';
+        ctx.lineWidth=4;
+        ctx.strokeRect(x+2,y+2,CELL_SIZE-4,CELL_SIZE-4);
+      }
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+function handleClick(e){
+  if(game.busy)return;
+  
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
+  const col=Math.floor((x/rect.width)*GRID_SIZE);
+  const row=Math.floor((y/rect.height)*GRID_SIZE);
+  
+  if(row<0||row>=GRID_SIZE||col<0||col>=GRID_SIZE)return;
+  
+  if(!game.selected){
+    game.selected={r:row,c:col};
+  }else{
+    // Check if adjacent
+    const dr=Math.abs(game.selected.r-row);
+    const dc=Math.abs(game.selected.c-col);
+    
+    if((dr===1&&dc===0)||(dr===0&&dc===1)){
+      swapCells(game.selected.r,game.selected.c,row,col);
+    }
+    game.selected=null;
+  }
+}
+
+function swapCells(r1,c1,r2,c2){
+  [game.grid[r1][c1],game.grid[r2][c2]]=[game.grid[r2][c2],game.grid[r1][c1]];
+  
+  const matches=findMatches();
+  if(matches.length>0){
+    game.moves--;
+    document.getElementById('moves').textContent=game.moves;
+    processMatches(matches);
+  }else{
+    // Swap back
+    [game.grid[r1][c1],game.grid[r2][c2]]=[game.grid[r2][c2],game.grid[r1][c1]];
+  }
+}
+
+function findMatches(){
+  const matches=[];
+  
+  // Horizontal
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE-2;c++){
+      const type=game.grid[r][c];
+      let count=1;
+      for(let i=1;c+i<GRID_SIZE&&game.grid[r][c+i]===type;i++)count++;
+      if(count>=3){
+        for(let i=0;i<count;i++){
+          matches.push({r,c:c+i});
+        }
+      }
+    }
+  }
+  
+  // Vertical
+  for(let c=0;c<GRID_SIZE;c++){
+    for(let r=0;r<GRID_SIZE-2;r++){
+      const type=game.grid[r][c];
+      let count=1;
+      for(let i=1;r+i<GRID_SIZE&&game.grid[r+i][c]===type;i++)count++;
+      if(count>=3){
+        for(let i=0;i<count;i++){
+          matches.push({r:r+i,c});
+        }
+      }
+    }
+  }
+  
+  // Remove duplicates
+  const unique=[];
+  matches.forEach(m=>{
+    if(!unique.find(u=>u.r===m.r&&u.c===m.c))unique.push(m);
+  });
+  
+  return unique;
+}
+
+function processMatches(matches){
+  game.busy=true;
+  
+  // Collect next beat
+  if(game.beatsCollected.size<15){
+    game.beatsCollected.add(game.beatsCollected.size+1);
+    game.score+=100;
+    
+    updateBeatList();
+    updateProgress();
+    
+    if(game.beatsCollected.size===15){
+      game.score+=500; // Completion bonus
+      showWinModal();
+    }
+  }else{
+    game.score+=matches.length*10;
+  }
+  
+  document.getElementById('score').textContent=game.score;
+  document.getElementById('beatsCollected').textContent=`${game.beatsCollected.size}/15`;
+  
+  clearMatches(matches);
+  
+  setTimeout(()=>{
+    dropCells();
+    refillGrid();
+    
+    const newMatches=findMatches();
+    if(newMatches.length>0){
+      processMatches(newMatches);
+    }else{
+      game.busy=false;
+      checkGameOver();
+    }
+  },300);
+}
+
+function clearMatches(matches){
+  matches.forEach(({r,c})=>{
+    game.grid[r][c]=null;
+  });
+}
+
+function dropCells(){
+  for(let c=0;c<GRID_SIZE;c++){
+    let writeRow=GRID_SIZE-1;
+    for(let r=GRID_SIZE-1;r>=0;r--){
+      if(game.grid[r][c]!==null){
+        game.grid[writeRow][c]=game.grid[r][c];
+        if(writeRow!==r)game.grid[r][c]=null;
+        writeRow--;
+      }
+    }
+  }
+}
+
+function refillGrid(){
+  for(let c=0;c<GRID_SIZE;c++){
+    for(let r=0;r<GRID_SIZE;r++){
+      if(game.grid[r][c]===null){
+        game.grid[r][c]=randomType();
+      }
+    }
+  }
+}
+
+function renderBeatList(){
+  const list=document.getElementById('beatList');
+  BEATS.forEach(beat=>{
+    const item=document.createElement('div');
+    item.className='beat-item';
+    item.id=`beat-${beat.id}`;
+    item.innerHTML=`
+      <span class="beat-num">${beat.id}</span>
+      <span class="beat-name">${beat.name}</span>
+      <span class="beat-check">✓</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function updateBeatList(){
+  game.beatsCollected.forEach(id=>{
+    const item=document.getElementById(`beat-${id}`);
+    if(item)item.classList.add('collected');
+  });
+}
+
+function updateProgress(){
+  const pct=(game.beatsCollected.size/15)*100;
+  document.getElementById('progressFill').style.width=`${pct}%`;
+}
+
+function checkGameOver(){
+  if(game.moves<=0 && game.beatsCollected.size<15){
+    alert('Out of moves! Try again.');
+    location.reload();
+  }
+}
+
+function showWinModal(){
+  document.getElementById('modalScore').textContent=game.score;
+  document.getElementById('modalBeats').textContent=game.beatsCollected.size;
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('exportBtn').style.display='inline-block';
+}
+
+init();
+</script>
+</body>
+</html>

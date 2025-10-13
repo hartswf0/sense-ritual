@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="manifest.json">
+  <title>MESHWORK 01 — Living Mosaic Automata</title>
+  <style>
+    :root{
+      --bg:#0a0a0a; --ui:#111; --line:#222;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:#0ff; font-family:-apple-system,sans-serif;}
+    
+    .wrap{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+    
+    /* Header */
+    header{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--ui); border-bottom:2px solid var(--line);}
+    .brand{font-weight:900; letter-spacing:3px; font-size:16px; color:#0ff;}
+    .stats{display:flex; gap:16px; font-size:12px; font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:#0ff;}
+    
+    /* Game Area */
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg);}
+    canvas{background:#0d0d0d; border:2px solid var(--line); border-radius:8px; touch-action:none; image-rendering:pixelated;}
+    
+    /* Video Preview */
+    .video-preview{position:absolute; top:20px; right:20px; width:160px; height:90px; border:2px solid #0ff; background:#000; overflow:hidden; pointer-events:none; opacity:0.8;}
+    .video-preview video{width:100%; height:100%; object-fit:cover;}
+    .video-label{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.9); padding:2px 6px; font-size:10px; color:#0ff; font-weight:700;}
+    
+    @media (max-width: 640px) {
+      .video-preview{width:120px; height:68px; top:10px; right:10px;}
+    }
+    
+    /* Toolbar: fixed bottom, concise */
+    .toolbar{position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:8px; padding:10px; background:rgba(0,0,0,0.85); border-top:2px solid #0ff; z-index:120;}
+    .btn{appearance:none; border:none; color:#0ff; background:rgba(0,255,255,0.1); border:1px solid #0ff; padding:8px 10px; border-radius:4px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;}
+    .btn:active{transform:scale(0.95); background:#0ff; color:#000;}
+    
+    /* Timeline lane (narrow) */
+    .timeline-panel{position:fixed; right:0; top:60px; bottom:50px; width:72px; background:rgba(0,0,0,0.78); border-left:2px solid #0ff; padding:6px 4px; overflow-y:auto; transform:translateX(0); transition:width 0.25s ease, padding 0.25s ease; z-index:100; display:flex; flex-direction:column; gap:6px;}
+    .timeline-panel.collapsed{width:0; padding:0; border-left:none; pointer-events:none;}
+    .timeline-title{font-size:10px; font-weight:900; color:#0ff; margin:0 0 6px; text-align:center; letter-spacing:1px;}
+    .clip-item{width:100%; aspect-ratio:16/9; margin-bottom:8px; border:2px solid #333; cursor:pointer; position:relative; overflow:hidden;}
+    .clip-item video{width:100%; height:100%; object-fit:cover;}
+    .clip-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.9); padding:3px; font-size:8px; color:#0ff; text-align:center; text-transform:uppercase; letter-spacing:0.5px;}
+    .sequence-player{position:sticky; bottom:0; background:#0b0b0b; border-top:2px solid #0ff; padding:8px;}
+    .sequence-player video{width:100%; aspect-ratio:16/9; background:#000; border:2px solid #0ff;}
+
+    /* Timeline handle */
+    .timeline-handle{position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff; color:#0ff; display:flex; align-items:center; justify-content:center; z-index:110; cursor:pointer; backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); font-weight:900;}
+    .timeline-handle:active{background:rgba(0,255,255,0.25);}
+    
+    @media (max-width: 768px) {
+      .timeline-panel{width:160px;}
+      .toolbar{grid-template-columns:repeat(3,1fr);}
+    }
+    
+    /* Shape Colors - High Contrast Bauhaus */
+    .color-0{border-color:#FF6B6B !important;} /* Red */
+    .color-1{border-color:#4ECDC4 !important;} /* Cyan */
+    .color-2{border-color:#FFE66D !important;} /* Yellow */
+    .color-3{border-color:#95E1D3 !important;} /* Mint */
+    .color-4{border-color:#F38181 !important;} /* Coral */
+    .color-5{border-color:#AA96DA !important;} /* Purple */
+    .color-6{border-color:#A8E6CF !important;} /* Green */
+    .color-7{border-color:#FFB74D !important;} /* Orange */
+    .color-8{border-color:#FCBAD3 !important;} /* Pink */
+    .color-9{border-color:#FFA07A !important;} /* Salmon */
+    
+    /* Loading */
+    .loading{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; color:#0ff; font-weight:900;}
+    
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal.show{display:flex;}
+    .modal-content{text-align:center; padding:40px;}
+    .modal-title{font-size:48px; font-weight:900; color:#0ff; margin-bottom:20px;}
+    .modal-stats{font-size:18px; color:#666; margin-bottom:30px;}
+    .modal-btn{padding:16px 40px; background:#0ff; border:none; color:#000; font-weight:900; font-size:16px; cursor:pointer; margin:5px;}
+    
+    /* Export Menu */
+    .export-menu{position:fixed; bottom:100px; right:20px; background:rgba(17,17,17,0.98); border:2px solid #0ff; padding:16px; border-radius:8px; display:none; z-index:200;}
+    .export-menu.show{display:block;}
+    .export-option{padding:12px; margin:4px 0; background:rgba(0,255,255,0.1); border:2px solid #0ff; color:#0ff; cursor:pointer; font-weight:900; font-size:12px; text-align:center;}
+    .export-option:hover{background:#0ff; color:#000;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">MESHWORK 01</div>
+    <div class="stats">
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
+      <div class="stat">CLIPS <span class="stat-value" id="clips">0</span></div>
+    </div>
+  </header>
+  
+  <div id="gameArea">
+    <div class="loading" id="loading">LOADING...</div>
+    <canvas id="game"></canvas>
+    <div class="video-preview" id="videoPreview" style="display:none;">
+      <video id="previewVideo" muted loop playsinline></video>
+      <div class="video-label" id="videoLabel">Scene 01</div>
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="playSequenceBtn">PLAY</button>
+    <button class="btn" id="autoPlayBtn">AUTO</button>
+    <button class="btn" id="shuffleBtn">SHUF</button>
+    <button class="btn" id="hintBtn">HINT</button>
+    <button class="btn" id="exportBtn">EXP</button>
+    <button class="btn" id="soundBtn">MUTE</button>
+  </div>
+</div>
+
+<div class="timeline-panel" id="timelinePanel">
+  <div class="timeline-title">SEQUENCE</div>
+  <div id="clipList"></div>
+  <div class="sequence-player" id="sequencePlayerWrap" style="display:none;">
+    <video id="sequencePlayer" controls playsinline></video>
+    <div class="clip-label" id="sequencePlayerLabel">—</div>
+  </div>
+</div>
+<div class="timeline-handle" id="timelineHandle">></div>
+
+<div class="export-menu" id="exportMenu">
+  <div class="export-option" onclick="exportJSON()">📄 JSON</div>
+  <div class="export-option" onclick="exportEDL()">🎬 EDL</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">SEQUENCE COMPLETE</div>
+    <div class="modal-stats" id="modalStats"></div>
+    <button class="modal-btn" onclick="location.reload()">NEW SEQUENCE</button>
+    <button class="modal-btn" onclick="document.getElementById('exportMenu').classList.toggle('show')">EXPORT</button>
+  </div>
+</div>
+
+<script>
+console.log('🌿 VIDEO GARDEN — Living Mosaic Automata Loading...');
+
+/*
+🧬 VIDEO MOSAIC AUTOMATA (VMA)
+A self-organizing visual field where video cells evolve like living organisms
+
+CONCEPT: Cellular Automata + Video Sampling
+- Each cell is an agent with state: {source, region, activity, timer, similarity, tension, drift}
+- Cells interact with 8 neighbors (Moore neighborhood)
+- Local rules create global emergent patterns
+- The garden grows, blooms, decays, and reorganizes itself
+
+CELL STATES (Eno-Style):
+- QUIET: Frozen frame, muted audio, accumulating "tension" at active borders.
+- LISTEN: High tension, about to bloom.
+- BURSTING: Blooming, vivid, produces a clip (short duration).
+- WILT: (Implicit: After bursting, cell quickly returns to QUIET).
+
+RULES (Eno-Style):
+1. HALF-SILENCE: ~50% of cells must be QUIET at any given time.
+2. TENSION BUILDUP: QUIET cells adjacent to active cells accumulate "tension."
+3. BLOOM: LISTEN cells with high tension and global quiet quota permitting can BURST.
+4. DECAY/WILT: BURSTING cells quickly return to QUIET, resetting tension.
+5. DRIFT: Sampled region within a cell slowly shifts over time.
+6. PROPAGATION (Whisper): Active cells can slowly influence QUIET neighbors' type, biased by global "wind."
+7. RARE SEEDS: Spontaneous, low-probability blooms from QUIET cells.
+
+EMERGENT BEHAVIORS:
+- Phasing between quiet and bloom bands.
+- Texture of negative space.
+- Edge behaviors where clusters touch.
+- Rare, vivid blooms rather than constant fireworks.
+*/
+
+// TYPE-SEGMENT MODE: Each candy type has one source video, auto-sliced into segments
+
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Red', color: '#FF6B6B'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Cyan', color: '#4ECDC4'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Yellow', color: '#FFE66D'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Mint', color: '#95E1D3'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Coral', color: '#F38181'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Purple', color: '#AA96DA'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Green', color: '#A8E6CF'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Orange', color: '#FFB74D'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Pink', color: '#FCBAD3'},
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Salmon', color: '#FFA07A'}
+};
+
+// Auto-slice each type into segments (4 per type, 10s each)
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+const typeUsage = {}; // Track which segment index to use next per type
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  typeUsage[t] = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const GRID_SIZE = 8;
+const CELL_SIZE = 50;
+
+// AUTOMATA CONSTANTS
+const CELL_STATES = {
+  // Original states are largely superseded by Eno states
+  // STABLE: 'stable',
+  // MATCHING: 'matching',
+  BURSTING: 'bursting', // Retain BURSTING for clips
+  // DECAYING: 'decaying',
+  // MERGING: 'merging',
+  QUIET: 'quiet',    // New: Frozen frame, muted audio
+  LISTEN: 'listen'   // New: About to bloom
+};
+
+const AUTOMATA_CONFIG = {
+  SIMILARITY_THRESHOLD: 0.7, // Still relevant for player interaction and basic propagation
+  DECAY_LIMIT: 120, // Frames (mostly for BURSTING to QUIET transition now)
+  PROPAGATION_CHANCE: 0.3, // "Whisper" propagation
+  FUSION_THRESHOLD: 0.8, // (Less relevant in new model)
+  UPDATE_FREQUENCY: 3 // Frames between automata updates
+};
+
+// NEW: Global "Season" and "Wind" parameters
+const SEASONS = {
+  drift: 0.0003,           // per-frame positional drift of sample window
+  rareBloomChance: 0.00005, // low-probability spontaneous bloom seeds (very low)
+  quietQuota: 0.5,         // target fraction of cells that must be QUIET (Half-Silence Rule)
+  tensionGain: 0.002,      // how fast quiet edges accumulate bloom-tension
+};
+let seasonPhase = 0;       // slowly advances to modulate thresholds
+let globalWindType = -1;   // bias for propagation, changes hourly
+let lastWindChange = Date.now();
+const WIND_CHANGE_INTERVAL = 1000 * 60 * 60; // Every hour
+
+const game = {
+  grid: [], // Now holds cell objects: {type, state, timer, activity, tension, drift}
+  selected: null,
+  score: 0,
+  moves: 30, // Moves now represent player nudges, not match-3 direct triggers
+  sequence: [],
+  busy: false,
+  loadedVideos: {},
+  sounds: {
+    match: null, // "Bloom" sound now
+    swap: null,
+    win: null,
+    error: null
+  },
+  soundEnabled: true,
+  autoPlay: true,
+  useTypeSegments: true,
+  typeSegmentVideos: {},
+  segmentUsage: {},
+  collectedTypes: new Set(),
+  typePlaybackTime: {},
+  automataFrame: 0, // Track frames for automata updates
+  cellBrightness: {} // Cache cell visual properties for similarity
+};
+
+// ===== RING BUFFER VIDEO POOL =====
+const VIDEO_POOL = {
+  maxSize: 12,  // Only keep 12 videos in memory at once
+  pool: [],
+  active: new Map(), // key -> {video, segment, lastUsed}
+  preloadQueue: [],
+  
+  init() {
+    // Create video pool elements
+    for(let i = 0; i < this.maxSize; i++){
+      const v = document.createElement('video')
+      v.muted = true
+      v.playsinline = true
+      v.preload = 'metadata'
+      v.crossOrigin = 'anonymous'
+      v.dataset.poolIndex = i
+      this.pool.push({el: v, inUse: false, key: null})
+    }
+    console.log(`✓ Video pool initialized: ${this.maxSize} slots`)
+  },
+  
+  get(key) {
+    // Return if already active
+    if(this.active.has(key)){
+      const entry = this.active.get(key)
+      entry.lastUsed = Date.now()
+      return entry.video
+    }
+    
+    // Find free slot or evict oldest
+    let slot = this.pool.find(s => !s.inUse)
+    if(!slot){
+      // Evict least recently used
+      let oldestKey = null
+      let oldestTime = Infinity
+      for(const [k, entry] of this.active.entries()){
+        if(entry.lastUsed < oldestTime){
+          oldestTime = entry.lastUsed
+          oldestKey = k
+        }
+      }
+      if(oldestKey){
+        const evicted = this.active.get(oldestKey)
+        evicted.video.pause()
+        evicted.video.src = ''
+        slot = this.pool.find(s => s.key === oldestKey)
+        if(slot) slot.inUse = false
+        this.active.delete(oldestKey)
+        console.log(`🔄 Evicted video: ${oldestKey}`)
+      }
+      slot = this.pool.find(s => !s.inUse)
+    }
+    
+    if(!slot){
+      console.warn('No available video slots!')
+      return null
+    }
+    
+    // Load new video
+    const [type, segIdx] = key.split('_').map(Number)
+    const seg = TYPE_SEGMENTS[type]?.[segIdx]
+    if(!seg){
+      console.warn(`Invalid segment: ${key}`)
+      return null
+    }
+    
+    slot.inUse = true
+    slot.key = key
+    const video = slot.el
+    
+    // Only change src if different
+    if(video.src !== seg.file){
+      video.src = seg.file
+    }
+    
+    video.onloadedmetadata = ()=>{
+      try {
+        video.currentTime = Math.min(seg.start, Math.max(0, video.duration - 0.2))
+      } catch(e) {}
+    }
+    
+    video.ontimeupdate = ()=>{
+      if(video.currentTime >= seg.end){
+        try { video.currentTime = seg.start } catch(e) {}
+      }
+    }
+    
+    this.active.set(key, {video, segment: seg, lastUsed: Date.now()})
+    return video
+  },
+  
+  preload(keys) {
+    // Preload upcoming videos
+    keys.slice(0, 3).forEach(key => {
+      if(!this.active.has(key) && !this.preloadQueue.includes(key)){
+        this.preloadQueue.push(key)
+      }
+    })
+    this.processPreloadQueue()
+  },
+  
+  processPreloadQueue() {
+    if(this.preloadQueue.length === 0) return
+    const key = this.preloadQueue.shift()
+    const video = this.get(key)
+    if(video && video.readyState < 2){
+      video.load()
+    }
+  },
+  
+  clear() {
+    this.pool.forEach(slot => {
+      if(slot.el){
+        slot.el.pause()
+        slot.el.src = ''
+      }
+      slot.inUse = false
+      slot.key = null
+    })
+    this.active.clear()
+    this.preloadQueue = []
+  }
+}
+
+// Init type-segment videos using ring buffer
+function initTypeSegments() {
+  VIDEO_POOL.init()
+  game.typeSegmentVideos = new Proxy({}, {
+    get(target, key) {
+      return VIDEO_POOL.get(key)
+    }
+  })
+  console.log('✓ Ring buffer video system initialized')
+}
+
+// Helper: map grid cell to segment index (deterministic variety)
+function segmentIndexForCell(type, r, c) {
+  return (r + c * 3) % SEGMENTS_PER_TYPE;
+}
+
+// Helper: get next unused segment for a type (for coherent sequences)
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = [];
+  let minUsed = Infinity;
+  let minIdx = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const used = game.segmentUsage[type].filter(u => u === s).length;
+    if (used < minUsed) {
+      minUsed = used;
+      minIdx = s;
+    }
+  }
+  game.segmentUsage[type].push(minIdx);
+  return minIdx;
+}
+
+// CELLULAR AUTOMATA FUNCTIONS
+
+// Create a cell object - MODIFIED for Eno states and properties
+function createCell(type) {
+  return {
+    type,
+    state: CELL_STATES.QUIET, // Start quiet
+    timer: 0,
+    brightness: 0.5,
+    lastChange: 0,
+    tension: 0,               // accumulates while quiet near active neighbors
+    drift: {dx: Math.random()*SEASONS.drift, dy: Math.random()*SEASONS.drift} // tiny per-cell drift
+  };
+}
+
+// Get Moore neighborhood (8 surrounding cells)
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+// Calculate similarity between two cells (0-1) - still used by player nudges
+function cellSimilarity(cell1, cell2) {
+  if (!cell1 || !cell2) return 0;
+  // Same type = high similarity
+  if (cell1.type === cell2.type) return 0.9;
+  // Similar brightness (if brightness data were being computed/cached, which it isn't currently)
+  // For now, only type similarity is dominant.
+  return 0; 
+}
+
+// Apply cellular automata rules to all cells - SIGNIFICANTLY REFACTORED
+function applyAutomataRules() {
+  const newStates = [];
+  const cellsToHarvest = []; // Collect cells that transition to BURSTING
+  
+  // NEW: Update season phase and global wind
+  seasonPhase += 0.0005; // Ultra slow progression for seasonal changes
+  if (Date.now() - lastWindChange > WIND_CHANGE_INTERVAL) {
+    globalWindType = Math.floor(Math.random() * 10); // Change wind bias
+    lastWindChange = Date.now();
+    console.log(`🌬️ Global wind shifted to Type ${globalWindType}`);
+  }
+
+  // Calculate global quiet quota and current state
+  const targetQuiet = SEASONS.quietQuota + 0.1 * Math.sin(seasonPhase); // Breathe
+  let quietCount = 0;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      const isQuiet = (cell.state === CELL_STATES.QUIET || cell.state === CELL_STATES.LISTEN);
+      if (isQuiet) quietCount++;
+    }
+  }
+  const currentQuietFrac = quietCount / (GRID_SIZE * GRID_SIZE);
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    newStates[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) { newStates[r][c] = null; continue; } // Should not happen with refillGrid
+      
+      let nextCellState = { ...cell, timer: cell.timer + 1 }; // Default: just increment timer
+
+      const isQuiet = (cell.state === CELL_STATES.QUIET || cell.state === CELL_STATES.LISTEN);
+      const neighbors = getNeighbors(r, c);
+      const activeNeighbors = neighbors.filter(n => n.cell && n.cell.state !== CELL_STATES.QUIET);
+
+      // Feedback loop (a): More Quiet increases bloom likelihood at edges
+      if (isQuiet && activeNeighbors.length > 0) {
+        // Edges “listen” and charge up
+        nextCellState.tension = Math.min(1, cell.tension + SEASONS.tensionGain * activeNeighbors.length);
+      } else if (!isQuiet) {
+        // Bleed tension in active areas
+        nextCellState.tension = Math.max(0, cell.tension - SEASONS.tensionGain * 0.5);
+      }
+
+      // 1. Rare spontaneous seeds (very low chance)
+      //    Prioritize cells near a quiet edge with some tension
+      if (Math.random() < SEASONS.rareBloomChance && cell.state === CELL_STATES.QUIET && cell.tension > 0.3) {
+        nextCellState = { ...cell, state: CELL_STATES.LISTEN, timer: 0 };
+      }
+      
+      // Check if global quota allows more activity (Inverse of Half-Silence Rule)
+      // `canBloom` is true if we haven't exceeded our "loud allowance"
+      const canBloom = (1 - currentQuietFrac) < (1 - targetQuiet) + 0.05; // Allow a small buffer
+
+      // 2. Bloom when: edge tension high AND we haven’t exceeded loud allowance
+      //    (WILT is implicit: after bursting, it returns to QUIET)
+      if (cell.state === CELL_STATES.LISTEN && cell.tension > (0.6 - 0.2 * Math.sin(seasonPhase)) && canBloom) {
+        nextCellState = { ...cell, state: CELL_STATES.BURSTING, timer: 0 };
+        cellsToHarvest.push({r, c, type: cell.type}); // Mark this cell for harvesting
+        game.sounds.match(); // Play bloom sound
+        haptic(20);
+      }
+
+      // 3. After blooming, wilt to QUIET (enforce rest)
+      //    Feedback loop (b): repeated blooms raise local quiet quotas (garden rests)
+      //    We manage this locally by resetting tension and forcing QUIET
+      else if (cell.state === CELL_STATES.BURSTING && cell.timer > 30) { // Burst for ~0.5 seconds
+        nextCellState = { ...cell, state: CELL_STATES.QUIET, timer: 0, tension: 0 };
+        // If we wanted to "raise local quiet quotas", we'd modify a cell-specific `quietQuota` here.
+        // For simplicity, for now, resetting tension and state is the "rest."
+      }
+
+      // 4. Propagation becomes whisper: adopt majority slowly, but only if QUIET quota ok
+      //    This is less about immediate type matching, more about slow diffusion
+      else if (cell.state !== CELL_STATES.QUIET && Math.random() < (AUTOMATA_CONFIG.PROPAGATION_CHANCE * 0.25)) {
+        const typeCounts = {};
+        neighbors.forEach(n => { typeCounts[n.cell.type] = (typeCounts[n.cell.type] || 0) + 1; });
+        
+        // Incorporate global "wind" bias
+        if (globalWindType !== -1) {
+          typeCounts[globalWindType] = (typeCounts[globalWindType] || 0) + 2; // Stronger bias
+        }
+
+        const dominantType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+        
+        if (dominantType && parseInt(dominantType) !== cell.type) {
+          nextCellState = { ...cell, type: parseInt(dominantType), lastChange: game.automataFrame };
+        }
+      }
+
+      // 5. Default: nudge QUIET cells toward LISTEN as edges heat up
+      else if (cell.state === CELL_STATES.QUIET && cell.tension > 0.4 && canBloom) {
+        nextCellState = { ...cell, state: CELL_STATES.LISTEN, timer: 0 };
+      }
+      
+      newStates[r][c] = nextCellState;
+    }
+  }
+  
+  game.grid = newStates;
+  
+  // Process all harvested cells AFTER the grid update
+  cellsToHarvest.forEach(({r, c, type}) => harvestBloom(r, c, type));
+}
+
+// NEW: Function to harvest a single blooming cell
+function harvestBloom(r, c, type) {
+  const segIdx = nextSegmentForType(type);
+  const seg = TYPE_SEGMENTS[type][segIdx];
+  const newClip = { 
+    title: seg.title, 
+    file: seg.file, 
+    start: seg.start, 
+    end: seg.end,
+    sourceCell: {r,c} // Keep track of which cell sourced it
+  };
+  
+  // Half-Silence Rule: Mute every other harvested clip
+  if (game.sequence.length % 2 === 0) {
+    newClip.mute = true;
+  }
+  
+  game.sequence.push(newClip);
+  game.collectedTypes.add(type);
+  game.typePlaybackTime[type] = 0; // Reset playback for this type
+  game.score += 10;
+  
+  // Update UI
+  document.getElementById('score').textContent = game.score;
+  document.getElementById('clips').textContent = game.sequence.length;
+  updateTimeline();
+
+  // Sync all segment videos for this type to start time
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const key = `${type}_${s}`;
+    const vid = game.typeSegmentVideos[key];
+    if (vid) {
+      try {
+        vid.currentTime = TYPE_SEGMENTS[type][s].start;
+        if (vid.paused) vid.play().catch(()=>{});
+      } catch(e) {}
+    }
+  }
+  maybeAutoPlaySequence();
+}
+
+// ✅ SOUND SYSTEM - Web Audio API
+function initSounds() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  game.sounds.match = () => { // Renamed from "match" to "bloom" sound
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1); // C5
+  };
+  
+  game.sounds.swap = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 392, 0.05); // G4
+  };
+  
+  game.sounds.win = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1);
+    setTimeout(() => playTone(audioContext, 659.25, 0.1), 100);
+    setTimeout(() => playTone(audioContext, 783.99, 0.2), 200);
+  };
+  
+  game.sounds.error = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 200, 0.1);
+  };
+  
+  console.log('🔊 Sound system initialized');
+}
+
+function playTone(ctx, frequency, duration) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+// ✅ HAPTIC FEEDBACK
+function haptic(pattern = 10) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
+// INIT
+function init() {
+  console.log('🎮 Initializing...');
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  canvas.addEventListener('click', handleClick);
+  
+  document.getElementById('hintBtn').addEventListener('click', showHint);
+  document.getElementById('shuffleBtn').addEventListener('click', shuffle);
+  document.getElementById('exportBtn').addEventListener('click', toggleExportMenu);
+  document.getElementById('soundBtn').addEventListener('click', toggleSound);
+  document.getElementById('playSequenceBtn').addEventListener('click', startSequencePlayback);
+  document.getElementById('autoPlayBtn').addEventListener('click', toggleAutoPlay);
+  document.getElementById('timelineHandle').addEventListener('click', () => {
+    document.getElementById('timelinePanel').classList.toggle('collapsed');
+  });
+  updateAutoPlayButton();
+  
+  // Close export menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('exportMenu');
+    const btn = document.getElementById('exportBtn');
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('show');
+    }
+  });
+  
+  initSounds();
+  // loadVideos(); // Not used in segment mode, and handled by typeSegmentVideos
+  if (game.useTypeSegments) initTypeSegments();
+  createGrid();
+  draw();
+}
+
+function resize() {
+  const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+  canvas.width = GRID_SIZE * CELL_SIZE;
+  canvas.height = GRID_SIZE * CELL_SIZE;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+
+function createGrid() {
+  game.grid = [];
+  for (let r = 0; r < GRID_SIZE; r++) {
+    game.grid[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      game.grid[r][c] = createCell(randomCandyType());
+    }
+  }
+  
+  // No need to remove initial matches in the Eno model, as they don't trigger direct harvesting
+  // Initial states are all QUIET, the garden will compose itself.
+  console.log('✓ Living grid created - cells are now autonomous agents');
+}
+
+function randomCandyType() {
+  return Math.floor(Math.random() * 10);
+}
+
+function draw() {
+  // Apply automata rules periodically
+  game.automataFrame++;
+  if (game.automataFrame % AUTOMATA_CONFIG.UPDATE_FREQUENCY === 0) {
+    applyAutomataRules();
+  }
+  
+  // PRELOAD: Collect all visible video keys and preload them
+  const visibleKeys = []
+  for(let r = 0; r < GRID_SIZE; r++){
+    for(let c = 0; c < GRID_SIZE; c++){
+      const cell = game.grid[r][c]
+      if(cell){
+        const segIdx = segmentIndexForCell(cell.type, r, c)
+        visibleKeys.push(`${cell.type}_${segIdx}`)
+      }
+    }
+  }
+  VIDEO_POOL.preload(visibleKeys)
+  
+  // Background
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Grid lines
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= GRID_SIZE; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * CELL_SIZE, 0);
+    ctx.lineTo(i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(0, i * CELL_SIZE);
+    ctx.lineTo(GRID_SIZE * CELL_SIZE, i * CELL_SIZE);
+    ctx.stroke();
+  }
+  
+  // Draw candies
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      const x = c * CELL_SIZE;
+      const y = r * CELL_SIZE;
+      
+      // MOSAIC SAMPLING: sample only the (r,c) spatial region from this video
+      const segIdx = segmentIndexForCell(cell.type, r, c);
+      const key = `${cell.type}_${segIdx}`;
+      const video = game.typeSegmentVideos[key];
+      
+      if (video && video.readyState >= 2) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+        ctx.clip();
+        
+        // Calculate which spatial region to sample from video
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const cellW = vw / GRID_SIZE; // Width of one cell in video
+        const cellH = vh / GRID_SIZE; // Height of one cell in video
+        
+        // NEW: DRIFT - slowly offset the sampled region (texture over time)
+        const driftX = (cell.drift.dx * cell.timer * vw) % cellW;
+        const driftY = (cell.drift.dy * cell.timer * vh) % cellH;
+        const sx = c * cellW + driftX; // Source X in video
+        const sy = r * cellH + driftY; // Source Y in video
+        
+        // Draw only that spatial region
+        ctx.drawImage(
+          video,
+          sx, sy, cellW, cellH, // Source rectangle (specific region)
+          x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8 // Destination
+        );
+        
+        ctx.restore();
+        // Play video only if not QUIET or LISTEN. In QUIET/LISTEN, video frame is 'frozen'
+        if (video.paused && cell.state !== CELL_STATES.QUIET && cell.state !== CELL_STATES.LISTEN) {
+          video.play().catch(()=>{});
+        }
+      }
+      
+      // STATE-BASED VISUAL EFFECTS - MODIFIED for Eno states
+      ctx.save();
+      
+      // NEW: QUIET overlay (treat quiet as instrument)
+      if (cell.state === CELL_STATES.QUIET) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; // Half-silence
+        ctx.fillRect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+        // Ensure video is paused if quiet
+        if(video && !video.paused) video.pause();
+      } else if (cell.state === CELL_STATES.LISTEN) {
+        // Subtle pulse to show listening tension
+        const pulse = 0.1 + 0.1 * Math.sin((Date.now() / 800) + (r + c));
+        ctx.strokeStyle = `rgba(0,255,255,${pulse})`;
+        ctx.lineWidth = 2; ctx.strokeRect(x + 6, y + 6, CELL_SIZE - 12, CELL_SIZE - 12);
+        // Ensure video is paused if listening
+        if(video && !video.paused) video.pause();
+      } else if (cell.state === CELL_STATES.BURSTING) {
+        const burst = cell.timer / 30; // 30 frames for burst
+        ctx.globalAlpha = 1 - burst;
+        const scale = 1 + burst * 0.5;
+        ctx.translate(x + CELL_SIZE/2, y + CELL_SIZE/2);
+        ctx.scale(scale, scale);
+        ctx.translate(-(x + CELL_SIZE/2), -(y + CELL_SIZE/2));
+        // Ensure video is playing if bursting
+        if(video && video.paused) video.play().catch(()=>{});
+      }
+      // For any non-QUIET/LISTEN state, ensure video is playing if possible
+      else {
+         if(video && video.paused) video.play().catch(()=>{});
+      }
+      
+      ctx.restore();
+      
+      // Border (color-coded)
+      const borderColor = getBorderColor(cell.type % 10);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+      
+      // Collected type glow
+      if (game.collectedTypes.has(cell.type)) {
+        const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+        ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 + pulse * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+      }
+      
+      // Selected highlight
+      if (game.selected && game.selected.r === r && game.selected.c === c) {
+        ctx.strokeStyle = '#0ff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+      }
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+function getBorderColor(colorId) {
+  const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA', '#A8E6CF', '#FFB74D', '#FCBAD3', '#FFA07A'];
+  return colors[colorId] || '#0ff';
+}
+
+function handleClick(e) {
+  // Player interaction is now a "nudge," not a direct match-3 trigger.
+  // It changes the grid, and the automata reacts.
+  if (game.busy) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  
+  const col = Math.floor((x / rect.width) * GRID_SIZE);
+  const row = Math.floor((y / rect.height) * GRID_SIZE);
+  
+  // Bounds check
+  if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+  if (!game.grid[row] || !game.grid[row][col]) return;
+  
+  console.log('👆 Click:', row, col);
+  
+  if (!game.selected) {
+    game.selected = {r: row, c: col};
+    const cell = game.grid[row][col];
+    console.log('✓ Selected:', row, col, '- type:', cell.type, 'state:', cell.state);
+    haptic(10);
+    game.sounds.swap();
+    
+    // Update video preview
+    const segIdx = segmentIndexForCell(cell.type, row, col);
+    const seg = TYPE_SEGMENTS[cell.type][segIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    document.getElementById('videoLabel').textContent = seg.title;
+  } else {
+    const {r: r1, c: c1} = game.selected;
+    const r2 = row, c2 = col;
+    
+    // Check if adjacent
+    const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+    
+    if (adjacent) {
+      console.log('🔄 Swapping (nudge):', [r1,c1], 'with', [r2,c2]);
+      haptic(15);
+      // Directly swap, no match-checking here. The automata will process new patterns.
+      const tempCell = game.grid[r1][c1];
+      game.grid[r1][c1] = game.grid[r2][c2];
+      game.grid[r2][c2] = tempCell;
+      game.moves--;
+      document.getElementById('moves').textContent = game.moves;
+      game.sounds.swap(); // Use swap sound for a nudge
+    } else {
+      console.log('❌ Not adjacent');
+      game.sounds.error();
+      haptic([10, 50, 10]);
+    }
+    
+    game.selected = null;
+    checkGameOver(); // Check if moves run out, regardless of matches
+  }
+}
+
+// trySwap is now integrated into handleClick (simpler direct swap)
+
+// findMatches is now NOT used for triggering harvesting. It could be used for hints, though.
+// function findMatches() { /* ... removed direct match-3 logic ... */ }
+
+// processMatches is replaced by harvestBloom for automata-driven composition.
+// The concept of cascading matches after a player move is also de-emphasized.
+// Player moves are now just inputs to the generative system.
+// function processMatches(matches) { /* ... removed ... */ }
+
+// dropCandies & refillGrid are not directly used by automata for clearing,
+// but could be part of a "reset" or "shuffle" action.
+function dropCandies() {
+  // Fall downward: consolidate non-nulls from bottom up
+  for (let c = 0; c < GRID_SIZE; c++) {
+    let writePos = GRID_SIZE - 1;
+    for (let r = GRID_SIZE - 1; r >= 0; r--) {
+      if (game.grid[r][c]) {
+        game.grid[writePos][c] = game.grid[r][c];
+        if (writePos !== r) {
+          game.grid[r][c] = createCell(randomCandyType()); // New cells are QUIET
+        }
+        writePos--;
+      }
+    }
+  }
+}
+
+function refillGrid() {
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (!game.grid[r][c]) {
+        game.grid[r][c] = createCell(randomCandyType());
+      }
+    }
+  }
+}
+
+function updateTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  const clipList = document.getElementById('clipList');
+  const wrap = document.getElementById('sequencePlayerWrap');
+  
+  clipList.innerHTML = '';
+  
+  game.sequence.forEach((video, i) => {
+    const clip = document.createElement('div');
+    clip.className = 'clip-item';
+    // Add visual cue for muted clips
+    if (video.mute) {
+      clip.style.opacity = '0.4';
+      clip.style.filter = 'grayscale(100%)';
+    }
+
+    const vid = document.createElement('video');
+    vid.src = video.file;
+    vid.muted = true;
+    vid.playsinline = true;
+    vid.currentTime = video.start || 0; // Set initial time
+    
+    const label = document.createElement('div');
+    label.className = 'clip-label';
+    label.textContent = `${i + 1}. ${video.title}`;
+    
+    clip.appendChild(vid);
+    clip.appendChild(label);
+    clip.onclick = () => playSingleInPlayer(video);
+    clipList.appendChild(clip);
+  });
+  
+  if (game.sequence.length > 0) {
+    panel.classList.add('active');
+    wrap.style.display = 'block';
+  }
+}
+
+// Sequence Player
+function startSequencePlayback() {
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  // Ensure timeline + player UI visible
+  document.getElementById('timelinePanel').classList.add('active');
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  let idx = 0;
+  const playIdx = (i) => {
+    const v = game.sequence[i];
+    if (!v) return;
+    player.src = v.file;
+    label.textContent = `${i+1}. ${v.title}`;
+    const start = v.start ?? 0;
+    const end = v.end ?? null;
+    player.onloadedmetadata = () => {
+      try { player.currentTime = start; } catch(e) {}
+      player.muted = !!v.mute; // Respect mute flag for clip
+      player.play().catch(()=>{});
+    };
+    if (end != null) {
+      player.ontimeupdate = () => {
+        if (player.currentTime >= end) {
+          player.ontimeupdate = null;
+          idx = (idx + 1) % game.sequence.length;
+          playIdx(idx);
+        }
+      };
+    } else {
+      player.ontimeupdate = null;
+    }
+  };
+  player.onended = () => { idx = (idx + 1) % game.sequence.length; playIdx(idx); };
+  playIdx(idx);
+}
+
+function playSingleInPlayer(v) {
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  player.src = v.file;
+  label.textContent = v.title;
+  const start = v.start ?? 0;
+  const end = v.end ?? null;
+  player.onloadedmetadata = () => {
+    try { player.currentTime = start; } catch(e) {}
+    player.muted = !!v.mute; // Respect mute flag for clip
+    player.play().catch(()=>{});
+  };
+  if (end != null) {
+    player.ontimeupdate = () => {
+      if (player.currentTime >= end) {
+        try { player.currentTime = start; } catch(e) {}
+      }
+    };
+  } else {
+    player.ontimeupdate = null;
+  }
+}
+
+function checkGameOver() {
+  if (game.moves <= 0) {
+    showModal();
+  }
+}
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const stats = document.getElementById('modalStats');
+  
+  stats.innerHTML = `
+    <div>SCORE: ${game.score}</div>
+    <div>CLIPS: ${game.sequence.length}</div>
+    <div style="margin-top:20px;font-size:14px;color:#0ff;">🎬 Your film is ready to export!</div>
+  `;
+  
+  game.sounds.win();
+  haptic([100, 50, 100, 50, 200]);
+  
+  modal.classList.add('show');
+  console.log('🏁 Game Over - Film Complete!');
+}
+
+function showHint() {
+  console.log('💡 Hint: Nudge the grid to see how it flows!');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function shuffle() {
+  console.log('🔀 Shuffling...');
+  createGrid(); // Re-creates grid with all QUIET cells
+  game.moves = Math.max(5, game.moves); // Keep moves if game is still active
+  document.getElementById('moves').textContent = game.moves;
+  game.sounds.match(); // Use bloom sound for shuffle
+  haptic(20);
+}
+
+function toggleTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  panel.classList.toggle('active');
+  console.log('📋 Timeline toggled');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('show');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleSound() {
+  game.soundEnabled = !game.soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = game.soundEnabled ? 'MUTE' : 'UNMUTE';
+  console.log('🔊 Sound:', game.soundEnabled);
+  haptic(10);
+}
+
+// AUTO PLAY HELPERS
+function updateAutoPlayButton() {
+  const btn = document.getElementById('autoPlayBtn');
+  if (!btn) return;
+  btn.textContent = game.autoPlay ? 'AUTO ON' : 'AUTO OFF';
+}
+
+function toggleAutoPlay() {
+  game.autoPlay = !game.autoPlay;
+  updateAutoPlayButton();
+  if (game.autoPlay) {
+    maybeAutoPlaySequence();
+  }
+}
+
+function maybeAutoPlaySequence() {
+  if (!game.autoPlay) return;
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  // If nothing loaded or player is paused without a source, start playback
+  const hasSrc = !!player.src && player.src.length > 0;
+  if (!hasSrc || player.paused) {
+    startSequencePlayback();
+  }
+}
+
+// ✅ EXPORT FUNCTIONS
+
+function exportJSON() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  const data = {
+    title: 'Garden Sequence',
+    timestamp: new Date().toISOString(),
+    score: game.score,
+    clips: game.sequence.length,
+    sequence: game.sequence.map((v, i) => ({
+      order: i + 1,
+      // id: v.id, // removed as there's no explicit id on clips
+      title: v.title,
+      file: v.file,
+      start: v.start,
+      end: v.end,
+      muted: !!v.mute, // Export mute state
+      sourceCell: v.sourceCell || 'N/A' // Added source cell info
+    }))
+  };
+  
+  downloadFile('garden_sequence.json', JSON.stringify(data, null, 2));
+  console.log('✓ JSON exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportEDL() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  let edl = 'TITLE: Garden Sequence\n\n';
+  let recordIn = 0;
+  
+  game.sequence.forEach((v, i) => {
+    // Each harvested segment is 10s long, unless specified.
+    const duration = (v.end - v.start) || 10; 
+    const recordOut = recordIn + duration;
+    
+    edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+    edl += `${formatTimecode(v.start)} ${formatTimecode(v.end)} `; // Source in/out
+    edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`; // Record in/out
+    edl += `* FROM CLIP: ${v.title} (Cell ${v.sourceCell.r},${v.sourceCell.c})${v.mute ? ' [MUTED]' : ''}\n`;
+    edl += `* SOURCE FILE: ${v.file}\n\n`;
+    
+    recordIn = recordOut;
+  });
+  
+  downloadFile('garden_sequence.edl', edl);
+  console.log('✓ EDL exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function formatTimecode(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const f = 0; // Assuming 0 frames for simplicity, or 24/30 FPS if needed
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+}
+
+function exportMosaic() {
+  alert('Mosaic HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportTimeline() {
+  alert('Timeline HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>

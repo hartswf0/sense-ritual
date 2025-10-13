@@ -74,8 +74,8 @@
       <div class="sys-subtitle">Procedural Video Synthesis Systems</div>
     </div>
     <div class="sys-status">
-      <span><span class="status-dot"></span>9 Systems Active</span>
-      <span>v0.9.0</span>
+      <span><span class="status-dot"></span>15 Systems Active</span>
+      <span>Ritual v0.9 + Narrative v1.0 ULTIMATE</span>
     </div>
   </header>
   
@@ -90,9 +90,22 @@
     
     <div class="window-grid" id="windowGrid"></div>
     
+    <section class="philosophy" style="margin-top:60px;">
+      <h2>NARRATIVE GARDEN — Candy Crush Meets Cinema</h2>
+      <p>Build complete 15-beat film structures through match-3 gameplay. Each version adds narrative complexity while keeping the <strong>sense of winning</strong>.</p>
+      <p><strong>Based on:</strong> Matrix-Editor framework, Save the Cat beats, Metz syntagmas</p>
+    </section>
+    
+    <div class="window-grid" id="narrativeGrid"></div>
+    
     <section class="evolution">
-      <h2>EVOLUTION TIMELINE</h2>
+      <h2>EVOLUTION TIMELINE — RITUAL GARDEN</h2>
       <div class="evolution-line" id="evolutionLine"></div>
+    </section>
+    
+    <section class="evolution" style="margin-top:40px;">
+      <h2>EVOLUTION TIMELINE — NARRATIVE GARDEN</h2>
+      <div class="evolution-line" id="narrativeLine"></div>
     </section>
   </main>
   
@@ -122,6 +135,15 @@ const systems = [
   {file:'m-crusher-07.html',version:'0.7',title:'MOSAIC',system:'Spatial Sampling',paradigm:'Compression Matrix',desc:'64 spatial regions per video. Each cell samples a unique coordinate. Polytemporal synchronization. Spatial compression.',concept:'Spatial<br>Mosaic'},
   {file:'m-crusher-08.html',version:'0.8',title:'EMERGENCE',system:'Cellular Automata',paradigm:'Self-Organization',desc:'Living cells with states. Moore neighborhood. Rules: matching, bursting, decaying, propagation. The garden becomes autonomous.',concept:'Cellular<br>Automata'},
   {file:'m-crusher-09.html',version:'0.9',title:'FLUX',system:'Organic Flow Fields',paradigm:'Glassmorphic Synthesis',desc:'<strong>CURRENT BUILD</strong> — Perlin noise. Distinct geometric shapes. Soft pastels. Breathing animations. Glassmorphic frosted windows. The garden flows like water.',concept:'Flux<br>Fields'}
+];
+
+const narrativeSystems = [
+  {file:'narrative-garden-v01.html',version:'0.1',title:'BEAT COLLECTION',system:'Sequential Structure',desc:'Match-3 to collect 15 narrative beats. Simple, focused, learn Save the Cat structure through gameplay.'},
+  {file:'narrative-garden-v02.html',version:'0.2',title:'SYNTAGMA TYPES',system:'Cinematic Grammar',desc:'Add Metz syntagma selection per beat. Learn film language: AS, PS, BS, DS, ALT, SC, ES, OS.'},
+  {file:'narrative-garden-v03.html',version:'0.3',title:'ACT STRUCTURE',system:'3-Act Visualization',desc:'Color-coded acts with progress bars. See narrative architecture, earn act completion bonuses.'},
+  {file:'narrative-garden-v04.html',version:'0.4',title:'CLIP SELECTION',system:'Ring Buffer Intelligence',desc:'Select 2-4 clips per beat from 30-clip pool. Ring buffer ensures variety, no repeats.'},
+  {file:'narrative-garden-v05.html',version:'0.5',title:'TIMELINE EXPORT',system:'Professional Output',desc:'Visual timeline. Export Storymap.md, EDL, OTI.JSON, Shotlist.js. Bridge game→production.'},
+  {file:'narrative-garden-ultimate.html',version:'1.0',title:'ULTIMATE',system:'Complete Integration',desc:'<strong>ALL FEATURES:</strong> Video textures + Cellular automata + 15 beats + Syntagmas + Film playback. MAKES ACTUAL FILMS.'}
 ];
 
 function renderSystems(){
@@ -166,6 +188,54 @@ function renderTimeline(){
   });
 }
 
+function renderNarrativeSystems(){
+  const grid=document.getElementById('narrativeGrid');
+  narrativeSystems.forEach(sys=>{
+    grid.innerHTML+=`
+      <div class="window">
+        <div class="loading"></div>
+        <div class="window-titlebar">
+          <div class="window-controls">
+            <div class="window-control close" onclick="event.stopPropagation()"></div>
+            <div class="window-control minimize" onclick="event.stopPropagation()"></div>
+            <div class="window-control maximize" onclick="openWindow('${sys.file}','${sys.title} — ${sys.system}')" title="Open in iframe"></div>
+          </div>
+          <div class="window-title">v${sys.version} — ${sys.title}</div>
+        </div>
+        <div class="window-body">
+          <div class="window-meta">
+            <div class="meta-row"><span class="meta-label">System</span><span class="meta-value">${sys.system}</span></div>
+            <div class="meta-row"><span class="meta-label">Type</span><span class="meta-value">Narrative Structure</span></div>
+          </div>
+          <div class="window-description">${sys.desc}</div>
+          <div class="window-actions">
+            <button class="btn" onclick="openWindow('${sys.file}','${sys.title} — ${sys.system}')">IFRAME</button>
+            <button class="btn primary" onclick="launchWindow('${sys.file}')">LAUNCH</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderNarrativeTimeline(){
+  const line=document.getElementById('narrativeLine');
+  narrativeSystems.forEach(sys=>{
+    const node=document.createElement('div');
+    node.className='evolution-node';
+    node.onclick=()=>launchWindow(sys.file);
+    if(sys.version==='1.0'){
+      node.style.borderColor='var(--sys-accent)';
+      node.style.background='rgba(0,255,65,0.1)';
+    }
+    node.innerHTML=`
+      <div class="version">v${sys.version}</div>
+      <div class="concept">${sys.title.replace(' ','<br>')}</div>
+    `;
+    line.appendChild(node);
+  });
+}
+
 function openWindow(file,title){
   const modal=document.getElementById('modal');
   const iframe=document.getElementById('modalIframe');
@@ -199,8 +269,10 @@ document.addEventListener('keydown',e=>{
 
 renderSystems();
 renderTimeline();
+renderNarrativeSystems();
+renderNarrativeTimeline();
 
-console.log('🌿 RITUAL GARDEN — 9 Systems Loaded');
+console.log('🌿 RITUAL GARDEN — 15 Systems Loaded (9 Ritual + 6 Narrative incl. v1.0 ULTIMATE)');
 </script>
 </body>
 </html>

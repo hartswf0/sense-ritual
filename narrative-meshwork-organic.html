@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>NARRATIVE MESHWORK — Organic Cellular</title>
+<style>
+:root{--bg:#0a0a0a;--ui:#111;--line:#222;--accent:#00ff41;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;margin:0;background:var(--bg);color:#0ff;font-family:-apple-system,sans-serif;}
+.wrap{display:flex;flex-direction:column;height:100vh;}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ui);border-bottom:2px solid var(--line);}
+.brand{font-weight:900;letter-spacing:3px;font-size:16px;color:var(--accent);}
+.stats{display:flex;gap:16px;font-size:12px;font-weight:700;}
+.stat{color:#666;}.stat-value{color:#0ff;}
+#gameArea{position:relative;flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+canvas{background:#0a0a0a;border:2px solid var(--line);border-radius:8px;touch-action:none;}
+.toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:10px;background:rgba(0,0,0,0.85);border-top:2px solid var(--line);}
+.btn{padding:8px 16px;border:1px solid var(--line);background:rgba(255,255,255,0.05);color:#f5f5f5;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+.btn:hover{background:rgba(0,255,65,0.1);border-color:var(--accent);color:var(--accent);}
+.film-player{position:fixed;bottom:80px;left:20px;right:20px;background:rgba(17,17,17,0.95);border:2px solid #0ff;padding:16px;border-radius:8px;z-index:200;display:none;max-height:70vh;overflow-y:auto;}
+.film-player.active{display:block;}
+.film-player video{width:100%;height:auto;background:#000;border:2px solid #0ff;border-radius:4px;margin-bottom:12px;}
+.beat-buttons{display:flex;gap:6px;flex-wrap:wrap;}
+.beat-btn{padding:8px 12px;background:rgba(0,255,255,0.1);border:1px solid #0ff;color:#0ff;font-size:10px;font-weight:700;cursor:pointer;border-radius:4px;}
+.beat-btn:hover{background:rgba(0,255,255,0.2);}
+.beat-btn.collected{background:rgba(0,255,65,0.3);border-color:var(--accent);color:var(--accent);}
+.beat-btn.current{background:#0ff;color:#000;}
+.clip-alley{position:fixed;right:0;top:60px;bottom:80px;width:60px;background:rgba(17,17,17,0.95);border-left:2px solid var(--accent);transition:width 0.3s;z-index:100;overflow:hidden;}
+.clip-alley.expanded{width:280px;}
+.clip-alley-toggle{position:absolute;left:0;top:50%;transform:translateY(-50%);width:20px;height:60px;background:var(--accent);border:none;color:#000;cursor:pointer;border-radius:0 4px 4px 0;font-weight:900;}
+.clip-alley-content{padding:16px;opacity:0;transition:opacity 0.3s;}
+.clip-alley.expanded .clip-alley-content{opacity:1;}
+.clip-thumbnails{display:flex;flex-direction:column;gap:8px;}
+.clip-thumb{width:100%;aspect-ratio:16/9;background:#000;border:1px solid #333;border-radius:4px;overflow:hidden;position:relative;cursor:pointer;}
+.clip-thumb video{width:100%;height:100%;object-fit:cover;}
+.clip-thumb-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#fff;font-size:9px;padding:2px 4px;}
+.act-section{margin-bottom:16px;}
+.act-title{font-size:11px;font-weight:900;letter-spacing:2px;margin-bottom:8px;}
+.act-title.act1{color:#4ECDC4;}.act-title.act2a{color:#FFE66D;}.act-title.act2b{color:#F38181;}.act-title.act3{color:#AA96DA;}
+.beat-item{padding:6px 8px;margin:4px 0;background:rgba(255,255,255,0.05);border-left:2px solid #333;font-size:10px;color:#666;display:flex;align-items:center;gap:8px;}
+.beat-item.collected{background:rgba(0,255,65,0.1);border-color:var(--accent);color:#0ff;}
+.beat-num{font-weight:900;color:inherit;}
+.syntagma-badge{padding:2px 6px;background:rgba(0,255,255,0.2);border-radius:3px;font-size:9px;color:#0ff;font-weight:900;}
+.syntagma-selector{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;align-items:center;justify-content:center;}
+.syntagma-selector.active{display:flex;}
+.selector-panel{background:var(--ui);border:2px solid:var(--accent);padding:24px;border-radius:8px;max-width:600px;}
+.selector-title{font-size:16px;color:var(--accent);margin-bottom:8px;letter-spacing:2px;text-align:center;}
+.syntagma-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px;}
+.syntagma-option{padding:16px;background:rgba(255,255,255,0.05);border:2px solid var(--line);cursor:pointer;transition:all 0.2s;}
+.syntagma-option:hover{border-color:var(--accent);background:rgba(0,255,65,0.1);}
+.syntagma-option.suggested{border-color:#FFE66D;background:rgba(255,230,109,0.1);}
+.syntagma-code{font-size:14px;color:var(--accent);font-weight:700;margin-bottom:4px;}
+.syntagma-name{font-size:10px;color:#999;}
+@media (max-width:768px){.clip-alley{width:50px;}.clip-alley.expanded{width:220px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="brand">NARRATIVE MESHWORK</div>
+<div class="stats">
+<div class="stat">BEATS <span class="stat-value" id="beatsValue">0/15</span></div>
+<div class="stat">SCORE <span class="stat-value" id="scoreValue">0</span></div>
+<div class="stat">MOVES <span class="stat-value" id="movesValue">50</span></div>
+</div>
+</header>
+<div id="gameArea"><canvas id="game"></canvas></div>
+<div class="toolbar">
+<button class="btn" id="watchFilmBtn">WATCH FILM</button>
+<button class="btn" id="automateBtn">AUTOMATE</button>
+<button class="btn" id="filmBtn">BEATS</button>
+<button class="btn" id="restartBtn">RESTART</button>
+</div>
+</div>
+
+<div class="clip-alley" id="clipAlley">
+<button class="clip-alley-toggle" id="alleyToggle">▶</button>
+<div class="clip-alley-content">
+<div style="font-size:11px;color:var(--accent);font-weight:900;margin-bottom:8px;letter-spacing:1px;">COLLECTED</div>
+<div class="clip-thumbnails" id="clipThumbnails"></div>
+</div>
+</div>
+
+<div class="film-player" id="filmPlayer">
+<video id="filmVideo" controls></video>
+<div class="beat-buttons" id="beatButtons"></div>
+</div>
+
+<div class="act-tracker">
+<div class="act-section">
+<div class="act-title act1">ACT 1: SETUP</div>
+<div id="act1Beats"></div>
+</div>
+<div class="act-section">
+<div class="act-title act2a">ACT 2A: CONFRONTATION</div>
+<div id="act2aBeats"></div>
+</div>
+<div class="act-section">
+<div class="act-title act2b">ACT 2B: CRISIS</div>
+<div id="act2bBeats"></div>
+</div>
+<div class="act-section">
+<div class="act-title act3">ACT 3: RESOLUTION</div>
+<div id="act3Beats"></div>
+</div>
+</div>
+
+<div class="syntagma-selector" id="syntagmaSelector">
+<div class="selector-panel">
+<div class="selector-title" id="selectorTitle">SELECT SYNTAGMA</div>
+<div class="syntagma-grid" id="syntagmaGrid"></div>
+</div>
+</div>
+
+<script>
+console.log('🎬 NARRATIVE MESHWORK — Organic Cellular');
+
+// NARRATIVE STRUCTURE
+const BEATS=[
+{id:1,name:'Opening Image',act:'act1',suggested:'DS',time:0},
+{id:2,name:'Theme Stated',act:'act1',suggested:'AS',time:5},
+{id:3,name:'Set-Up',act:'act1',suggested:'DS',time:10},
+{id:4,name:'Catalyst',act:'act1',suggested:'SC',time:15},
+{id:5,name:'Debate',act:'act1',suggested:'PS',time:20},
+{id:6,name:'Break into Two',act:'act2a',suggested:'SC',time:25},
+{id:7,name:'B Story',act:'act2a',suggested:'ALT',time:30},
+{id:8,name:'Fun and Games',act:'act2a',suggested:'ES',time:35},
+{id:9,name:'Midpoint',act:'act2a',suggested:'SC',time:40},
+{id:10,name:'Bad Guys Close In',act:'act2a',suggested:'OS',time:45},
+{id:11,name:'All Is Lost',act:'act2b',suggested:'AS',time:50},
+{id:12,name:'Dark Night',act:'act2b',suggested:'BS',time:55},
+{id:13,name:'Break into Three',act:'act3',suggested:'SC',time:60},
+{id:14,name:'Finale',act:'act3',suggested:'OS',time:65},
+{id:15,name:'Final Image',act:'act3',suggested:'AS',time:70}
+];
+
+const SYNTAGMAS=[
+{code:'AS',name:'Autonomous Shot',bonus:100},
+{code:'PS',name:'Parallel Syntagma',bonus:100},
+{code:'BS',name:'Bracket Syntagma',bonus:100},
+{code:'DS',name:'Descriptive Syntagma',bonus:100},
+{code:'ALT',name:'Alternating Syntagma',bonus:150},
+{code:'SC',name:'Scene',bonus:100},
+{code:'ES',name:'Episodic Sequence',bonus:150},
+{code:'OS',name:'Ordinary Sequence',bonus:100}
+];
+
+// VIDEO SOURCES (using MEDIA folder)
+const VIDEOS=[
+'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4',
+'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4',
+'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4',
+'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4',
+'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4',
+'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4'
+];
+
+const COLORS=['#FF6666','#00FFFF','#FFDD00','#88FFCC','#FF8888','#DD88FF'];
+const SYMBOLS=['❀','✿','✾','❁','✽','❃'];
+
+const GRID_SIZE=8,CELL_SIZE=64;
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+
+const game={
+grid:[],
+selected:null,
+score:0,
+moves:50,
+busy:false,
+beatsCollected:[],
+currentAct:1,
+pendingBeat:null,
+videos:{},
+voronoiPoints:[],
+automating:false,
+automateInterval:null,
+collectedClips:[]
+};
+
+// BREATHING ANIMATION
+const breathing={
+time:0,
+speed:0.0008,
+amplitude:0.15,
+setAct(act){
+const speeds=[0.0008,0.0015,0.0020,0.0005];
+const amps=[0.15,0.20,0.25,0.12];
+this.speed=speeds[act-1]||0.0008;
+this.amplitude=amps[act-1]||0.15;
+console.log(`🫁 Act ${act} breathing`);
+},
+get(){return 0.85+Math.sin(this.time)*this.amplitude;}
+};
+
+// INIT
+function init(){
+canvas.width=GRID_SIZE*CELL_SIZE;
+canvas.height=GRID_SIZE*CELL_SIZE;
+generateVoronoiPoints();
+createGrid();
+loadVideos();
+renderBeatList();
+initFilmPlayer();
+draw();
+canvas.addEventListener('click',handleClick);
+document.getElementById('filmBtn').addEventListener('click',()=>document.getElementById('filmPlayer').classList.toggle('active'));
+document.getElementById('restartBtn').addEventListener('click',()=>location.reload());
+document.getElementById('alleyToggle').addEventListener('click',toggleAlley);
+document.getElementById('watchFilmBtn').addEventListener('click',watchFilm);
+document.getElementById('automateBtn').addEventListener('click',toggleAutomate);
+
+// Auto-play all videos on load (delayed for mobile)
+setTimeout(()=>{
+Object.values(game.videos).forEach(v=>{
+if(v&&v.readyState>=2){
+v.play().catch(e=>console.log('Auto-play blocked:',e.message));
+}
+});
+},2000);
+
+// Click anywhere to start videos (mobile requirement)
+const startVideos=()=>{
+Object.values(game.videos).forEach(v=>v.play().catch(()=>{}));
+document.removeEventListener('click',startVideos);
+};
+document.addEventListener('click',startVideos);
+}
+
+// ORGANIC VORONOI POINTS
+function generateVoronoiPoints(){
+game.voronoiPoints=[];
+for(let r=0;r<GRID_SIZE;r++){
+game.voronoiPoints[r]=[];
+for(let c=0;c<GRID_SIZE;c++){
+// More organic jitter
+const jitter=CELL_SIZE*0.25;
+const angle=Math.random()*Math.PI*2;
+const dist=Math.random()*jitter;
+game.voronoiPoints[r][c]={
+x:c*CELL_SIZE+CELL_SIZE/2+Math.cos(angle)*dist,
+y:r*CELL_SIZE+CELL_SIZE/2+Math.sin(angle)*dist
+};
+}
+}
+}
+
+// CREATE GRID
+function createGrid(){
+for(let r=0;r<GRID_SIZE;r++){
+game.grid[r]=[];
+for(let c=0;c<GRID_SIZE;c++){
+game.grid[r][c]=Math.floor(Math.random()*6);
+}
+}
+// Clear initial matches
+while(findMatches().length>0){
+findMatches().forEach(m=>game.grid[m.r][m.c]=null);
+refillGrid();
+}
+}
+
+// LOAD VIDEOS
+function loadVideos(){
+VIDEOS.forEach((src,i)=>{
+const v=document.createElement('video');
+v.src=src;
+v.muted=true;
+v.loop=true;
+v.playsinline=true;
+v.preload='auto';
+v.crossOrigin='anonymous';
+v.addEventListener('canplay',()=>{
+if(!v.paused)return;
+v.play().catch(e=>console.log('Video play blocked:',e.message));
+});
+game.videos[i]=v;
+});
+}
+
+// DRAW with ORGANIC CELLS
+function draw(){
+breathing.time+=breathing.speed;
+const breathe=breathing.get();
+
+// Dark background
+ctx.fillStyle='#0a0a0a';
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+for(let r=0;r<GRID_SIZE;r++){
+for(let c=0;c<GRID_SIZE;c++){
+const type=game.grid[r][c];
+const video=game.videos[type];
+const center=game.voronoiPoints[r][c];
+
+ctx.save();
+
+// Draw organic cell shape (rounded square with breathing)
+const size=CELL_SIZE*0.95*breathe;
+const x=center.x-size/2;
+const y=center.y-size/2;
+const radius=size*0.2;
+
+// Create organic path
+ctx.beginPath();
+ctx.moveTo(x+radius,y);
+ctx.lineTo(x+size-radius,y);
+ctx.quadraticCurveTo(x+size,y,x+size,y+radius);
+ctx.lineTo(x+size,y+size-radius);
+ctx.quadraticCurveTo(x+size,y+size,x+size-radius,y+size);
+ctx.lineTo(x+radius,y+size);
+ctx.quadraticCurveTo(x,y+size,x,y+size-radius);
+ctx.lineTo(x,y+radius);
+ctx.quadraticCurveTo(x,y,x+radius,y);
+ctx.closePath();
+
+// Colored backing with bloom
+const backColor=COLORS[type];
+ctx.shadowColor=backColor;
+ctx.shadowBlur=15*breathe;
+ctx.fillStyle=hexToRgba(backColor,0.3*breathe);
+ctx.fill();
+
+// Clip for video
+ctx.clip();
+
+// Draw video if ready
+if(video&&video.readyState>=2){
+// Draw video slightly larger to prevent gaps
+const vidSize=size*1.1;
+const vidX=center.x-vidSize/2;
+const vidY=center.y-vidSize/2;
+ctx.drawImage(video,vidX,vidY,vidSize,vidSize);
+}else{
+// Fallback colored fill
+ctx.fillStyle=hexToRgba(backColor,0.5);
+ctx.fillRect(x,y,size,size);
+}
+
+ctx.restore();
+
+// Draw symbol on top
+ctx.save();
+ctx.font=`bold ${size*0.5}px Arial`;
+ctx.textAlign='center';
+ctx.textBaseline='middle';
+ctx.shadowColor=hexToRgba(backColor,breathe);
+ctx.shadowBlur=8;
+ctx.fillStyle=hexToRgba(backColor,0.9*breathe);
+ctx.fillText(SYMBOLS[type],center.x,center.y);
+ctx.restore();
+
+// Selection highlight
+if(game.selected&&game.selected.r===r&&game.selected.c===c){
+ctx.strokeStyle='#00ff41';
+ctx.lineWidth=4;
+ctx.beginPath();
+ctx.arc(center.x,center.y,size*0.6,0,Math.PI*2);
+ctx.stroke();
+}
+}
+}
+
+requestAnimationFrame(draw);
+}
+
+// MATCH-3 MECHANICS
+function handleClick(e){
+if(game.busy)return;
+const rect=canvas.getBoundingClientRect();
+const x=(e.clientX-rect.left)*(canvas.width/rect.width);
+const y=(e.clientY-rect.top)*(canvas.height/rect.height);
+const clicked=findCellAtPoint(x,y);
+if(clicked===null)return;
+if(!game.selected){
+game.selected=clicked;
+}else{
+const dr=Math.abs(game.selected.r-clicked.r);
+const dc=Math.abs(game.selected.c-clicked.c);
+if((dr===1&&dc===0)||(dr===0&&dc===1)){
+swapCells(game.selected,clicked);
+}
+game.selected=null;
+}
+}
+
+function findCellAtPoint(x,y){
+for(let r=0;r<GRID_SIZE;r++){
+for(let c=0;c<GRID_SIZE;c++){
+const p=game.voronoiPoints[r][c];
+const dist=Math.sqrt((x-p.x)**2+(y-p.y)**2);
+if(dist<CELL_SIZE*0.5)return{r,c};
+}
+}
+return null;
+}
+
+function swapCells(a,b){
+[game.grid[a.r][a.c],game.grid[b.r][b.c]]=[game.grid[b.r][b.c],game.grid[a.r][a.c]];
+const matches=findMatches();
+if(matches.length>0){
+game.moves--;
+document.getElementById('movesValue').textContent=game.moves;
+processMatches(matches);
+}else{
+[game.grid[a.r][a.c],game.grid[b.r][b.c]]=[game.grid[b.r][b.c],game.grid[a.r][a.c]];
+}
+}
+
+function findMatches(){
+const matches=[];
+// Horizontal
+for(let r=0;r<GRID_SIZE;r++){
+for(let c=0;c<GRID_SIZE-2;c++){
+const type=game.grid[r][c];
+let count=1;
+for(let i=1;c+i<GRID_SIZE&&game.grid[r][c+i]===type;i++)count++;
+if(count>=3)for(let i=0;i<count;i++)matches.push({r,c:c+i});
+}
+}
+// Vertical
+for(let c=0;c<GRID_SIZE;c++){
+for(let r=0;r<GRID_SIZE-2;r++){
+const type=game.grid[r][c];
+let count=1;
+for(let i=1;r+i<GRID_SIZE&&game.grid[r+i][c]===type;i++)count++;
+if(count>=3)for(let i=0;i<count;i++)matches.push({r:r+i,c});
+}
+}
+const unique=[];
+matches.forEach(m=>{if(!unique.find(u=>u.r===m.r&&u.c===m.c))unique.push(m);});
+return unique;
+}
+
+function processMatches(matches){
+game.busy=true;
+game.score+=matches.length*10;
+document.getElementById('scoreValue').textContent=game.score;
+
+if(game.beatsCollected.length<15){
+game.pendingBeat=game.beatsCollected.length;
+// AUTO-SELECT syntagma (no modal!)
+autoselectSyntagma();
+}else{
+finishProcessing(matches);
+}
+}
+
+function finishProcessing(matches){
+matches.forEach(m=>game.grid[m.r][m.c]=null);
+setTimeout(()=>{
+dropCells();
+refillGrid();
+const newMatches=findMatches();
+if(newMatches.length>0){
+processMatches(newMatches);
+}else{
+game.busy=false;
+checkGameOver();
+}
+},300);
+}
+
+function dropCells(){
+for(let c=0;c<GRID_SIZE;c++){
+let writeRow=GRID_SIZE-1;
+for(let r=GRID_SIZE-1;r>=0;r--){
+if(game.grid[r][c]!==null){
+game.grid[writeRow][c]=game.grid[r][c];
+if(writeRow!==r)game.grid[r][c]=null;
+writeRow--;
+}
+}
+}
+}
+
+function refillGrid(){
+for(let c=0;c<GRID_SIZE;c++){
+for(let r=0;r<GRID_SIZE;r++){
+if(game.grid[r][c]===null){
+game.grid[r][c]=Math.floor(Math.random()*6);
+}
+}
+}
+}
+
+function checkGameOver(){
+if(game.moves<=0&&game.beatsCollected.length<15){
+alert('Out of moves!');
+location.reload();
+}
+}
+
+// SYNTAGMA SELECTION
+function showSyntagmaSelector(){
+const beat=BEATS[game.pendingBeat];
+document.getElementById('selectorTitle').textContent=`Beat ${beat.id}: ${beat.name}`;
+const grid=document.getElementById('syntagmaGrid');
+grid.innerHTML='';
+SYNTAGMAS.forEach(syn=>{
+const opt=document.createElement('div');
+opt.className='syntagma-option';
+if(syn.code===beat.suggested)opt.classList.add('suggested');
+opt.innerHTML=`<div class="syntagma-code">${syn.code}</div><div class="syntagma-name">${syn.name}</div>`;
+opt.onclick=()=>selectSyntagma(syn.code);
+grid.appendChild(opt);
+});
+document.getElementById('syntagmaSelector').classList.add('active');
+}
+
+function autoselectSyntagma(){
+const beat=BEATS[game.pendingBeat];
+const code=beat.suggested; // Auto-select suggested
+const syn=SYNTAGMAS.find(s=>s.code===code);
+
+// Collect clip with video segment
+const clipType=Math.floor(Math.random()*6);
+const video=game.videos[clipType];
+if(video&&video.duration&&video.src){
+const segment=beat.time;
+game.collectedClips.push({
+beat:beat.id,
+syntagma:code,
+video:video,
+type:clipType,
+start:segment,
+end:Math.min(segment+5,video.duration)
+});
+addClipThumbnail(game.collectedClips[game.collectedClips.length-1]);
+console.log(`🎬 Collected Beat ${beat.id}: ${beat.name}`);
+}
+
+game.beatsCollected.push({beat:beat.id,syntagma:code});
+game.score+=syn.bonus+50; // Always get suggested bonus
+document.getElementById('scoreValue').textContent=game.score;
+document.getElementById('beatsValue').textContent=`${game.beatsCollected.length}/15`;
+
+// Update act breathing
+const newAct=getActNumber(beat.act);
+if(newAct!==game.currentAct){
+game.currentAct=newAct;
+breathing.setAct(newAct);
+}
+
+updateBeatList();
+finishProcessing(findMatches());
+}
+
+function selectSyntagma(code){
+// Keep for manual selection from film player
+autoselectSyntagma();
+}
+
+function getActNumber(actStr){
+if(actStr==='act1')return 1;
+if(actStr==='act2a')return 2;
+if(actStr==='act2b')return 3;
+return 4;
+}
+
+// BEAT LIST
+function renderBeatList(){
+['act1','act2a','act2b','act3'].forEach(act=>{
+const container=document.getElementById(`${act}Beats`);
+BEATS.filter(b=>b.act===act).forEach(beat=>{
+const item=document.createElement('div');
+item.className=`beat-item`;
+item.id=`beat-${beat.id}`;
+item.innerHTML=`<span class="beat-num">${beat.id}</span><span>${beat.name}</span>`;
+container.appendChild(item);
+});
+});
+}
+
+function updateBeatList(){
+game.beatsCollected.forEach(({beat,syntagma})=>{
+const item=document.getElementById(`beat-${beat}`);
+if(item){
+item.classList.add('collected');
+const badge=document.createElement('span');
+badge.className='syntagma-badge';
+badge.textContent=syntagma;
+item.appendChild(badge);
+}
+});
+}
+
+// FILM PLAYER
+function initFilmPlayer(){
+const container=document.getElementById('beatButtons');
+BEATS.forEach(beat=>{
+const btn=document.createElement('button');
+btn.className='beat-btn';
+btn.id=`film-beat-${beat.id}`;
+btn.textContent=`${beat.id}. ${beat.name}`;
+btn.onclick=()=>jumpToBeat(beat);
+container.appendChild(btn);
+});
+}
+
+function jumpToBeat(beat){
+const video=document.getElementById('filmVideo');
+video.currentTime=beat.time;
+video.play();
+document.querySelectorAll('.beat-btn').forEach(b=>b.classList.remove('current'));
+document.getElementById(`film-beat-${beat.id}`).classList.add('current');
+console.log(`⏩ ${beat.name} (${beat.time}s)`);
+}
+
+// UTILS
+function hexToRgba(hex,alpha){
+if(!hex||typeof hex!=='string')return `rgba(255,255,255,${alpha})`;
+let r,g,b;
+if(hex.length===4){
+r="0x"+hex[1]+hex[1];
+g="0x"+hex[2]+hex[2];
+b="0x"+hex[3]+hex[3];
+}else if(hex.length===7){
+r="0x"+hex[1]+hex[2];
+g="0x"+hex[3]+hex[4];
+b="0x"+hex[5]+hex[6];
+}else{
+return `rgba(255,255,255,${alpha})`;
+}
+return `rgba(${+r},${+g},${+b},${alpha})`;
+}
+
+// CLIP ALLEY
+function toggleAlley(){
+const alley=document.getElementById('clipAlley');
+alley.classList.toggle('expanded');
+const btn=document.getElementById('alleyToggle');
+btn.textContent=alley.classList.contains('expanded')?'◀':'▶';
+}
+
+function addClipThumbnail(clip){
+if(!clip||!clip.video)return;
+const container=document.getElementById('clipThumbnails');
+const thumb=document.createElement('div');
+thumb.className='clip-thumb';
+
+// Create thumbnail video
+const vid=document.createElement('video');
+vid.src=clip.video.src;
+vid.muted=true;
+vid.playsinline=true;
+vid.preload='metadata';
+thumb.appendChild(vid);
+
+// Seek to start time when loaded
+vid.addEventListener('loadedmetadata',()=>{
+vid.currentTime=clip.start;
+});
+
+const label=document.createElement('div');
+label.className='clip-thumb-label';
+label.textContent=`Beat ${clip.beat}`;
+thumb.appendChild(label);
+
+thumb.onclick=()=>{
+const filmVideo=document.getElementById('filmVideo');
+filmVideo.muted=false;
+filmVideo.src=clip.video.src;
+filmVideo.currentTime=clip.start;
+filmVideo.play().catch(e=>console.log('Play error:',e));
+document.getElementById('filmPlayer').classList.add('active');
+};
+
+container.appendChild(thumb);
+}
+
+// WATCH ASSEMBLED FILM
+function watchFilm(){
+if(game.collectedClips.length===0){
+console.warn('No clips collected yet');
+return;
+}
+const filmVideo=document.getElementById('filmVideo');
+filmVideo.muted=false; // Enable sound for film
+let currentClip=0;
+
+const playNext=()=>{
+if(currentClip>=game.collectedClips.length){
+filmVideo.pause();
+console.log('🎬 Film complete! '+game.collectedClips.length+' beats');
+return;
+}
+
+const clip=game.collectedClips[currentClip];
+if(!clip||!clip.video||!clip.video.src){
+console.error('Invalid clip',clip);
+currentClip++;
+playNext();
+return;
+}
+
+console.log(`Playing beat ${clip.beat}: ${clip.start}s - ${clip.end}s`);
+filmVideo.src=clip.video.src;
+filmVideo.currentTime=clip.start;
+
+// Remove old listeners
+filmVideo.ontimeupdate=null;
+filmVideo.onended=null;
+
+filmVideo.play().catch(e=>console.error('Play error:',e));
+
+// Monitor time to advance
+filmVideo.ontimeupdate=()=>{
+if(filmVideo.currentTime>=clip.end-0.1){
+filmVideo.ontimeupdate=null;
+currentClip++;
+setTimeout(playNext,100);
+}
+};
+};
+
+playNext();
+document.getElementById('filmPlayer').classList.add('active');
+console.log(`🎬 Starting film with ${game.collectedClips.length} clips`);
+}
+
+// CELLULAR AUTOMATA MODE
+function toggleAutomate(){
+const btn=document.getElementById('automateBtn');
+if(game.automating){
+game.automating=false;
+if(game.automateInterval)clearInterval(game.automateInterval);
+btn.textContent='AUTOMATE';
+console.log('🛑 Automation stopped');
+}else{
+game.automating=true;
+btn.textContent='STOP';
+console.log('🤖 Automation started');
+game.automateInterval=setInterval(()=>{
+if(game.busy)return;
+const matches=findMatches();
+if(matches.length>0){
+processMatches(matches);
+}else{
+// Random swap
+const r1=Math.floor(Math.random()*GRID_SIZE);
+const c1=Math.floor(Math.random()*GRID_SIZE);
+const dir=Math.random()<0.5?'h':'v';
+const r2=dir==='v'?(r1+1)%GRID_SIZE:r1;
+const c2=dir==='h'?(c1+1)%GRID_SIZE:c1;
+swapCells({r:r1,c:c1},{r:r2,c:c2});
+}
+},800);
+}
+}
+
+init();
+</script>
+</body>
+</html>

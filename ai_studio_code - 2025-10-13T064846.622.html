@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="manifest.json">
+  <title>VIDEO GARDEN — Living Mosaic Automata</title>
+  <style>
+    :root{
+      --bg:#0a0a0a; --ui:#111; --line:#222;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:#0ff; font-family:-apple-system,sans-serif;}
+    
+    .wrap{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+    
+    /* Header */
+    header{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--ui); border-bottom:2px solid var(--line);}
+    .brand{font-weight:900; letter-spacing:3px; font-size:16px; color:#0ff;}
+    .stats{display:flex; gap:16px; font-size:12px; font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:#0ff;}
+    .act-counter{font-weight:700; color:#FFD700;} /* New style for Act Counter */
+    
+    /* Game Area */
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg);}
+    canvas{background:#0d0d0d; border:2px solid var(--line); border-radius:8px; touch-action:none; /* image-rendering:pixelated; */ }
+    
+    /* Video Preview */
+    .video-preview{position:absolute; top:20px; right:20px; width:160px; height:90px; border:2px solid #0ff; background:#000; overflow:hidden; pointer-events:none; opacity:0.8;}
+    .video-preview video{width:100%; height:100%; object-fit:cover;}
+    .video-label{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.9); padding:2px 6px; font-size:10px; color:#0ff; font-weight:700;}
+    
+    @media (max-width: 640px) {
+      .video-preview{width:120px; height:68px; top:10px; right:10px;}
+    }
+    
+    /* Toolbar: fixed bottom, concise */
+    .toolbar{position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:8px; padding:10px; background:rgba(0,0,0,0.85); border-top:2px solid #0ff; z-index:120;}
+    .btn{appearance:none; border:none; color:#0ff; background:rgba(0,255,255,0.1); border:1px solid #0ff; padding:8px 10px; border-radius:4px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;}
+    .btn:active{transform:scale(0.95); background:#0ff; color:#000;}
+    
+    /* Timeline lane (narrow) */
+    .timeline-panel{position:fixed; right:0; top:60px; bottom:50px; width:72px; background:rgba(0,0,0,0.78); border-left:2px solid #0ff; padding:6px 4px; overflow-y:auto; transform:translateX(0); transition:width 0.25s ease, padding 0.25s ease; z-index:100; display:flex; flex-direction:column; gap:6px;}
+    .timeline-panel.collapsed{width:0; padding:0; border-left:none; pointer-events:none;}
+    .timeline-title{font-size:10px; font-weight:900; color:#0ff; margin:0 0 6px; text-align:center; letter-spacing:1px;}
+    .clip-item{width:100%; aspect-ratio:16/9; margin-bottom:8px; border:2px solid #333; cursor:pointer; position:relative; overflow:hidden;}
+    .clip-item video{width:100%; height:100%; object-fit:cover;}
+    .clip-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.9); padding:3px; font-size:8px; color:#0ff; text-align:center; text-transform:uppercase; letter-spacing:0.5px;}
+    .clip-item.locked .clip-label::after { content: "🔒"; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); font-size: 1.5em; }
+    .clip-item.locked { border-color: #666 !important; opacity: 0.6; filter: grayscale(100%); }
+    .clip-item.muted { opacity: 0.4; filter: grayscale(100%); } /* Added for Half-Silence Rule */
+
+
+    .sequence-player{position:sticky; bottom:0; background:#0b0b0b; border-top:2px solid #0ff; padding:8px;}
+    .sequence-player video{width:100%; aspect-ratio:16/9; background:#000; border:2px solid #0ff;}
+
+    /* Timeline handle */
+    .timeline-handle{position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff; color:#0ff; display:flex; align-items:center; justify-content:center; z-index:110; cursor:pointer; backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); font-weight:900;}
+    .timeline-handle:active{background:rgba(0,255,255,0.25);}
+    
+    @media (max-width: 768px) {
+      .timeline-panel{width:160px;}
+      .toolbar{grid-template-columns:repeat(3,1fr);}
+    }
+    
+    /* Shape Colors - High Contrast Bauhaus (used for borders, not direct fill) */
+    .color-0{border-color:#FF6B6B !important;} /* Red */
+    .color-1{border-color:#4ECDC4 !important;} /* Cyan */
+    .color-2{border-color:#FFE66D !important;} /* Yellow */
+    .color-3{border-color:#95E1D3 !important;} /* Mint */
+    .color-4{border-color:#F38181 !important;} /* Coral */
+    .color-5{border-color:#AA96DA !important;} /* Purple */
+    .color-6{border-color:#A8E6CF !important;} /* Green */
+    .color-7{border-color:#FFB74D !important;} /* Orange */
+    .color-8{border-color:#FCBAD3 !important;} /* Pink */
+    .color-9{border-color:#FFA07A !important;} /* Salmon */
+    
+    /* Loading */
+    .loading{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; color:#0ff; font-weight:900;}
+    
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal.show{display:flex;}
+    .modal-content{text-align:center; padding:40px;}
+    .modal-title{font-size:48px; font-weight:900; color:#0ff; margin-bottom:20px;}
+    .modal-stats{font-size:18px; color:#666; margin-bottom:30px;}
+    <button class="modal-btn" onclick="location.reload()">NEW SEQUENCE</button>
+    <button class="modal-btn" onclick="document.getElementById('exportMenu').classList.toggle('show')">EXPORT</button>
+  </div>
+</div>
+
+<script>
+console.log('🌿 VIDEO GARDEN — Living Mosaic Automata Loading...');
+
+/*
+# UTILITY PATENT: PROCEDURAL SYNTAGMATIC VIDEO EDITOR
+## "Minecraft for Video Editors" - Spatial Narrative Construction System
+
+CORE INNOVATION: Bottom-Up Narrative Assembly Through Spatial Reasoning
+
+PATENT CLAIMS - PROCEDURAL DESIGN ELEMENTS
+
+1. SYNTAGMATIC BLOCK SYSTEM: Each video block = syntagma (meaningful unit)
+   - Properties: Temporal range, Thematic category, Narrative weight, Color coding
+   - How it works: Physical adjacency creates syntagmatic chains
+   - Current: Cell types are themes. Cells physically adjacent are neighbors.
+   
+2. SPATIAL PATTERN MATCHING (Match-3 Mechanics): Collect fragments only when 3+ identical themes align spatially
+   - How it works: System analyzes completed lines for thematic patterns. Only concepts appearing 3+ times are "collected".
+   - Current: Now *explicitly player-driven* match-3 detection to trigger BURSTING and collection.
+   
+3. QUANTUM STATE BLOCKS: Blocks exist in superposition until "observed" (locked in place)
+   - States: QUIET (potential/dormant), LISTEN (activated/pre-burst), BURSTING (collapsed/observed), LOCKED (collected clip).
+   - Current: QUIET/LISTEN are states of potential. BURSTING is collapse/observation. "Locked" clips.
+
+4. TIME WARP MECHANICS: Spatial transformations = temporal manipulations
+   - Operations: Rotate (time reversal), Hold (temporal suspension), Drop (accelerated time), Rewind (quantum state restoration)
+   - Current: Drift, animations, subtle pulsing. Player nudges are micro-time warps.
+
+5. TIME WORMS (Future Feature): Blocks that tunnel through the grid, connecting non-adjacent moments
+
+6. NARRATIVE GRAVITY: Blocks fall at different speeds based on narrative weight
+   - Current: Implemented as drift (subtle video texture movement) and the refactored `refillGrid` that simulates gravity for falling cells.
+
+7. BLOCK FUSION: Adjacent blocks of same category can fuse into longer sequences
+
+8. DIMENSIONAL LAYERS (Future Feature): Z-axis = narrative depth
+
+9. CAUSAL CHAINS: System validates cause-effect relationships between adjacent blocks
+
+10. PROCEDURAL GENERATION: Block spawn order determined by narrative algorithms
+    - Current: Random candy type, global wind bias (removed from propagation, could be for spawn), automata rules are basic procedural generation (now mostly visual).
+
+MINECRAFT PARALLELS:
+- Blocks -> Video syntagmas (CELLS)
+- Spatial building -> Narrative construction (GRID, PLAYER NUDGES)
+- Resource mining -> Fragment collection (MATCH-3, HARVEST BLOOM)
+- Creative mode -> Free arrangement (AUTO PLAY)
+- Portals -> Time worms (FUTURE)
+
+---
+
+# V0.1: EVOLUTIONARY BEAT
+
+**BEAT:** `COLLECTION`
+**DESCRIPTION:** The core loop of collecting video segments is established through *player-driven* match-3 pattern recognition and locking/unlocked clips.
+
+**Aesthetics:** "Holographic Organic Ritual Layers"
+-   Thinner lines.
+-   More dramatic, organic grid shapes.
+-   Distinctive glyphs/runes for each type.
+-   Layered visual effects for depth and holographic feel.
+-   **Less glowing and pulsing, more peaceful wind movement.**
+
+**Mechanics:**
+-   **Player-Driven Match-3:** Swapping cells is the primary interaction. Matches trigger `BURSTING` and clip harvesting.
+-   **Clips are `locked`** upon collection and must be `unlocked` for playback by tapping them in the timeline.
+-   **"Act Counter"** tracks narrative progression (every `clipsPerAct` clips).
+-   **"Half-Silence Rule":** Every other harvested clip is muted in the sequence.
+*/
+
+// TYPE_SOURCES colors adjusted for a more pastel, less saturated look
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Crimson', color: '#FF6B6B'}, // Muted Red
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Azure', color: '#4ECDC4'},    // Muted Cyan
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Amber', color: '#FFE66D'},   // Muted Yellow
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Jade', color: '#95E1D3'},     // Muted Mint
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Flame', color: '#F38181'},    // Muted Coral
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Violet', color: '#AA96DA'},   // Muted Purple
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Emerald', color: '#A8E6CF'},  // Muted Green
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Gold', color: '#FFB74D'},     // Muted Orange
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Rose', color: '#FCBAD3'},     // Muted Pink
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Stone', color: '#FFA07A'}     // Muted Salmon/Tan
+};
+
+
+// Auto-slice each type into segments (4 per type, 10s each)
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+const typeUsage = {}; // Track which segment index to use next per type
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  typeUsage[t] = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+// NEW: TYPE_GLYPHS for dramatic signature shapes (from previous version)
+const TYPE_GLYPHS = [
+    // Type 0: Crimson - Egyptian Papyrus symbol (𓉗) - simplified angular shape
+    (ctx, x, y, size) => { 
+        const thick = size * 0.1;
+        ctx.moveTo(x + size * 0.2, y + size * 0.8);
+        ctx.lineTo(x + size * 0.5, y + size * 0.1);
+        ctx.lineTo(x + size * 0.8, y + size * 0.8);
+        ctx.lineTo(x + size * 0.7, y + size * 0.8 - thick);
+        ctx.lineTo(x + size * 0.5, y + size * 0.2);
+        ctx.lineTo(x + size * 0.3, y + size * 0.8 - thick);
+        ctx.closePath();
+    },
+    // Type 1: Azure - Eye (𓃑) - simplified oval/almond
+    (ctx, x, y, size) => {
+        const cx = x + size/2;
+        const cy = y + size/2;
+        const radius = size * 0.2;
+        ctx.ellipse(cx, cy, size * 0.4, size * 0.15, Math.PI / 4, 0, Math.PI * 2);
+        ctx.moveTo(cx + radius, cy);
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2); // Pupil
+    },
+    // Type 2: Amber - Solid Block (▓) - bold square
+    (ctx, x, y, size) => { ctx.rect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6); },
+    // Type 3: Jade - Crossroad (⿻) - X-shape
+    (ctx, x, y, size) => {
+        const pad = size * 0.25;
+        ctx.moveTo(x + pad, y + pad); ctx.lineTo(x + size - pad, y + size - pad);
+        ctx.moveTo(x + size - pad, y + pad); ctx.lineTo(x + pad, y + size - pad);
+    },
+    // Type 4: Flame - Container (⿴) - square with inner dot
+    (ctx, x, y, size) => { 
+        ctx.rect(x + size * 0.15, y + size * 0.15, size * 0.7, size * 0.7);
+        ctx.moveTo(x + size/2 + size*0.05, y + size/2);
+        ctx.arc(x + size/2, y + size/2, size*0.05, 0, Math.PI*2);
+    },
+    // Type 5: Violet - Scales (𓊍) - balanced arcs
+    (ctx, x, y, size) => {
+        ctx.arc(x + size * 0.3, y + size * 0.5, size * 0.2, Math.PI / 2, Math.PI * 3 / 2, false);
+        ctx.arc(x + size * 0.7, y + size * 0.5, size * 0.2, Math.PI / 2, Math.PI * 3 / 2, true);
+        ctx.moveTo(x + size * 0.3, y + size * 0.5 - size * 0.2);
+        ctx.lineTo(x + size * 0.7, y + size * 0.5 - size * 0.2);
+    },
+    // Type 6: Emerald - Enclosure (❏) - checkbox-like
+    (ctx, x, y, size) => {
+        ctx.rect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
+        ctx.moveTo(x + size * 0.3, y + size * 0.5);
+        ctx.lineTo(x + size * 0.45, y + size * 0.65);
+        ctx.lineTo(x + size * 0.7, y + size * 0.35);
+    },
+    // Type 7: Gold - Wave (𓈌) - double wave
+    (ctx, x, y, size) => {
+        ctx.moveTo(x + size * 0.2, y + size * 0.4);
+        ctx.quadraticCurveTo(x + size * 0.35, y + size * 0.2, x + size * 0.5, y + size * 0.4);
+        ctx.quadraticCurveTo(x + size * 0.65, y + size * 0.6, x + size * 0.8, y + size * 0.4);
+        ctx.moveTo(x + size * 0.2, y + size * 0.6);
+        ctx.quadraticCurveTo(x + size * 0.35, y + size * 0.8, x + size * 0.5, y + size * 0.6);
+        ctx.quadraticCurveTo(x + size * 0.65, y + size * 0.4, x + size * 0.8, y + size * 0.6);
+    },
+    // Type 8: Rose - Fish (𓆉) - simple fish outline
+    (ctx, x, y, size) => {
+        ctx.moveTo(x + size * 0.2, y + size * 0.5);
+        ctx.quadraticCurveTo(x + size * 0.4, y + size * 0.2, x + size * 0.8, y + size * 0.3);
+        ctx.lineTo(x + size * 0.8, y + size * 0.7);
+        ctx.quadraticCurveTo(x + size * 0.4, y + size * 0.8, x + size * 0.2, y + size * 0.5);
+        ctx.closePath();
+    },
+    // Type 9: Stone - Spiral (𓇼) - shell-like spiral
+    (ctx, x, y, size) => {
+        const cx = x + size/2;
+        const cy = y + size/2;
+        const maxR = size*0.4;
+        ctx.moveTo(cx, cy);
+        for(let i=0; i<720; i+=10) { // Two full rotations
+            const angle = i * Math.PI / 180;
+            const radius = maxR * (i / 720);
+            ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        }
+    }
+];
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const GRID_SIZE = 8;
+const CELL_SIZE = 50; // Base unit for calculating cell dimensions
+
+// Constants for polygon generation
+const JITTER_AMOUNT_FACTOR = 0.2; // Max jitter as a factor of CELL_SIZE (reduced for stability)
+const BULGE_AMOUNT_FACTOR = 0.25;  // Max bulge of an edge as a factor of CELL_SIZE/2 (further reduced for gentler movement)
+
+// AUTOMATA CONSTANTS
+const CELL_STATES = {
+  BURSTING: 'bursting', // Triggered by player match, animates and clears
+  QUIET: 'quiet',       // Dormant, video paused, darkened
+  LISTEN: 'listen'      // Visually activated, pulsing, video paused
+};
+
+const AUTOMATA_CONFIG = {
+  UPDATE_FREQUENCY: 1,       // Update visual CA rules every frame
+  MATCH_LENGTH: 3,           // For player-driven match-3 detection
+  BURST_DURATION: 30         // Frames for the BURSTING animation
+};
+
+// Global "Season" and "Wind" parameters (for visual effects only now)
+const SEASONS = {
+  driftFactor: 0.0003,     // per-frame positional drift of sample window
+  tensionGain: 0.002,      // how fast quiet edges accumulate visual bloom-tension
+  bulgeSpeed: 0.015          // Speed of edge bulging animation
+};
+let seasonPhase = 0;       // slowly advances to modulate thresholds
+let globalWindType = -1;   // bias for propagation, changes hourly (now visual/spawn hint only)
+let lastWindChange = Date.now(); 
+const WIND_CHANGE_INTERVAL = 1000 * 60 * 60; // Every hour
+
+const game = {
+  grid: [], 
+  selected: null,
+  score: 0,
+  moves: 30, 
+  sequence: [],
+  busy: false, // Flag to prevent input during animations
+  loadedVideos: {}, 
+  sounds: {
+    match: null, 
+    swap: null,
+    win: null,
+    error: null
+  },
+  soundEnabled: true,
+  autoPlay: true, // Auto-play sequence from timeline
+  useTypeSegments: true,
+  typeSegmentVideos: {},
+  segmentUsage: {},
+  collectedTypes: new Set(),
+  typePlaybackTime: {},
+  automataFrame: 0, 
+  jitteredPoints: [], // Stores pre-calculated jittered grid points
+  actCounter: 1,      // NEW: Act Structure
+  clipsCollectedInAct: 0,
+  clipsPerAct: 5,     // Collect 5 clips to advance an Act
+  hintActive: false,  // For hint animation
+  hintCoords: null    // {r, c, dr, dc} of the hint swap
+};
+
+function initTypeSegments() {
+  for (let type = 0; type < 10; type++) {
+    for (let segIdx = 0; segIdx < SEGMENTS_PER_TYPE; segIdx++) {
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const key = `${type}_${segIdx}`;
+      const v = document.createElement('video');
+      v.src = seg.file;
+      v.muted = true;
+      v.playsinline = true;
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      v.addEventListener('loadedmetadata', () => {
+        try { 
+            v.currentTime = Math.min(seg.start, Math.max(0, v.duration - 0.2)); 
+            v.play().catch(e => console.log(`Video ${key} autoplay blocked (will retry muted):`, e));
+        } catch(e) { console.error("Error setting video current time:", e); }
+      });
+      v.addEventListener('timeupdate', () => {
+        if (v.currentTime >= seg.end) {
+          try { v.currentTime = seg.start; } catch(e) {}
+        }
+      });
+      v.addEventListener('pause', () => {
+        // Only retry playing if not explicitly in a QUIET/LISTEN state
+        const cell = Object.values(game.grid).flat().find(c => c && c.type === type && segmentIndexForCell(type, c.r, c.c) === segIdx);
+        if (cell && cell.state !== CELL_STATES.QUIET && cell.state !== CELL_STATES.LISTEN) {
+             setTimeout(() => { if (v.paused) v.play().catch(()=>{}); }, 100);
+        }
+      });
+
+      v.load(); // Trigger preload
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created:', Object.keys(game.typeSegmentVideos).length);
+}
+
+function segmentIndexForCell(type, r, c) {
+  // Deterministic segment assignment for consistent visual mosaic
+  return (r * GRID_SIZE + c) % SEGMENTS_PER_TYPE; 
+}
+
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = [];
+  let minUsed = Infinity;
+  let minIdx = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const used = game.segmentUsage[type].filter(u => u === s).length;
+    if (used < minUsed) {
+      minUsed = used;
+      minIdx = s;
+    }
+  }
+  game.segmentUsage[type].push(minIdx);
+  return minIdx;
+}
+
+// CELLULAR AUTOMATA FUNCTIONS
+
+function createCell(type, r = -1, c = -1) { // Added r, c for potential future use, not currently used
+  return {
+    type,
+    state: CELL_STATES.QUIET, 
+    timer: 0,
+    tension: 0, // Visual tension for glow/activity
+    drift: {dx: (Math.random()*2-1)*SEASONS.driftFactor, dy: (Math.random()*2-1)*SEASONS.driftFactor} 
+  };
+}
+
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+// applyAutomataRules now primarily manages visual states and timers
+function applyAutomataRules() {
+  // Update seasonPhase here for smooth animation of bulges
+  seasonPhase += SEASONS.bulgeSpeed; 
+
+  // Update global wind (for potential future visual/spawn bias)
+  if (Date.now() - lastWindChange > WIND_CHANGE_INTERVAL) {
+    globalWindType = Math.floor(Math.random() * 10); 
+    lastWindChange = Date.now();
+    console.log(`🌬️ Global wind shifted to Type ${globalWindType}`);
+  }
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue; 
+      
+      // Update BURSTING timer
+      if (cell.state === CELL_STATES.BURSTING) {
+        cell.timer++;
+      }
+
+      // Update tension for visual flair
+      // Tension could relate to proximity to a match or just natural fluctuation
+      // For now, let's keep a simple oscillating tension for visual interest
+      cell.tension = (0.5 + 0.5 * Math.sin(game.automataFrame * SEASONS.tensionGain + (r+c)*0.5))
+    }
+  }
+}
+
+// Checks for a match of AUTOMATA_CONFIG.MATCH_LENGTH (3) or more
+function findMatches() {
+  const matches = [];
+  const checked = new Set();
+  
+  // Horizontal
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell || checked.has(`${r},${c}`)) continue;
+      
+      const horizontalRun = [];
+      for (let k = c; k < GRID_SIZE; k++) {
+        if (game.grid[r][k] && game.grid[r][k].type === cell.type) {
+          horizontalRun.push({r, c: k});
+        } else {
+          break;
+        }
+      }
+      if (horizontalRun.length >= AUTOMATA_CONFIG.MATCH_LENGTH) {
+        horizontalRun.forEach(coord => {
+          matches.push(coord);
+          checked.add(`${coord.r},${coord.c}`);
+        });
+      }
+    }
+  }
+  
+  // Vertical
+  for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < GRID_SIZE; r++) {
+      const cell = game.grid[r][c];
+      if (!cell || checked.has(`${r},${c}`)) continue; // Also check if already part of a horizontal match
+      
+      const verticalRun = [];
+      for (let k = r; k < GRID_SIZE; k++) {
+        if (game.grid[k][c] && game.grid[k][c].type === cell.type) {
+          verticalRun.push({r: k, c});
+        } else {
+          break;
+        }
+      }
+      if (verticalRun.length >= AUTOMATA_CONFIG.MATCH_LENGTH) {
+        verticalRun.forEach(coord => {
+          matches.push(coord);
+          checked.add(`${coord.r},${coord.c}`);
+        });
+      }
+    }
+  }
+  
+  return matches;
+}
+
+// Process successful player-triggered matches
+function processMatches(matches) {
+  game.busy = true; // Block input during animations
+  game.hintActive = false; // Hide hint if a match is made
+
+  // Mark cells as BURSTING for animation
+  matches.forEach(({r, c}) => {
+    const cell = game.grid[r][c];
+    if (cell) {
+      cell.state = CELL_STATES.BURSTING;
+      cell.timer = 0; // Reset timer for pop animation
+    }
+  });
+  
+  game.sounds.match(); 
+  haptic(20);
+
+  // After BURSTING animation, clear and refill
+  setTimeout(() => {
+    const matchedTypes = new Set();
+    matches.forEach(({r, c}) => {
+      const cell = game.grid[r][c];
+      if (cell) {
+        matchedTypes.add(cell.type);
+      }
+      game.grid[r][c] = null; // Clear matched cells
+      game.score += 10;
+    });
+    
+    document.getElementById('score').textContent = game.score;
+    
+    // Add to sequence and handle Act progression
+    let lastCollectedSeg = null;
+    matchedTypes.forEach(type => {
+      const segIdx = nextSegmentForType(type);
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const newClip = { 
+        title: seg.title, 
+        file: seg.file, 
+        start: seg.start, 
+        end: seg.end,
+        sourceCell: matches[0], // Store source cell of first match for context
+        locked: true, // NEW: Clips are locked by default
+        mute: (game.sequence.length % 2 === 0) // NEW: Half-Silence Rule
+      };
+      game.sequence.push(newClip);
+      lastCollectedSeg = seg; // Only relevant for the old fullscreen video behavior, keeping for context
+      
+      // This part now primarily re-syncs videos for visual flux field
+      game.collectedTypes.add(type);
+      game.typePlaybackTime[type] = 0; 
+      for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+        const key = `${type}_${s}`;
+        const vid = game.typeSegmentVideos[key];
+        if (vid) {
+          try {
+            vid.currentTime = TYPE_SEGMENTS[type][s].start;
+            if (vid.paused) vid.play().catch(()=>{});
+          } catch(e) {}
+        }
+      }
+    });
+    
+    game.clipsCollectedInAct++;
+    if (game.clipsCollectedInAct >= game.clipsPerAct) {
+      game.actCounter++;
+      game.clipsCollectedInAct = 0;
+      document.getElementById('actCounter').textContent = game.actCounter;
+      console.log(`🎬 Act ${game.actCounter} Initiated!`);
+    }
+    
+    document.getElementById('clips').textContent = game.sequence.length;
+    updateTimeline();
+    maybeAutoPlaySequence();
+    
+    // Drop existing cells and refill with new ones
+    refillGrid();
+    
+    // Check for cascades
+    const newMatches = findMatches();
+    if (newMatches.length > 0) {
+      console.log('🔁 Cascade:', newMatches.length, 'matches');
+      haptic(30);
+      processMatches(newMatches); // Recursively process cascades
+    } else {
+      game.busy = false; // All animations and cascades finished, allow input
+      checkGameOver();
+    }
+  }, AUTOMATA_CONFIG.BURST_DURATION * (1000/60)); // Convert frames to ms
+  
+  console.log('💥 Processed matches:', matches.length, '- Score:', game.score);
+}
+
+// SOUND SYSTEM - Web Audio API
+function initSounds() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  game.sounds.match = () => { 
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1); 
+  };
+  
+  game.sounds.swap = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 392, 0.05); 
+  };
+  
+  game.sounds.win = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1);
+    setTimeout(() => playTone(audioContext, 659.25, 0.1), 100);
+    setTimeout(() => playTone(audioContext, 783.99, 0.2), 200);
+  };
+  
+  game.sounds.error = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 200, 0.1);
+  };
+  
+  console.log('🔊 Sound system initialized');
+}
+
+function playTone(ctx, frequency, duration) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+// HAPTIC FEEDBACK
+function haptic(pattern = 10) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
+// Helper function to convert hex color to RGBA
+function hexToRgba(hex, alpha) {
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) { // #RGB
+        r = "0x" + hex[1] + hex[1];
+        g = "0x" + hex[2] + hex[2];
+        b = "0x" + hex[3] + hex[3];
+    } else if (hex.length === 7) { // #RRGGBB
+        r = "0x" + hex[1] + hex[2];
+        g = "0x" + hex[3] + hex[4];
+        b = "0x" + hex[5] + hex[6];
+    }
+    return `rgba(${+r},${+g},${+b},${alpha})`;
+}
+
+// INIT
+function init() {
+  console.log('🎮 Initializing...');
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  canvas.addEventListener('click', handleClick);
+  
+  document.getElementById('hintBtn').addEventListener('click', showHint);
+  document.getElementById('shuffleBtn').addEventListener('click', shuffle);
+  document.getElementById('exportBtn').addEventListener('click', toggleExportMenu);
+  document.getElementById('soundBtn').addEventListener('click', toggleSound);
+  document.getElementById('playSequenceBtn').addEventListener('click', startSequencePlayback);
+  document.getElementById('autoPlayBtn').addEventListener('click', toggleAutoPlay);
+  document.getElementById('timelineHandle').addEventListener('click', () => {
+    document.getElementById('timelinePanel').classList.toggle('collapsed');
+  });
+  updateAutoPlayButton();
+  
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('exportMenu');
+    const btn = document.getElementById('exportBtn');
+    if (menu && btn && !menu.contains(e.target) && e.target !== btn) { // Check if menu and button exist
+      menu.classList.remove('show');
+    }
+  });
+  
+  initSounds();
+  if (game.useTypeSegments) initTypeSegments();
+  createGrid(); 
+  draw();
+  document.getElementById('actCounter').textContent = game.actCounter; // Initialize act counter display
+}
+
+function resize() {
+  const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+  canvas.width = GRID_SIZE * CELL_SIZE; 
+  canvas.height = GRID_SIZE * CELL_SIZE;
+  canvas.style.width = size + 'px'; 
+  canvas.style.height = size + 'px';
+}
+
+// Function to generate jittered grid points for the corners of the cells
+function generateJitteredPoints() {
+    game.jitteredPoints = [];
+    const jitterMax = CELL_SIZE * JITTER_AMOUNT_FACTOR; 
+
+    for (let r = 0; r <= GRID_SIZE; r++) { 
+        game.jitteredPoints[r] = [];
+        for (let c = 0; c <= GRID_SIZE; c++) {
+            let x = c * CELL_SIZE;
+            let y = r * CELL_SIZE;
+
+            let currentJitterX = 0;
+            let currentJitterY = 0;
+
+            // Apply less jitter at the canvas boundaries to keep the overall mosaic contained
+            const jitterScaleX = (c === 0 || c === GRID_SIZE) ? 0.2 : 1; // Reduced jitter at edges
+            const jitterScaleY = (r === 0 || r === GRID_SIZE) ? 0.2 : 1;
+            
+            currentJitterX = (Math.random() * 2 - 1) * jitterMax * jitterScaleX;
+            currentJitterY = (Math.random() * 2 - 1) * jitterMax * jitterScaleY;
+            
+            game.jitteredPoints[r][c] = { x: x + currentJitterX, y: y + currentJitterY };
+        }
+    }
+}
+
+// Function to get the 4 corner points for a given cell (r, c)
+function getCellCorners(r, c) {
+  const p0 = game.jitteredPoints[r][c];
+  const p1 = game.jitteredPoints[r][c+1];
+  const p2 = game.jitteredPoints[r+1][c+1];
+  const p3 = game.jitteredPoints[r+1][c];
+  return [p0, p1, p2, p3]; // Order for drawing a convex quad
+}
+
+/**
+ * Draws a single wavy quadratic curve segment.
+ * @param {CanvasRenderingContext2D} context The canvas rendering context.
+ * @param {{x:number, y:number}} p1 Start point.
+ * @param {{x:number, y:number}} p2 End point.
+ * @param {number} segmentSeed A unique seed for this specific edge segment to ensure consistent bulge.
+ * @param {number} typeInfluence A number (e.g., cell type) to influence bulge variation.
+ */
+function drawWavyEdgeSegment(context, p1, p2, segmentSeed, typeInfluence) {
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
+
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    let normalX = 0;
+    let normalY = 0;
+    if (length > 0) {
+        normalX = -dy / length; 
+        normalY = dx / length;  
+    }
+    
+    const typeBulgeFactor = 1 + (typeInfluence % 3) * 0.1; // Subtle variation by type
+    const animatedBulge = Math.sin(seasonPhase + segmentSeed * 0.1) * BULGE_AMOUNT_FACTOR * (CELL_SIZE / 2) * typeBulgeFactor;
+
+    const controlX = midX + normalX * animatedBulge;
+    const controlY = midY + normalY * animatedBulge;
+
+    context.quadraticCurveTo(controlX, controlY, p2.x, p2.y);
+}
+
+/**
+ * Draws a closed wavy quadrilateral path for a cell, used for clipping and filling.
+ * @param {CanvasRenderingContext2D} context The canvas rendering context.
+ * @param {Array<{x:number, y:number}>} corners The 4 corner points of the cell.
+ * @param {number} r Row index of the cell.
+ * @param {number} c Column index of the cell.
+ * @param {number} cellType The type of the cell (for bulge variation).
+ */
+function drawWavyQuadPath(context, corners, r, c, cellType) {
+    context.beginPath();
+    context.moveTo(corners[0].x, corners[0].y);
+
+    const numSides = corners.length;
+    for (let i = 0; i < numSides; i++) {
+        const p1 = corners[i];
+        const p2 = corners[(i + 1) % numSides];
+        
+        const segmentSeed = (r * GRID_SIZE + c) * 10 + i; 
+        
+        drawWavyEdgeSegment(context, p1, p2, segmentSeed, cellType);
+    }
+    context.closePath();
+}
+
+/**
+ * Draws the entire grid of wavy lines as a single path, for consistent aesthetics.
+ * @param {CanvasRenderingContext2D} context The canvas rendering context.
+ * @param {number} strokeWidth The width of the lines.
+ * @param {string} strokeColor The color of the lines.
+ */
+function drawFullWavyGrid(context, strokeWidth, strokeColor) {
+    context.beginPath();
+    context.strokeStyle = strokeColor; 
+    context.lineWidth = strokeWidth;     
+
+    // Draw horizontal lines
+    for (let r = 0; r <= GRID_SIZE; r++) {
+        context.moveTo(game.jitteredPoints[r][0].x, game.jitteredPoints[r][0].y);
+        for (let c = 0; c < GRID_SIZE; c++) {
+            const p1 = game.jitteredPoints[r][c];
+            const p2 = game.jitteredPoints[r][c+1];
+            const segmentSeed = r * (GRID_SIZE + 1) + c; 
+            drawWavyEdgeSegment(context, p1, p2, segmentSeed, 0); 
+        }
+    }
+
+    // Draw vertical lines
+    for (let c = 0; c <= GRID_SIZE; c++) {
+        context.moveTo(game.jitteredPoints[0][c].x, game.jitteredPoints[0][c].y);
+        for (let r = 0; r < GRID_SIZE; r++) {
+            const p1 = game.jitteredPoints[r][c];
+            const p2 = game.jitteredPoints[r+1][c];
+            const segmentSeed = (r * (GRID_SIZE + 1) + c) + (GRID_SIZE + 1) * (GRID_SIZE + 1) * 10; 
+            drawWavyEdgeSegment(context, p1, p2, segmentSeed, 0); 
+        }
+    }
+    context.stroke();
+}
+
+
+function createGrid() {
+  game.grid = [];
+  generateJitteredPoints(); // Generate jittered points for the entire grid first
+  for (let r = 0; r < GRID_SIZE; r++) {
+    game.grid[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      game.grid[r][c] = createCell(randomCandyType());
+    }
+  }
+  
+  // Ensure no initial matches
+  while (findMatches().length > 0) {
+    findMatches().forEach(({r, c}) => {
+      game.grid[r][c] = createCell(randomCandyType());
+    });
+  }
+  
+  console.log('✓ Living grid created - irregular, wavy quadrilateral cells');
+}
+
+function randomCandyType() {
+  return Math.floor(Math.random() * 10);
+}
+
+// Reusable offscreen canvas for video patterns
+const offscreenVideoCanvas = document.createElement('canvas');
+offscreenVideoCanvas.width = CELL_SIZE;
+offscreenVideoCanvas.height = CELL_SIZE;
+const offscreenVideoCtx = offscreenVideoCanvas.getContext('2d');
+
+
+function draw() {
+  game.automataFrame++;
+  // seasonPhase is updated in applyAutomataRules now
+
+  if (game.automataFrame % AUTOMATA_CONFIG.UPDATE_FREQUENCY === 0) {
+    applyAutomataRules();
+  }
+  
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      const polygonCorners = getCellCorners(r, c); 
+      
+      const segIdx = segmentIndexForCell(cell.type, r, c);
+      const key = `${cell.type}_${segIdx}`;
+      const video = game.typeSegmentVideos[key];
+      
+      ctx.save();
+      
+      // Handle BURSTING animation scaling
+      if (cell.state === CELL_STATES.BURSTING) {
+          const burstProgress = cell.timer / AUTOMATA_CONFIG.BURST_DURATION;
+          const scale = 1 + burstProgress * 0.2; // Scale up to 1.2x (reduced)
+          const alpha = 1 - burstProgress;      // Fade out
+          
+          ctx.globalAlpha = alpha;
+          // Scale around the center of the cell
+          const cellCenterX = (polygonCorners[0].x + polygonCorners[1].x + polygonCorners[2].x + polygonCorners[3].x) / 4;
+          const cellCenterY = (polygonCorners[0].y + polygonCorners[1].y + polygonCorners[2].y + polygonCorners[3].y) / 4;
+          ctx.translate(cellCenterX, cellCenterY);
+          ctx.scale(scale, scale);
+          ctx.translate(-cellCenterX, -cellCenterY);
+      }
+
+      // --- Prepare video content on offscreen canvas ---
+      if (video && video.readyState >= 2) {
+        if (cell.state === CELL_STATES.QUIET || cell.state === CELL_STATES.LISTEN) {
+            if (!video.paused) video.pause(); // Pause video for inactive states
+        } else {
+            if (video.paused) video.play().catch(()=>{}); // Play video for active states
+        }
+
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const srcCellW = vw / GRID_SIZE; 
+        const srcCellH = vh / GRID_SIZE; 
+        
+        // Apply cell's internal drift to the video sample window
+        const driftX = (cell.drift.dx * game.automataFrame * vw);
+        const driftY = (cell.drift.dy * game.automataFrame * vh);
+        
+        // Ensure source coordinates wrap around if drift goes out of bounds
+        const sx = (c * srcCellW + driftX) % vw;
+        const sy = (r * srcCellH + driftY) % vh;
+
+        offscreenVideoCtx.clearRect(0, 0, CELL_SIZE, CELL_SIZE);
+        offscreenVideoCtx.drawImage(
+            video,
+            sx < 0 ? sx + vw : sx, // Wrap negative coordinates
+            sy < 0 ? sy + vh : sy, // Wrap negative coordinates
+            srcCellW, srcCellH,    
+            0, 0, CELL_SIZE, CELL_SIZE 
+        );
+      }
+      const videoPattern = video && video.readyState >= 2 ? ctx.createPattern(offscreenVideoCanvas, 'no-repeat') : '#000';
+      
+      // --- LAYER 1: Base Video Content (filling the path) ---
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+      ctx.fillStyle = videoPattern;
+      ctx.fill(); 
+      
+      // --- LAYER 2: Opaque Colored Shade Layer (Holographic Film) ---
+      // Always present, subtle opacity based on state
+      const baseShadeOpacity = 0.05 + (cell.type % 5) * 0.005; // Reduced base, subtle variation
+      const activeShadeOpacity = (cell.state === CELL_STATES.QUIET || cell.state === CELL_STATES.LISTEN) ? baseShadeOpacity : baseShadeOpacity * 0.5; // Slightly less opaque when active
+      ctx.fillStyle = hexToRgba(TYPE_SOURCES[cell.type].color, activeShadeOpacity);
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+      ctx.fill();
+      
+      // --- LAYER 3: Inner Aura / Holographic Glow (Type Signature) ---
+      const auraColor = TYPE_SOURCES[cell.type].color;
+      const pulseFactor = cell.state === CELL_STATES.BURSTING ? 1.0 : cell.state === CELL_STATES.LISTEN ? 0.4 : 0.1; // Reduced for active/listen
+      const glowStrength = (0.1 + cell.tension * 0.4) * pulseFactor * (0.8 + 0.2 * Math.sin(game.automataFrame / 20)); // Slower anim, less tension impact
+      const blurAmount = 3 + (cell.type % 3) * 1; // Reduced blur
+
+      ctx.shadowColor = hexToRgba(auraColor, glowStrength * 0.4); // Reduced shadow opacity
+      ctx.shadowBlur = blurAmount;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      ctx.fillStyle = hexToRgba(auraColor, glowStrength * 0.05); // Very subtle inner fill
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+      ctx.fill(); 
+      ctx.shadowBlur = 0; // Reset shadow for next draw operations
+
+      // --- LAYER 4: Dynamic Glyph / Ritual Layer ---
+      if (cell.state !== CELL_STATES.QUIET) { // Glyphs only appear when active
+          const glyphColor = TYPE_SOURCES[cell.type].color;
+          const glyphOpacity = cell.state === CELL_STATES.BURSTING ? 1.0 : cell.state === CELL_STATES.LISTEN ? 0.5 : 0.2; // Reduced for LISTEN/active
+          const glyphScale = cell.state === CELL_STATES.BURSTING ? (1 + Math.sin(cell.timer / AUTOMATA_CONFIG.BURST_DURATION * Math.PI) * 0.1) : 1; // Subtle pulse for bursting glyph
+
+          ctx.save(); 
+          
+          const glyphTranslateX = c * CELL_SIZE;
+          const glyphTranslateY = r * CELL_SIZE;
+          ctx.translate(glyphTranslateX + CELL_SIZE/2, glyphTranslateY + CELL_SIZE/2);
+          ctx.scale(glyphScale, glyphScale);
+          ctx.translate(-(glyphTranslateX + CELL_SIZE/2), -(glyphTranslateY + CELL_SIZE/2));
+
+
+          ctx.beginPath();
+          TYPE_GLYPHS[cell.type](ctx, glyphTranslateX, glyphTranslateY, CELL_SIZE); 
+          ctx.closePath();
+
+          ctx.shadowColor = hexToRgba(glyphColor, glyphOpacity * 0.2); // Very subtle glyph shadow
+          ctx.shadowBlur = 5 + (cell.type % 4); // Reduced blur
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+
+          ctx.fillStyle = hexToRgba(glyphColor, glyphOpacity * 0.3); // Subtle fill
+          ctx.fill();
+
+          ctx.strokeStyle = hexToRgba(glyphColor, glyphOpacity * 0.7); // Subtle stroke
+          ctx.lineWidth = 0.7; // Thinner
+          ctx.stroke();
+
+          ctx.restore(); 
+      }
+
+      // QUIET overlay (darkens and freezes the frame, with subtle static)
+      if (cell.state === CELL_STATES.QUIET) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; // Stronger darkening
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.fill();
+        const noiseAlpha = 0.02 + 0.02 * Math.sin(game.automataFrame / 30); // Slower, less intense static
+        ctx.fillStyle = `rgba(0,255,255,${noiseAlpha})`;
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.fill();
+      } 
+      // LISTEN state (subtle pulse)
+      else if (cell.state === CELL_STATES.LISTEN) {
+        const pulse = 0.1 + 0.1 * Math.sin((game.automataFrame / 15) + (r + c)); // Slower pulse
+        ctx.strokeStyle = hexToRgba(TYPE_SOURCES[cell.type].color, pulse * 0.5); // Use cell color, reduced opacity
+        ctx.lineWidth = 1.5; // Slightly thinner
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.stroke();
+      } 
+      
+      ctx.restore(); // Restore globalAlpha and transform from BURSTING or default
+
+      // Selected highlight (on top of everything)
+      if (game.selected && game.selected.r === r && game.selected.c === c) {
+        ctx.strokeStyle = '#0ff'; // Bright cyan
+        ctx.lineWidth = 3; // Thinner border
+        ctx.shadowColor = '#0ff';
+        ctx.shadowBlur = 10; // Softer glow
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.stroke();
+        ctx.shadowBlur = 0; // Reset shadow
+      }
+
+      // Hint highlight (on top of everything)
+      if (game.hintActive && game.hintCoords && 
+          ((game.hintCoords.r1 === r && game.hintCoords.c1 === c) || (game.hintCoords.r2 === r && game.hintCoords.c2 === c))) {
+          const hintPulse = 0.5 + 0.5 * Math.sin(game.automataFrame / 10);
+          ctx.strokeStyle = `rgba(255, 255, 0, ${hintPulse * 0.7})`; // Yellow pulse, reduced opacity
+          ctx.lineWidth = 2; // Thinner
+          ctx.shadowColor = `rgba(255, 255, 0, ${hintPulse * 0.5})`; // Softer shadow
+          ctx.shadowBlur = 8; // Reduced blur
+          drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+      }
+    }
+  }
+
+  // --- FINAL LAYER: Draw the entire grid of lines once ---
+  drawFullWavyGrid(ctx, 1.0, '#333'); // Thinner, darker grid lines
+  
+  requestAnimationFrame(draw);
+}
+
+
+function handleClick(e) {
+  if (game.busy) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  // Scale click coordinates to canvas's internal resolution
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+  
+  let clickedCellR = -1;
+  let clickedCellC = -1;
+
+  // Iterate over cells to find which one was clicked
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c]; 
+      if (!cell) continue;
+
+      const polygonCorners = getCellCorners(r, c);
+      
+      // Draw wavy path for point-in-path test
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+      
+      if (ctx.isPointInPath(clickX, clickY)) {
+        clickedCellR = r;
+        clickedCellC = c;
+        // Do NOT break or clear path yet, need to finish loop for consistent drawing.
+        // Clearing here might break subsequent ctx.isPointInPath calls for other cells.
+      }
+    }
+  }
+  ctx.beginPath(); // Clear the path after all checks
+
+  if (clickedCellR === -1) { 
+    game.selected = null; 
+    game.hintActive = false; // Clear hint if clicking outside
+    return;
+  }
+  
+  const row = clickedCellR;
+  const col = clickedCellC;
+
+  console.log('👆 Click:', row, col);
+  
+  if (!game.selected) {
+    game.selected = {r: row, c: col};
+    const cell = game.grid[row][col];
+    console.log('✓ Selected:', row, col, '- type:', cell.type, 'state:', cell.state);
+    haptic(10);
+    game.sounds.swap();
+    game.hintActive = false; // Clear hint on selection
+    
+    // Update video preview
+    const segIdx = segmentIndexForCell(cell.type, row, col);
+    const seg = TYPE_SEGMENTS[cell.type][segIdx];
+    const previewVideo = document.getElementById('previewVideo');
+    previewVideo.src = seg.file;
+    previewVideo.onloadedmetadata = () => {
+        try { previewVideo.currentTime = seg.start; } catch(e) {}
+        previewVideo.play().catch(()=>{});
+    };
+    document.getElementById('videoLabel').textContent = seg.title;
+  } else {
+    const {r: r1, c: c1} = game.selected;
+    const r2 = row, c2 = col;
+    
+    // Check if adjacent (only horizontal or vertical)
+    const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+    
+    if (adjacent) {
+      console.log('🔄 Swapping (nudge):', [r1,c1], 'with', [r2,c2]);
+      trySwap(r1, c1, r2, c2); // Initiate the swap attempt
+    } else {
+      console.log('❌ Not adjacent or re-selecting');
+      // If player clicks the same cell, deselect it. If clicks non-adjacent, select new one.
+      if (r1 === r2 && c1 === c2) {
+        game.selected = null;
+      } else {
+        game.selected = {r: row, c: col}; // Select new cell
+        const cell = game.grid[row][col];
+        const segIdx = segmentIndexForCell(cell.type, row, col);
+        const seg = TYPE_SEGMENTS[cell.type][segIdx];
+        const previewVideo = document.getElementById('previewVideo');
+        previewVideo.src = seg.file;
+        previewVideo.onloadedmetadata = () => {
+            try { previewVideo.currentTime = seg.start; } catch(e) {}
+            previewVideo.play().catch(()=>{});
+        };
+        document.getElementById('videoLabel').textContent = seg.title;
+      }
+      game.sounds.error();
+      haptic([10, 50, 10]);
+      game.hintActive = false; // Clear hint on interaction
+    }
+  }
+}
+
+function trySwap(r1, c1, r2, c2) {
+  game.busy = true; // Block input
+  game.hintActive = false; // Clear hint on swap attempt
+  
+  // Perform the visual swap immediately
+  const tempCell = game.grid[r1][c1];
+  game.grid[r1][c1] = game.grid[r2][c2];
+  game.grid[r2][c2] = tempCell;
+
+  // After a brief visual pause, check for matches
+  setTimeout(() => {
+    const matches = findMatches();
+    
+    if (matches.length === 0) {
+      // No match - swap back
+      console.log('↩️ No match - reverting');
+      const tempCellBack = game.grid[r1][c1];
+      game.grid[r1][c1] = game.grid[r2][c2];
+      game.grid[r2][c2] = tempCellBack;
+      game.sounds.error();
+      haptic([10, 50, 10]);
+      game.busy = false; // Allow input again
+    } else {
+      // Match found!
+      game.moves--;
+      document.getElementById('moves').textContent = game.moves;
+      processMatches(matches);
+    }
+    game.selected = null; // Clear selection after swap attempt
+    checkGameOver();
+  }, 200); // Short delay for visual feedback before match processing
+}
+
+function refillGrid() {
+  for (let c = 0; c < GRID_SIZE; c++) {
+    // Filter out nulls (cleared cells) and keep existing cells
+    const existingCells = [];
+    for (let r = GRID_SIZE - 1; r >= 0; r--) {
+        if (game.grid[r][c]) {
+            existingCells.push(game.grid[r][c]);
+        }
+    }
+    // Fill the column from bottom up with existing cells
+    for (let r = 0; r < GRID_SIZE; r++) {
+        if (r < existingCells.length) {
+            game.grid[GRID_SIZE - 1 - r][c] = existingCells[r];
+        } else {
+            // Fill any remaining top cells with new random types
+            let newCell = createCell(randomCandyType());
+            // Ensure newly spawned cells don't immediately create a match
+            let attempts = 0;
+            while (attempts < 10 && checkForNewMatch(GRID_SIZE - 1 - r, c, newCell.type)) {
+                newCell.type = randomCandyType();
+                attempts++;
+            }
+            game.grid[GRID_SIZE - 1 - r][c] = newCell;
+        }
+    }
+  }
+}
+
+// Helper to check if a newly placed cell creates an immediate match
+function checkForNewMatch(r, c, type) {
+    // Temporarily set the cell type to check
+    game.grid[r][c] = { type: type, state: CELL_STATES.QUIET, timer: 0, tension: 0, drift: {dx:0, dy:0} }; // Minimal cell object
+
+    let hasMatch = false;
+    // Check horizontal
+    let hCount = 1;
+    for (let i = c - 1; i >= 0 && game.grid[r][i] && game.grid[r][i].type === type; i--) hCount++;
+    for (let i = c + 1; i < GRID_SIZE && game.grid[r][i] && game.grid[r][i].type === type; i++) hCount++;
+    if (hCount >= AUTOMATA_CONFIG.MATCH_LENGTH) hasMatch = true;
+
+    // Check vertical
+    let vCount = 1;
+    for (let i = r - 1; i >= 0 && game.grid[i][c] && game.grid[i][c].type === type; i--) vCount++;
+    for (let i = r + 1; i < GRID_SIZE && game.grid[i][c] && game.grid[i][c].type === type; i++) vCount++;
+    if (vCount >= AUTOMATA_CONFIG.MATCH_LENGTH) hasMatch = true;
+
+    game.grid[r][c] = null; // Reset to null after check (it will be properly assigned later)
+    return hasMatch;
+}
+
+function updateTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  const clipList = document.getElementById('clipList');
+  const wrap = document.getElementById('sequencePlayerWrap');
+  
+  clipList.innerHTML = '';
+  
+  game.sequence.forEach((video, i) => {
+    const clip = document.createElement('div');
+    clip.className = 'clip-item';
+    if (video.mute) {
+      clip.classList.add('muted'); // Use class for muted
+    }
+    if (video.locked) { 
+        clip.classList.add('locked');
+    }
+
+    const vid = document.createElement('video');
+    vid.src = video.file;
+    vid.muted = true;
+    vid.playsinline = true;
+    vid.currentTime = video.start || 0; 
+    
+    const label = document.createElement('div');
+    label.className = 'clip-label';
+    label.textContent = `${i + 1}. ${video.title}`;
+    
+    clip.appendChild(vid);
+    clip.appendChild(label);
+    // Click to unlock or play
+    clip.onclick = () => {
+        if (video.locked) {
+            video.locked = false;
+            updateTimeline(); // Re-render to show unlock
+            console.log(`🔓 Unlocked clip: ${video.title}`);
+            maybeAutoPlaySequence(); // Try to play if auto-play is on
+        } else {
+            playSingleInPlayer(video);
+        }
+    };
+    clipList.appendChild(clip);
+  });
+  
+  if (game.sequence.length > 0) {
+    panel.classList.add('active');
+    wrap.style.display = 'block';
+  }
+}
+
+function startSequencePlayback() {
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  document.getElementById('timelinePanel').classList.remove('collapsed'); 
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  
+  let idx = 0;
+
+  const getNextPlayableClip = (startIndex) => {
+      for (let i = 0; i < game.sequence.length; i++) {
+          const currentIdx = (startIndex + i) % game.sequence.length;
+          if (!game.sequence[currentIdx].locked) { // Only play unlocked clips
+              return currentIdx;
+          }
+      }
+      return -1; // No unlocked clips to play
+  };
+
+  const playIdx = (i) => {
+    const playableIdx = getNextPlayableClip(i);
+    if (playableIdx === -1) {
+        label.textContent = "No Unlocked Clips";
+        player.pause();
+        return;
+    }
+    idx = playableIdx; 
+    const v = game.sequence[idx];
+    
+    player.src = v.file;
+    label.textContent = `${idx+1}. ${v.title}`;
+    const start = v.start ?? 0;
+    const end = v.end ?? null;
+    player.onloadedmetadata = () => {
+      try { player.currentTime = start; } catch(e) {}
+      player.muted = !!v.mute || !game.soundEnabled; // Mute if clip is muted or global sound is off
+      player.play().catch(()=>{});
+    };
+    if (end != null) {
+      player.ontimeupdate = () => {
+        if (player.currentTime >= end) {
+          player.ontimeupdate = null; 
+          playIdx((idx + 1) % game.sequence.length); 
+        }
+      };
+    } else {
+      player.ontimeupdate = null; 
+    }
+  };
+  player.onended = () => { playIdx((idx + 1) % game.sequence.length); };
+  playIdx(idx); 
+}
+
+function playSingleInPlayer(v) {
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  if (v.locked) {
+      label.textContent = "Clip Locked! 🔒";
+      player.pause();
+      return;
+  }
+  document.getElementById('timelinePanel').classList.remove('collapsed'); 
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  
+  player.src = v.file;
+  label.textContent = v.title;
+  const start = v.start ?? 0;
+  const end = v.end ?? null;
+  player.onloadedmetadata = () => {
+    try { player.currentTime = start; } catch(e) {}
+    player.muted = !!v.mute || !game.soundEnabled; 
+    player.play().catch(()=>{});
+  };
+  if (end != null) {
+    player.ontimeupdate = () => {
+      if (player.currentTime >= end) {
+        try { player.currentTime = start; } catch(e) {} // Loop single clip
+      }
+    };
+  } else {
+    player.ontimeupdate = null;
+  }
+}
+
+function checkGameOver() {
+  if (game.moves <= 0) {
+    if (!canMakeAnyMove()) {
+        showModal();
+    } else {
+        // For simplicity, if moves reach 0, it's game over.
+        showModal();
+    }
+  }
+}
+
+function canMakeAnyMove() {
+    // This is a complex check for match-3, iterate all possible 1-step swaps and check for matches.
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            // Check right swap
+            if (c + 1 < GRID_SIZE) {
+                [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]];
+                if (findMatches().length > 0) {
+                    [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]]; // Swap back
+                    return true;
+                }
+                [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]]; // Swap back
+            }
+            // Check down swap
+            if (r + 1 < GRID_SIZE) {
+                [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]];
+                if (findMatches().length > 0) {
+                    [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]]; // Swap back
+                    return true;
+                }
+                [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]]; // Swap back
+            }
+        }
+    }
+    return false;
+}
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const stats = document.getElementById('modalStats');
+  
+  stats.innerHTML = `
+    <div>SCORE: ${game.score}</div>
+    <div>CLIPS: ${game.sequence.length}</div>
+    <div>ACTS: ${game.actCounter}</div>
+    <div style="margin-top:20px;font-size:14px;color:#0ff;">🎬 Your film is ready to export!</div>
+  `;
+  
+  game.sounds.win();
+  haptic([100, 50, 100, 50, 200]);
+  
+  modal.classList.add('show');
+  console.log('🏁 Game Over - Film Complete!');
+}
+
+function showHint() {
+  if (game.busy || game.hintActive) return;
+
+  const hint = findHint();
+  if (hint) {
+    game.hintActive = true;
+    game.hintCoords = hint;
+    console.log('💡 Hint: Try swapping', hint.r1, hint.c1, 'with', hint.r2, hint.c2);
+    game.sounds.swap();
+    haptic(10);
+    // The draw loop will now render the hint highlight
+    setTimeout(() => {
+        game.hintActive = false; // Hint disappears after a short time
+        game.hintCoords = null;
+    }, 2000);
+  } else {
+    console.log('💡 No obvious hint found. Try shuffling!');
+    game.sounds.error();
+    haptic([10, 50, 10]);
+  }
+}
+
+function findHint() {
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            // Check right swap
+            if (c + 1 < GRID_SIZE) {
+                [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]];
+                if (findMatches().length > 0) {
+                    [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]]; // Swap back
+                    return { r1: r, c1: c, r2: r, c2: c + 1 };
+                }
+                [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]]; // Swap back
+            }
+            // Check down swap
+            if (r + 1 < GRID_SIZE) {
+                [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]];
+                if (findMatches().length > 0) {
+                    [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]]; // Swap back
+                    return { r1: r, c1: c, r2: r + 1, c2: c };
+                }
+                [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]]; // Swap back
+            }
+        }
+    }
+    return null; // No hint found
+}
+
+function shuffle() {
+  console.log('🔀 Shuffling...');
+  game.busy = true; // Prevent input during shuffle
+  game.selected = null;
+  game.hintActive = false;
+
+  setTimeout(() => { // Small delay for visual effect
+    createGrid(); // This recreates grid and ensures no immediate matches
+    game.moves = Math.max(5, game.moves); // Give some moves back or reset
+    document.getElementById('moves').textContent = game.moves;
+    game.sounds.match(); 
+    haptic(20);
+    game.busy = false; // Allow input again
+  }, 300);
+}
+
+function toggleTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  panel.classList.toggle('collapsed'); 
+  console.log('📋 Timeline toggled');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('show');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleSound() {
+  game.soundEnabled = !game.soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = game.soundEnabled ? 'MUTE' : 'UNMUTE';
+  
+  // Also mute/unmute sequence player and all segment videos
+  const seqPlayer = document.getElementById('sequencePlayer');
+  if (seqPlayer) seqPlayer.muted = !game.soundEnabled;
+  Object.values(game.typeSegmentVideos).forEach(v => {
+      v.muted = !game.soundEnabled;
+  });
+
+  console.log('🔊 Sound:', game.soundEnabled);
+  haptic(10);
+}
+
+function updateAutoPlayButton() {
+  const btn = document.getElementById('autoPlayBtn');
+  if (!btn) return;
+  btn.textContent = game.autoPlay ? 'AUTO ON' : 'AUTO OFF';
+}
+
+function toggleAutoPlay() {
+  game.autoPlay = !game.autoPlay;
+  updateAutoPlayButton();
+  if (game.autoPlay) {
+    maybeAutoPlaySequence();
+  } else {
+    const player = document.getElementById('sequencePlayer');
+    if(player) player.pause();
+  }
+}
+
+function maybeAutoPlaySequence() {
+  if (!game.autoPlay) return;
+  if (game.sequence.length === 0) return;
+  
+  const hasUnlockedClips = game.sequence.some(clip => !clip.locked);
+  if (!hasUnlockedClips) {
+      document.getElementById('sequencePlayerLabel').textContent = "No Unlocked Clips";
+      const player = document.getElementById('sequencePlayer');
+      if(player) player.pause();
+      return;
+  }
+  
+  const player = document.getElementById('sequencePlayer');
+  const hasSrc = !!player.src && player.src.length > 0;
+  if (!hasSrc || player.paused) {
+    startSequencePlayback();
+  }
+}
+
+// EXPORT FUNCTIONS
+
+function exportJSON() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  const data = {
+    title: 'Garden Sequence',
+    timestamp: new Date().toISOString(),
+    score: game.score,
+    clips: game.sequence.length,
+    acts: game.actCounter, 
+    sequence: game.sequence.map((v, i) => ({
+      order: i + 1,
+      title: v.title,
+      file: v.file,
+      start: v.start,
+      end: v.end,
+      muted: !!v.mute, 
+      locked: !!v.locked, 
+      sourceCell: v.sourceCell || 'N/A' 
+    }))
+  };
+  
+  downloadFile('garden_sequence.json', JSON.stringify(data, null, 2));
+  console.log('✓ JSON exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportEDL() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  let edl = 'TITLE: Garden Sequence\n\n';
+  let recordIn = 0;
+  
+  game.sequence.forEach((v, i) => {
+    if (v.locked) {
+        edl += `* CLIP ${i + 1}: ${v.title} [LOCKED/SKIPPED IN EDL]\n\n`;
+        return;
+    }
+    const duration = (v.end - v.start) || 10; 
+    const recordOut = recordIn + duration;
+    
+    edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+    edl += `${formatTimecode(v.start)} ${formatTimecode(v.end)} `; 
+    edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`; 
+    edl += `* FROM CLIP: ${v.title} (Cell ${v.sourceCell.r},${v.sourceCell.c})${v.mute ? ' [MUTED]' : ''}\n`;
+    edl += `* SOURCE FILE: ${v.file}\n\n`;
+    
+    recordIn = recordOut;
+  });
+  
+  downloadFile('garden_sequence.edl', edl);
+  console.log('✓ EDL exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function formatTimecode(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const f = 0; 
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+}
+
+function exportMosaic() {
+  alert('Mosaic HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportTimeline() {
+  alert('Timeline HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>

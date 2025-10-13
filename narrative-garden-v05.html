@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NARRATIVE GARDEN v0.5 — Synthesis (Timeline Export)</title>
+  <style>
+    :root{--bg:#0a0a0a;--ui:#111;--line:#222;--accent:#00ff41;--timeline:#4ECDC4;}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg);color:#f5f5f5;font-family:'SF Mono','Monaco',monospace;font-size:13px;}
+    .wrap{display:flex;flex-direction:column;height:100vh;}
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ui);border-bottom:2px solid var(--line);}
+    .brand{font-weight:900;letter-spacing:3px;font-size:16px;color:var(--accent);}
+    .version{font-size:10px;color:#666;letter-spacing:1px;margin-top:2px;}
+    .stats{display:flex;gap:16px;font-size:12px;font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:var(--accent);}
+    #gameArea{position:relative;flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+    canvas{background:#0d0d0d;border:2px solid var(--line);border-radius:8px;touch-action:none;cursor:pointer;}
+    
+    .timeline-panel{position:fixed;left:20px;top:80px;right:20px;height:140px;background:rgba(17,17,17,0.95);border:2px solid var(--timeline);padding:12px;border-radius:4px;overflow-x:auto;}
+    .timeline-title{font-size:11px;color:var(--timeline);margin-bottom:8px;letter-spacing:2px;font-weight:700;}
+    .timeline-track{display:flex;gap:4px;height:90px;align-items:flex-end;}
+    .timeline-beat{min-width:60px;background:rgba(255,255,255,0.05);border:1px solid var(--line);border-radius:4px;padding:6px;transition:all 0.3s;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;}
+    .timeline-beat.collected{background:rgba(0,255,65,0.1);border-color:var(--accent);height:100%;}
+    .timeline-beat:hover{transform:translateY(-4px);border-color:var(--timeline);}
+    .timeline-beat-num{font-size:9px;color:#666;font-weight:700;}
+    .timeline-beat.collected .timeline-beat-num{color:var(--accent);}
+    .timeline-beat-name{font-size:8px;color:#999;margin:4px 0;}
+    .timeline-beat.collected .timeline-beat-name{color:#fff;}
+    .timeline-clips{font-size:7px;color:var(--timeline);margin-top:auto;}
+    
+    .export-panel{position:fixed;right:20px;top:240px;width:280px;background:rgba(17,17,17,0.95);border:2px solid var(--line);padding:12px;border-radius:4px;}
+    .export-title{font-size:11px;color:var(--accent);margin-bottom:8px;letter-spacing:2px;font-weight:700;}
+    .export-format{padding:10px;margin:6px 0;background:rgba(255,255,255,0.05);border:1px solid var(--line);cursor:pointer;transition:all 0.2s;}
+    .export-format:hover{background:rgba(0,255,65,0.1);border-color:var(--accent);}
+    .export-format-name{font-size:11px;color:#fff;margin-bottom:4px;font-weight:600;}
+    .export-format-desc{font-size:8px;color:#999;line-height:1.4;}
+    
+    .toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:10px;background:rgba(0,0,0,0.85);border-top:2px solid var(--line);}
+    .btn{padding:8px 16px;border:1px solid var(--line);background:rgba(255,255,255,0.05);color:#f5f5f5;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+    .btn:hover{background:rgba(0,255,65,0.1);border-color:var(--accent);color:var(--accent);}
+    .btn.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);}
+    .btn:disabled{opacity:0.3;cursor:not-allowed;}
+    
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;}
+    .modal.active{display:flex;}
+    .modal-content{background:var(--ui);border:2px solid var(--accent);padding:40px;border-radius:8px;max-width:800px;max-height:90vh;overflow-y:auto;margin:20px;}
+    .modal-title{font-size:24px;color:var(--accent);margin-bottom:16px;letter-spacing:3px;text-align:center;}
+    .modal-subtitle{font-size:12px;color:#999;margin-bottom:24px;text-align:center;}
+    .export-preview{background:rgba(255,255,255,0.03);border:1px solid var(--line);padding:16px;border-radius:4px;font-size:10px;color:#999;line-height:1.6;max-height:400px;overflow-y:auto;font-family:monospace;white-space:pre-wrap;}
+    .export-actions{display:flex;gap:12px;margin-top:24px;justify-content:center;}
+    
+    .selector{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9998;display:none;flex-direction:column;align-items:center;justify-content:center;}
+    .selector.active{display:flex;}
+    .selector-panel{background:var(--ui);border:2px solid var(--accent);padding:24px;border-radius:8px;max-width:600px;}
+    .selector-title{font-size:16px;color:var(--accent);margin-bottom:16px;letter-spacing:2px;text-align:center;}
+    .selector-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+    .selector-option{padding:16px;background:rgba(255,255,255,0.05);border:2px solid var(--line);cursor:pointer;transition:all 0.2s;}
+    .selector-option:hover{border-color:var(--accent);background:rgba(0,255,65,0.1);transform:scale(1.05);}
+    .selector-option-name{font-size:14px;color:var(--accent);font-weight:700;margin-bottom:4px;}
+    .selector-option-desc{font-size:10px;color:#999;}
+    
+    @media (max-width:768px){.timeline-panel{left:10px;right:10px;height:100px;}.export-panel{display:none;}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">NARRATIVE GARDEN</div>
+      <div class="version">v0.5 SYNTHESIS — Timeline Export (Storymap, EDL, JSON)</div>
+    </div>
+    <div class="stats">
+      <div class="stat">BEATS <span class="stat-value" id="beatsCollected">0/15</span></div>
+      <div class="stat">CLIPS <span class="stat-value" id="clipsUsed">0</span></div>
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">60</span></div>
+    </div>
+  </header>
+  
+  <div class="timeline-panel">
+    <div class="timeline-title">NARRATIVE TIMELINE</div>
+    <div class="timeline-track" id="timelineTrack"></div>
+  </div>
+  
+  <div id="gameArea"><canvas id="game"></canvas></div>
+  
+  <div class="export-panel">
+    <div class="export-title">EXPORT OPTIONS</div>
+    <div class="export-format" id="exportStorymap">
+      <div class="export-format-name">📄 STORYMAP.MD</div>
+      <div class="export-format-desc">Full narrative structure with acts, beats, syntagmas, and clips</div>
+    </div>
+    <div class="export-format" id="exportEDL">
+      <div class="export-format-name">🎬 EDL (Edit Decision List)</div>
+      <div class="export-format-desc">Industry-standard format for video editing software</div>
+    </div>
+    <div class="export-format" id="exportJSON">
+      <div class="export-format-name">📊 OTI.JSON</div>
+      <div class="export-format-desc">Complete metadata with timestamps and structure</div>
+    </div>
+    <div class="export-format" id="exportShotlist">
+      <div class="export-format-name">📋 SHOTLIST.JS</div>
+      <div class="export-format-desc">Cinematic prompts for AI video generation</div>
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="restartBtn">RESTART</button>
+    <button class="btn" id="viewTimelineBtn" disabled>VIEW TIMELINE</button>
+    <button class="btn primary" id="exportAllBtn" disabled>EXPORT ALL</button>
+  </div>
+</div>
+
+<div class="selector" id="syntagmaSelector">
+  <div class="selector-panel">
+    <div class="selector-title" id="selectorTitle">SELECT SYNTAGMA</div>
+    <div class="selector-grid" id="syntagmaGrid"></div>
+  </div>
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modal-content">
+    <div class="modal-title" id="exportModalTitle">EXPORT PREVIEW</div>
+    <div class="modal-subtitle" id="exportModalSubtitle"></div>
+    <div class="export-preview" id="exportPreview"></div>
+    <div class="export-actions">
+      <button class="btn" onclick="closeExportModal()">CLOSE</button>
+      <button class="btn primary" onclick="downloadExport()">DOWNLOAD</button>
+      <button class="btn" onclick="copyExport()">COPY TO CLIPBOARD</button>
+    </div>
+  </div>
+</div>
+
+<script>
+console.log('🎬 NARRATIVE GARDEN v0.5 — Synthesis Loading...');
+
+const BEATS=[
+  {id:1,name:'Opening Image',act:'Act 1',suggestedSyntagma:'DS'},
+  {id:2,name:'Theme Stated',act:'Act 1',suggestedSyntagma:'AS'},
+  {id:3,name:'Set-Up',act:'Act 1',suggestedSyntagma:'DS'},
+  {id:4,name:'Catalyst',act:'Act 1',suggestedSyntagma:'SC'},
+  {id:5,name:'Debate',act:'Act 1',suggestedSyntagma:'PS'},
+  {id:6,name:'Break into Two',act:'Act 2A',suggestedSyntagma:'SC'},
+  {id:7,name:'B Story',act:'Act 2A',suggestedSyntagma:'ALT'},
+  {id:8,name:'Fun and Games',act:'Act 2A',suggestedSyntagma:'ES'},
+  {id:9,name:'Midpoint',act:'Act 2A',suggestedSyntagma:'SC'},
+  {id:10,name:'Bad Guys Close In',act:'Act 2A',suggestedSyntagma:'OS'},
+  {id:11,name:'All Is Lost',act:'Act 2B',suggestedSyntagma:'AS'},
+  {id:12,name:'Dark Night',act:'Act 2B',suggestedSyntagma:'BS'},
+  {id:13,name:'Break into Three',act:'Act 3',suggestedSyntagma:'SC'},
+  {id:14,name:'Finale',act:'Act 3',suggestedSyntagma:'OS'},
+  {id:15,name:'Final Image',act:'Act 3',suggestedSyntagma:'AS'}
+];
+
+const SYNTAGMAS=[
+  {code:'AS',name:'Autonomous Shot',desc:'Single powerful moment'},
+  {code:'PS',name:'Parallel Syntagma',desc:'Comparison/contrast'},
+  {code:'BS',name:'Bracket Syntagma',desc:'Thematic montage'},
+  {code:'DS',name:'Descriptive Syntagma',desc:'Establish setting'},
+  {code:'ALT',name:'Alternating Syntagma',desc:'Simultaneous actions'},
+  {code:'SC',name:'Scene',desc:'Continuous real-time'},
+  {code:'ES',name:'Episodic Sequence',desc:'Events over time'},
+  {code:'OS',name:'Ordinary Sequence',desc:'Condensed progression'}
+];
+
+const CLIPS=['Landscape','Portrait','Action','Close-up','Wide','Detail','Movement','Emotion','Object','Environment'];
+
+const GRID_SIZE=8,CELL_SIZE=64;
+const COLORS=['#FF6B6B','#4ECDC4','#FFE66D','#95E1D3','#F38181','#AA96DA'];
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+
+const game={grid:[],selected:null,score:0,moves:60,beatsCollected:[],busy:false,pendingBeatId:null,currentExport:null};
+
+function init(){
+  canvas.width=GRID_SIZE*CELL_SIZE;
+  canvas.height=GRID_SIZE*CELL_SIZE;
+  renderTimeline();
+  renderSyntagmaGrid();
+  createGrid();
+  draw();
+  canvas.addEventListener('click',handleClick);
+  document.getElementById('restartBtn').addEventListener('click',()=>location.reload());
+  document.getElementById('exportStorymap').addEventListener('click',()=>showExport('storymap'));
+  document.getElementById('exportEDL').addEventListener('click',()=>showExport('edl'));
+  document.getElementById('exportJSON').addEventListener('click',()=>showExport('json'));
+  document.getElementById('exportShotlist').addEventListener('click',()=>showExport('shotlist'));
+  document.getElementById('exportAllBtn').addEventListener('click',exportAll);
+}
+
+function createGrid(){for(let r=0;r<GRID_SIZE;r++){game.grid[r]=[];for(let c=0;c<GRID_SIZE;c++){game.grid[r][c]=Math.floor(Math.random()*COLORS.length);}}while(findMatches().length>0){clearMatches(findMatches());dropCells();refillGrid();}}
+function draw(){ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,canvas.width,canvas.height);for(let r=0;r<GRID_SIZE;r++){for(let c=0;c<GRID_SIZE;c++){const x=c*CELL_SIZE,y=r*CELL_SIZE,type=game.grid[r][c];ctx.fillStyle=COLORS[type];ctx.fillRect(x+4,y+4,CELL_SIZE-8,CELL_SIZE-8);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=2;ctx.strokeRect(x+4,y+4,CELL_SIZE-8,CELL_SIZE-8);if(game.selected&&game.selected.r===r&&game.selected.c===c){ctx.strokeStyle='#00ff41';ctx.lineWidth=4;ctx.strokeRect(x+2,y+2,CELL_SIZE-4,CELL_SIZE-4);}}}requestAnimationFrame(draw);}
+function handleClick(e){if(game.busy)return;const rect=canvas.getBoundingClientRect();const x=e.clientX-rect.left,y=e.clientY-rect.top;const col=Math.floor((x/rect.width)*GRID_SIZE);const row=Math.floor((y/rect.height)*GRID_SIZE);if(row<0||row>=GRID_SIZE||col<0||col>=GRID_SIZE)return;if(!game.selected){game.selected={r:row,c:col};}else{const dr=Math.abs(game.selected.r-row),dc=Math.abs(game.selected.c-col);if((dr===1&&dc===0)||(dr===0&&dc===1)){swapCells(game.selected.r,game.selected.c,row,col);}game.selected=null;}}
+function swapCells(r1,c1,r2,c2){[game.grid[r1][c1],game.grid[r2][c2]]=[game.grid[r2][c2],game.grid[r1][c1]];const matches=findMatches();if(matches.length>0){game.moves--;document.getElementById('moves').textContent=game.moves;processMatches(matches);}else{[game.grid[r1][c1],game.grid[r2][c2]]=[game.grid[r2][c2],game.grid[r1][c1]];}}
+function findMatches(){const matches=[];for(let r=0;r<GRID_SIZE;r++){for(let c=0;c<GRID_SIZE-2;c++){const type=game.grid[r][c];let count=1;for(let i=1;c+i<GRID_SIZE&&game.grid[r][c+i]===type;i++)count++;if(count>=3){for(let i=0;i<count;i++)matches.push({r,c:c+i});}}}for(let c=0;c<GRID_SIZE;c++){for(let r=0;r<GRID_SIZE-2;r++){const type=game.grid[r][c];let count=1;for(let i=1;r+i<GRID_SIZE&&game.grid[r+i][c]===type;i++)count++;if(count>=3){for(let i=0;i<count;i++)matches.push({r:r+i,c});}}}const unique=[];matches.forEach(m=>{if(!unique.find(u=>u.r===m.r&&u.c===m.c))unique.push(m);});return unique;}
+function processMatches(matches){game.busy=true;if(game.beatsCollected.length<15){game.pendingBeatId=game.beatsCollected.length+1;showSyntagmaSelector();}else{game.score+=matches.length*10;finishProcessing(matches);}}
+function showSyntagmaSelector(){const beat=BEATS[game.pendingBeatId-1];document.getElementById('selectorTitle').textContent=`Beat ${beat.id}: ${beat.name}`;document.getElementById('syntagmaSelector').classList.add('active');}
+function renderSyntagmaGrid(){const grid=document.getElementById('syntagmaGrid');SYNTAGMAS.forEach(syn=>{const opt=document.createElement('div');opt.className='selector-option';opt.innerHTML=`<div class="selector-option-name">${syn.code}</div><div class="selector-option-desc">${syn.name}<br>${syn.desc}</div>`;opt.onclick=()=>selectSyntagma(syn.code);grid.appendChild(opt);});}
+function selectSyntagma(code){const beat=BEATS[game.pendingBeatId-1];const clips=[];for(let i=0;i<Math.floor(Math.random()*3)+2;i++){clips.push(CLIPS[Math.floor(Math.random()*CLIPS.length)]);}game.beatsCollected.push({beatId:game.pendingBeatId,name:beat.name,act:beat.act,syntagma:code,clips:clips});game.score+=200;updateTimeline();const totalClips=game.beatsCollected.reduce((sum,b)=>sum+b.clips.length,0);document.getElementById('score').textContent=game.score;document.getElementById('beatsCollected').textContent=`${game.beatsCollected.length}/15`;document.getElementById('clipsUsed').textContent=totalClips;document.getElementById('syntagmaSelector').classList.remove('active');if(game.beatsCollected.length===15){game.score+=2000;document.getElementById('exportAllBtn').disabled=false;document.getElementById('viewTimelineBtn').disabled=false;}finishProcessing(findMatches());}
+function finishProcessing(matches){clearMatches(matches);setTimeout(()=>{dropCells();refillGrid();const newMatches=findMatches();if(newMatches.length>0){processMatches(newMatches);}else{game.busy=false;}},300);}
+function clearMatches(matches){matches.forEach(({r,c})=>{game.grid[r][c]=null;});}
+function dropCells(){for(let c=0;c<GRID_SIZE;c++){let writeRow=GRID_SIZE-1;for(let r=GRID_SIZE-1;r>=0;r--){if(game.grid[r][c]!==null){game.grid[writeRow][c]=game.grid[r][c];if(writeRow!==r)game.grid[r][c]=null;writeRow--;}}}}
+function refillGrid(){for(let c=0;c<GRID_SIZE;c++){for(let r=0;r<GRID_SIZE;r++){if(game.grid[r][c]===null){game.grid[r][c]=Math.floor(Math.random()*COLORS.length);}}}}
+function renderTimeline(){const track=document.getElementById('timelineTrack');BEATS.forEach(beat=>{const item=document.createElement('div');item.className='timeline-beat';item.id=`timeline-${beat.id}`;item.innerHTML=`<div class="timeline-beat-num">${beat.id}</div><div class="timeline-beat-name">${beat.name}</div><div class="timeline-clips"></div>`;track.appendChild(item);});}
+function updateTimeline(){game.beatsCollected.forEach(beat=>{const item=document.getElementById(`timeline-${beat.beatId}`);if(item){item.classList.add('collected');const clips=item.querySelector('.timeline-clips');clips.textContent=`${beat.syntagma} • ${beat.clips.length} clips`;}});}
+function showExport(type){if(game.beatsCollected.length<15){alert('Complete all 15 beats first!');return;}let content='',title='',subtitle='';if(type==='storymap'){title='STORYMAP.MD';subtitle='Markdown narrative structure';content=generateStorymap();}else if(type==='edl'){title='EDIT DECISION LIST';subtitle='EDL format for video editing';content=generateEDL();}else if(type==='json'){title='OTI.JSON';subtitle='Complete metadata structure';content=generateJSON();}else if(type==='shotlist'){title='SHOTLIST.JS';subtitle='Cinematic prompts';content=generateShotlist();}document.getElementById('exportModalTitle').textContent=title;document.getElementById('exportModalSubtitle').textContent=subtitle;document.getElementById('exportPreview').textContent=content;game.currentExport={type,content,filename:`narrative_${type}_${Date.now()}`};document.getElementById('exportModal').classList.add('active');}
+function generateStorymap(){let md='# NARRATIVE STRUCTURE\\n\\n';game.beatsCollected.forEach(beat=>{md+=`## Beat ${beat.beatId}: ${beat.name}\\n`;md+=`**Act:** ${beat.act}\\n`;md+=`**Syntagma:** ${beat.syntagma}\\n`;md+=`**Clips:** ${beat.clips.join(', ')}\\n\\n`;});return md;}
+function generateEDL(){let edl='TITLE: NARRATIVE GARDEN SEQUENCE\\n\\n';let tc=0;game.beatsCollected.forEach((beat,idx)=>{beat.clips.forEach((clip,cidx)=>{const start=tc;tc+=5;const end=tc;edl+=`${String(idx+1).padStart(3,'0')}  001  V  C    ${formatTC(start)} ${formatTC(end)} ${formatTC(start)} ${formatTC(end)}\\n`;edl+=`* FROM CLIP NAME: ${clip}\\n\\n`;});});return edl;}
+function formatTC(sec){const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=Math.floor(sec%60);const f=0;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;}
+function generateJSON(){return JSON.stringify({title:'Narrative Garden Sequence',created:new Date().toISOString(),totalBeats:15,totalClips:game.beatsCollected.reduce((s,b)=>s+b.clips.length,0),score:game.score,structure:game.beatsCollected},null,2);}
+function generateShotlist(){let js='const prompts = [\\n';game.beatsCollected.forEach(beat=>{beat.clips.forEach(clip=>{js+=`  // Beat ${beat.beatId}: ${beat.name}\\n`;js+=`  "A cinematic shot of ${clip}. ${beat.syntagma} style.",\\n`;});});js+='];';return js;}
+function closeExportModal(){document.getElementById('exportModal').classList.remove('active');}
+function downloadExport(){const {content,filename,type}=game.currentExport;const ext=type==='json'?'.json':type==='edl'?'.edl':type==='shotlist'?'.js':'.md';const blob=new Blob([content],{type:'text/plain'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename+ext;a.click();}
+function copyExport(){const content=document.getElementById('exportPreview').textContent;navigator.clipboard.writeText(content).then(()=>alert('Copied to clipboard!'));}
+function exportAll(){['storymap','edl','json','shotlist'].forEach(type=>showExport(type));}
+init();
+</script>
+</body>
+</html>

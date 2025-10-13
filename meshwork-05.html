@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="manifest.json">
+  <title>VIDEO GARDEN — Living Mosaic Automata</title>
+  <style>
+    :root{
+      --bg:#0a0a0a; --ui:#111; --line:#222;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:#0ff; font-family:-apple-system,sans-serif;}
+    
+    .wrap{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+    
+    /* Header */
+    header{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--ui); border-bottom:2px solid var(--line);}
+    .brand{font-weight:900; letter-spacing:3px; font-size:16px; color:#0ff;}
+    .stats{display:flex; gap:16px; font-size:12px; font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:#0ff;}
+    .act-counter{font-weight:700; color:#FFD700;} /* New style for Act Counter */
+    
+    /* Game Area */
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg);}
+    canvas{background:#0d0d0d; border:2px solid var(--line); border-radius:8px; touch-action:none; /* image-rendering:pixelated; */ }
+    
+    /* Video Preview */
+    .video-preview{position:absolute; top:20px; right:20px; width:160px; height:90px; border:2px solid #0ff; background:#000; overflow:hidden; pointer-events:none; opacity:0.8;}
+    .video-preview video{width:100%; height:100%; object-fit:cover;}
+    .video-label{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.9); padding:2px 6px; font-size:10px; color:#0ff; font-weight:700;}
+    
+    @media (max-width: 640px) {
+      .video-preview{width:120px; height:68px; top:10px; right:10px;}
+    }
+    
+    /* Toolbar: fixed bottom, concise */
+    .toolbar{position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:8px; padding:10px; background:rgba(0,0,0,0.85); border-top:2px solid #0ff; z-index:120;}
+    .btn{appearance:none; border:none; color:#0ff; background:rgba(0,255,255,0.1); border:1px solid #0ff; padding:8px 10px; border-radius:4px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;}
+    .btn:active{transform:scale(0.95); background:#0ff; color:#000;}
+    
+    /* Timeline lane (narrow) */
+    .timeline-panel{position:fixed; right:0; top:60px; bottom:50px; width:72px; background:rgba(0,0,0,0.78); border-left:2px solid #0ff; padding:6px 4px; overflow-y:auto; transform:translateX(0); transition:width 0.25s ease, padding 0.25s ease; z-index:100; display:flex; flex-direction:column; gap:6px;}
+    .timeline-panel.collapsed{width:0; padding:0; border-left:none; pointer-events:none;}
+    .timeline-title{font-size:10px; font-weight:900; color:#0ff; margin:0 0 6px; text-align:center; letter-spacing:1px;}
+    .clip-item{width:100%; aspect-ratio:16/9; margin-bottom:8px; border:2px solid #333; cursor:pointer; position:relative; overflow:hidden;}
+    .clip-item video{width:100%; height:100%; object-fit:cover;}
+    .clip-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.9); padding:3px; font-size:8px; color:#0ff; text-align:center; text-transform:uppercase; letter-spacing:0.5px;}
+    .clip-item.locked .clip-label::after { content: "🔒"; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); font-size: 1.5em; }
+    .clip-item.locked { border-color: #666 !important; opacity: 0.6; filter: grayscale(100%); }
+
+    .sequence-player{position:sticky; bottom:0; background:#0b0b0b; border-top:2px solid #0ff; padding:8px;}
+    .sequence-player video{width:100%; aspect-ratio:16/9; background:#000; border:2px solid #0ff;}
+
+    /* Timeline handle */
+    .timeline-handle{position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff; color:#0ff; display:flex; align-items:center; justify-content:center; z-index:110; cursor:pointer; backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); font-weight:900;}
+    .timeline-handle:active{background:rgba(0,255,255,0.25);}
+    
+    @media (max-width: 768px) {
+      .timeline-panel{width:160px;}
+      .toolbar{grid-template-columns:repeat(3,1fr);}
+    }
+    
+    /* Shape Colors - High Contrast Bauhaus (used for borders, not direct fill) */
+    .color-0{border-color:#FF6B6B !important;} /* Red */
+    .color-1{border-color:#4ECDC4 !important;} /* Cyan */
+    .color-2{border-color:#FFE66D !important;} /* Yellow */
+    .color-3{border-color:#95E1D3 !important;} /* Mint */
+    .color-4{border-color:#F38181 !important;} /* Coral */
+    .color-5{border-color:#AA96DA !important;} /* Purple */
+    .color-6{border-color:#A8E6CF !important;} /* Green */
+    .color-7{border-color:#FFB74D !important;} /* Orange */
+    .color-8{border-color:#FCBAD3 !important;} /* Pink */
+    .color-9{border-color:#FFA07A !important;} /* Salmon */
+    
+    /* Loading */
+    .loading{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; color:#0ff; font-weight:900;}
+    
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal.show{display:flex;}
+    .modal-content{text-align:center; padding:40px;}
+    .modal-title{font-size:48px; font-weight:900; color:#0ff; margin-bottom:20px;}
+    .modal-stats{font-size:18px; color:#666; margin-bottom:30px;}
+    .modal-btn{padding:16px 40px; background:#0ff; border:none; color:#000; font-weight:900; font-size:16px; cursor:pointer; margin:5px;}
+    
+    /* Export Menu */
+    .export-menu{position:fixed; bottom:100px; right:20px; background:rgba(17,17,17,0.98); border:2px solid #0ff; padding:16px; border-radius:8px; display:none; z-index:200;}
+    .export-menu.show{display:block;}
+    .export-option{padding:12px; margin:4px 0; background:rgba(0,255,255,0.1); border:2px solid #0ff; color:#0ff; cursor:pointer; font-weight:900; font-size:12px; text-align:center;}
+    .export-option:hover{background:#0ff; color:#000;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">VIDEO GARDEN</div>
+    <div class="stats">
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
+      <div class="stat">CLIPS <span class="stat-value" id="clips">0</span></div>
+      <div class="stat">ACT <span class="act-counter" id="actCounter">1</span></div>
+    </div>
+  </header>
+  
+  <div id="gameArea">
+    <div class="loading" id="loading">LOADING...</div>
+    <canvas id="game"></canvas>
+    <div class="video-preview" id="videoPreview" style="display:none;">
+      <video id="previewVideo" muted loop playsinline></video>
+      <div class="video-label" id="videoLabel">Scene 01</div>
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="playSequenceBtn">PLAY</button>
+    <button class="btn" id="autoPlayBtn">AUTO</button>
+    <button class="btn" id="shuffleBtn">SHUF</button>
+    <button class="btn" id="hintBtn">HINT</button>
+    <button class="btn" id="exportBtn">EXP</button>
+    <button class="btn" id="soundBtn">MUTE</button>
+  </div>
+</div>
+
+<div class="timeline-panel" id="timelinePanel">
+  <div class="timeline-title">SEQUENCE</div>
+  <div id="clipList"></div>
+  <div class="sequence-player" id="sequencePlayerWrap" style="display:none;">
+    <video id="sequencePlayer" controls playsinline></video>
+    <div class="clip-label" id="sequencePlayerLabel">—</div>
+  </div>
+</div>
+<div class="timeline-handle" id="timelineHandle">></div>
+
+<div class="export-menu" id="exportMenu">
+  <div class="export-option" onclick="exportJSON()">📄 JSON</div>
+  <div class="export-option" onclick="exportEDL()">🎬 EDL</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">SEQUENCE COMPLETE</div>
+    <div class="modal-stats" id="modalStats"></div>
+    <button class="modal-btn" onclick="location.reload()">NEW SEQUENCE</button>
+    <button class="modal-btn" onclick="document.getElementById('exportMenu').classList.toggle('show')">EXPORT</button>
+  </div>
+</div>
+
+<script>
+console.log('🌿 VIDEO GARDEN — Living Mosaic Automata Loading...');
+
+/*
+# UTILITY PATENT: PROCEDURAL SYNTAGMATIC VIDEO EDITOR
+## "Minecraft for Video Editors" - Spatial Narrative Construction System
+
+CORE INNOVATION: Bottom-Up Narrative Assembly Through Spatial Reasoning
+
+PATENT CLAIMS - PROCEDURAL DESIGN ELEMENTS
+
+1. SYNTAGMATIC BLOCK SYSTEM: Each video block = syntagma (meaningful unit)
+   - Properties: Temporal range, Thematic category, Narrative weight, Color coding
+   - How it works: Physical adjacency creates syntagmatic chains
+   - Current: Cell types are themes. Cells physically adjacent are neighbors.
+   
+2. SPATIAL PATTERN MATCHING (Match-3 Mechanics): Collect fragments only when 3+ identical themes align spatially
+   - How it works: System analyzes completed lines for thematic patterns. Only concepts appearing 3+ times are "collected".
+   - Current: Re-introducing automata-driven match-3 detection to trigger BURSTING and collection.
+   
+3. QUANTUM STATE BLOCKS: Blocks exist in superposition until "observed" (locked in place)
+   - States: Falling (potential), Locked (collapsed), Ghost (preview)
+   - Current: QUIET/LISTEN are states of potential. BURSTING is collapse/observation. "Locked" clips.
+
+4. TIME WARP MECHANICS: Spatial transformations = temporal manipulations
+   - Operations: Rotate (time reversal), Hold (temporal suspension), Drop (accelerated time), Rewind (quantum state restoration)
+   - Current: Drift, animations, subtle pulsing. Player nudges are micro-time warps.
+
+5. TIME WORMS (Future Feature): Blocks that tunnel through the grid, connecting non-adjacent moments
+
+6. NARRATIVE GRAVITY: Blocks fall at different speeds based on narrative weight
+   - Current: Implemented as drift, could extend to vertical "fall" with gravity-like mechanics.
+
+7. BLOCK FUSION: Adjacent blocks of same category can fuse into longer sequences
+
+8. DIMENSIONAL LAYERS (Future Feature): Z-axis = narrative depth
+
+9. CAUSAL CHAINS: System validates cause-effect relationships between adjacent blocks
+
+10. PROCEDURAL GENERATION: Block spawn order determined by narrative algorithms
+    - Current: Random candy type, global wind bias, automata rules are basic procedural generation.
+
+MINECRAFT PARALLELS:
+- Blocks -> Video syntagmas (CELLS)
+- Spatial building -> Narrative construction (GRID, PLAYER NUDGES)
+- Resource mining -> Fragment collection (MATCH-3, HARVEST BLOOM)
+- Creative mode -> Free arrangement (AUTO PLAY)
+- Portals -> Time worms (FUTURE)
+
+---
+
+# V0.1: EVOLUTIONARY BEAT
+
+**BEAT:** `COLLECTION`
+**DESCRIPTION:** The core loop of collecting video segments is established through automata-driven pattern recognition and locking/unlocking.
+
+**Aesthetics:** "Holographic Organic Ritual Layers"
+-   Thinner lines.
+-   More dramatic, organic grid shapes.
+-   Distinctive glyphs/runes for each type.
+-   Layered visual effects for depth and holographic feel.
+
+**Mechanics:**
+-   Automata-driven Match-3 re-enabled: Matching cells trigger `BURSTING` and harvesting.
+-   Clips are `locked` upon collection and must be `unlocked` for playback.
+-   "Act Counter" introduced to track narrative progression.
+*/
+
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Red', color: '#FF6B6B'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Cyan', color: '#4ECDC4'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Yellow', color: '#FFE66D'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Mint', color: '#95E1D3'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Coral', color: '#F38181'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Purple', color: '#AA96DA'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Green', color: '#A8E6CF'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Orange', color: '#FFB74D'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Pink', color: '#FCBAD3'},
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Salmon', color: '#FFA07A'}
+};
+
+// Auto-slice each type into segments (4 per type, 10s each)
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+const typeUsage = {}; // Track which segment index to use next per type
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  typeUsage[t] = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+// NEW: TYPE_GLYPHS for dramatic signature shapes (from previous version)
+const TYPE_GLYPHS = [
+    // Type 0: Red - Egyptian Papyrus symbol (𓉗) - simplified angular shape
+    (ctx, x, y, size) => { 
+        const thick = size * 0.1;
+        ctx.moveTo(x + size * 0.2, y + size * 0.8);
+        ctx.lineTo(x + size * 0.5, y + size * 0.1);
+        ctx.lineTo(x + size * 0.8, y + size * 0.8);
+        ctx.lineTo(x + size * 0.7, y + size * 0.8 - thick);
+        ctx.lineTo(x + size * 0.5, y + size * 0.2);
+        ctx.lineTo(x + size * 0.3, y + size * 0.8 - thick);
+        ctx.closePath();
+    },
+    // Type 1: Cyan - Eye (𓃑) - simplified oval/almond
+    (ctx, x, y, size) => {
+        const cx = x + size/2;
+        const cy = y + size/2;
+        const radius = size * 0.2;
+        ctx.ellipse(cx, cy, size * 0.4, size * 0.15, Math.PI / 4, 0, Math.PI * 2);
+        ctx.moveTo(cx + radius, cy);
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2); // Pupil
+    },
+    // Type 2: Yellow - Solid Block (▓) - bold square
+    (ctx, x, y, size) => { ctx.rect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6); },
+    // Type 3: Mint - Crossroad (⿻) - X-shape
+    (ctx, x, y, size) => {
+        const pad = size * 0.25;
+        ctx.moveTo(x + pad, y + pad); ctx.lineTo(x + size - pad, y + size - pad);
+        ctx.moveTo(x + size - pad, y + pad); ctx.lineTo(x + pad, y + size - pad);
+    },
+    // Type 4: Coral - Container (⿴) - square with inner dot
+    (ctx, x, y, size) => { 
+        ctx.rect(x + size * 0.15, y + size * 0.15, size * 0.7, size * 0.7);
+        ctx.moveTo(x + size/2 + size*0.05, y + size/2);
+        ctx.arc(x + size/2, y + size/2, size*0.05, 0, Math.PI*2);
+    },
+    // Type 5: Purple - Scales (𓊍) - balanced arcs
+    (ctx, x, y, size) => {
+        ctx.arc(x + size * 0.3, y + size * 0.5, size * 0.2, Math.PI / 2, Math.PI * 3 / 2, false);
+        ctx.arc(x + size * 0.7, y + size * 0.5, size * 0.2, Math.PI / 2, Math.PI * 3 / 2, true);
+        ctx.moveTo(x + size * 0.3, y + size * 0.5 - size * 0.2);
+        ctx.lineTo(x + size * 0.7, y + size * 0.5 - size * 0.2);
+    },
+    // Type 6: Green - Enclosure (❏) - checkbox-like
+    (ctx, x, y, size) => {
+        ctx.rect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
+        ctx.moveTo(x + size * 0.3, y + size * 0.5);
+        ctx.lineTo(x + size * 0.45, y + size * 0.65);
+        ctx.lineTo(x + size * 0.7, y + size * 0.35);
+    },
+    // Type 7: Orange - Wave (𓈌) - double wave
+    (ctx, x, y, size) => {
+        ctx.moveTo(x + size * 0.2, y + size * 0.4);
+        ctx.quadraticCurveTo(x + size * 0.35, y + size * 0.2, x + size * 0.5, y + size * 0.4);
+        ctx.quadraticCurveTo(x + size * 0.65, y + size * 0.6, x + size * 0.8, y + size * 0.4);
+        ctx.moveTo(x + size * 0.2, y + size * 0.6);
+        ctx.quadraticCurveTo(x + size * 0.35, y + size * 0.8, x + size * 0.5, y + size * 0.6);
+        ctx.quadraticCurveTo(x + size * 0.65, y + size * 0.4, x + size * 0.8, y + size * 0.6);
+    },
+    // Type 8: Pink - Fish (𓆉) - simple fish outline
+    (ctx, x, y, size) => {
+        ctx.moveTo(x + size * 0.2, y + size * 0.5);
+        ctx.quadraticCurveTo(x + size * 0.4, y + size * 0.2, x + size * 0.8, y + size * 0.3);
+        ctx.lineTo(x + size * 0.8, y + size * 0.7);
+        ctx.quadraticCurveTo(x + size * 0.4, y + size * 0.8, x + size * 0.2, y + size * 0.5);
+        ctx.closePath();
+    },
+    // Type 9: Salmon - Spiral (𓇼) - shell-like spiral
+    (ctx, x, y, size) => {
+        const cx = x + size/2;
+        const cy = y + size/2;
+        const maxR = size*0.4;
+        ctx.moveTo(cx, cy);
+        for(let i=0; i<720; i+=10) { // Two full rotations
+            const angle = i * Math.PI / 180;
+            const radius = maxR * (i / 720);
+            ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        }
+    }
+];
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const GRID_SIZE = 8;
+const CELL_SIZE = 50; // Base unit for calculating cell dimensions
+
+// Constants for polygon generation
+const JITTER_AMOUNT_FACTOR = 0.3; // Max jitter as a factor of CELL_SIZE
+const BULGE_AMOUNT_FACTOR = 0.4;  // Max bulge of an edge as a factor of CELL_SIZE/2 (increased for more drama)
+
+// AUTOMATA CONSTANTS
+const CELL_STATES = {
+  BURSTING: 'bursting', 
+  QUIET: 'quiet',    // Frozen frame, muted audio
+  LISTEN: 'listen'   // About to bloom (now also a match-3 pre-state)
+};
+
+const AUTOMATA_CONFIG = {
+  SIMILARITY_THRESHOLD: 0.7, 
+  DECAY_LIMIT: 120, 
+  PROPAGATION_CHANCE: 0.3,
+  UPDATE_FREQUENCY: 3, 
+  MATCH_LENGTH: 3 // For match-3 detection
+};
+
+// Global "Season" and "Wind" parameters
+const SEASONS = {
+  drift: 0.0003,           // per-frame positional drift of sample window
+  rareBloomChance: 0.00002, // even lower probability for spontaneous seeds
+  quietQuota: 0.5,         // target fraction of cells that must be QUIET (Half-Silence Rule)
+  tensionGain: 0.002,      // how fast quiet edges accumulate bloom-tension
+  bulgeSpeed: 0.015          // Speed of edge bulging animation
+};
+let seasonPhase = 0;       // slowly advances to modulate thresholds
+let globalWindType = -1;   // bias for propagation, changes hourly
+let lastWindChange = Date.2now(); // Using Date.now() for initial randomness
+const WIND_CHANGE_INTERVAL = 1000 * 60 * 60; // Every hour
+
+const game = {
+  grid: [], 
+  selected: null,
+  score: 0,
+  moves: 30, 
+  sequence: [],
+  busy: false,
+  loadedVideos: {}, 
+  sounds: {
+    match: null, 
+    swap: null,
+    win: null,
+    error: null
+  },
+  soundEnabled: true,
+  autoPlay: true,
+  useTypeSegments: true,
+  typeSegmentVideos: {},
+  segmentUsage: {},
+  collectedTypes: new Set(),
+  typePlaybackTime: {},
+  automataFrame: 0, 
+  cellBrightness: {}, 
+  jitteredPoints: [], 
+  actCounter: 1, // NEW: Act Structure
+  clipsCollectedInAct: 0,
+  clipsPerAct: 5 // Collect 5 clips to advance an Act
+};
+
+function initTypeSegments() {
+  for (let type = 0; type < 10; type++) {
+    for (let segIdx = 0; segIdx < SEGMENTS_PER_TYPE; segIdx++) {
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const key = `${type}_${segIdx}`;
+      const v = document.createElement('video');
+      v.src = seg.file;
+      v.muted = true;
+      v.playsinline = true;
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      v.addEventListener('loadedmetadata', () => {
+        try { v.currentTime = Math.min(seg.start, Math.max(0, v.duration - 0.2)); } catch(e) {}
+      });
+      v.addEventListener('timeupdate', () => {
+        if (v.currentTime >= seg.end) {
+          try { v.currentTime = seg.start; } catch(e) {}
+        }
+      });
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created:', Object.keys(game.typeSegmentVideos).length);
+}
+
+function segmentIndexForCell(type, r, c) {
+  return (r + c * 3) % SEGMENTS_PER_TYPE;
+}
+
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = [];
+  let minUsed = Infinity;
+  let minIdx = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const used = game.segmentUsage[type].filter(u => u === s).length;
+    if (used < minUsed) {
+      minUsed = used;
+      minIdx = s;
+    }
+  }
+  game.segmentUsage[type].push(minIdx);
+  return minIdx;
+}
+
+// CELLULAR AUTOMATA FUNCTIONS
+
+function createCell(type) {
+  return {
+    type,
+    state: CELL_STATES.QUIET, 
+    timer: 0,
+    brightness: 0.5,
+    lastChange: 0,
+    tension: 0,               
+    drift: {dx: (Math.random()*2-1)*SEASONS.drift, dy: (Math.random()*2-1)*SEASONS.drift} 
+  };
+}
+
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+function cellSimilarity(cell1, cell2) {
+  if (!cell1 || !cell2) return 0;
+  if (cell1.type === cell2.type) return 0.9;
+  return 0; 
+}
+
+// Check for match-3 patterns of a given type at a specific cell
+function checkForMatch3(r, c, type) {
+    // Check horizontal
+    let hCount = 1;
+    for (let i = c - 1; i >= 0 && game.grid[r][i] && game.grid[r][i].type === type; i--) hCount++;
+    for (let i = c + 1; i < GRID_SIZE && game.grid[r][i] && game.grid[r][i].type === type; i++) hCount++;
+    if (hCount >= AUTOMATA_CONFIG.MATCH_LENGTH) return true;
+
+    // Check vertical
+    let vCount = 1;
+    for (let i = r - 1; i >= 0 && game.grid[i][c] && game.grid[i][c].type === type; i--) vCount++;
+    for (let i = r + 1; i < GRID_SIZE && game.grid[i][c] && game.grid[i][c].type === type; i++) vCount++;
+    if (vCount >= AUTOMATA_CONFIG.MATCH_LENGTH) return true;
+
+    return false;
+}
+
+
+function applyAutomataRules() {
+  const newStates = [];
+  const cellsToHarvest = []; 
+  const cellsToClear = new Set(); // To clear matched cells
+
+  // Update seasonPhase here for smooth animation of bulges
+  seasonPhase += SEASONS.bulgeSpeed * 0.5;
+
+  if (Date.now() - lastWindChange > WIND_CHANGE_INTERVAL) {
+    globalWindType = Math.floor(Math.random() * 10); 
+    lastWindChange = Date.now();
+    console.log(`🌬️ Global wind shifted to Type ${globalWindType}`);
+  }
+
+  const targetQuiet = SEASONS.quietQuota + 0.1 * Math.sin(seasonPhase); 
+  let quietCount = 0;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue; 
+      const isQuiet = (cell.state === CELL_STATES.QUIET || cell.state === CELL_STATES.LISTEN);
+      if (isQuiet) quietCount++;
+    }
+  }
+  const currentQuietFrac = quietCount / (GRID_SIZE * GRID_SIZE);
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    newStates[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) { newStates[r][c] = null; continue; } 
+      
+      let nextCellState = { ...cell, timer: cell.timer + 1 }; 
+
+      const isQuiet = (cell.state === CELL_STATES.QUIET || cell.state === CELL_STATES.LISTEN);
+      const neighbors = getNeighbors(r, c);
+      const activeNeighbors = neighbors.filter(n => n.cell && n.cell.state !== CELL_STATES.QUIET);
+
+      // --- TENSION BUILDUP ---
+      if (isQuiet && activeNeighbors.length > 0) {
+        nextCellState.tension = Math.min(1, cell.tension + SEASONS.tensionGain * activeNeighbors.length);
+      } else if (!isQuiet) {
+        nextCellState.tension = Math.max(0, cell.tension - SEASONS.tensionGain * 0.5);
+      }
+
+      const canBloom = (1 - currentQuietFrac) < (1 - targetQuiet) + 0.05; 
+
+      // --- STATE TRANSITIONS (Order matters) ---
+
+      // 1. BURSTING -> QUIET (Wilt)
+      if (cell.state === CELL_STATES.BURSTING && cell.timer > 30) { 
+        nextCellState = { ...cell, state: CELL_STATES.QUIET, timer: 0, tension: 0 };
+        cellsToClear.add(`${r},${c}`);
+      }
+      // 2. LISTEN -> BURSTING (Bloom)
+      else if (cell.state === CELL_STATES.LISTEN && cell.tension > (0.6 - 0.2 * Math.sin(seasonPhase)) && canBloom) {
+        nextCellState = { ...cell, state: CELL_STATES.BURSTING, timer: 0 };
+        cellsToHarvest.push({r, c, type: cell.type}); 
+        game.sounds.match(); 
+        haptic(20);
+      }
+      // 3. QUIET -> LISTEN (Match-3 or Rare Seed)
+      else if (cell.state === CELL_STATES.QUIET) {
+        // A. Match-3 detection (Automata-driven collection)
+        if (checkForMatch3(r, c, cell.type)) {
+            nextCellState = { ...cell, state: CELL_STATES.LISTEN, timer: 0, tension: 1 }; // High tension from match
+        }
+        // B. Rare spontaneous seed (very low chance, fallback)
+        else if (Math.random() < SEASONS.rareBloomChance && cell.tension > 0.3) {
+            nextCellState = { ...cell, state: CELL_STATES.LISTEN, timer: 0 };
+        }
+      }
+      // 4. PROPAGATION (Whisper) - only if not quiet, not bursting
+      else if (cell.state !== CELL_STATES.QUIET && cell.state !== CELL_STATES.BURSTING && Math.random() < (AUTOMATA_CONFIG.PROPAGATION_CHANCE * 0.25)) {
+        const typeCounts = {};
+        neighbors.forEach(n => { typeCounts[n.cell.type] = (typeCounts[n.cell.type] || 0) + 1; });
+        
+        if (globalWindType !== -1) {
+          typeCounts[globalWindType] = (typeCounts[globalWindType] || 0) + 2; 
+        }
+
+        const dominantType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+        
+        if (dominantType && parseInt(dominantType) !== cell.type) {
+          nextCellState = { ...cell, type: parseInt(dominantType), lastChange: game.automataFrame };
+        }
+      }
+      
+      newStates[r][c] = nextCellState;
+    }
+  }
+  
+  game.grid = newStates;
+  
+  // After all state calculations, process harvests and clear cells
+  cellsToHarvest.forEach(({r, c, type}) => harvestBloom(r, c, type));
+  cellsToClear.forEach(key => {
+      const [r,c] = key.split(',').map(Number);
+      game.grid[r][c] = createCell(randomCandyType()); // Replace cleared cells
+  });
+  
+  // Ensure the grid is full after clearing (gravity-like drop)
+  refillGrid(); 
+}
+
+function harvestBloom(r, c, type) {
+  const segIdx = nextSegmentForType(type);
+  const seg = TYPE_SEGMENTS[type][segIdx];
+  const newClip = { 
+    title: seg.title, 
+    file: seg.file, 
+    start: seg.start, 
+    end: seg.end,
+    sourceCell: {r,c},
+    locked: true 
+  };
+  
+  // Half-Silence Rule: Mute every other harvested clip
+  if (game.sequence.length % 2 === 0) {
+    newClip.mute = true;
+  }
+  
+  game.sequence.push(newClip);
+  game.collectedTypes.add(type);
+  game.typePlaybackTime[type] = 0; 
+  game.score += 10;
+  game.clipsCollectedInAct++;
+
+  // Advance Act structure
+  if (game.clipsCollectedInAct >= game.clipsPerAct) {
+    game.actCounter++;
+    game.clipsCollectedInAct = 0;
+    document.getElementById('actCounter').textContent = game.actCounter;
+    console.log(`🎬 Act ${game.actCounter} Initiated!`);
+  }
+  
+  document.getElementById('score').textContent = game.score;
+  document.getElementById('clips').textContent = game.sequence.length;
+  updateTimeline();
+
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const key = `${type}_${s}`;
+    const vid = game.typeSegmentVideos[key];
+    if (vid) {
+      try {
+        vid.currentTime = TYPE_SEGMENTS[type][s].start;
+        if (vid.paused) vid.play().catch(()=>{});
+      } catch(e) {}
+    }
+  }
+  maybeAutoPlaySequence();
+}
+
+// SOUND SYSTEM - Web Audio API
+function initSounds() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  game.sounds.match = () => { 
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1); 
+  };
+  
+  game.sounds.swap = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 392, 0.05); 
+  };
+  
+  game.sounds.win = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1);
+    setTimeout(() => playTone(audioContext, 659.25, 0.1), 100);
+    setTimeout(() => playTone(audioContext, 783.99, 0.2), 200);
+  };
+  
+  game.sounds.error = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 200, 0.1);
+  };
+  
+  console.log('🔊 Sound system initialized');
+}
+
+function playTone(ctx, frequency, duration) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+// HAPTIC FEEDBACK
+function haptic(pattern = 10) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
+// Helper function to convert hex color to RGBA
+function hexToRgba(hex, alpha) {
+    let r = 0, g = 0, b = 0;
+    // 3 digits
+    if (hex.length == 4) {
+        r = "0x" + hex[1] + hex[1];
+        g = "0x" + hex[2] + hex[2];
+        b = "0x" + hex[3] + hex[3];
+    }
+    // 6 digits
+    else if (hex.length == 7) {
+        r = "0x" + hex[1] + hex[2];
+        g = "0x" + hex[3] + hex[4];
+        b = "0x" + hex[5] + hex[6];
+    }
+    return `rgba(${+r},${+g},${+b},${alpha})`;
+}
+
+// INIT
+function init() {
+  console.log('🎮 Initializing...');
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  canvas.addEventListener('click', handleClick);
+  
+  document.getElementById('hintBtn').addEventListener('click', showHint);
+  document.getElementById('shuffleBtn').addEventListener('click', shuffle);
+  document.getElementById('exportBtn').addEventListener('click', toggleExportMenu);
+  document.getElementById('soundBtn').addEventListener('click', toggleSound);
+  document.getElementById('playSequenceBtn').addEventListener('click', startSequencePlayback);
+  document.getElementById('autoPlayBtn').addEventListener('click', toggleAutoPlay);
+  document.getElementById('timelineHandle').addEventListener('click', () => {
+    document.getElementById('timelinePanel').classList.toggle('collapsed');
+  });
+  updateAutoPlayButton();
+  
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('exportMenu');
+    const btn = document.getElementById('exportBtn');
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('show');
+    }
+  });
+  
+  initSounds();
+  if (game.useTypeSegments) initTypeSegments();
+  createGrid(); 
+  draw();
+  document.getElementById('actCounter').textContent = game.actCounter; // Initialize act counter display
+}
+
+function resize() {
+  const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+  canvas.width = GRID_SIZE * CELL_SIZE; 
+  canvas.height = GRID_SIZE * CELL_SIZE;
+  canvas.style.width = size + 'px'; 
+  canvas.style.height = size + 'px';
+}
+
+// Function to generate jittered grid points for the corners of the cells
+function generateJitteredPoints() {
+    game.jitteredPoints = [];
+    const jitterMax = CELL_SIZE * JITTER_AMOUNT_FACTOR; 
+
+    for (let r = 0; r <= GRID_SIZE; r++) { 
+        game.jitteredPoints[r] = [];
+        for (let c = 0; c <= GRID_SIZE; c++) {
+            let x = c * CELL_SIZE;
+            let y = r * CELL_SIZE;
+
+            let currentJitterX = 0;
+            let currentJitterY = 0;
+
+            // Apply less jitter at the canvas boundaries to keep the overall mosaic contained
+            const jitterScaleX = (c === 0 || c === GRID_SIZE) ? 0 : 1;
+            const jitterScaleY = (r === 0 || r === GRID_SIZE) ? 0 : 1;
+            
+            currentJitterX = (Math.random() * 2 - 1) * jitterMax * jitterScaleX;
+            currentJitterY = (Math.random() * 2 - 1) * jitterMax * jitterScaleY;
+            
+            game.jitteredPoints[r][c] = { x: x + currentJitterX, y: y + currentJitterY };
+        }
+    }
+}
+
+// Function to get the 4 corner points for a given cell (r, c)
+function getCellCorners(r, c) {
+  const p0 = game.jitteredPoints[r][c];
+  const p1 = game.jitteredPoints[r][c+1];
+  const p2 = game.jitteredPoints[r+1][c+1];
+  const p3 = game.jitteredPoints[r+1][c];
+  return [p0, p1, p2, p3]; // Order for drawing a convex quad
+}
+
+/**
+ * Draws a single wavy quadratic curve segment.
+ * @param {CanvasRenderingContext2D} context The canvas rendering context.
+ * @param {{x:number, y:number}} p1 Start point.
+ * @param {{x:number, y:number}} p2 End point.
+ * @param {number} segmentSeed A unique seed for this specific edge segment to ensure consistent bulge.
+ * @param {number} cellType The type of the *cell owning this edge* for bulge variation.
+ */
+function drawWavyEdgeSegment(context, p1, p2, segmentSeed, cellType) {
+    // Calculate midpoint of the current edge
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
+
+    // Calculate normal vector (perpendicular) to the edge from midpoint
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    let normalX = 0;
+    let normalY = 0;
+    if (length > 0) {
+        // Normal vector points 'outwards' by default (assuming clockwise polygon definition)
+        normalX = -dy / length; 
+        normalY = dx / length;  
+    }
+    
+    // Animate bulge amount based on seasonPhase, unique segment seed, and cell type
+    const typeBulgeFactor = 1 + (cellType % 3) * 0.3; // More distinct bulge variation by type
+    const animatedBulge = Math.sin(seasonPhase + segmentSeed * 0.1) * BULGE_AMOUNT_FACTOR * (CELL_SIZE / 2) * typeBulgeFactor;
+
+    // Calculate the control point
+    const controlX = midX + normalX * animatedBulge;
+    const controlY = midY + normalY * animatedBulge;
+
+    context.quadraticCurveTo(controlX, controlY, p2.x, p2.y);
+}
+
+/**
+ * Draws a closed wavy quadrilateral path for a cell, used for clipping and filling.
+ * @param {CanvasRenderingContext2D} context The canvas rendering context.
+ * @param {Array<{x:number, y:number}>} corners The 4 corner points of the cell.
+ * @param {number} r Row index of the cell.
+ * @param {number} c Column index of the cell.
+ * @param {number} cellType The type of the cell (for bulge variation).
+ */
+function drawWavyQuadPath(context, corners, r, c, cellType) {
+    context.beginPath();
+    context.moveTo(corners[0].x, corners[0].y);
+
+    const numSides = corners.length;
+    for (let i = 0; i < numSides; i++) {
+        const p1 = corners[i];
+        const p2 = corners[(i + 1) % numSides];
+        
+        // Calculate a unique segment seed based on cell (r,c) and edge index (i)
+        // This makes sure bulge calculation is consistent for this cell path
+        const segmentSeed = (r * GRID_SIZE + c) * 10 + i; 
+        
+        drawWavyEdgeSegment(context, p1, p2, segmentSeed, cellType);
+    }
+    context.closePath();
+}
+
+/**
+ * Draws the entire grid of wavy lines as a single path, for consistent aesthetics.
+ * @param {CanvasRenderingContext2D} context The canvas rendering context.
+ */
+function drawFullWavyGrid(context) {
+    context.beginPath();
+    context.strokeStyle = '#333'; // Consistent dark grey for lines (or '#000' for black)
+    context.lineWidth = 1.0;     // Very thin lines
+
+    // Draw horizontal lines
+    for (let r = 0; r <= GRID_SIZE; r++) {
+        context.moveTo(game.jitteredPoints[r][0].x, game.jitteredPoints[r][0].y);
+        for (let c = 0; c < GRID_SIZE; c++) {
+            const p1 = game.jitteredPoints[r][c];
+            const p2 = game.jitteredPoints[r][c+1];
+            // Seed for horizontal edge: use 'r' and 'c' of its LEFT point in the jitteredPoints grid
+            const segmentSeed = r * (GRID_SIZE + 1) + c; 
+            // We need a dummy cell type for consistent bulge calculation across the grid
+            // For grid lines, a fixed type (e.g., 0) is fine, or we could average neighbors.
+            // For now, fixed type 0 is fine for line geometry.
+            drawWavyEdgeSegment(context, p1, p2, segmentSeed, 0); 
+        }
+    }
+
+    // Draw vertical lines
+    for (let c = 0; c <= GRID_SIZE; c++) {
+        context.moveTo(game.jitteredPoints[0][c].x, game.jitteredPoints[0][c].y);
+        for (let r = 0; r < GRID_SIZE; r++) {
+            const p1 = game.jitteredPoints[r][c];
+            const p2 = game.jitteredPoints[r+1][c];
+            // Seed for vertical edge: use 'r' and 'c' of its TOP point in the jitteredPoints grid, plus a large offset
+            const segmentSeed = (r * (GRID_SIZE + 1) + c) + (GRID_SIZE + 1) * (GRID_SIZE + 1) * 10;
+            drawWavyEdgeSegment(context, p1, p2, segmentSeed, 0); 
+        }
+    }
+    context.stroke();
+}
+
+
+function createGrid() {
+  game.grid = [];
+  generateJitteredPoints(); // Generate jittered points for the entire grid first
+  for (let r = 0; r < GRID_SIZE; r++) {
+    game.grid[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      game.grid[r][c] = createCell(randomCandyType());
+    }
+  }
+  
+  console.log('✓ Living grid created - irregular, wavy quadrilateral cells');
+}
+
+function randomCandyType() {
+  return Math.floor(Math.random() * 10);
+}
+
+// Reusable offscreen canvas for video patterns
+const offscreenVideoCanvas = document.createElement('canvas');
+offscreenVideoCanvas.width = CELL_SIZE;
+offscreenVideoCanvas.height = CELL_SIZE;
+const offscreenVideoCtx = offscreenVideoCanvas.getContext('2d');
+
+
+function draw() {
+  game.automataFrame++;
+  seasonPhase += SEASONS.bulgeSpeed * 0.5;
+
+  if (game.automataFrame % AUTOMATA_CONFIG.UPDATE_FREQUENCY === 0) {
+    applyAutomataRules();
+  }
+  
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      const polygonCorners = getCellCorners(r, c); 
+      
+      const segIdx = segmentIndexForCell(cell.type, r, c);
+      const key = `${cell.type}_${segIdx}`;
+      const video = game.typeSegmentVideos[key];
+      
+      if (video && video.readyState >= 2) {
+        ctx.save();
+        
+        // --- Prepare video content on offscreen canvas ---
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const srcCellW = vw / GRID_SIZE; 
+        const srcCellH = vh / GRID_SIZE; 
+        
+        const driftX = (cell.drift.dx * cell.timer * vw);
+        const driftY = (cell.drift.dy * cell.timer * vh);
+        
+        const sx = (c * srcCellW + driftX) % vw;
+        const sy = (r * srcCellH + driftY) % vh;
+
+        offscreenVideoCtx.clearRect(0, 0, CELL_SIZE, CELL_SIZE);
+        offscreenVideoCtx.drawImage(
+            video,
+            sx < 0 ? sx + vw : sx, 
+            sy < 0 ? sy + vh : sy, 
+            srcCellW, srcCellH,    
+            0, 0, CELL_SIZE, CELL_SIZE 
+        );
+
+        const videoPattern = ctx.createPattern(offscreenVideoCanvas, 'no-repeat');
+        
+        // --- LAYER 1: Base Video Content (filling the path) ---
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); // Define the curved path
+        ctx.fillStyle = videoPattern;
+        ctx.fill(); 
+        
+        // --- LAYER 2: Color Tinting (Multiply Blend) ---
+        if (cell.state !== CELL_STATES.QUIET && cell.state !== CELL_STATES.LISTEN) {
+            const cellColor = TYPE_SOURCES[cell.type].color;
+            const tintOpacity = 0.15 + (cell.type % 5) * 0.03; 
+            ctx.globalCompositeOperation = 'multiply'; 
+            ctx.fillStyle = hexToRgba(cellColor, tintOpacity); 
+            drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+            ctx.fill(); 
+            ctx.globalCompositeOperation = 'source-over'; 
+        }
+
+        // --- NEW LAYER 2.5: Opaque Colored Shade Layer ---
+        const shadeColor = TYPE_SOURCES[cell.type].color;
+        const shadeOpacity = 0.08 + (cell.type % 5) * 0.01; // Small opaque shade, subtly varies
+        ctx.fillStyle = hexToRgba(shadeColor, shadeOpacity);
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+        ctx.fill();
+        
+        // --- LAYER 3: Inner Aura / Holographic Glow (Type Signature) ---
+        if (cell.state !== CELL_STATES.QUIET) { 
+            const auraColor = TYPE_SOURCES[cell.type].color;
+            const pulseFactor = cell.state === CELL_STATES.BURSTING ? 1.0 : cell.state === CELL_STATES.LISTEN ? 0.7 : 0.4;
+            const glowStrength = (0.2 + cell.tension * 0.8) * pulseFactor * (0.8 + 0.2 * Math.sin(Date.now() / 200)); 
+            const blurAmount = 5 + (cell.type % 3) * 2; 
+
+            ctx.shadowColor = hexToRgba(auraColor, glowStrength * 0.8); 
+            ctx.shadowBlur = blurAmount;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            
+            ctx.fillStyle = hexToRgba(auraColor, glowStrength * 0.1); 
+            drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+            ctx.fill(); 
+        }
+
+        ctx.restore(); 
+        
+        // Manage video playback based on cell state
+        if (video.paused && cell.state !== CELL_STATES.QUIET && cell.state !== CELL_STATES.LISTEN) {
+          video.play().catch(()=>{});
+        }
+      }
+      
+      ctx.save(); 
+
+      // --- LAYER 4: Dynamic Glyph / Ritual Layer (with glow) ---
+      if (cell.state !== CELL_STATES.QUIET) {
+          const glyphColor = TYPE_SOURCES[cell.type].color;
+          const glyphOpacity = cell.state === CELL_STATES.BURSTING ? 1.0 : cell.state === CELL_STATES.LISTEN ? 0.6 : 0.3;
+          
+          ctx.save(); 
+          
+          ctx.beginPath();
+          TYPE_GLYPHS[cell.type](ctx, c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE); 
+          ctx.closePath();
+
+          ctx.shadowColor = hexToRgba(glyphColor, glyphOpacity * 0.5); 
+          ctx.shadowBlur = 10 + (cell.type % 4) * 3; 
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+
+          ctx.fillStyle = hexToRgba(glyphColor, glyphOpacity * 0.7);
+          ctx.fill();
+
+          ctx.strokeStyle = hexToRgba(glyphColor, glyphOpacity * 1.0);
+          ctx.lineWidth = 1; 
+          ctx.stroke();
+
+          ctx.restore(); 
+      }
+
+      // QUIET overlay (darkens and freezes the frame, with subtle static)
+      if (cell.state === CELL_STATES.QUIET) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; 
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.fill();
+        const noiseAlpha = 0.05 + 0.03 * Math.sin(Date.now() / 150);
+        ctx.fillStyle = `rgba(0,255,255,${noiseAlpha})`;
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.fill();
+
+        if(video && !video.paused) video.pause();
+      } 
+      // LISTEN state (subtle pulse)
+      else if (cell.state === CELL_STATES.LISTEN) {
+        const pulse = 0.1 + 0.1 * Math.sin((Date.now() / 800) + (r + c));
+        ctx.strokeStyle = `rgba(0,255,255,${pulse})`;
+        ctx.lineWidth = 1.5; 
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.stroke();
+        if(video && !video.paused) video.pause();
+      } 
+      // BURSTING state (glowing fill effect)
+      else if (cell.state === CELL_STATES.BURSTING) {
+        const burst = cell.timer / 30; 
+        ctx.globalAlpha = 1 - burst; 
+        
+        const center = polygonCorners.reduce((acc, p) => ({x: acc.x + p.x, y: acc.y + p.y}), {x:0, y:0});
+        center.x /= polygonCorners.length;
+        center.y /= polygonCorners.length;
+
+        const scale = 1 + burst * 0.5; 
+        ctx.translate(center.x, center.y);
+        ctx.scale(scale, scale);
+        ctx.translate(-center.x, -center.y);
+
+        ctx.fillStyle = hexToRgba(TYPE_SOURCES[cell.type].color, 0.9); 
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.fill(); 
+        if(video && video.paused) video.play().catch(()=>{});
+      }
+      else {
+         if(video && video.paused) video.play().catch(()=>{});
+      }
+      
+      ctx.restore(); 
+      
+      // Selected highlight (on top of everything)
+      if (game.selected && game.selected.r === r && game.selected.c === c) {
+        ctx.strokeStyle = '#0ff';
+        ctx.lineWidth = 3; 
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+        ctx.stroke();
+      }
+    }
+  }
+
+  // --- FINAL LAYER: Draw the entire grid of lines once ---
+  drawFullWavyGrid(ctx);
+  
+  requestAnimationFrame(draw);
+}
+
+function getBorderColor(colorId) {
+  const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA', '#A8E6CF', '#FFB74D', '#FCBAD3', '#FFA07A'];
+  return colors[colorId] || '#0ff';
+}
+
+function handleClick(e) {
+  if (game.busy) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+  
+  let clickedCellR = -1;
+  let clickedCellC = -1;
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c]; // Get cell to pass its type to path drawing
+      const polygonCorners = getCellCorners(r, c);
+      
+      // Draw wavy path for point-in-path test
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type); 
+      
+      if (ctx.isPointInPath(clickX, clickY)) {
+        clickedCellR = r;
+        clickedCellC = c;
+        // Important: Clear the path after testing each cell, otherwise ctx.isPointInPath will test against all previous paths.
+        ctx.beginPath(); 
+        break; 
+      }
+       // If not clicked, still clear the path.
+       ctx.beginPath();
+    }
+    if (clickedCellR !== -1) break; 
+  }
+
+  if (clickedCellR === -1) { 
+    game.selected = null; 
+    return;
+  }
+  
+  const row = clickedCellR;
+  const col = clickedCellC;
+
+  console.log('👆 Click:', row, col);
+  
+  if (!game.selected) {
+    game.selected = {r: row, c: col};
+    const cell = game.grid[row][col];
+    console.log('✓ Selected:', row, col, '- type:', cell.type, 'state:', cell.state);
+    haptic(10);
+    game.sounds.swap();
+    
+    const segIdx = segmentIndexForCell(cell.type, row, col);
+    const seg = TYPE_SEGMENTS[cell.type][segIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    document.getElementById('videoLabel').textContent = seg.title;
+  } else {
+    const {r: r1, c: c1} = game.selected;
+    const r2 = row, c2 = col;
+    
+    const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+    
+    if (adjacent) {
+      console.log('🔄 Swapping (nudge):', [r1,c1], 'with', [r2,c2]);
+      haptic(15);
+      const tempCell = game.grid[r1][c1];
+      game.grid[r1][c1] = game.grid[r2][c2];
+      game.grid[r2][c2] = tempCell;
+      game.moves--;
+      document.getElementById('moves').textContent = game.moves;
+      game.sounds.swap(); 
+    } else {
+      console.log('❌ Not adjacent');
+      game.sounds.error();
+      haptic([10, 50, 10]);
+    }
+    
+    game.selected = null;
+    checkGameOver(); 
+  }
+}
+
+function dropCandies() {
+  // This is effectively handled by refillGrid after matched cells are cleared.
+  // We're not "dropping" blocks like Tetris, but replacing nulls from top.
+}
+
+function refillGrid() {
+  for (let c = 0; c < GRID_SIZE; c++) {
+    // Collect all non-null cells in this column
+    const columnCells = [];
+    for (let r = GRID_SIZE - 1; r >= 0; r--) {
+        if (game.grid[r][c]) {
+            columnCells.unshift(game.grid[r][c]); // Add to the front to maintain order
+        }
+    }
+
+    // Fill the column from bottom up with existing cells
+    for (let r = 0; r < columnCells.length; r++) {
+        game.grid[GRID_SIZE - 1 - r][c] = columnCells[columnCells.length - 1 - r];
+    }
+
+    // Fill any remaining nulls at the top with new cells
+    for (let r = 0; r < GRID_SIZE - columnCells.length; r++) {
+        game.grid[r][c] = createCell(randomCandyType());
+    }
+  }
+}
+
+
+function updateTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  const clipList = document.getElementById('clipList');
+  const wrap = document.getElementById('sequencePlayerWrap');
+  
+  clipList.innerHTML = '';
+  
+  game.sequence.forEach((video, i) => {
+    const clip = document.createElement('div');
+    clip.className = 'clip-item';
+    if (video.mute) {
+      clip.style.opacity = '0.4';
+      clip.style.filter = 'grayscale(100%)';
+    }
+    if (video.locked) { // NEW: Add locked class
+        clip.classList.add('locked');
+    }
+
+    const vid = document.createElement('video');
+    vid.src = video.file;
+    vid.muted = true;
+    vid.playsinline = true;
+    vid.currentTime = video.start || 0; 
+    
+    const label = document.createElement('div');
+    label.className = 'clip-label';
+    label.textContent = `${i + 1}. ${video.title}`;
+    
+    clip.appendChild(vid);
+    clip.appendChild(label);
+    // NEW: Click to unlock a clip
+    clip.onclick = () => {
+        if (video.locked) {
+            video.locked = false;
+            updateTimeline(); // Re-render to show unlock
+            console.log(`🔓 Unlocked clip: ${video.title}`);
+        } else {
+            playSingleInPlayer(video);
+        }
+    };
+    clipList.appendChild(clip);
+  });
+  
+  if (game.sequence.length > 0) {
+    panel.classList.add('active');
+    wrap.style.display = 'block';
+  }
+}
+
+function startSequencePlayback() {
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  document.getElementById('timelinePanel').classList.add('active');
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  let idx = 0;
+
+  const getNextPlayableClip = (startIndex) => {
+      for (let i = 0; i < game.sequence.length; i++) {
+          const currentIdx = (startIndex + i) % game.sequence.length;
+          if (!game.sequence[currentIdx].locked) { // Only play unlocked clips
+              return currentIdx;
+          }
+      }
+      return -1; // No unlocked clips to play
+  };
+
+  const playIdx = (i) => {
+    const playableIdx = getNextPlayableClip(i);
+    if (playableIdx === -1) {
+        label.textContent = "No Unlocked Clips";
+        player.pause();
+        return;
+    }
+    idx = playableIdx; // Update current index to the actual played clip
+    const v = game.sequence[idx];
+    
+    player.src = v.file;
+    label.textContent = `${idx+1}. ${v.title}`;
+    const start = v.start ?? 0;
+    const end = v.end ?? null;
+    player.onloadedmetadata = () => {
+      try { player.currentTime = start; } catch(e) {}
+      player.muted = !!v.mute; 
+      player.play().catch(()=>{});
+    };
+    if (end != null) {
+      player.ontimeupdate = () => {
+        if (player.currentTime >= end) {
+          player.ontimeupdate = null;
+          playIdx((idx + 1) % game.sequence.length); // Try next clip from here
+        }
+      };
+    } else {
+      player.ontimeupdate = null;
+    }
+  };
+  player.onended = () => { playIdx((idx + 1) % game.sequence.length); };
+  playIdx(idx); // Start playback
+}
+
+function playSingleInPlayer(v) {
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  if (v.locked) {
+      label.textContent = "Clip Locked! 🔒";
+      player.pause();
+      return;
+  }
+  player.src = v.file;
+  label.textContent = v.title;
+  const start = v.start ?? 0;
+  const end = v.end ?? null;
+  player.onloadedmetadata = () => {
+    try { player.currentTime = start; } catch(e) {}
+    player.muted = !!v.mute; 
+    player.play().catch(()=>{});
+  };
+  if (end != null) {
+    player.ontimeupdate = () => {
+      if (player.currentTime >= end) {
+        try { player.currentTime = start; } catch(e) {}
+      }
+    };
+  } else {
+    player.ontimeupdate = null;
+  }
+}
+
+function checkGameOver() {
+  if (game.moves <= 0) {
+    showModal();
+  }
+}
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const stats = document.getElementById('modalStats');
+  
+  stats.innerHTML = `
+    <div>SCORE: ${game.score}</div>
+    <div>CLIPS: ${game.sequence.length}</div>
+    <div>ACTS: ${game.actCounter}</div>
+    <div style="margin-top:20px;font-size:14px;color:#0ff;">🎬 Your film is ready to export!</div>
+  `;
+  
+  game.sounds.win();
+  haptic([100, 50, 100, 50, 200]);
+  
+  modal.classList.add('show');
+  console.log('🏁 Game Over - Film Complete!');
+}
+
+function showHint() {
+  console.log('💡 Hint: Nudge the grid to make patterns appear!');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function shuffle() {
+  console.log('🔀 Shuffling...');
+  createGrid(); 
+  game.moves = Math.max(5, game.moves); 
+  document.getElementById('moves').textContent = game.moves;
+  game.sounds.match(); 
+  haptic(20);
+}
+
+function toggleTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  panel.classList.toggle('collapsed'); 
+  console.log('📋 Timeline toggled');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('show');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleSound() {
+  game.soundEnabled = !game.soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = game.soundEnabled ? 'MUTE' : 'UNMUTE';
+  console.log('🔊 Sound:', game.soundEnabled);
+  haptic(10);
+}
+
+function updateAutoPlayButton() {
+  const btn = document.getElementById('autoPlayBtn');
+  if (!btn) return;
+  btn.textContent = game.autoPlay ? 'AUTO ON' : 'AUTO OFF';
+}
+
+function toggleAutoPlay() {
+  game.autoPlay = !game.autoPlay;
+  updateAutoPlayButton();
+  if (game.autoPlay) {
+    maybeAutoPlaySequence();
+  }
+}
+
+function maybeAutoPlaySequence() {
+  if (!game.autoPlay) return;
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  const hasUnlockedClips = game.sequence.some(clip => !clip.locked);
+
+  if (!hasUnlockedClips) {
+      document.getElementById('sequencePlayerLabel').textContent = "No Unlocked Clips";
+      player.pause();
+      return;
+  }
+  
+  const hasSrc = !!player.src && player.src.length > 0;
+  if (!hasSrc || player.paused) {
+    startSequencePlayback();
+  }
+}
+
+// EXPORT FUNCTIONS
+
+function exportJSON() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  const data = {
+    title: 'Garden Sequence',
+    timestamp: new Date().toISOString(),
+    score: game.score,
+    clips: game.sequence.length,
+    acts: game.actCounter, 
+    sequence: game.sequence.map((v, i) => ({
+      order: i + 1,
+      title: v.title,
+      file: v.file,
+      start: v.start,
+      end: v.end,
+      muted: !!v.mute, 
+      locked: !!v.locked, 
+      sourceCell: v.sourceCell || 'N/A' 
+    }))
+  };
+  
+  downloadFile('garden_sequence.json', JSON.stringify(data, null, 2));
+  console.log('✓ JSON exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportEDL() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  let edl = 'TITLE: Garden Sequence\n\n';
+  let recordIn = 0;
+  
+  game.sequence.forEach((v, i) => {
+    if (v.locked) {
+        edl += `* CLIP ${i + 1}: ${v.title} [LOCKED/SKIPPED]\n\n`;
+        return;
+    }
+    const duration = (v.end - v.start) || 10; 
+    const recordOut = recordIn + duration;
+    
+    edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+    edl += `${formatTimecode(v.start)} ${formatTimecode(v.end)} `; 
+    edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`; 
+    edl += `* FROM CLIP: ${v.title} (Cell ${v.sourceCell.r},${v.sourceCell.c})${v.mute ? ' [MUTED]' : ''}\n`;
+    edl += `* SOURCE FILE: ${v.file}\n\n`;
+    
+    recordIn = recordOut;
+  });
+  
+  downloadFile('garden_sequence.edl', edl);
+  console.log('✓ EDL exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function formatTimecode(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const f = 0; 
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+}
+
+function exportMosaic() {
+  alert('Mosaic HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportTimeline() {
+  alert('Timeline HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>
