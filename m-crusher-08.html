@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="manifest" href="manifest.json">
-  <title>GARDEN — Video Sequencing Game</title>
+  <title>VIDEO GARDEN — Living Mosaic Automata</title>
   <style>
     :root{
       --bg:#0a0a0a; --ui:#111; --line:#222;
@@ -91,7 +91,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">GARDEN</div>
+    <div class="brand">VIDEO GARDEN</div>
     <div class="stats">
       <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
       <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
@@ -143,29 +143,100 @@
 </div>
 
 <script>
-console.log('🎬 GARDEN Loading...');
+console.log('🌿 VIDEO GARDEN — Living Mosaic Automata Loading...');
 
-// VIDEOS - Single shared video per color
-const VIDEOS = [
-  { id: 0, file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Scene 01' },
-  { id: 1, file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Scene 02' },
-  { id: 2, file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Scene 03' },
-  { id: 3, file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Scene 04' },
-  { id: 4, file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Scene 05' },
-  { id: 5, file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Scene 06' },
-  { id: 6, file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Scene 07' },
-  { id: 7, file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Scene 08' },
-  { id: 8, file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Scene 09' },
-  { id: 9, file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Scene 10' }
-];
+/*
+🧬 VIDEO MOSAIC AUTOMATA (VMA)
+A self-organizing visual field where video cells evolve like living organisms
+
+CONCEPT: Cellular Automata + Video Sampling
+- Each cell is an agent with state: {source, region, activity, timer, similarity}
+- Cells interact with 8 neighbors (Moore neighborhood)
+- Local rules create global emergent patterns
+- The garden grows, blooms, decays, and reorganizes itself
+
+CELL STATES:
+- STABLE: Normal display, awaiting interaction
+- MATCHING: Similar neighbors detected, preparing to burst
+- BURSTING: Exploding into new patterns
+- DECAYING: Fading from inactivity
+- MERGING: Fusing with synchronized neighbors
+
+RULES:
+1. MATCHING: 3+ similar neighbors → burst & replace
+2. PROPAGATION: Adopt majority neighbor's video source
+3. DECAY: Inactive cells fade and reset
+4. FUSION: Motion-synced neighbors merge temporarily
+
+EMERGENT BEHAVIORS:
+- Self-organizing clusters
+- Blooming and wilting patterns
+- Temporal diffusion waves
+- Rhythmic coherence zones
+*/
+
+// TYPE-SEGMENT MODE: Each candy type has one source video, auto-sliced into segments
+
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Red', color: '#FF6B6B'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Cyan', color: '#4ECDC4'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Yellow', color: '#FFE66D'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Mint', color: '#95E1D3'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Coral', color: '#F38181'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Purple', color: '#AA96DA'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Green', color: '#A8E6CF'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Orange', color: '#FFB74D'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Pink', color: '#FCBAD3'},
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Salmon', color: '#FFA07A'}
+};
+
+// Auto-slice each type into segments (4 per type, 10s each)
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+const typeUsage = {}; // Track which segment index to use next per type
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  typeUsage[t] = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+const VIDEOS = []; // Not used in segment mode
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const GRID_SIZE = 8;
 const CELL_SIZE = 50;
 
+// AUTOMATA CONSTANTS
+const CELL_STATES = {
+  STABLE: 'stable',
+  MATCHING: 'matching',
+  BURSTING: 'bursting',
+  DECAYING: 'decaying',
+  MERGING: 'merging'
+};
+
+const AUTOMATA_CONFIG = {
+  SIMILARITY_THRESHOLD: 0.7,
+  DECAY_LIMIT: 120, // frames
+  PROPAGATION_CHANCE: 0.3,
+  FUSION_THRESHOLD: 0.8,
+  UPDATE_FREQUENCY: 3 // frames between automata updates
+};
+
 const game = {
-  grid: [],
+  grid: [], // Now holds cell objects: {type, state, timer, activity}
   selected: null,
   score: 0,
   moves: 30,
@@ -180,70 +251,158 @@ const game = {
   },
   soundEnabled: true,
   autoPlay: true,
-  useFragments: true,
-  fragmentVideos: [],
-  fragmentSourceMap: []
+  useTypeSegments: true,
+  typeSegmentVideos: {},
+  segmentUsage: {},
+  collectedTypes: new Set(),
+  typePlaybackTime: {},
+  automataFrame: 0, // Track frames for automata updates
+  cellBrightness: {} // Cache cell visual properties for similarity
 };
 
-// Fragment mode: reuse STORY_FRAGMENTS from matrix-editor with time ranges
-const FRAGMENTS = [
-  { id: 'fom-exhibition-1950s', title: 'Family of Man', start: 27, end: 53 },
-  { id: 'bayer-individual-self', title: 'Individual Self', start: 67, end: 78 },
-  { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', start: 197, end: 204 },
-  { id: 'tupac-grand-stories', title: 'Grand Stories', start: 143, end: 148 },
-  { id: 'society-boom-q', title: 'Societal Boom', start: 230, end: 237 },
-  { id: 'crack-epidemic-afeni-fall', title: 'Crack Epidemic', start: 291, end: 300 },
-  { id: 'mass-incarceration-clinton', title: 'Mass Incarceration', start: 1070, end: 1078 },
-  { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society', start: 379, end: 384 },
-  { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary", start: 1166, end: 1172 },
-  { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', start: 1237, end: 1248 },
-  { id: 'zubaydah-perpetual-now', title: 'Perpetual Now', start: 1313, end: 1320 },
-  { id: 'cia-enhanced-interrogation', title: 'CIA Interrogation', start: 2604, end: 2616 },
-  { id: 'cia-godzilla-fear', title: 'Godzilla Fear', start: 2664, end: 2675 },
-  { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', start: 664, end: 669 },
-  { id: 'complexity-theory-patterns', title: 'Complexity Theory', start: 738, end: 751 },
-  { id: 'hinton-neural-networks', title: 'Neural Networks', start: 3595, end: 3606 },
-  { id: 'algorithms-predict-behavior', title: 'Predictive Algorithms', start: 3650, end: 3670 },
-  { id: 'surveillance-capitalism', title: 'Surveillance Capitalism', start: 3700, end: 3720 },
-  { id: 'filter-bubble-isolation', title: 'Filter Bubbles', start: 3750, end: 3770 },
-  { id: 'attention-economy', title: 'Attention Economy', start: 3800, end: 3820 }
-];
-
-function initFragments() {
-  // Rotate through existing media sources to avoid requiring a single master file
-  const sources = VIDEOS.map(v => v.file);
-  game.fragmentVideos = [];
-  game.fragmentSourceMap = [];
-  FRAGMENTS.forEach((frag, i) => {
-    const src = sources[i % sources.length];
-    const v = document.createElement('video');
-    v.src = src;
-    v.muted = true;
-    v.playsinline = true;
-    v.preload = 'auto';
-    v.crossOrigin = 'anonymous';
-    const start = frag.start || 0;
-    const end = frag.end || start + 5;
-    v.addEventListener('loadedmetadata', () => {
-      try { v.currentTime = Math.min(start, Math.max(0, v.duration - 0.2)); } catch(e) {}
-    });
-    v.addEventListener('timeupdate', () => {
-      if (v.currentTime >= end) {
-        try { v.currentTime = start; } catch(e) {}
-      }
-    });
-    // Do not auto-play here; draw() will attempt to play on first paint
-    game.fragmentVideos.push(v);
-    game.fragmentSourceMap.push({ file: src, start, end, title: frag.title, id: frag.id });
-  });
+// Init type-segment videos: create looping videos for each type×segment pair
+function initTypeSegments() {
+  for (let type = 0; type < 10; type++) {
+    for (let segIdx = 0; segIdx < SEGMENTS_PER_TYPE; segIdx++) {
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const key = `${type}_${segIdx}`;
+      const v = document.createElement('video');
+      v.src = seg.file;
+      v.muted = true;
+      v.playsinline = true;
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      v.addEventListener('loadedmetadata', () => {
+        try { v.currentTime = Math.min(seg.start, Math.max(0, v.duration - 0.2)); } catch(e) {}
+      });
+      v.addEventListener('timeupdate', () => {
+        if (v.currentTime >= seg.end) {
+          try { v.currentTime = seg.start; } catch(e) {}
+        }
+      });
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created:', Object.keys(game.typeSegmentVideos).length);
 }
 
-// Optional FRAGMENT PATCH MODE (scaffold)
-// If you have a single long film and want less redundancy, define:
-// const SEGMENT_SOURCE = 'MEDIA/master.mp4';
-// const FRAGMENTS = [ {start:0,end:10,title:'A'}, ... ];
-// Then create one hidden <video> per fragment looping between start/end
-// and map grid cells to distinct fragments. For now we keep existing VIDEOS.
+// Helper: map grid cell to segment index (deterministic variety)
+function segmentIndexForCell(type, r, c) {
+  return (r + c * 3) % SEGMENTS_PER_TYPE;
+}
+
+// Helper: get next unused segment for a type (for coherent sequences)
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = [];
+  let minUsed = Infinity;
+  let minIdx = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const used = game.segmentUsage[type].filter(u => u === s).length;
+    if (used < minUsed) {
+      minUsed = used;
+      minIdx = s;
+    }
+  }
+  game.segmentUsage[type].push(minIdx);
+  return minIdx;
+}
+
+// CELLULAR AUTOMATA FUNCTIONS
+
+// Create a cell object
+function createCell(type) {
+  return {
+    type,
+    state: CELL_STATES.STABLE,
+    timer: 0,
+    brightness: 0.5,
+    lastChange: 0
+  };
+}
+
+// Get Moore neighborhood (8 surrounding cells)
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+// Calculate similarity between two cells (0-1)
+function cellSimilarity(cell1, cell2) {
+  if (!cell1 || !cell2) return 0;
+  // Same type = high similarity
+  if (cell1.type === cell2.type) return 0.9;
+  // Similar brightness
+  const brightDiff = Math.abs(cell1.brightness - cell2.brightness);
+  return Math.max(0, 1 - brightDiff * 2);
+}
+
+// Apply cellular automata rules to all cells
+function applyAutomataRules() {
+  const newStates = [];
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    newStates[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      cell.timer++;
+      const neighbors = getNeighbors(r, c);
+      
+      // Count similar neighbors
+      const similarNeighbors = neighbors.filter(n => 
+        cellSimilarity(cell, n.cell) > AUTOMATA_CONFIG.SIMILARITY_THRESHOLD
+      );
+      
+      // RULE 1: MATCHING - similar neighbors trigger bursting
+      if (similarNeighbors.length >= 3 && cell.state === CELL_STATES.STABLE) {
+        newStates[r][c] = {...cell, state: CELL_STATES.MATCHING, timer: 0};
+      }
+      // RULE 2: BURSTING - after matching period
+      else if (cell.state === CELL_STATES.MATCHING && cell.timer > 15) {
+        newStates[r][c] = {...cell, state: CELL_STATES.BURSTING, timer: 0};
+      }
+      // RULE 3: DECAY - inactive cells fade
+      else if (cell.timer > AUTOMATA_CONFIG.DECAY_LIMIT && cell.state === CELL_STATES.STABLE) {
+        newStates[r][c] = {...cell, state: CELL_STATES.DECAYING, timer: 0};
+      }
+      // RULE 4: PROPAGATION - adopt majority neighbor type
+      else if (Math.random() < AUTOMATA_CONFIG.PROPAGATION_CHANCE && cell.state === CELL_STATES.STABLE) {
+        const typeCounts = {};
+        neighbors.forEach(n => {
+          typeCounts[n.cell.type] = (typeCounts[n.cell.type] || 0) + 1;
+        });
+        const dominantType = Object.keys(typeCounts).reduce((a, b) => 
+          typeCounts[a] > typeCounts[b] ? a : b
+        );
+        if (parseInt(dominantType) !== cell.type && typeCounts[dominantType] >= 4) {
+          newStates[r][c] = createCell(parseInt(dominantType));
+        } else {
+          newStates[r][c] = cell;
+        }
+      }
+      // Reset bursting/decaying cells
+      else if ((cell.state === CELL_STATES.BURSTING || cell.state === CELL_STATES.DECAYING) && cell.timer > 20) {
+        newStates[r][c] = createCell(Math.floor(Math.random() * 10));
+      }
+      else {
+        newStates[r][c] = cell;
+      }
+    }
+  }
+  
+  game.grid = newStates;
+}
 
 // ✅ SOUND SYSTEM - Web Audio API
 function initSounds() {
@@ -329,7 +488,7 @@ function init() {
   
   initSounds();
   loadVideos();
-  if (game.useFragments) initFragments();
+  if (game.useTypeSegments) initTypeSegments();
   createGrid();
   draw();
 }
@@ -374,26 +533,31 @@ function createGrid() {
   for (let r = 0; r < GRID_SIZE; r++) {
     game.grid[r] = [];
     for (let c = 0; c < GRID_SIZE; c++) {
-      game.grid[r][c] = randomCandy();
+      game.grid[r][c] = createCell(randomCandyType());
     }
   }
   
   // Remove initial matches
   while (findMatches().length > 0) {
     findMatches().forEach(({r, c}) => {
-      game.grid[r][c] = randomCandy();
+      game.grid[r][c] = createCell(randomCandyType());
     });
   }
   
-  console.log('✓ Grid created');
+  console.log('✓ Living grid created - cells are now autonomous agents');
 }
 
-function randomCandy() {
-  const poolSize = game.useFragments ? FRAGMENTS.length : VIDEOS.length;
-  return Math.floor(Math.random() * poolSize);
+function randomCandyType() {
+  return Math.floor(Math.random() * 10);
 }
 
 function draw() {
+  // Apply automata rules periodically
+  game.automataFrame++;
+  if (game.automataFrame % AUTOMATA_CONFIG.UPDATE_FREQUENCY === 0) {
+    applyAutomataRules();
+  }
+  
   // Background
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -416,32 +580,87 @@ function draw() {
   // Draw candies
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
-      const candy = game.grid[r][c];
-      if (candy === null) continue;
+      const cell = game.grid[r][c];
+      if (!cell) continue;
       
       const x = c * CELL_SIZE;
       const y = r * CELL_SIZE;
       
-      // Draw video (fragment or whole)
-      const video = game.useFragments ? game.fragmentVideos[candy] : game.loadedVideos[candy];
+      // MOSAIC SAMPLING: sample only the (r,c) spatial region from this video
+      const segIdx = segmentIndexForCell(cell.type, r, c);
+      const key = `${cell.type}_${segIdx}`;
+      const video = game.typeSegmentVideos[key] || game.loadedVideos[cell.type];
       if (video && video.readyState >= 2) {
         ctx.save();
         ctx.beginPath();
         ctx.rect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
         ctx.clip();
-        ctx.drawImage(video, x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+        
+        // Calculate which spatial region to sample from video
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const cellW = vw / GRID_SIZE; // Width of one cell in video
+        const cellH = vh / GRID_SIZE; // Height of one cell in video
+        const sx = c * cellW; // Source X in video
+        const sy = r * cellH; // Source Y in video
+        
+        // Draw only that spatial region
+        ctx.drawImage(
+          video,
+          sx, sy, cellW, cellH, // Source rectangle (specific region)
+          x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8 // Destination
+        );
+        
         ctx.restore();
         if (video.paused) {
-          // Try to play silently once it has painted to canvas
           video.play().catch(()=>{});
         }
       }
       
+      // STATE-BASED VISUAL EFFECTS
+      ctx.save();
+      
+      // Apply state effects
+      if (cell.state === CELL_STATES.MATCHING) {
+        const pulse = Math.sin(Date.now() / 100) * 0.5 + 0.5;
+        ctx.globalAlpha = 0.7 + pulse * 0.3;
+      } else if (cell.state === CELL_STATES.BURSTING) {
+        const burst = cell.timer / 20;
+        ctx.globalAlpha = 1 - burst;
+        const scale = 1 + burst * 0.5;
+        ctx.translate(x + CELL_SIZE/2, y + CELL_SIZE/2);
+        ctx.scale(scale, scale);
+        ctx.translate(-(x + CELL_SIZE/2), -(y + CELL_SIZE/2));
+      } else if (cell.state === CELL_STATES.DECAYING) {
+        ctx.globalAlpha = 1 - (cell.timer / 20);
+      }
+      
+      ctx.restore();
+      
       // Border (color-coded)
-      const borderColor = getBorderColor(candy % 10);
+      const borderColor = getBorderColor(cell.type % 10);
       ctx.strokeStyle = borderColor;
       ctx.lineWidth = 3;
       ctx.strokeRect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+      
+      // State indicators
+      if (cell.state === CELL_STATES.MATCHING) {
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+      } else if (cell.state === CELL_STATES.MERGING) {
+        ctx.strokeStyle = '#FF00FF';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+      
+      // Collected type glow
+      if (game.collectedTypes.has(cell.type)) {
+        const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+        ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 + pulse * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+      }
       
       // Selected highlight
       if (game.selected && game.selected.r === r && game.selected.c === c) {
@@ -472,27 +691,22 @@ function handleClick(e) {
   
   // Bounds check
   if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
-  if (!game.grid[row] || game.grid[row][col] === null) return;
+  if (!game.grid[row] || !game.grid[row][col]) return;
   
   console.log('👆 Click:', row, col);
   
   if (!game.selected) {
     game.selected = {r: row, c: col};
-    console.log('✓ Selected:', row, col, '- candy:', game.grid[row][col]);
+    const cell = game.grid[row][col];
+    console.log('✓ Selected:', row, col, '- type:', cell.type, 'state:', cell.state);
     haptic(10);
     game.sounds.swap();
     
     // Update video preview
-    const candy = game.grid[row][col];
-    if (game.useFragments) {
-      const frag = game.fragmentSourceMap[candy];
-      document.getElementById('previewVideo').src = frag.file;
-      document.getElementById('videoLabel').textContent = frag.title;
-    } else {
-      const video = VIDEOS[candy];
-      document.getElementById('previewVideo').src = video.file;
-      document.getElementById('videoLabel').textContent = video.title;
-    }
+    const segIdx = segmentIndexForCell(cell.type, row, col);
+    const seg = TYPE_SEGMENTS[cell.type][segIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    document.getElementById('videoLabel').textContent = seg.title;
   } else {
     const {r: r1, c: c1} = game.selected;
     const r2 = row, c2 = col;
@@ -546,10 +760,11 @@ function findMatches() {
   // Horizontal
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE - 2; c++) {
-      const candy = game.grid[r][c];
-      if (candy === null) continue;
+      const cell = game.grid[r][c];
+      if (!cell) continue;
       
-      if (game.grid[r][c+1] === candy && game.grid[r][c+2] === candy) {
+      if (game.grid[r][c+1] && game.grid[r][c+2] &&
+          game.grid[r][c+1].type === cell.type && game.grid[r][c+2].type === cell.type) {
         for (let i = 0; i < 3; i++) {
           const key = `${r},${c+i}`;
           if (!checked.has(key)) {
@@ -564,10 +779,11 @@ function findMatches() {
   // Vertical
   for (let c = 0; c < GRID_SIZE; c++) {
     for (let r = 0; r < GRID_SIZE - 2; r++) {
-      const candy = game.grid[r][c];
-      if (candy === null) continue;
+      const cell = game.grid[r][c];
+      if (!cell) continue;
       
-      if (game.grid[r+1][c] === candy && game.grid[r+2][c] === candy) {
+      if (game.grid[r+1][c] && game.grid[r+2][c] &&
+          game.grid[r+1][c].type === cell.type && game.grid[r+2][c].type === cell.type) {
         for (let i = 0; i < 3; i++) {
           const key = `${r+i},${c}`;
           if (!checked.has(key)) {
@@ -588,20 +804,32 @@ function processMatches(matches) {
   // Collect unique videos
   const matchedVideos = new Set();
   matches.forEach(({r, c}) => {
-    const candy = game.grid[r][c];
-    matchedVideos.add(candy);
+    const cell = game.grid[r][c];
+    if (cell) matchedVideos.add(cell.type);
     game.grid[r][c] = null;
     game.score += 10;
   });
   
-  // Add to sequence
-  matchedVideos.forEach(idx => {
-    if (game.useFragments) {
-      const frag = game.fragmentSourceMap[idx];
-      game.sequence.push({ id: frag.id, title: frag.title, file: frag.file, start: frag.start, end: frag.end });
-    } else {
-      const video = VIDEOS[idx];
-      game.sequence.push(video);
+  // Add to sequence: collect next unused segment for each type
+  matchedVideos.forEach(type => {
+    const segIdx = nextSegmentForType(type);
+    const seg = TYPE_SEGMENTS[type][segIdx];
+    game.sequence.push({ title: seg.title, file: seg.file, start: seg.start, end: seg.end });
+    
+    // Mark type as collected for synchronized mosaic playback
+    game.collectedTypes.add(type);
+    game.typePlaybackTime[type] = 0;
+    
+    // Sync all segment videos for this type to start time
+    for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+      const key = `${type}_${s}`;
+      const vid = game.typeSegmentVideos[key];
+      if (vid) {
+        try {
+          vid.currentTime = TYPE_SEGMENTS[type][s].start;
+          vid.play().catch(()=>{});
+        } catch(e) {}
+      }
     }
   });
   
@@ -636,7 +864,7 @@ function dropCandies() {
   for (let c = 0; c < GRID_SIZE; c++) {
     let writePos = GRID_SIZE - 1;
     for (let r = GRID_SIZE - 1; r >= 0; r--) {
-      if (game.grid[r][c] !== null) {
+      if (game.grid[r][c]) {
         game.grid[writePos][c] = game.grid[r][c];
         if (writePos !== r) {
           game.grid[r][c] = null;
@@ -650,8 +878,8 @@ function dropCandies() {
 function refillGrid() {
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
-      if (game.grid[r][c] === null) {
-        game.grid[r][c] = randomCandy();
+      if (!game.grid[r][c]) {
+        game.grid[r][c] = createCell(randomCandyType());
       }
     }
   }

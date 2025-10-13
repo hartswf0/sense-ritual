@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="manifest" href="manifest.json">
-  <title>GARDEN — Video Sequencing Game</title>
+  <title>GARDEN CRUSHER — Segmented Video Mosaic</title>
   <style>
     :root{
       --bg:#0a0a0a; --ui:#111; --line:#222;
@@ -91,7 +91,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">GARDEN</div>
+    <div class="brand">CRUSHER 07</div>
     <div class="stats">
       <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
       <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
@@ -143,21 +143,66 @@
 </div>
 
 <script>
-console.log('🎬 GARDEN Loading...');
+console.log('🎬 MOSAIC CRUSHER Loading...');
 
-// VIDEOS - Single shared video per color
-const VIDEOS = [
-  { id: 0, file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Scene 01' },
-  { id: 1, file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Scene 02' },
-  { id: 2, file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Scene 03' },
-  { id: 3, file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Scene 04' },
-  { id: 4, file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Scene 05' },
-  { id: 5, file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Scene 06' },
-  { id: 6, file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Scene 07' },
-  { id: 7, file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Scene 08' },
-  { id: 8, file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Scene 09' },
-  { id: 9, file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Scene 10' }
-];
+/*
+🎨 MOSAIC VIDEO GRID SAMPLING SYSTEM
+
+CONCEPT: Spatial Sampling as Temporal Compression
+- Each source video is divided into an 8×8 spatial grid (64 regions)
+- Grid cells sample ONLY their corresponding spatial region from the video
+- Multiple videos are interspersed spatially, creating a living mosaic
+- When you collect a type, ALL tiles of that type play in sync across the grid
+
+MECHANICS:
+1. Grid Position (r,c) → samples region (r,c) from video
+2. Each candy type maps to one source video + temporal segments
+3. Matching tiles triggers synchronized playback across all tiles of that type
+4. Result: Polytemporal mosaic where many streams flow simultaneously
+
+EMERGENT BEHAVIOR:
+- Distributed Attention: eye scans micro-narratives across cells
+- Spatial Coherence: same type shows different regions of same video
+- Temporal Sync: collected types pulse and play together
+*/
+
+// TYPE-SEGMENT MODE: Each candy type has one source video, auto-sliced into segments
+
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Red', color: '#FF6B6B'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Cyan', color: '#4ECDC4'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Yellow', color: '#FFE66D'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Mint', color: '#95E1D3'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Coral', color: '#F38181'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Purple', color: '#AA96DA'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Green', color: '#A8E6CF'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Orange', color: '#FFB74D'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Pink', color: '#FCBAD3'},
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Salmon', color: '#FFA07A'}
+};
+
+// Auto-slice each type into segments (4 per type, 10s each)
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+const typeUsage = {}; // Track which segment index to use next per type
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  typeUsage[t] = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+const VIDEOS = []; // Not used in segment mode
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -180,70 +225,60 @@ const game = {
   },
   soundEnabled: true,
   autoPlay: true,
-  useFragments: true,
-  fragmentVideos: [],
-  fragmentSourceMap: []
+  useTypeSegments: true,
+  typeSegmentVideos: {}, // {type_segment: videoEl}
+  segmentUsage: {}, // Track which segments collected per type
+  collectedTypes: new Set(), // Types currently being played across all tiles
+  typePlaybackTime: {} // Sync playback time per type
 };
 
-// Fragment mode: reuse STORY_FRAGMENTS from matrix-editor with time ranges
-const FRAGMENTS = [
-  { id: 'fom-exhibition-1950s', title: 'Family of Man', start: 27, end: 53 },
-  { id: 'bayer-individual-self', title: 'Individual Self', start: 67, end: 78 },
-  { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', start: 197, end: 204 },
-  { id: 'tupac-grand-stories', title: 'Grand Stories', start: 143, end: 148 },
-  { id: 'society-boom-q', title: 'Societal Boom', start: 230, end: 237 },
-  { id: 'crack-epidemic-afeni-fall', title: 'Crack Epidemic', start: 291, end: 300 },
-  { id: 'mass-incarceration-clinton', title: 'Mass Incarceration', start: 1070, end: 1078 },
-  { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society', start: 379, end: 384 },
-  { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary", start: 1166, end: 1172 },
-  { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', start: 1237, end: 1248 },
-  { id: 'zubaydah-perpetual-now', title: 'Perpetual Now', start: 1313, end: 1320 },
-  { id: 'cia-enhanced-interrogation', title: 'CIA Interrogation', start: 2604, end: 2616 },
-  { id: 'cia-godzilla-fear', title: 'Godzilla Fear', start: 2664, end: 2675 },
-  { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', start: 664, end: 669 },
-  { id: 'complexity-theory-patterns', title: 'Complexity Theory', start: 738, end: 751 },
-  { id: 'hinton-neural-networks', title: 'Neural Networks', start: 3595, end: 3606 },
-  { id: 'algorithms-predict-behavior', title: 'Predictive Algorithms', start: 3650, end: 3670 },
-  { id: 'surveillance-capitalism', title: 'Surveillance Capitalism', start: 3700, end: 3720 },
-  { id: 'filter-bubble-isolation', title: 'Filter Bubbles', start: 3750, end: 3770 },
-  { id: 'attention-economy', title: 'Attention Economy', start: 3800, end: 3820 }
-];
-
-function initFragments() {
-  // Rotate through existing media sources to avoid requiring a single master file
-  const sources = VIDEOS.map(v => v.file);
-  game.fragmentVideos = [];
-  game.fragmentSourceMap = [];
-  FRAGMENTS.forEach((frag, i) => {
-    const src = sources[i % sources.length];
-    const v = document.createElement('video');
-    v.src = src;
-    v.muted = true;
-    v.playsinline = true;
-    v.preload = 'auto';
-    v.crossOrigin = 'anonymous';
-    const start = frag.start || 0;
-    const end = frag.end || start + 5;
-    v.addEventListener('loadedmetadata', () => {
-      try { v.currentTime = Math.min(start, Math.max(0, v.duration - 0.2)); } catch(e) {}
-    });
-    v.addEventListener('timeupdate', () => {
-      if (v.currentTime >= end) {
-        try { v.currentTime = start; } catch(e) {}
-      }
-    });
-    // Do not auto-play here; draw() will attempt to play on first paint
-    game.fragmentVideos.push(v);
-    game.fragmentSourceMap.push({ file: src, start, end, title: frag.title, id: frag.id });
-  });
+// Init type-segment videos: create looping videos for each type×segment pair
+function initTypeSegments() {
+  for (let type = 0; type < 10; type++) {
+    for (let segIdx = 0; segIdx < SEGMENTS_PER_TYPE; segIdx++) {
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const key = `${type}_${segIdx}`;
+      const v = document.createElement('video');
+      v.src = seg.file;
+      v.muted = true;
+      v.playsinline = true;
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      v.addEventListener('loadedmetadata', () => {
+        try { v.currentTime = Math.min(seg.start, Math.max(0, v.duration - 0.2)); } catch(e) {}
+      });
+      v.addEventListener('timeupdate', () => {
+        if (v.currentTime >= seg.end) {
+          try { v.currentTime = seg.start; } catch(e) {}
+        }
+      });
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created:', Object.keys(game.typeSegmentVideos).length);
 }
 
-// Optional FRAGMENT PATCH MODE (scaffold)
-// If you have a single long film and want less redundancy, define:
-// const SEGMENT_SOURCE = 'MEDIA/master.mp4';
-// const FRAGMENTS = [ {start:0,end:10,title:'A'}, ... ];
-// Then create one hidden <video> per fragment looping between start/end
-// and map grid cells to distinct fragments. For now we keep existing VIDEOS.
+// Helper: map grid cell to segment index (deterministic variety)
+function segmentIndexForCell(type, r, c) {
+  return (r + c * 3) % SEGMENTS_PER_TYPE;
+}
+
+// Helper: get next unused segment for a type (for coherent sequences)
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = [];
+  // Find least-used segment
+  let minUsed = Infinity;
+  let minIdx = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const used = game.segmentUsage[type].filter(u => u === s).length;
+    if (used < minUsed) {
+      minUsed = used;
+      minIdx = s;
+    }
+  }
+  game.segmentUsage[type].push(minIdx);
+  return minIdx;
+}
 
 // ✅ SOUND SYSTEM - Web Audio API
 function initSounds() {
@@ -329,7 +364,7 @@ function init() {
   
   initSounds();
   loadVideos();
-  if (game.useFragments) initFragments();
+  if (game.useTypeSegments) initTypeSegments();
   createGrid();
   draw();
 }
@@ -389,8 +424,8 @@ function createGrid() {
 }
 
 function randomCandy() {
-  const poolSize = game.useFragments ? FRAGMENTS.length : VIDEOS.length;
-  return Math.floor(Math.random() * poolSize);
+  // Return candy type (0-9)
+  return Math.floor(Math.random() * 10);
 }
 
 function draw() {
@@ -422,17 +457,35 @@ function draw() {
       const x = c * CELL_SIZE;
       const y = r * CELL_SIZE;
       
-      // Draw video (fragment or whole)
-      const video = game.useFragments ? game.fragmentVideos[candy] : game.loadedVideos[candy];
+      // MOSAIC SAMPLING: sample only the (r,c) spatial region from this video
+      // Each video is conceptually divided into 8×8 grid
+      // Cell at position (r,c) shows region (r,c) from its type's video
+      const segIdx = segmentIndexForCell(candy, r, c);
+      const key = `${candy}_${segIdx}`;
+      const video = game.typeSegmentVideos[key] || game.loadedVideos[candy];
       if (video && video.readyState >= 2) {
         ctx.save();
         ctx.beginPath();
         ctx.rect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
         ctx.clip();
-        ctx.drawImage(video, x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+        
+        // Calculate which spatial region to sample from video
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const cellW = vw / GRID_SIZE; // Width of one cell in video
+        const cellH = vh / GRID_SIZE; // Height of one cell in video
+        const sx = c * cellW; // Source X in video
+        const sy = r * cellH; // Source Y in video
+        
+        // Draw only that spatial region
+        ctx.drawImage(
+          video,
+          sx, sy, cellW, cellH, // Source rectangle (specific region)
+          x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8 // Destination
+        );
+        
         ctx.restore();
         if (video.paused) {
-          // Try to play silently once it has painted to canvas
           video.play().catch(()=>{});
         }
       }
@@ -442,6 +495,14 @@ function draw() {
       ctx.strokeStyle = borderColor;
       ctx.lineWidth = 3;
       ctx.strokeRect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+      
+      // Collected type glow - all tiles of collected types pulse
+      if (game.collectedTypes.has(candy)) {
+        const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+        ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 + pulse * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+      }
       
       // Selected highlight
       if (game.selected && game.selected.r === r && game.selected.c === c) {
@@ -484,15 +545,10 @@ function handleClick(e) {
     
     // Update video preview
     const candy = game.grid[row][col];
-    if (game.useFragments) {
-      const frag = game.fragmentSourceMap[candy];
-      document.getElementById('previewVideo').src = frag.file;
-      document.getElementById('videoLabel').textContent = frag.title;
-    } else {
-      const video = VIDEOS[candy];
-      document.getElementById('previewVideo').src = video.file;
-      document.getElementById('videoLabel').textContent = video.title;
-    }
+    const segIdx = segmentIndexForCell(candy, row, col);
+    const seg = TYPE_SEGMENTS[candy][segIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    document.getElementById('videoLabel').textContent = seg.title;
   } else {
     const {r: r1, c: c1} = game.selected;
     const r2 = row, c2 = col;
@@ -594,14 +650,26 @@ function processMatches(matches) {
     game.score += 10;
   });
   
-  // Add to sequence
-  matchedVideos.forEach(idx => {
-    if (game.useFragments) {
-      const frag = game.fragmentSourceMap[idx];
-      game.sequence.push({ id: frag.id, title: frag.title, file: frag.file, start: frag.start, end: frag.end });
-    } else {
-      const video = VIDEOS[idx];
-      game.sequence.push(video);
+  // Add to sequence: collect next unused segment for each type
+  matchedVideos.forEach(type => {
+    const segIdx = nextSegmentForType(type);
+    const seg = TYPE_SEGMENTS[type][segIdx];
+    game.sequence.push({ title: seg.title, file: seg.file, start: seg.start, end: seg.end });
+    
+    // Mark type as collected for synchronized mosaic playback
+    game.collectedTypes.add(type);
+    game.typePlaybackTime[type] = 0;
+    
+    // Sync all segment videos for this type to start time
+    for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+      const key = `${type}_${s}`;
+      const vid = game.typeSegmentVideos[key];
+      if (vid) {
+        try {
+          vid.currentTime = TYPE_SEGMENTS[type][s].start;
+          vid.play().catch(()=>{});
+        } catch(e) {}
+      }
     }
   });
   
