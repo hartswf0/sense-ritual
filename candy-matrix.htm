@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>CANDY // MATRIX CUT — Canvas Edition</title>
+<style>
+  :root{
+    --bg:#000; --grid:#FFD400; --accent:#19C2FF; --accent2:#E24A4A; --paper:#0a0a0a;
+    --ui:#111; --text:#fff; --muted:#b7b7b7; --good:#62ff87; --bad:#ff5a5a;
+    --board-bg:#0a0a0a; --cell-bg:#1a1a1a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+  .app{position:relative;display:flex;flex-direction:column;height:100svh;overflow:hidden;background:#000}
+  header{position:fixed;left:8px;right:8px;top:8px;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border:2px solid var(--grid);border-radius:12px;background:#000000f5;backdrop-filter:blur(6px);box-shadow:0 4px 20px rgba(0,0,0,0.5)}
+  .brand{letter-spacing:.28em;text-transform:uppercase;font-weight:900;font-size:13px;opacity:1;background:linear-gradient(135deg, var(--grid), var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .hud{display:flex;align-items:center;gap:14px;font-weight:800}
+  .pill{border:2px solid var(--grid);padding:6px 12px;border-radius:999px;display:flex;align-items:center;gap:8px;background:rgba(255,212,0,0.05)}
+  .pill strong{transition:all 0.3s ease;font-size:16px}
+  .pill small{opacity:.6}
+  .pill span{font-size:14px;opacity:0.8}
+  .toolbar{position:fixed;left:8px;right:8px;bottom:8px;z-index:20;display:flex;gap:8px;overflow:auto;padding:8px;background:#000000f5;border:2px solid var(--grid);border-radius:14px;backdrop-filter:blur(6px);transition:transform .25s ease, opacity .25s ease;box-shadow:0 -4px 20px rgba(0,0,0,0.5)} .toolbar.collapsed{transform:translateY(calc(100% - 50px));opacity:.95} #toggleTools{position:fixed;right:14px;bottom:14px;z-index:21;border:2px solid var(--grid);background:#000;color:var(--grid);border-radius:999px;padding:10px 16px;font-weight:900;font-size:12px;letter-spacing:0.1em;box-shadow:0 0 15px rgba(255,212,0,0.3)}
+  .btn{appearance:none;border:2px solid var(--grid);background:#0000;color:var(--text);padding:10px 12px;border-radius:10px;font-weight:900;letter-spacing:.08em;min-width:90px;transition:all 0.2s ease;position:relative;overflow:hidden}
+  .btn::before{content:'';position:absolute;inset:0;background:var(--grid);transform:translateX(-100%);transition:transform 0.3s ease}
+  .btn:active{transform:scale(.97)}
+  .btn:active::before{transform:translateX(0)}
+  .btn span{position:relative;z-index:1}
+  .btn[disabled]{opacity:.35;pointer-events:none}
+  .btn[data-on="1"]{background:var(--grid);color:#000;box-shadow:0 0 15px rgba(255,212,0,0.4)}
+  .canvas-wrap{position:absolute;left:8px;right:8px;top:64px;bottom:76px;display:flex;align-items:flex-end;justify-content:center;background:#000;padding-bottom:20px}
+  canvas{display:block;width:min(90vw, 450px);height:min(90vw, 450px);background:var(--board-bg);border:3px solid var(--grid);box-shadow:0 0 0 3px #000,0 0 30px rgba(255,212,0,0.3);border-radius:8px}
+  .grid-overlay{position:absolute;inset:auto;bottom:100px;left:50%;transform:translateX(-50%);color:var(--muted);font-size:11px;opacity:.8;text-align:center;white-space:nowrap}
+  .toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);border:2px solid var(--grid);background:#000;padding:10px 14px;font-weight:800;letter-spacing:.1em;display:none;z-index:30}
+  .toast.show{display:block;animation:pop .45s ease}
+  @keyframes pop{from{transform:translate(-50%,-12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+  /* Final Cut panel */
+  .panel{position:fixed;inset:0;background:#000000f2;backdrop-filter:blur(4px);display:none;flex-direction:column}
+  .panel.show{display:flex}
+  .panel header{position:relative}
+  .clips{padding:10px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;overflow:auto}
+  .clip{border:2px solid var(--grid);background:#000;padding:12px;border-radius:10px;transition:all 0.2s ease}
+  .clip:hover{border-color:var(--accent);box-shadow:0 0 15px rgba(25,194,255,0.3)}
+  .clip h4{margin:2px 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .clip h4::before{content:attr(data-icon);font-size:16px;opacity:0.8}
+  iframe{width:100%;aspect-ratio:16/9;border:1px solid #222;border-radius:6px;margin-top:8px}
+  .ribbon{position:absolute;right:14px;bottom:14px;background:var(--grid);color:#000;padding:6px 10px;border-radius:999px;font-weight:900}
+  .hammer{position:absolute;pointer-events:none;translate:-50% -50%;width:120px;height:120px;border-radius:50%;border:3px dashed var(--grid);display:none;place-items:center;font-size:44px}
+  .hammer.show{display:grid;animation:hammer .25s ease}
+  @keyframes hammer{0%{scale:.7;rotate:-15deg}70%{scale:1.08;rotate:12deg}100%{scale:1;rotate:0}}
+  .win{position:fixed;inset:0;display:none;place-items:center;background:#000000f2}
+  .win.show{display:grid}
+  .win .card{border:3px solid var(--grid);padding:20px;border-radius:16px;background:conic-gradient(from 180deg at 50% 50%, #111 0%, #0a0a0a 100%);text-align:center}
+  .confetti{position:fixed;inset:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">CANDY // MATRIX CUT</div>
+    <div class="hud">
+      <div class="pill"><span>Lvl</span><strong id="lvl">1</strong></div>
+      <div class="pill"><span>Score</span><strong id="score">0</strong></div>
+      <div class="pill" title="Clips assembled"><span>◈</span><strong id="clips">0</strong>/<strong id="clipGoal">6</strong></div>
+    </div>
+  </header>
+  <div class="canvas-wrap">
+    <canvas id="game" width="720" height="720" aria-label="Candy grid"></canvas>
+    <div class="hammer" id="hammer">🔨</div>
+    <canvas class="confetti" id="fx"></canvas>
+    <div class="grid-overlay">Tap two candies to swap • 3+ matches collect clips</div>
+  </div>
+  <div class="toolbar collapsed" id="tools">
+    <button class="btn" id="bHammer" title="Smash one candy">🔨 Hammer</button>
+    <button class="btn" id="bBomb" title="Clear 3×3">💣 Bomb</button>
+    <button class="btn" id="bStripeR" title="Clear Row">➡️ Row</button>
+    <button class="btn" id="bStripeC" title="Clear Column">⬇️ Col</button>
+    <button class="btn" id="bColor" title="Clear one color">🌈 Color</button>
+    <button class="btn" id="bShuffle" title="Shuffle the board">🔀 Shuffle</button>
+    <button class="btn" id="bMom" title="Mom Mode—gentle help">🫶 Mom</button>
+    <button class="btn" id="bFinal" title="Open Final Cut">🎬 Final Cut</button>
+  </div>
+  <button id="toggleTools">Tools ▴</button>
+</div>
+
+<!-- Final Cut / Clips -->
+<section class="panel" id="panel">
+  <header>
+    <div class="brand">FINAL CUT — MATRIX ASSEMBLER</div>
+    <div class="ribbon" id="renderBtn">Assemble</div>
+  </header>
+  <div class="clips" id="clipsList"></div>
+</section>
+
+<section class="win" id="win">
+  <div class="card">
+    <h2 style="letter-spacing:.2em;text-transform:uppercase;margin:6px 0 10px">Level Complete</h2>
+    <p style="opacity:.8;margin:0 0 14px">Candies explode. Everyone cheers. Mom smiles.</p>
+    <button class="btn" id="nextBtn">NEXT LEVEL ▶</button>
+  </div>
+</section>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+  // --- Aesthetic ties to Matrix Editor (palette, grid, title caps) ---
+  const YT_ID = 'BQ2n6SN7gOY'; // same film as matrix-editor
+  const STORY_FRAGMENTS = [
+    { id: 'fom-exhibition-1950s', title: 'Family of Man', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', icon: '◯', start: 27, end: 53 },
+    { id: 'bayer-individual-self', title: 'Individual Self', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story.', icon: '◐', start: 67, end: 78 },
+    { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', category: 'Systemic Critique', desc: 'The world that concealed the harsh reality of power.', icon: '◑', start: 197, end: 204 },
+    { id: 'tupac-grand-stories', title: 'Grand Stories', category: 'Core Concept', desc: 'Believed deeply in their power to move people and inspire change.', icon: '◒', start: 143, end: 148 },
+    { id: 'society-boom-q', title: 'Societal Boom', category: 'Systemic Control', desc: 'Society lets you go far, but as soon as you ask questions, boom.', icon: '◓', start: 230, end: 237 },
+    { id: 'crack-epidemic-afeni-fall', title: 'Crack Epidemic', category: 'Systemic Event', desc: 'Crack swept through black communities, Afeni became addicted.', icon: '◔', start: 291, end: 300 },
+    { id: 'mass-incarceration-clinton', title: 'Mass Incarceration', category: 'Systemic Control', desc: 'Hundreds of thousands imprisoned with no hope of parole.', icon: '◕', start: 1070, end: 1078 },
+    { id: 'saudi-dream-corrupt', title: 'Saudi Dream Society', category: 'Systemic Critique', desc: 'Billions created a dreamlike society, deeply corrupt.', icon: '◖', start: 379, end: 384 },
+    { id: 'zubaydah-diary-fragments', title: "Zubaydah's Diary", category: 'Personal Apparatus', desc: 'Memories in fragments, nothing linked them, made no sense.', icon: '◗', start: 1166, end: 1172 },
+    { id: 'jihad-disintegration-factions', title: 'Jihad Disintegration', category: 'Systemic Event', desc: 'Organization disintegrating, all solidarity gone.', icon: '◘', start: 1237, end: 1248 },
+    { id: 'zubaydah-perpetual-now', title: 'Perpetual Now', category: 'Emotional State', desc: 'Trapped in perpetual now, haunted by fragments.', icon: '◙', start: 1313, end: 1320 },
+    { id: 'cia-enhanced-interrogation', title: 'CIA Interrogation', category: 'Systemic Control', desc: 'Waterboarding 83 times to create learned helplessness.', icon: '◚', start: 2604, end: 2616 },
+    { id: 'cia-godzilla-fear', title: 'Godzilla Fear', category: 'Systemic Impact', desc: 'Disconnected memories spread fear across America.', icon: '◛', start: 2664, end: 2675 },
+    { id: 'chaos-theory-unpredictable', title: 'Chaos Theory', category: 'Scientific Theory', desc: 'Tiny changes have massive catastrophic consequences.', icon: '◜', start: 664, end: 669 },
+    { id: 'complexity-theory-patterns', title: 'Complexity Theory', category: 'Scientific Theory', desc: 'Computers see hidden patterns, make chaos manageable.', icon: '◝', start: 738, end: 751 },
+    { id: 'hinton-neural-networks', title: 'Neural Networks', category: 'Technological Apparatus', desc: 'AI learns from mass data, ignores all human stories.', icon: '◞', start: 3595, end: 3606 },
+    { id: 'algorithms-predict-behavior', title: 'Predictive Algorithms', category: 'Technological Apparatus', desc: 'Algorithms that predict and shape human behavior.', icon: '◟', start: 3650, end: 3670 },
+    { id: 'surveillance-capitalism', title: 'Surveillance Capitalism', category: 'Systemic Control', desc: 'Extracting behavioral data to predict and modify.', icon: '◠', start: 3700, end: 3720 },
+    { id: 'filter-bubble-isolation', title: 'Filter Bubbles', category: 'Media Apparatus', desc: 'Algorithms isolate us in personalized realities.', icon: '◡', start: 3750, end: 3770 },
+    { id: 'attention-economy', title: 'Attention Economy', category: 'Systemic Control', desc: 'Engineered to capture and monetize attention.', icon: '◢', start: 3800, end: 3820 }
+  ];
+
+  // --- Game state ---
+  const N=8; // grid size
+  const TYPES=['🍋','🍒','🍏','🍇','🧊','🍊']; // candies
+  const typeColor={'🍋':'#ffe34f','🍒':'#ff3a62','🍏':'#6bff87','🍇':'#a88bff','🧊':'#68e2ff','🍊':'#ff9a31'};
+  const canvas=document.getElementById('game');
+  const ctx=canvas.getContext('2d');
+  const fx=document.getElementById('fx');
+  const fctx=fx.getContext('2d');
+  const hammer=document.getElementById('hammer');
+  let W=canvas.width, H=canvas.height, S=W/N; // will be recalculated by layout()
+
+
+  const ui={lvl:1, score:0, goalClips:6, clips:[], mom:false};
+  const board=[...Array(N)].map(()=>Array(N).fill(0));
+  const boosters={mode:null};
+  let sel=null, anims=[];
+
+  const uiIds=(id,v)=>document.getElementById(id).textContent=v;
+  uiIds('lvl',ui.lvl); uiIds('clipGoal',ui.goalClips);
+
+  // --- Utility ---
+  const rand=a=>a[Math.floor(Math.random()*a.length)];
+  const toast=(msg)=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1000)}
+  const embed=(frag)=>`https://www.youtube-nocookie.com/embed/${YT_ID}?start=${frag.start}&end=${frag.end}&autoplay=1&mute=1&controls=1&modestbranding=1&loop=1&playlist=${YT_ID}`;
+
+  // --- Init board ---
+  function fillBoard(){
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++){board[y][x]=rand(TYPES)}
+    // avoid initial matches for clean start
+    resolveMatches(true);
+    draw();
+  }
+
+  // --- Rendering ---
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // grid bg with subtle gradient
+    const bgGrad = ctx.createLinearGradient(0,0,0,H);
+    bgGrad.addColorStop(0,'#0a0a0a');
+    bgGrad.addColorStop(1,'#050505');
+    ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+    
+    // cells
+    for(let y=0;y<N;y++){
+      for(let x=0;x<N;x++){
+        const c=board[y][x];
+        const px=x*S, py=y*S;
+        
+        // slot with darker inner shadow
+        ctx.fillStyle='#1a1a1a';
+        ctx.fillRect(px+2,py+2,S-4,S-4);
+        ctx.strokeStyle='rgba(255,212,0,0.15)';
+        ctx.lineWidth=1; ctx.setLineDash([4,4]);
+        ctx.strokeRect(px+3,py+3,S-6,S-6);
+        ctx.setLineDash([]);
+        
+        // candy disk with enhanced gradient
+        const r=S*0.38; const cx=px+S/2, cy=py+S/2;
+        
+        // Outer glow
+        const glowGrad = ctx.createRadialGradient(cx,cy,r*0.8,cx,cy,r*1.2);
+        const col=typeColor[c];
+        glowGrad.addColorStop(0,col+'44');
+        glowGrad.addColorStop(1,col+'00');
+        ctx.fillStyle=glowGrad;
+        ctx.beginPath(); ctx.arc(cx,cy,r*1.2,0,Math.PI*2); ctx.fill();
+        
+        // Main candy gradient
+        const g=ctx.createRadialGradient(cx-r*0.2,cy-r*0.2,r*.1,cx,cy,r);
+        g.addColorStop(0,'#ffffff');
+        g.addColorStop(0.3,'#ffffffcc');
+        g.addColorStop(0.7,col);
+        g.addColorStop(1,col+'cc');
+        ctx.fillStyle=g;
+        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+        
+        // Glossy highlight
+        const highlight = ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx-r*0.3,cy-r*0.3,r*0.5);
+        highlight.addColorStop(0,'#ffffff99');
+        highlight.addColorStop(1,'#ffffff00');
+        ctx.fillStyle=highlight;
+        ctx.beginPath(); ctx.arc(cx-r*0.2,cy-r*0.2,r*0.4,0,Math.PI*2); ctx.fill();
+        
+        // Border with subtle shadow
+        ctx.strokeStyle='#00000099';
+        ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(cx+1,cy+1,r,0,Math.PI*2); ctx.stroke();
+        ctx.strokeStyle='#000000';
+        ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+        
+        // Emoji with shadow
+        ctx.font=`${S*0.36}px system-ui,emoji`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillStyle='#00000066';
+        ctx.fillText(c,cx+1.5,cy+1.5);
+        ctx.fillStyle='#fff';
+        ctx.fillText(c,cx,cy);
+        
+        // Selection highlight
+        if(sel && sel.x===x && sel.y===y){
+          ctx.strokeStyle='#00FFFF';
+          ctx.lineWidth=4;
+          ctx.setLineDash([]);
+          ctx.strokeRect(px+4,py+4,S-8,S-8);
+          // Pulsing glow
+          ctx.shadowColor='#00FFFF';
+          ctx.shadowBlur=15;
+          ctx.strokeRect(px+4,py+4,S-8,S-8);
+          ctx.shadowBlur=0;
+        }
+      }
+    }
+    // animations on top
+    anims=anims.filter(a=>a(Date.now()));
+  }
+
+  // --- Input ---
+  function cellFromEvent(e){
+    const rect=canvas.getBoundingClientRect();
+    const x=Math.floor(( (e.touches?e.touches[0].clientX:e.clientX) - rect.left)/rect.width*N);
+    const y=Math.floor(( (e.touches?e.touches[0].clientY:e.clientY) - rect.top)/rect.height*N);
+    return {x:Math.max(0,Math.min(N-1,x)),y:Math.max(0,Math.min(N-1,y))};
+  }
+
+  function onTap(e){
+    const {x,y}=cellFromEvent(e);
+    if(boosters.mode){
+      useBooster(x,y); return;
+    }
+    if(!sel){ sel={x,y}; draw(); return;}
+    // swap if adjacent
+    const dx=Math.abs(x-sel.x), dy=Math.abs(y-sel.y);
+    if(dx+dy===1){
+      swap(sel.x,sel.y,x,y);
+      if(!hasAnyMatch()){
+        // swap back if no match
+        swap(sel.x,sel.y,x,y);
+        toast('No match');
+      } else {
+        resolveMatches();
+      }
+      sel=null; draw();
+    } else { sel={x,y}; draw(); }
+  }
+  canvas.addEventListener('click',onTap); canvas.addEventListener('touchstart',onTap,{passive:true});
+
+  // --- Mechanics ---
+  function swap(x1,y1,x2,y2){ const t=board[y1][x1]; board[y1][x1]=board[y2][x2]; board[y2][x2]=t; }
+
+  function findMatches(){
+    const kill=Array.from({length:N},()=>Array(N).fill(false));
+    // rows
+    for(let y=0;y<N;y++){
+      let run=1; for(let x=1;x<=N;x++){
+        if(x<N && board[y][x]===board[y][x-1]) run++; else { if(run>=3){ for(let k=0;k<run;k++) kill[y][x-1-k]=true } run=1 }
+      }
+    }
+    // cols
+    for(let x=0;x<N;x++){
+      let run=1; for(let y=1;y<=N;y++){
+        if(y<N && board[y][x]===board[y-1][x]) run++; else { if(run>=3){ for(let k=0;k<run;k++) kill[y-1-k][x]=true } run=1 }
+      }
+    }
+    return kill;
+  }
+
+  function hasAnyMatch(){
+    const m=findMatches(); for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(m[y][x]) return true; return false;
+  }
+
+  function resolveMatches(initial=false){
+    let loop=0; let matched=false;
+    do{
+      const kill=findMatches(); matched=false;
+      for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(kill[y][x]){ matched=true; spawnCandyBlast(x,y,board[y][x]); board[y][x]=null; ui.score+=10; }
+      if(matched && !initial){
+        uiIds('score',ui.score);
+        collectClip(); // tie to video assembly
+      }
+      // drop
+      for(let x=0;x<N;x++){
+        let ptr=N-1; for(let y=N-1;y>=0;y--) if(board[y][x]!=null){ board[ptr][x]=board[y][x]; ptr--; }
+        for(let y=ptr;y>=0;y--) board[y][x]=rand(TYPES);
+      }
+      loop++;
+    }while(matched && loop<10)
+    draw();
+    checkWin();
+  }
+
+  function collectClip(){
+    const frag=STORY_FRAGMENTS[ ui.clips.length % STORY_FRAGMENTS.length ];
+    ui.clips.push(frag); uiIds('clips',ui.clips.length);
+    showClipBadge(frag.title);
+  }
+
+  function checkWin(){
+    if(ui.clips.length>=ui.goalClips){
+      // win fx
+      confetti();
+      document.getElementById('win').classList.add('show');
+    }
+  }
+
+  // --- Boosters ---
+  const toolBtns={
+    bHammer:()=>setMode('hammer'),
+    bBomb:()=>setMode('bomb'),
+    bStripeR:()=>setMode('row'),
+    bStripeC:()=>setMode('col'),
+    bColor:()=>setMode('color'),
+    bShuffle:()=>{shuffle(); resolveMatches();},
+    bMom:()=>{ui.mom=!ui.mom; document.getElementById('bMom').dataset.on=ui.mom?1:0; toast(ui.mom?'Mom Mode ON':'Mom Mode OFF')},
+    bFinal:()=>openPanel()
+  };
+  Object.keys(toolBtns).forEach(id=>document.getElementById(id).onclick=toolBtns[id]);
+
+  function setMode(m){ boosters.mode=m; toast(m.toUpperCase()); }
+
+  function useBooster(x,y){
+    const c=board[y][x];
+    if(boosters.mode==='hammer'){
+      hammer.style.left=(canvas.getBoundingClientRect().left+ (x+.5)*canvas.clientWidth/N)+'px';
+      hammer.style.top=(canvas.getBoundingClientRect().top+ (y+.5)*canvas.clientHeight/N)+'px';
+      hammer.classList.add('show'); setTimeout(()=>hammer.classList.remove('show'),180);
+      board[y][x]=null; resolveMatches();
+    }
+    else if(boosters.mode==='bomb'){
+      for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++){ const X=x+i,Y=y+j; if(X>=0&&Y>=0&&X<N&&Y<N) board[Y][X]=null }
+      spawnBombBlast(x,y); resolveMatches();
+    }
+    else if(boosters.mode==='row'){ for(let i=0;i<N;i++) board[y][i]=null; spawnRowBlast(y); resolveMatches(); }
+    else if(boosters.mode==='col'){ for(let i=0;i<N;i++) board[i][x]=null; spawnColBlast(x); resolveMatches(); }
+    else if(boosters.mode==='color'){
+      const target=c; for(let Y=0;Y<N;Y++) for(let X=0;X<N;X++) if(board[Y][X]===target) board[Y][X]=null; toast('All '+target+' cleared'); resolveMatches();
+    }
+    boosters.mode=null; [...document.querySelectorAll('.btn')].forEach(b=>b.dataset.on=0);
+  }
+
+  function shuffle(){
+    const flat=[]; for(let y=0;y<N;y++) for(let x=0;x<N;x++) flat.push(board[y][x]);
+    for(let i=flat.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [flat[i],flat[j]]=[flat[j],flat[i]] }
+    for(let y=0,k=0;y<N;y++) for(let x=0;x<N;x++,k++) board[y][x]=flat[k];
+    draw();
+  }
+
+  // --- FX ---
+  function spawnCandyBlast(x,y,emoji){
+    const cx=(x+.5)*S, cy=(y+.5)*S; const start=Date.now();
+    // FIX: previously used `ctx.fillStyle:typeColor[...]` which is invalid JS and caused a SyntaxError
+    anims.push(t=>{ const k=(t-start)/300; if(k>=1) return false; ctx.save(); ctx.translate(cx,cy); ctx.globalAlpha=1-k; ctx.fillStyle = typeColor[emoji]; ctx.beginPath(); ctx.arc(0,0,S*(.4+.4*k),0,Math.PI*2); ctx.strokeStyle= '#fff'; ctx.lineWidth=1; ctx.stroke(); ctx.restore(); return true });
+    for(let i=0;i<12;i++)
+      particle(canvas,ctx,cx,cy,typeColor[emoji]);
+  }
+  function spawnBombBlast(x,y){ const cx=(x+.5)*S, cy=(y+.5)*S; for(let i=0;i<40;i++) particle(canvas,ctx,cx,cy,'#FFD400') }
+  function spawnRowBlast(y){ for(let i=0;i<40;i++) particle(canvas,ctx,W/2,(y+.5)*S,'#19C2FF') }
+  function spawnColBlast(x){ for(let i=0;i<40;i++) particle(canvas,ctx,(x+.5)*S,H/2,'#19C2FF') }
+  function particle(c,ct,x,y,color){ const a={x,y,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*6,life:400,color}; anims.push(t=>{ a.life-=16; a.x+=a.vx; a.y+=a.vy; ct.fillStyle=a.color; ct.globalAlpha=Math.max(0,a.life/400); ct.fillRect(a.x,a.y,3,3); return a.life>0 }) }
+
+  // Confetti on win (full-screen canvas)
+  function confetti(){ const total=160, g=fctx; const parts=[]; for(let i=0;i<total;i++) parts.push({x:Math.random()*fx.width,y:-20-200*Math.random(),vy:2+Math.random()*4,rot:Math.random()*6.28,vr: (Math.random()-.5)*0.2,sz:4+Math.random()*6,color:['#FFD400','#19C2FF','#E24A4A','#62ff87'][Math.floor(Math.random()*4)]});
+    let t=0; function step(){ g.clearRect(0,0,fx.width,fx.height); parts.forEach(p=>{ p.y+=p.vy; p.rot+=p.vr; g.save(); g.translate(p.x,p.y); g.rotate(p.rot); g.fillStyle=p.color; g.fillRect(-p.sz/2,-p.sz/2,p.sz,p.sz); g.restore(); }); if((t+=16)<3000) requestAnimationFrame(step); else g.clearRect(0,0,fx.width,fx.height);} step(); }
+
+  function showClipBadge(name){ 
+    toast('◆ '+name); 
+    renderClipsList(); 
+    // Pulse the clips counter
+    const counter = document.getElementById('clips');
+    counter.style.transform = 'scale(1.3)';
+    counter.style.color = 'var(--good)';
+    setTimeout(()=>{
+      counter.style.transform = 'scale(1)';
+      counter.style.color = '';
+    }, 300);
+  }
+
+  // --- Final Cut Panel ---
+  const panel=document.getElementById('panel');
+  const clipsList=document.getElementById('clipsList');
+  document.getElementById('bFinal').addEventListener('click',openPanel);
+  const toolsEl=document.getElementById('tools');
+  const toggle=document.getElementById('toggleTools');
+  const setCollapsed=(v)=>{toolsEl.classList.toggle('collapsed',v); toggle.textContent=v?'Tools ▴':'Tools ▾'};
+  toggle.addEventListener('click',()=>setCollapsed(!toolsEl.classList.contains('collapsed')));
+  // Auto-collapse shortly after load to stay "out of the way"
+  setTimeout(()=>{setCollapsed(true); layout();},1200);
+  document.getElementById('renderBtn').addEventListener('click',()=>{
+    if(!ui.clips.length){toast('Collect clips by matching!'); return}
+    openPanel();
+  });
+  function openPanel(){ panel.classList.add('show'); renderClipsList(); }
+  panel.addEventListener('click',(e)=>{ if(e.target===panel) panel.classList.remove('show') });
+  // Reflow when opening/closing tools/panels
+  const mo = new MutationObserver(layout); mo.observe(toolsEl,{attributes:true,attributeFilter:['class']});
+
+  function renderClipsList(){
+    clipsList.innerHTML='';
+    ui.clips.forEach((frag,i)=>{
+      const el=document.createElement('div'); el.className='clip';
+      const h4 = document.createElement('h4');
+      h4.setAttribute('data-icon', frag.icon);
+      h4.innerHTML = `${String(i+1).padStart(2,'0')} — ${frag.title}`;
+      
+      const category = document.createElement('div');
+      category.style.cssText = 'font-size:10px;color:#888;margin:4px 0;text-transform:uppercase;letter-spacing:0.1em';
+      category.textContent = frag.category;
+      
+      const desc = document.createElement('div');
+      desc.style.cssText = 'font-size:11px;color:#aaa;margin:6px 0;line-height:1.4';
+      desc.textContent = frag.desc;
+      
+      const iframe = document.createElement('iframe');
+      iframe.src = embed(frag);
+      iframe.setAttribute('allow', 'autoplay; encrypted-media');
+      iframe.setAttribute('referrerpolicy', 'no-referrer');
+      
+      el.appendChild(h4);
+      el.appendChild(category);
+      el.appendChild(desc);
+      el.appendChild(iframe);
+      clipsList.appendChild(el);
+    })
+  }
+
+  // --- Leveling ---
+  document.getElementById('nextBtn').onclick=()=>{ ui.lvl++; ui.goalClips+=2; ui.clips.length=0; uiIds('lvl',ui.lvl); uiIds('clipGoal',ui.goalClips); uiIds('clips',0); document.getElementById('win').classList.remove('show'); shuffle(); };
+
+  // --- Mom Mode helpers ---
+  setInterval(()=>{ if(!ui.mom) return; if(!hasAnyMatch()){ shuffle(); toast('Helping…') }}, 4500);
+
+  // -----------------
+  // Simple Test Suite
+  // -----------------
+  function assert(cond,msg){ if(!cond) throw new Error(msg||'Assertion failed'); }
+  function cloneBoard(){ return board.map(row=>row.slice()); }
+  function setBoardByEmoji(fillEmoji){ for(let y=0;y<N;y++){ for(let x=0;x<N;x++){ board[y][x]=fillEmoji; } } }
+  function runTests(){
+    const savedUI={...ui}; const savedBoard=cloneBoard();
+    // 1) Matching detection (row of 3)
+    setBoardByEmoji('🍋'); board[0][0]='🍒'; board[0][1]='🍒'; board[0][2]='🍒';
+    assert(hasAnyMatch()===true,'hasAnyMatch should be true for horizontal triplet');
+
+    // 2) resolve scoring & clip collection on non-initial pass
+    ui.score=0; ui.clips=[]; resolveMatches(false);
+    assert(ui.score>=30,'Score should increase after clearing matches');
+    assert(ui.clips.length>=1,'Clip should be collected when a match clears');
+
+    // restore
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++) board[y][x]=savedBoard[y][x];
+    Object.assign(ui,savedUI);
+    draw();
+    console.log('%cTests passed','color:#0f0');
+  }
+
+  // Responsive layout
+  const wrap=document.querySelector('.canvas-wrap');
+  const hud=document.querySelector('header');
+  function layout(){
+    // Calculate available rectangle between header and toolbars
+    const topSpace = hud.offsetHeight + 12;
+    const bottomSpace = Math.max(toolsEl.offsetHeight, toggle.offsetHeight) + 16;
+    wrap.style.top = topSpace + 'px';
+    wrap.style.bottom = bottomSpace + 'px';
+    // Square size that fits in wrap
+    const availW = wrap.clientWidth - 12;
+    const availH = wrap.clientHeight - 12;
+    const size = Math.max(240, Math.min(720, Math.min(availW, availH)));
+    canvas.style.width = canvas.style.height = size + 'px';
+    canvas.width = canvas.height = size; // true pixels
+    fx.width = window.innerWidth; fx.height = window.innerHeight;
+    W = canvas.width; H = canvas.height; S = W/N;
+    draw();
+  }
+  window.addEventListener('resize', layout);
+  // Kickoff
+  fillBoard(); layout(); draw(); runTests();
+})();
+</script>
+</body>
+</html>

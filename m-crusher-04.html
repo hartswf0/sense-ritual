@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Matrix Editor: Film Assembly</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+
+        /* Bauhaus Color Palette - Subtle */
+        .color-1 { border-color: #FF6B6B; } /* Soft Red */
+        .color-2 { border-color: #4ECDC4; } /* Teal */
+        .color-3 { border-color: #FFE66D; } /* Soft Yellow */
+        .color-4 { border-color: #95E1D3; } /* Mint */
+        .color-5 { border-color: #F38181; } /* Coral */
+        .color-6 { border-color: #AA96DA; } /* Lavender */
+        .color-7 { border-color: #FCBAD3; } /* Pink */
+        .color-8 { border-color: #A8E6CF; } /* Sea Green */
+        .color-9 { border-color: #FFD3B6; } /* Peach */
+        .color-10 { border-color: #DCEDC1; } /* Light Green */
+        .color-11 { border-color: #FFA07A; } /* Light Salmon */
+        .color-12 { border-color: #98D8C8; } /* Turquoise */
+        .color-13 { border-color: #F7DC6F; } /* Light Gold */
+        .color-14 { border-color: #BB8FCE; } /* Purple */
+        .color-15 { border-color: #85C1E2; } /* Sky Blue */
+        .color-16 { border-color: #F8B88B; } /* Orange */
+        .color-17 { border-color: #BAE1FF; } /* Baby Blue */
+        .color-18 { border-color: #FFB3BA; } /* Light Pink */
+        .color-19 { border-color: #BAFFC9; } /* Pastel Green */
+        .color-20 { border-color: #C7CEEA; } /* Periwinkle */
+
+        /* Mobile-First Layout */
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
+        }
+
+        /* Header - Compact for Mobile */
+        .header {
+            background: #111;
+            border-bottom: 1px solid #333;
+            padding: 10px 12px;
+            flex-shrink: 0;
+        }
+        
+        @media (max-width: 640px) {
+            .header {
+                padding: 8px 12px;
+            }
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #fff;
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #999;
+        }
+
+        .stat-value {
+            color: #fff;
+        }
+
+        /* Sequence Counter - Prominent on Mobile */
+        .sequence-counter {
+            background: #1a1a1a;
+            padding: 6px 12px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 900;
+            color: #4ECDC4;
+        }
+
+        /* Main Grid - Scrollable */
+        .grid-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            padding: 2px;
+            min-height: 100%;
+        }
+
+        /* Tablet: 8 columns */
+        @media (max-width: 1024px) {
+            .grid-container {
+                grid-template-columns: repeat(8, 1fr);
+            }
+        }
+
+        /* Mobile landscape/larger phones: 6 columns */
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 2px;
+            }
+        }
+        
+        /* Mobile portrait: 5 columns */
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 1px;
+            }
+        }
+        
+        /* Very small screens: 4 columns minimum */
+        @media (max-width: 360px) {
+            .grid-container {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1px;
+            }
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #111;
+            border: 2px solid #333;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            overflow: hidden;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .cell.has-video {
+            border-width: 3px;
+        }
+        
+        @media (max-width: 768px) {
+            .cell {
+                border-width: 1px;
+            }
+            .cell.has-video {
+                border-width: 2px;
+            }
+        }
+
+        .cell.selected {
+            animation: selectPulse 0.3s ease;
+        }
+
+        @keyframes selectPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.9); }
+        }
+
+        /* Video Preview in Cell */
+        .cell-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .cell-color-bg {
+            position: absolute;
+            inset: 0;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .cell-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.95));
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 8px;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        @media (max-width: 768px) {
+            .cell-overlay {
+                padding: 4px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .cell-overlay {
+                padding: 3px;
+            }
+        }
+
+        .cell-icon {
+            font-size: 28px;
+            margin-bottom: 4px;
+            text-shadow: 0 2px 8px rgba(0,0,0,1);
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+        
+        @media (max-width: 768px) {
+            .cell-icon {
+                font-size: 18px;
+                margin-bottom: 2px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .cell-icon {
+                font-size: 16px;
+                margin-bottom: 1px;
+            }
+        }
+
+        .cell-title {
+            font-size: 10px;
+            font-weight: 900;
+            line-height: 1.2;
+            text-shadow: 0 2px 4px rgba(0,0,0,1);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            letter-spacing: 0.5px;
+        }
+        
+        @media (max-width: 768px) {
+            .cell-title {
+                font-size: 7px;
+                letter-spacing: 0.2px;
+                -webkit-line-clamp: 1;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .cell-title {
+                font-size: 6px;
+                letter-spacing: 0;
+            }
+        }
+
+        /* Sequence Bar - Fixed Bottom, Swipeable */
+        .sequence-bar {
+            background: #111;
+            border-top: 2px solid #333;
+            height: 100px;
+            flex-shrink: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+        
+        @media (max-width: 640px) {
+            .sequence-bar {
+                height: 90px;
+            }
+        }
+
+        .sequence-scroll {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            height: 100%;
+        }
+
+        .sequence-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .sequence-item {
+            min-width: 90px;
+            width: 90px;
+            height: 96px;
+            background: #1a1a1a;
+            border: 2px solid;
+            position: relative;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .sequence-item:active {
+            transform: scale(0.95);
+        }
+
+        .sequence-item iframe {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+
+        .sequence-number {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 900;
+            border-radius: 2px;
+        }
+
+        .sequence-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(255,0,0,0.9);
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 900;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Controls - Mobile Optimized */
+        .controls {
+            position: fixed;
+            bottom: 136px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .btn {
+            width: 48px;
+            height: 48px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border: 2px solid #4ECDC4;
+            color: #4ECDC4;
+            font-size: 20px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .btn:active {
+            transform: scale(0.9);
+            background: #4ECDC4;
+            color: #000;
+        }
+
+        /* Modal - Mobile Friendly */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #111;
+            border: 2px solid #4ECDC4;
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 4px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 900;
+            color: #4ECDC4;
+            margin-bottom: 16px;
+            letter-spacing: 2px;
+        }
+
+        .modal-body {
+            color: #ccc;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            background: #4ECDC4;
+            border: none;
+            color: #000;
+            font-weight: 900;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4ECDC4;
+            border-radius: 2px;
+        }
+
+        /* Tablet/Desktop adjustments */
+        @media (min-width: 641px) {
+            .header {
+                padding: 16px 24px;
+            }
+            
+            .title {
+                font-size: 16px;
+            }
+            
+            .stats {
+                font-size: 12px;
+            }
+            
+            .sequence-bar {
+                height: 140px;
+            }
+            
+            .sequence-item {
+                min-width: 110px;
+                width: 110px;
+                height: 116px;
+            }
+            
+            .controls {
+                bottom: 156px;
+                right: 20px;
+                gap: 10px;
+            }
+            
+            .btn {
+                width: 56px;
+                height: 56px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div class="title">MATRIX EDITOR</div>
+                <div class="stats">
+                    <div>CLIPS <span class="stat-value" id="clipCount">0</span></div>
+                </div>
+            </div>
+            <div class="sequence-counter" id="seqCounter">
+                TAP CELLS TO BUILD SEQUENCE: 0
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-wrapper">
+            <div class="grid-container" id="gridContainer"></div>
+        </div>
+
+        <!-- Sequence Bar -->
+        <div class="sequence-bar">
+            <div class="sequence-scroll" id="sequenceBar">
+                <div class="sequence-empty">
+                    Tap cells above to add clips →
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="btn" id="clearBtn" title="Clear">✕</button>
+        <button class="btn" id="exportBtn" title="Export">↓</button>
+        <button class="btn" id="helpBtn" title="Help">?</button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">HELP</div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn" id="modalClose">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🎬 Matrix Editor Loading...');
+
+        const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+        
+        // Color mapping for fragments
+        const COLORS = {
+            1: '#FF6B6B', 2: '#4ECDC4', 3: '#FFE66D', 4: '#95E1D3', 5: '#F38181',
+            6: '#AA96DA', 7: '#FCBAD3', 8: '#A8E6CF', 9: '#FFD3B6', 10: '#DCEDC1',
+            11: '#FFA07A', 12: '#98D8C8', 13: '#F7DC6F', 14: '#BB8FCE', 15: '#85C1E2',
+            16: '#F8B88B', 17: '#BAE1FF', 18: '#FFB3BA', 19: '#BAFFC9', 20: '#C7CEEA'
+        };
+        
+        function getColorForFragment(colorNum) {
+            return COLORS[colorNum] || '#4ECDC4';
+        }
+        
+        const FRAGMENTS = [
+            { id: 1, title: 'Family of Man', start: 27, end: 53, icon: '◯', color: 1 },
+            { id: 2, title: 'Individual Self', start: 67, end: 78, icon: '◆', color: 2 },
+            { id: 3, title: 'Unreal Fairyland', start: 197, end: 204, icon: '◇', color: 3 },
+            { id: 4, title: 'Grand Stories', start: 143, end: 148, icon: '◈', color: 4 },
+            { id: 5, title: 'Societal Boom', start: 230, end: 237, icon: '◊', color: 5 },
+            { id: 6, title: 'Crack Epidemic', start: 291, end: 300, icon: '◉', color: 6 },
+            { id: 7, title: 'Mass Incarceration', start: 1070, end: 1078, icon: '◎', color: 7 },
+            { id: 8, title: 'Saudi Dream', start: 379, end: 384, icon: '○', color: 8 },
+            { id: 9, title: 'Zubaydah Diary', start: 1166, end: 1172, icon: '●', color: 9 },
+            { id: 10, title: 'Jihad Disintegration', start: 1237, end: 1248, icon: '◐', color: 10 },
+            { id: 11, title: 'Perpetual Now', start: 1313, end: 1320, icon: '◑', color: 11 },
+            { id: 12, title: 'CIA Interrogation', start: 2604, end: 2616, icon: '◒', color: 12 },
+            { id: 13, title: 'Godzilla Fear', start: 2664, end: 2675, icon: '◓', color: 13 },
+            { id: 14, title: 'Chaos Theory', start: 664, end: 669, icon: '◔', color: 14 },
+            { id: 15, title: 'Complexity Theory', start: 738, end: 751, icon: '◕', color: 15 },
+            { id: 16, title: 'Neural Networks', start: 3595, end: 3606, icon: '◖', color: 16 },
+            { id: 17, title: 'Algorithms', start: 3650, end: 3670, icon: '◗', color: 17 },
+            { id: 18, title: 'Surveillance', start: 3700, end: 3720, icon: '◘', color: 18 },
+            { id: 19, title: 'Filter Bubbles', start: 3750, end: 3770, icon: '◙', color: 19 },
+            { id: 20, title: 'Attention Economy', start: 3800, end: 3820, icon: '◚', color: 20 }
+        ];
+
+        const state = {
+            cells: [],
+            sequence: [],
+            selectedCell: null
+        };
+
+        function buildVideoEmbed(fragment) {
+            return `https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${fragment.start}&end=${fragment.end}&autoplay=1&mute=1&loop=1&playlist=${YOUTUBE_VIDEO_ID}&controls=0&modestbranding=1`;
+        }
+
+        function init() {
+            console.log('🎮 Initializing grid...');
+            const container = document.getElementById('gridContainer');
+            
+            // Create cells (50 on desktop, auto-adjust on mobile)
+            const totalCells = window.innerWidth <= 640 ? 40 : 50;
+            
+            for (let i = 0; i < totalCells; i++) {
+                const fragment = FRAGMENTS[i % FRAGMENTS.length];
+                
+                const cell = document.createElement('div');
+                cell.className = `cell color-${fragment.color}`;
+                cell.dataset.index = i;
+                
+                const color = getColorForFragment(fragment.color);
+                
+                cell.innerHTML = `
+                    <div class="cell-color-bg" style="background: ${color}"></div>
+                    <div class="loading">···</div>
+                    <div class="cell-overlay">
+                        <div class="cell-icon" style="color: ${color}">${fragment.icon}</div>
+                        <div class="cell-title">${fragment.title}</div>
+                    </div>
+                `;
+                
+                cell.addEventListener('click', () => {
+                    console.log('📌 Cell clicked:', i, fragment.title);
+                    selectCell(i, fragment);
+                });
+                
+                container.appendChild(cell);
+                state.cells.push({ element: cell, fragment, loaded: false });
+                
+                // Stagger video loading for performance
+                setTimeout(() => loadCellVideo(i), 50 * i);
+            }
+            
+            setupControls();
+            updateStats();
+        }
+
+        function loadCellVideo(index) {
+            const cell = state.cells[index];
+            if (!cell || cell.loaded) return;
+            
+            console.log('🎥 Loading video for cell', index);
+            
+            const iframe = document.createElement('iframe');
+            iframe.className = 'cell-video';
+            iframe.src = buildVideoEmbed(cell.fragment);
+            iframe.frameBorder = '0';
+            iframe.allow = 'autoplay; encrypted-media';
+            iframe.loading = 'lazy';
+            
+            const loading = cell.element.querySelector('.loading');
+            if (loading) loading.remove();
+            
+            cell.element.insertBefore(iframe, cell.element.firstChild);
+            cell.element.classList.add('has-video');
+            cell.loaded = true;
+        }
+
+        function selectCell(index, fragment) {
+            console.log('✅ Adding to sequence:', fragment.title);
+            
+            // Visual feedback
+            const cell = state.cells[index];
+            cell.element.classList.add('selected');
+            setTimeout(() => cell.element.classList.remove('selected'), 300);
+            
+            // Add to sequence
+            state.sequence.push({ ...fragment, cellIndex: index });
+            renderSequence();
+            updateStats();
+            
+            // Scroll sequence bar to end
+            const bar = document.getElementById('sequenceBar');
+            setTimeout(() => {
+                bar.parentElement.scrollLeft = bar.scrollWidth;
+            }, 100);
+        }
+
+        function renderSequence() {
+            const bar = document.getElementById('sequenceBar');
+            
+            if (state.sequence.length === 0) {
+                bar.innerHTML = '<div class="sequence-empty">Tap cells above to add clips →</div>';
+                return;
+            }
+            
+            bar.innerHTML = '';
+            
+            state.sequence.forEach((item, idx) => {
+                const seqItem = document.createElement('div');
+                seqItem.className = `sequence-item color-${item.color}`;
+                
+                const iframe = document.createElement('iframe');
+                iframe.src = buildVideoEmbed(item);
+                iframe.frameBorder = '0';
+                iframe.allow = 'autoplay; encrypted-media';
+                
+                const number = document.createElement('div');
+                number.className = 'sequence-number';
+                number.textContent = idx + 1;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'sequence-remove';
+                removeBtn.textContent = '✕';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeFromSequence(idx);
+                };
+                
+                seqItem.appendChild(iframe);
+                seqItem.appendChild(number);
+                seqItem.appendChild(removeBtn);
+                bar.appendChild(seqItem);
+            });
+            
+            console.log('📊 Sequence updated:', state.sequence.length, 'clips');
+        }
+
+        function removeFromSequence(index) {
+            console.log('🗑️ Removing from sequence:', index);
+            state.sequence.splice(index, 1);
+            renderSequence();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('clipCount').textContent = FRAGMENTS.length;
+            document.getElementById('seqCounter').textContent = 
+                state.sequence.length > 0 
+                    ? `SEQUENCE: ${state.sequence.length} CLIPS` 
+                    : 'TAP CELLS TO BUILD SEQUENCE: 0';
+        }
+
+        function setupControls() {
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                if (state.sequence.length === 0) return;
+                if (confirm('Clear entire sequence?')) {
+                    console.log('🧹 Clearing sequence');
+                    state.sequence = [];
+                    renderSequence();
+                    updateStats();
+                }
+            });
+            
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                if (state.sequence.length === 0) {
+                    showModal('NO CLIPS', '<p style="text-align:center;">Add clips to sequence before exporting!</p>');
+                    return;
+                }
+                
+                console.log('💾 Exporting sequence...');
+                exportSequence();
+            });
+            
+            document.getElementById('helpBtn').addEventListener('click', () => {
+                showModal('MATRIX EDITOR', `
+                    <p><strong>Documentary Assembly Interface</strong></p>
+                    <br>
+                    <p><strong>How to use:</strong></p>
+                    <ul style="margin-left: 20px; line-height: 2;">
+                        <li>Tap any cell to preview and add clip</li>
+                        <li>Build your sequence in order (bottom bar)</li>
+                        <li>Swipe bottom bar to view full sequence</li>
+                        <li>Tap ✕ on clips to remove</li>
+                        <li>Tap ↓ to export final sequence</li>
+                        <li>Each color represents a different theme</li>
+                        <li>From "Can't Get You Out of My Head" by Adam Curtis</li>
+                    </ul>
+                `);
+            });
+            
+            document.getElementById('modalClose').addEventListener('click', () => {
+                document.getElementById('modal').classList.remove('show');
+            });
+        }
+
+        function showModal(title, body) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function exportSequence() {
+            const totalDuration = state.sequence.reduce((sum, s) => sum + (s.end - s.start), 0);
+            
+            const data = {
+                title: 'Matrix Editor Sequence',
+                timestamp: new Date().toISOString(),
+                totalClips: state.sequence.length,
+                totalDuration: totalDuration,
+                formattedDuration: formatDuration(totalDuration),
+                clips: state.sequence.map((s, idx) => ({
+                    order: idx + 1,
+                    title: s.title,
+                    icon: s.icon,
+                    color: s.color,
+                    start: s.start,
+                    end: s.end,
+                    duration: s.end - s.start,
+                    cellIndex: s.cellIndex
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `matrix_sequence_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('✅ Export complete:', data);
+            showModal('EXPORT COMPLETE', `
+                <p style="text-align:center; font-size: 16px; margin-bottom: 16px;">
+                    <strong>${state.sequence.length} clips</strong><br>
+                    ${formatDuration(totalDuration)} total runtime
+                </p>
+                <p style="text-align:center; color: #4ECDC4;">
+                    JSON file downloaded!
+                </p>
+            `);
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Boot
+        init();
+        console.log('✅ Matrix Editor Ready');
+    </script>
+</body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Canvas Crush — Mom's Favorite Part</title>
+  <style>
+    :root{
+      --bg:#0b0b10; --ui:#11161f; --accent:#ffd400; --line:#2a3140; --good:#00e676; --bad:#ff5252; --text:#e8eef7;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;}
+    .wrap{display:flex; flex-direction:column; height:100%;}
+    header{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:linear-gradient(#151b27,#0f1420); border-bottom:1px solid #0b0f18; position:relative;}
+    header .brand{font-weight:800; letter-spacing:.06em; font-size:14px}
+    header .stats{display:flex; gap:10px; font-size:12px}
+    header .pill{background:#0f1827; border:1px solid #232c3b; padding:6px 8px; border-radius:999px; display:flex; align-items:center; gap:6px}
+
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center;}
+    canvas{background:#0d111a; border:1px solid #1a2232; border-radius:16px; touch-action:none; box-shadow:0 10px 30px rgba(0,0,0,.35);}   
+
+    .toolbar{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; padding:10px; background:#0f1420; border-top:1px solid #0b0f18;}
+    .btn{appearance:none; border:none; color:var(--text); background:#101826; border:1px solid #223049; padding:8px 6px; border-radius:12px; font-size:12px; display:flex; align-items:center; justify-content:center; min-height:42px}
+    .btn:active{transform:translateY(1px)}
+    .btn .label{opacity:.95; font-weight:600; letter-spacing:.02em}
+    .active{outline:2px solid var(--accent); box-shadow:0 0 0 2px rgba(255,212,0,.2) inset}
+
+    .modal{position:fixed; inset:0; background:rgba(0,0,8,.68); display:none; align-items:center; justify-content:center; z-index:10}
+    .modal.show{display:flex}
+    .card{background:linear-gradient(180deg,#151b27,#0d101a); border:1px solid #223049; border-radius:18px; padding:18px; width:min(92vw,420px); text-align:center}
+    .title{font-size:20px; font-weight:800; letter-spacing:.03em;}
+    .subtitle{opacity:.8; font-size:13px; margin-top:6px}
+    .actions{margin-top:16px; display:flex; gap:10px; justify-content:center}
+    .primary{background:var(--accent); color:#111; border:none; padding:10px 14px; border-radius:12px; font-weight:700}
+    .ghost{background:transparent; border:1px solid #303a52; color:var(--text); padding:10px 14px; border-radius:12px}
+
+    .toast{position:fixed; bottom:88px; left:50%; transform:translateX(-50%); background:#0f1827; border:1px solid #223049; color:#e8eef7; padding:8px 12px; border-radius:999px; font-size:12px; opacity:0; pointer-events:none; transition:opacity .25s ease;}
+    .toast.show{opacity:1}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">CANVAS CRUSH</div>
+    <div class="stats">
+      <div class="pill" id="lvlP"><span id="levelTxt">LVL 1</span></div>
+      <div class="pill">Score <span id="scoreTxt">0</span></div>
+      <div class="pill">Target <span id="targetTxt">500</span></div>
+      <div class="pill">Moves <span id="movesTxt">30</span></div>
+    </div>
+  </header>
+  <div id="gameArea">
+    <canvas id="game" width="360" height="480"></canvas>
+  </div>
+  <div class="toolbar">
+    <button class="btn" data-tool="swap"><span class="label">Swap</span></button>
+    <button class="btn" data-tool="hammer"><span class="label">Hammer</span></button>
+    <button class="btn" data-tool="bomb"><span class="label">Bomb</span></button>
+    <button class="btn" data-tool="stripe"><span class="label">Stripe</span></button>
+    <button class="btn" data-tool="shuffle"><span class="label">Shuffle</span></button>
+  </div>
+</div>
+<div class="modal" id="winModal">
+  <div class="card">
+    <div class="title">Victory</div>
+    <div class="subtitle">Target reached. Candies explode.</div>
+    <div class="actions">
+      <button class="primary" id="nextLevelBtn">Next Level</button>
+      <button class="ghost" id="replayBtn">Replay</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">Hammer ready — tap any candy</div>
+
+<div id="timeline" style="position:fixed;bottom:0;left:0;right:0;background:#000000f8;border-top:2px solid var(--accent);padding:12px;display:none;backdrop-filter:blur(12px);max-height:140px;overflow-y:auto">
+  <div style="font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;opacity:0.6;margin-bottom:8px;color:var(--accent)">Assembled Fragments</div>
+  <div id="fragmentsList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+</div>
+
+<script>
+(function(){
+  console.log('🎮 Canvas Crush Loading...');
+  
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const area = document.getElementById('gameArea');
+  const winModal = document.getElementById('winModal');
+  const toast = document.getElementById('toast');
+  const nextLevelBtn = document.getElementById('nextLevelBtn');
+  const replayBtn = document.getElementById('replayBtn');
+  const scoreTxt = document.getElementById('scoreTxt');
+  const targetTxt = document.getElementById('targetTxt');
+  const movesTxt = document.getElementById('movesTxt');
+  const levelTxt = document.getElementById('levelTxt');
+
+  // ---- GAME CONFIG ----
+  const GRID_SIZE = 8; // 8x8
+  const COLORS = ['#ff476f','#60e1ff','#ffd166','#8aff80','#bd9cff','#ff9ecb'];
+  const BOOSTERS = { swap:'swap', hammer:'hammer', bomb:'bomb', stripe:'stripe', shuffle:'shuffle'};
+  const LEVELS = [
+    {target:500, moves:30, candies:6},
+    {target:1200, moves:28, candies:6},
+    {target:2200, moves:26, candies:6},
+    {target:3500, moves:24, candies:6},
+    {target:5200, moves:22, candies:6}
+  ];
+
+  // ---- DOCUMENTARY FRAGMENTS (from matrix-editor) ----
+  const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+  const STORY_FRAGMENTS = [
+    { id: 'fom-exhibition-1950s', title: 'Family of Man', category: 'Media Apparatus', desc: 'A new way of seeing the world, an alternative to the horrors of Nazism and communism.', icon: '◯', start: 27, end: 53 },
+    { id: 'bayer-individual-self', title: 'Individual Self', category: 'Core Concept', desc: 'At the center of that world is the individual self, making their own story.', icon: '◐', start: 67, end: 78 },
+    { id: 'afeni-fairyland-conceal', title: 'Unreal Fairyland', category: 'Systemic Critique', desc: 'The world that concealed the harsh reality of power.', icon: '◑', start: 197, end: 204 },
+    { id: 'tupac-grand-stories', title: 'Grand Stories', category: 'Core Concept', desc: 'Believed deeply in their power to move people and inspire change.', icon: '◒', start: 143, end: 148 },
+    { id: 'society-boom-q', title: 'Societal Boom', category: 'Systemic Control', desc: 'Society lets you go far, but as soon as you ask questions, boom.', icon: '◓', start: 230, end: 237 },
+    { id: 'crack-epidemic-afeni-fall', title: 'Crack Epidemic', category: 'Systemic Event', desc: 'Crack swept through black communities, Afeni became addicted.', icon: '◔', start: 291, end: 300 }
+  ];
+  
+  function buildVideoEmbed(fragment) {
+    return `https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${fragment.start}&end=${fragment.end}&controls=0&modestbranding=1&fs=0&iv_load_policy=3&autoplay=1&mute=1&loop=1&playlist=${YOUTUBE_VIDEO_ID}`;
+  }
+
+  const videos = [];
+  const iframes = [];
+  let collectedFragments = [];
+  
+  function setupVideos(){
+    console.log('Setting up YouTube iframe videos...');
+    for(let i=0;i<COLORS.length;i++){
+      const fragment = STORY_FRAGMENTS[i % STORY_FRAGMENTS.length];
+      const iframe = document.createElement('iframe');
+      iframe.width = 640;
+      iframe.height = 360;
+      iframe.src = buildVideoEmbed(fragment);
+      iframe.frameBorder = 0;
+      iframe.allow = 'autoplay; encrypted-media';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframes[i] = iframe;
+      console.log(`Fragment ${i}: ${fragment.title} (${fragment.start}s-${fragment.end}s)`);
+    }
+    console.log('YouTube fragments loaded:', STORY_FRAGMENTS.length);
+  }
+
+  // Optional: Call this with garden MEDIA array to map tiles to those videos
+  window.loadGardenMedia = function(mediaList){
+    mediaList.slice(0, COLORS.length).forEach((m, i)=>{
+      const el = document.getElementById('v'+i);
+      el.src = m.file; el.play().catch(()=>{});
+      videos[i] = el;
+    });
+  }
+
+  // ---- STATE ----
+  let cell = 44;
+  let offsetX = 0, offsetY = 0;
+  let grid = [];
+  let particles = [];
+  let score = 0, moves = 0, target = 500, level = 0;
+  let selected = null; // {r,c}
+  let busy = false;
+  let tool = BOOSTERS.swap;
+
+  const rand = (n)=> Math.floor(Math.random()*n);
+  function assertGrid(where){
+    const ok = Array.isArray(grid) && grid.length===GRID_SIZE && grid.every(row=>Array.isArray(row) && row.length===GRID_SIZE);
+    if(!ok){ console.warn('[Assert]', where, 'grid malformed', grid); }
+    return ok;
+  }
+
+  // ---- SETUP ----
+  function resize(){
+    const pad = 16; 
+    let w = Math.max(200, area.clientWidth - pad*2);
+    let h = Math.max(200, area.clientHeight - pad*2);
+    const size = Math.min(w, h);
+    canvas.style.width = size+'px';
+    canvas.style.height = size+'px';
+    canvas.width = size * devicePixelRatio;
+    canvas.height = size * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    cell = Math.max(1, Math.floor(size / GRID_SIZE));
+    offsetX = (size - cell*GRID_SIZE)/2;
+    offsetY = (size - cell*GRID_SIZE)/2;
+    draw();
+  }
+  window.addEventListener('resize', resize);
+
+  function initLevel(idx){
+    console.log('🚀 Initializing level', idx+1);
+    level = idx;
+    const L = LEVELS[level % LEVELS.length];
+    target = L.target; moves = L.moves; score = 0;
+    collectedFragments = [];
+    levelTxt.textContent = 'LVL '+(level+1);
+    targetTxt.textContent = target; movesTxt.textContent = moves; scoreTxt.textContent = score;
+    grid = makeGrid(L.candies);
+    clearCombos(true); 
+    winModal.classList.remove('show');
+    updateTimeline();
+    assertGrid('initLevel');
+    draw();
+  }
+
+  function makeGrid(candyCount){
+    console.log('🎲 Generating grid with', candyCount, 'candy types');
+    const g = Array.from({length:GRID_SIZE},()=>Array(GRID_SIZE).fill(0));
+    for(let r=0;r<GRID_SIZE;r++){
+      for(let c=0;c<GRID_SIZE;c++){
+        do{ g[r][c] = rand(candyCount); } while(causesMatch(g,r,c));
+      }
+    }
+    return g;
+  }
+
+  function causesMatch(g,r,c){
+    const v = g[r][c];
+    if(c>=2 && g[r][c-1]===v && g[r][c-2]===v) return true;
+    if(r>=2 && g[r-1][c]===v && g[r-2][c]===v) return true;
+    return false;
+  }
+
+  // ---- DRAW ----
+  function draw(){
+    const size = cell*GRID_SIZE; 
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(!grid || grid.length!==GRID_SIZE){ return; }
+
+    // board backdrop
+    roundedRect(offsetX-6,offsetY-6,size+12,size+12,16,'#0a0e16','#0a0e16');
+
+    for(let r=0;r<GRID_SIZE;r++){
+      const row = grid[r]; if(!row){ continue; }
+      for(let c=0;c<GRID_SIZE;c++){
+        const x=offsetX+c*cell, y=offsetY+r*cell;
+        // tile base
+        roundedRect(x+2,y+2,cell-4,cell-4,10,'#0f1827','#1a2232');
+        const id = row[c]; if(id==null) continue;
+        // video layer clipped to rounded square
+        const clipX = x+6, clipY=y+6, clipS=cell-12;
+        ctx.save();
+        roundPath(clipX, clipY, clipS, clipS, 10);
+        ctx.clip();
+        const vid = videos[id];
+        if(vid && vid.readyState>=2 && vid.videoWidth>0){
+          // cover fit
+          const vw=vid.videoWidth, vh=vid.videoHeight;
+          const scale=Math.max(clipS/vw, clipS/vh);
+          const dw=vw*scale, dh=vh*scale;
+          const dx=clipX+(clipS-dw)/2, dy=clipY+(clipS-dh)/2;
+          try{ 
+            ctx.drawImage(vid, dx, dy, dw, dh); 
+          }catch(e){
+            console.warn(`Failed to draw video ${id}:`, e);
+          }
+        } else {
+          // fallback color (video not ready)
+          ctx.fillStyle = COLORS[id];
+          ctx.fillRect(clipX, clipY, clipS, clipS);
+        }
+        ctx.restore();
+
+        if(selected && selected.r===r && selected.c===c){
+          ctx.lineWidth=2;ctx.strokeStyle='#ffd400';
+          ctx.strokeRect(x+3,y+3,cell-6,cell-6);
+        }
+      }
+    }
+
+    // particles
+    for(const p of particles){
+      ctx.globalAlpha = Math.max(p.life,0);
+      ctx.fillStyle = p.col || '#fff';
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+
+  function roundPath(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function roundedRect(x,y,w,h,r,fill,stroke){
+    roundPath(x,y,w,h,r);
+    if(fill){ctx.fillStyle=fill;ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
+  }
+
+  // ---- INPUT ----
+  const buttons = Array.from(document.querySelectorAll('.btn'));
+  buttons.forEach(b=>{
+    b.addEventListener('click',()=>{
+      console.log('🔧 Tool selected:', b.dataset.tool);
+      buttons.forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      tool = b.dataset.tool;
+      if(tool==='hammer') showToast('Hammer ready — tap any candy');
+      if(tool==='bomb') showToast('Bomb: clears 3×3');
+      if(tool==='stripe') showToast('Stripe: tap to clear row/col');
+      if(tool==='shuffle') showToast('Shuffle board');
+      if(tool==='swap') showToast('Tap two candies to swap');
+    });
+  });
+  if(buttons[0]) buttons[0].classList.add('active');
+
+  function cellFromClient(x,y){
+    const rect = canvas.getBoundingClientRect();
+    const cx = (x-rect.left), cy=(y-rect.top);
+    const c = Math.floor((cx-offsetX)/cell), r=Math.floor((cy-offsetY)/cell);
+    if(r<0||c<0||r>=GRID_SIZE||c>=GRID_SIZE) return null; else return {r,c};
+  }
+
+  canvas.addEventListener('pointerdown', e=>{
+    canvas.setPointerCapture(e.pointerId);
+    handleTap(e.clientX,e.clientY);
+  });
+
+  function handleTap(x,y){
+    if(busy) { console.log('⏸️ Busy - ignoring tap'); return; }
+    if(!assertGrid('tap')) return;
+    const cc = cellFromClient(x,y); 
+    if(!cc) { console.log('❌ Tap outside grid'); return; }
+    console.log('👆 Tap at cell:', cc, 'tool:', tool);
+
+    if(tool===BOOSTERS.swap){
+      console.log('🎮 Swap mode - clicked:', cc, 'selected:', selected);
+      if(!selected){ 
+        selected = cc; 
+        console.log('✅ First candy selected:', cc);
+        draw(); 
+        return; 
+      }
+      if(selected && (selected.r!==cc.r || selected.c!==cc.c)){
+        console.log('✅ Second candy selected, attempting swap');
+        trySwap(selected, cc);
+        selected = null;
+      } else {
+        console.log('⚠️ Same candy clicked, deselecting');
+        selected = null;
+        draw();
+      }
+    } else if(tool===BOOSTERS.hammer){
+      removeAt(cc.r,cc.c, true); consumeMove();
+    } else if(tool===BOOSTERS.bomb){
+      bombAt(cc.r,cc.c); consumeMove();
+    } else if(tool===BOOSTERS.stripe){
+      const rect = canvas.getBoundingClientRect();
+      const gx = offsetX + cc.c*cell + cell/2; const gy = offsetY + cc.r*cell + cell/2;
+      const dx = (x-rect.left)-gx; const dy=(y-rect.top)-gy;
+      if(Math.abs(dx)>Math.abs(dy)) clearRow(cc.r); else clearCol(cc.c);
+      consumeMove();
+    } else if(tool===BOOSTERS.shuffle){
+      shuffleBoard(); consumeMove();
+    }
+    draw();
+  }
+
+  // ---- GAMEPLAY ----
+  function trySwap(a,b){
+    console.log('🔄 Trying swap:', a, b);
+    if(Math.abs(a.r-b.r)+Math.abs(a.c-b.c)!==1) { 
+      console.log('❌ Not adjacent');
+      showToast('Pick adjacent candies'); draw(); return; 
+    }
+    swap(a,b);
+    const combos = findCombos();
+    console.log('🎯 Combos found:', combos.length, combos);
+    if(combos.length===0){ 
+      console.log('↩️ No match - reverting swap');
+      swap(a,b); wobble(b); return; 
+    }
+    consumeMove();
+    resolveCombos(combos);
+  }
+
+  function swap(a,b){
+    console.log('💱 Swapping', `[${a.r},${a.c}]=${grid[a.r][a.c]}`, 'with', `[${b.r},${b.c}]=${grid[b.r][b.c]}`);
+    const t=grid[a.r][a.c]; 
+    grid[a.r][a.c]=grid[b.r][b.c]; 
+    grid[b.r][b.c]=t; 
+    draw();
+  }
+
+  function findCombos(){
+    const out=[]; const used = Array.from({length:GRID_SIZE},()=>Array(GRID_SIZE).fill(false));
+    
+    // Check horizontal
+    for(let r=0;r<GRID_SIZE;r++){
+      let run=1; 
+      for(let c=1;c<=GRID_SIZE;c++){
+        const same = c<GRID_SIZE && grid[r][c]===grid[r][c-1];
+        if(same) run++; 
+        else { 
+          if(run>=3){ 
+            console.log(`➡️ H-combo at row ${r}, cols ${c-run} to ${c-1}, color ${grid[r][c-1]}`);
+            for(let k=c-run;k<c;k++){out.push({r,c:k}); used[r][k]=true;} 
+          } 
+          run=1; 
+        }
+      }
+    }
+    
+    // Check vertical
+    for(let c=0;c<GRID_SIZE;c++){
+      let run=1; 
+      for(let r=1;r<=GRID_SIZE;r++){
+        const same = r<GRID_SIZE && grid[r][c]===grid[r-1][c];
+        if(same) run++; 
+        else { 
+          if(run>=3){ 
+            console.log(`⬇️ V-combo at col ${c}, rows ${r-run} to ${r-1}, color ${grid[r-1][c]}`);
+            for(let k=r-run;k<r;k++){ if(!used[k][c]) out.push({r:k,c}); } 
+          } 
+          run=1; 
+        }
+      }
+    }
+    
+    console.log(`📊 Total combos found: ${out.length}`);
+    return out;
+  }
+
+  function resolveCombos(combos){
+    console.log('💥 Resolving combos:', combos.length);
+    busy=true;
+    for(const {r,c} of combos){ removeAt(r,c, false); }
+    setTimeout(()=>{ dropAndFill();
+      const next = findCombos();
+      if(next.length){ 
+        console.log('🔁 Chain reaction!', next.length, 'more combos');
+        resolveCombos(next); 
+      }
+      else { 
+        console.log('✔️ No more combos - ready for input');
+        busy=false; draw(); checkWin(); 
+      }
+    }, 180);
+  }
+
+  function removeAt(r,c, bonus){
+    if(!inBounds(r,c)) return;
+    const id = grid[r][c]; if(id==null) return;
+    score += bonus? 30: 10; scoreTxt.textContent = score;
+    console.log(`💎 Removed [${r},${c}] color ${id}, score: ${score}`);
+    
+    // Collect fragment
+    const fragment = STORY_FRAGMENTS[id % STORY_FRAGMENTS.length];
+    if(!collectedFragments.find(f=>f.id===fragment.id)){
+      collectedFragments.push(fragment);
+      console.log(`📼 Collected fragment: ${fragment.title}`);
+      showToast(`Collected: ${fragment.icon} ${fragment.title}`);
+      updateTimeline();
+    }
+    
+    spawnParticles(r,c,COLORS[id] || '#fff');
+    grid[r][c] = null; 
+  }
+  
+  function updateTimeline(){
+    const timeline = document.getElementById('timeline');
+    const list = document.getElementById('fragmentsList');
+    
+    if(collectedFragments.length === 0){
+      timeline.style.display = 'none';
+      return;
+    }
+    
+    timeline.style.display = 'block';
+    list.innerHTML = '';
+    
+    collectedFragments.forEach(frag => {
+      const div = document.createElement('div');
+      div.style.cssText = 'background:#131b2a;border:2px solid #2c3649;padding:8px 12px;border-radius:8px;font-size:12px;cursor:pointer;transition:all 0.3s';
+      div.innerHTML = `<span style="font-size:16px;margin-right:6px">${frag.icon}</span><span style="font-weight:600">${frag.title}</span><span style="opacity:0.6;font-size:10px;margin-left:6px">${frag.category}</span>`;
+      div.onmouseover = () => div.style.borderColor = '#ffd400';
+      div.onmouseout = () => div.style.borderColor = '#2c3649';
+      div.onclick = () => {
+        console.log('Playing fragment:', frag.title);
+        window.open(`https://www.youtube.com/watch?v=${YOUTUBE_VIDEO_ID}&t=${frag.start}s`, '_blank');
+      };
+      list.appendChild(div);
+    });
+  }
+
+  function bombAt(r,c){
+    console.log('💣 Bomb at', r, c);
+    for(let rr=r-1;rr<=r+1;rr++) for(let cc=c-1;cc<=c+1;cc++) if(inBounds(rr,cc)) removeAt(rr,cc,true);
+    dropAndFill();
+  }
+  function clearRow(r){ 
+    console.log('➡️ Clearing row', r);
+    for(let c=0;c<GRID_SIZE;c++) removeAt(r,c,true); dropAndFill(); 
+  }
+  function clearCol(c){ 
+    console.log('⬇️ Clearing col', c);
+    for(let r=0;r<GRID_SIZE;r++) removeAt(r,c,true); dropAndFill(); 
+  }
+  function shuffleBoard(){
+    console.log('🔀 Shuffling board');
+    const flat = [];
+    for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]!=null) flat.push(grid[r][c]);
+    for(let i=flat.length-1;i>0;i--){ const j=rand(i+1); [flat[i],flat[j]]=[flat[j],flat[i]]; }
+    let k=0; 
+    for(let r=0;r<GRID_SIZE;r++){
+      for(let c=0;c<GRID_SIZE;c++){
+        grid[r][c] = (k<flat.length) ? flat[k++] : rand(COLORS.length);
+      }
+    }
+    if(findCombos().length===0) shuffleBoard();
+    draw();
+  }
+
+  function inBounds(r,c){ return r>=0 && c>=0 && r<GRID_SIZE && c<GRID_SIZE; }
+
+  function dropAndFill(){
+    console.log('⬇️ Dropping and filling');
+    for(let c=0;c<GRID_SIZE;c++){
+      let write = GRID_SIZE-1;
+      for(let r=GRID_SIZE-1;r>=0;r--){
+        if(grid[r][c]!=null){ grid[write][c]=grid[r][c]; if(write!==r) grid[r][c]=null; write--; }
+      }
+      for(let r=write;r>=0;r--){ grid[r][c]=rand(COLORS.length); }
+    }
+    draw();
+  }
+
+  function clearCombos(seed){
+    let combos = findCombos();
+    if(seed){
+      while(combos.length){
+        console.log('🔁 Reseeding to remove initial matches');
+        for(const {r,c} of combos) grid[r][c]=rand(COLORS.length);
+        combos = findCombos();
+      }
+    }
+  }
+
+  function wobble(){ showToast('No match — try another'); }
+
+  function consumeMove(){
+    moves--; movesTxt.textContent=moves; 
+    console.log('🎯 Move consumed, remaining:', moves);
+    if(moves<=0) { gameOver(); }
+  }
+
+  function checkWin(){
+    if(score>=target){
+      console.log('🎉 VICTORY! Score:', score, 'Target:', target);
+      explodeAll();
+      setTimeout(()=> winModal.classList.add('show'), 550);
+    }
+  }
+
+  function gameOver(){
+    console.log('💀 Out of moves! Shuffling and adding 5 moves');
+    showToast('Out of moves — shuffling…');
+    shuffleBoard(); moves+=5; movesTxt.textContent=moves;
+  }
+
+  function explodeAll(){
+    console.log('💥 Exploding all candies!');
+    for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++){
+      const id = grid[r][c]; if(id==null) continue; 
+      spawnParticles(r,c,COLORS[id] || '#fff');
+    }
+    draw();
+  }
+
+  // ---- PARTICLES ----
+  function spawnParticles(r,c,col){
+    const x = offsetX + c*cell + cell/2;
+    const y = offsetY + r*cell + cell/2;
+    for(let i=0;i<10;i++){
+      particles.push({x,y, vx:(Math.random()-0.5)*4, vy:(Math.random()-0.5)*4-1, r:2+Math.random()*2, life:1, col});
+    }
+  }
+  function loop(){
+    particles = particles.filter(p=>p.life>0);
+    for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.06; p.life-=0.02; }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ---- TOAST ----
+  let toastTimer=null;
+  function showToast(t){ 
+    console.log('💬 Toast:', t);
+    toast.textContent=t; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('show'),1300); 
+  }
+
+  // ---- MODAL ACTIONS ----
+  nextLevelBtn.addEventListener('click',()=>{ 
+    console.log('➡️ Next level clicked');
+    initLevel(level+1); 
+  });
+  replayBtn.addEventListener('click',()=>{ 
+    console.log('🔄 Replay clicked');
+    initLevel(level); 
+  });
+
+  // ---- BOOT ----
+  setupVideos();
+  initLevel(0);
+  resize();
+  requestAnimationFrame(loop);
+
+  // TESTS
+  console.assert(assertGrid('boot'), 'Grid should be 8x8 after init');
+  console.assert(findCombos().length===0, 'No initial matches after seeding');
+  console.log('✅ Canvas Crush Loaded! Open console to see debug logs.');
+})();
+</script>
+</body>
+</html>

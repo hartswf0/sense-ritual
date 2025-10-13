@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Crush: Film Assembly System</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HUD */
+.game-hud {
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.95);
+  border-bottom: 2px solid #FFD400;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  z-index: 10;
+}
+
+.faction-label {
+  font-size: clamp(11px, 2.5vw, 14px);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.resource-bar {
+  display: flex;
+  gap: 25px;
+  font-size: clamp(14px, 3vw, 18px);
+  font-weight: 700;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.resource-icon {
+  font-size: clamp(16px, 3.5vw, 20px);
+}
+
+/* Playfield */
+.playfield {
+  flex: 1;
+  position: relative;
+  background: #0a0a0a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#gameCanvas {
+  background: #0a0a0a;
+  border: 3px solid #FFD400;
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(255, 212, 0, 0.3);
+  touch-action: none;
+}
+
+/* Toolbar */
+.toolbar {
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.95);
+  border-top: 2px solid #FFD400;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  z-index: 10;
+}
+
+.tool-btn {
+  padding: 10px 16px;
+  background: rgba(255, 212, 0, 0.1);
+  border: 2px solid #FFD400;
+  color: #FFD400;
+  font-weight: 700;
+  font-size: clamp(11px, 2.5vw, 13px);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.tool-btn:hover {
+  background: rgba(255, 212, 0, 0.2);
+}
+
+.tool-btn:active {
+  transform: scale(0.95);
+}
+
+.tool-btn.active {
+  background: #FFD400;
+  color: #000;
+  box-shadow: 0 0 20px rgba(255, 212, 0, 0.5);
+}
+
+/* Win Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-card {
+  background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+  border: 3px solid #FFD400;
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: 0 0 50px rgba(255, 212, 0, 0.4);
+}
+
+.modal-title {
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+  color: #FFD400;
+}
+
+.modal-subtitle {
+  font-size: clamp(13px, 3vw, 16px);
+  opacity: 0.8;
+  margin-bottom: 25px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modal-btn {
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 2px solid #FFD400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.modal-btn.primary {
+  background: #FFD400;
+  color: #000;
+}
+
+.modal-btn.secondary {
+  background: transparent;
+  color: #FFD400;
+}
+
+.modal-btn:active {
+  transform: scale(0.95);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #FFD400;
+  color: #FFD400;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 50;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+  <div class="game-hud">
+    <div class="faction-label">MATRIX CRUSH</div>
+    <div class="resource-bar">
+      <div class="resource">
+        <span class="resource-icon">◈</span>
+        <span id="level">1</span>
+      </div>
+      <div class="resource">
+        <span class="resource-icon">⭐</span>
+        <span id="score">0</span>
+      </div>
+      <div class="resource">
+        <span class="resource-icon">🎯</span>
+        <span id="target">500</span>
+      </div>
+      <div class="resource">
+        <span class="resource-icon">🎲</span>
+        <span id="moves">30</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="playfield">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+  
+  <div class="toolbar">
+    <button class="tool-btn active" data-tool="swap">↔️ Swap</button>
+    <button class="tool-btn" data-tool="hammer">🔨 Hammer</button>
+    <button class="tool-btn" data-tool="bomb">💣 Bomb</button>
+    <button class="tool-btn" data-tool="stripe">〰️ Stripe</button>
+    <button class="tool-btn" data-tool="shuffle">🔀 Shuffle</button>
+  </div>
+</div>
+
+<div class="modal" id="winModal">
+  <div class="modal-card">
+    <div class="modal-title">Level Complete</div>
+    <div class="modal-subtitle">Fragments assembled. Matrix stabilized.</div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="nextLevel">Next Level ▶</button>
+      <button class="modal-btn secondary" id="replay">Replay</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Ready</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const winModal = document.getElementById('winModal');
+  const toast = document.getElementById('toast');
+  
+  // UI elements
+  const levelEl = document.getElementById('level');
+  const scoreEl = document.getElementById('score');
+  const targetEl = document.getElementById('target');
+  const movesEl = document.getElementById('moves');
+  
+  // Constants
+  const GRID_SIZE = 8;
+  const COLORS = ['#ff476f', '#60e1ff', '#ffd166', '#8aff80', '#bd9cff', '#ff9ecb'];
+  const LEVELS = [
+    {target: 500, moves: 30},
+    {target: 1200, moves: 28},
+    {target: 2200, moves: 26},
+    {target: 3500, moves: 24},
+    {target: 5200, moves: 22}
+  ];
+  
+  // State
+  let grid = [];
+  let particles = [];
+  let score = 0;
+  let moves = 0;
+  let target = 500;
+  let level = 0;
+  let selected = null;
+  let busy = false;
+  let tool = 'swap';
+  let cellSize = 0;
+  let offsetX = 0;
+  let offsetY = 0;
+  
+  // Initialize
+  function init() {
+    resize();
+    initLevel(0);
+    setupControls();
+    animate();
+  }
+  
+  function resize() {
+    const container = canvas.parentElement;
+    const size = Math.min(container.clientWidth - 40, container.clientHeight - 40, 600);
+    canvas.width = size;
+    canvas.height = size;
+    cellSize = size / GRID_SIZE;
+    offsetX = 0;
+    offsetY = 0;
+    draw();
+  }
+  
+  function initLevel(lvl) {
+    level = lvl;
+    const L = LEVELS[level % LEVELS.length];
+    target = L.target;
+    moves = L.moves;
+    score = 0;
+    
+    levelEl.textContent = level + 1;
+    targetEl.textContent = target;
+    movesEl.textContent = moves;
+    scoreEl.textContent = score;
+    
+    grid = makeGrid();
+    clearInitialMatches();
+    winModal.classList.remove('show');
+    draw();
+  }
+  
+  function makeGrid() {
+    const g = [];
+    for (let r = 0; r < GRID_SIZE; r++) {
+      g[r] = [];
+      for (let c = 0; c < GRID_SIZE; c++) {
+        do {
+          g[r][c] = Math.floor(Math.random() * COLORS.length);
+        } while (causesMatch(g, r, c));
+      }
+    }
+    return g;
+  }
+  
+  function causesMatch(g, r, c) {
+    const v = g[r][c];
+    if (c >= 2 && g[r][c-1] === v && g[r][c-2] === v) return true;
+    if (r >= 2 && g[r-1][c] === v && g[r-2][c] === v) return true;
+    return false;
+  }
+  
+  function clearInitialMatches() {
+    let combos = findCombos();
+    while (combos.length > 0) {
+      for (const {r, c} of combos) {
+        grid[r][c] = Math.floor(Math.random() * COLORS.length);
+      }
+      combos = findCombos();
+    }
+  }
+  
+  // Drawing
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGrad.addColorStop(0, '#0f0f0f');
+    bgGrad.addColorStop(1, '#050505');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Grid cells
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const x = offsetX + c * cellSize;
+        const y = offsetY + r * cellSize;
+        
+        // Cell background
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+        
+        // Cell border
+        ctx.strokeStyle = 'rgba(255, 212, 0, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(x + 3, y + 3, cellSize - 6, cellSize - 6);
+        ctx.setLineDash([]);
+        
+        // Candy
+        if (grid[r][c] !== null) {
+          drawCandy(x, y, cellSize, COLORS[grid[r][c]]);
+        }
+        
+        // Selection
+        if (selected && selected.r === r && selected.c === c) {
+          ctx.strokeStyle = '#FFD400';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 4, y + 4, cellSize - 8, cellSize - 8);
+        }
+      }
+    }
+    
+    // Particles
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  function drawCandy(x, y, size, color) {
+    const r = size * 0.38;
+    const cx = x + size / 2;
+    const cy = y + size / 2;
+    
+    // Glow
+    const glowGrad = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 1.2);
+    glowGrad.addColorStop(0, color + '44');
+    glowGrad.addColorStop(1, color + '00');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Main gradient
+    const grad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.1, cx, cy, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#ffffffcc');
+    grad.addColorStop(0.7, color);
+    grad.addColorStop(1, color + 'cc');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Highlight
+    const highlight = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx - r * 0.3, cy - r * 0.3, r * 0.5);
+    highlight.addColorStop(0, '#ffffff99');
+    highlight.addColorStop(1, '#ffffff00');
+    ctx.fillStyle = highlight;
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Border
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  // Game logic
+  function findCombos() {
+    const combos = [];
+    const used = Array.from({length: GRID_SIZE}, () => Array(GRID_SIZE).fill(false));
+    
+    // Rows
+    for (let r = 0; r < GRID_SIZE; r++) {
+      let run = 1;
+      for (let c = 1; c <= GRID_SIZE; c++) {
+        const same = c < GRID_SIZE && grid[r][c] === grid[r][c-1] && grid[r][c] !== null;
+        if (same) {
+          run++;
+        } else {
+          if (run >= 3) {
+            for (let k = c - run; k < c; k++) {
+              combos.push({r, c: k});
+              used[r][k] = true;
+            }
+          }
+          run = 1;
+        }
+      }
+    }
+    
+    // Columns
+    for (let c = 0; c < GRID_SIZE; c++) {
+      let run = 1;
+      for (let r = 1; r <= GRID_SIZE; r++) {
+        const same = r < GRID_SIZE && grid[r][c] === grid[r-1][c] && grid[r][c] !== null;
+        if (same) {
+          run++;
+        } else {
+          if (run >= 3) {
+            for (let k = r - run; k < r; k++) {
+              if (!used[k][c]) combos.push({r: k, c});
+            }
+          }
+          run = 1;
+        }
+      }
+    }
+    
+    return combos;
+  }
+  
+  function resolveCombos(combos) {
+    busy = true;
+    for (const {r, c} of combos) {
+      removeAt(r, c, false);
+    }
+    
+    setTimeout(() => {
+      dropAndFill();
+      const next = findCombos();
+      if (next.length > 0) {
+        resolveCombos(next);
+      } else {
+        busy = false;
+        draw();
+        checkWin();
+      }
+    }, 200);
+  }
+  
+  function removeAt(r, c, bonus) {
+    if (r < 0 || c < 0 || r >= GRID_SIZE || c >= GRID_SIZE) return;
+    if (grid[r][c] === null) return;
+    
+    score += bonus ? 30 : 10;
+    scoreEl.textContent = score;
+    
+    spawnParticles(r, c, COLORS[grid[r][c]]);
+    grid[r][c] = null;
+  }
+  
+  function dropAndFill() {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      let write = GRID_SIZE - 1;
+      for (let r = GRID_SIZE - 1; r >= 0; r--) {
+        if (grid[r][c] !== null) {
+          grid[write][c] = grid[r][c];
+          if (write !== r) grid[r][c] = null;
+          write--;
+        }
+      }
+      for (let r = write; r >= 0; r--) {
+        grid[r][c] = Math.floor(Math.random() * COLORS.length);
+      }
+    }
+    draw();
+  }
+  
+  function spawnParticles(r, c, color) {
+    const x = offsetX + c * cellSize + cellSize / 2;
+    const y = offsetY + r * cellSize + cellSize / 2;
+    for (let i = 0; i < 10; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4 - 1,
+        r: 2 + Math.random() * 2,
+        life: 1,
+        color
+      });
+    }
+  }
+  
+  function consumeMove() {
+    moves--;
+    movesEl.textContent = moves;
+    if (moves <= 0) gameOver();
+  }
+  
+  function checkWin() {
+    if (score >= target) {
+      setTimeout(() => winModal.classList.add('show'), 500);
+    }
+  }
+  
+  function gameOver() {
+    showToast('Out of moves!');
+    moves += 5;
+    movesEl.textContent = moves;
+  }
+  
+  // Input
+  function setupControls() {
+    const toolBtns = document.querySelectorAll('.tool-btn');
+    toolBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toolBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tool = btn.dataset.tool;
+        showToast(btn.textContent.trim());
+      });
+    });
+    
+    canvas.addEventListener('pointerdown', handleTap);
+    
+    document.getElementById('nextLevel').addEventListener('click', () => {
+      initLevel(level + 1);
+    });
+    
+    document.getElementById('replay').addEventListener('click', () => {
+      initLevel(level);
+    });
+  }
+  
+  function handleTap(e) {
+    if (busy) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const c = Math.floor((x - offsetX) / cellSize);
+    const r = Math.floor((y - offsetY) / cellSize);
+    
+    if (r < 0 || c < 0 || r >= GRID_SIZE || c >= GRID_SIZE) return;
+    
+    if (tool === 'swap') {
+      if (!selected) {
+        selected = {r, c};
+        draw();
+      } else {
+        if (Math.abs(selected.r - r) + Math.abs(selected.c - c) === 1) {
+          trySwap(selected, {r, c});
+        }
+        selected = null;
+        draw();
+      }
+    } else if (tool === 'hammer') {
+      removeAt(r, c, true);
+      consumeMove();
+      draw();
+    } else if (tool === 'bomb') {
+      for (let rr = r - 1; rr <= r + 1; rr++) {
+        for (let cc = c - 1; cc <= c + 1; cc++) {
+          removeAt(rr, cc, true);
+        }
+      }
+      dropAndFill();
+      consumeMove();
+    } else if (tool === 'stripe') {
+      for (let i = 0; i < GRID_SIZE; i++) {
+        removeAt(r, i, true);
+      }
+      dropAndFill();
+      consumeMove();
+    } else if (tool === 'shuffle') {
+      shuffleBoard();
+      consumeMove();
+    }
+  }
+  
+  function trySwap(a, b) {
+    const temp = grid[a.r][a.c];
+    grid[a.r][a.c] = grid[b.r][b.c];
+    grid[b.r][b.c] = temp;
+    
+    const combos = findCombos();
+    if (combos.length === 0) {
+      grid[b.r][b.c] = grid[a.r][a.c];
+      grid[a.r][a.c] = temp;
+      showToast('No match!');
+      draw();
+    } else {
+      consumeMove();
+      resolveCombos(combos);
+    }
+  }
+  
+  function shuffleBoard() {
+    const flat = [];
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (grid[r][c] !== null) flat.push(grid[r][c]);
+      }
+    }
+    
+    for (let i = flat.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [flat[i], flat[j]] = [flat[j], flat[i]];
+    }
+    
+    let k = 0;
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        grid[r][c] = k < flat.length ? flat[k++] : Math.floor(Math.random() * COLORS.length);
+      }
+    }
+    draw();
+  }
+  
+  // Animation
+  function animate() {
+    particles = particles.filter(p => p.life > 0);
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.06;
+      p.life -= 0.02;
+    }
+    if (particles.length > 0) draw();
+    requestAnimationFrame(animate);
+  }
+  
+  // Toast
+  let toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1500);
+  }
+  
+  // Start
+  window.addEventListener('resize', resize);
+  init();
+})();
+</script>
+</body>
+</html>

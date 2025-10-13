@@ -1,0 +1,11 @@
+{
+  "name": "Sense Ritual — Garden Sequencer",
+  "short_name": "Garden",
+  "description": "Match-3 film sequencer with inline sequence player, sounds, haptics, JSON/EDL export",
+  "start_url": "m-crusher-06.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ffff",
+  "icons": []
+}

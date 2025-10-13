@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrix Crush: Film Assembly Puzzle</title>
+<style>
+:root{--bg:#0a0e14;--accent:#ffd400;--text:#c7d0e0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.card{background:#0e1524;border:2px solid #2a3850;padding:30px;border-radius:16px;text-align:center;max-width:500px}
+h1{color:#fff;font-size:32px;margin-bottom:16px}
+p{opacity:.8;margin-bottom:20px;line-height:1.6}
+.legend{font-size:14px;opacity:.7;margin:16px 0}
+button{background:var(--accent);color:#000;border:none;padding:14px 28px;border-radius:8px;font-weight:700;font-size:16px;cursor:pointer;margin-top:10px}
+button:hover{opacity:.9}
+#game{display:none;flex-direction:column;align-items:center;gap:20px}
+#game.show{display:flex}
+canvas{border:3px solid var(--accent);border-radius:8px;box-shadow:0 0 30px rgba(255,212,0,0.2)}
+.hud{display:flex;gap:20px;font-weight:600}
+.stat{background:#131b2a;border:1px solid #243047;padding:8px 16px;border-radius:999px}
+.timeline{position:fixed;bottom:0;left:0;right:0;background:#000000f8;border-top:2px solid var(--accent);padding:16px;display:none;backdrop-filter:blur(12px);max-height:180px;overflow-y:auto}
+.timeline.show{display:block;animation:slideUp 0.4s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.timeline-title{font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;opacity:0.6;margin-bottom:12px;color:var(--accent)}
+.fragments{display:flex;gap:12px;flex-wrap:wrap}
+.fragment{background:#131b2a;border:2px solid #2c3649;padding:10px 14px;border-radius:12px;font-size:13px;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:8px;box-shadow:0 0 15px rgba(0,0,0,0.5)}
+.fragment:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 0 25px rgba(255,212,0,0.4)}
+.fragment-icon{font-size:20px;text-shadow:0 0 10px currentColor}
+.fragment-title{font-weight:600}
+.fragment-cat{opacity:0.5;font-size:10px;margin-left:6px}
+</style>
+</head>
+<body>
+
+<div id="start" class="card">
+  <h1>Matrix Crush</h1>
+  <p>Match fragments to assemble the documentary timeline.<br>Each candy represents a narrative category.</p>
+  <div class="legend">
+    ◯ Media Apparatus · ◐ Core Concept · ◑ Systemic Critique<br>
+    ◒ Systemic Control · ◓ Systemic Event · ◔ Personal
+  </div>
+  <button onclick="startGame()">Begin Assembly</button>
+</div>
+
+<div id="game">
+  <div class="hud">
+    <div class="stat">Target: <b id="target">6000</b></div>
+    <div class="stat">Moves: <b id="moves">30</b></div>
+    <div class="stat">Score: <b id="score">0</b></div>
+  </div>
+  <canvas id="board" width="640" height="640"></canvas>
+  <button onclick="newGame()">New Game</button>
+</div>
+
+<div id="timeline" class="timeline">
+  <div class="timeline-title">◼︎ Assembled Fragments</div>
+  <div id="fragments" class="fragments"></div>
+</div>
+
+<div id="videoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
+  <div style="max-width:800px;width:90%;background:#0e1524;border:3px solid #ffd400;border-radius:16px;padding:24px;box-shadow:0 0 50px rgba(255,212,0,0.5)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 id="modalTitle" style="color:#ffd400;margin:0;font-size:20px"></h2>
+      <button onclick="closeModal()" style="background:#1a2436;color:#fff;padding:8px 16px">Close</button>
+    </div>
+    <div id="modalCat" style="opacity:0.7;margin-bottom:12px;font-size:13px"></div>
+    <div id="modalDesc" style="margin-bottom:16px;line-height:1.6"></div>
+    <iframe id="modalVideo" width="100%" height="400" frameborder="0" allowfullscreen style="border-radius:8px"></iframe>
+  </div>
+</div>
+
+<script>
+console.log('=== SCRIPT STARTING ===');
+const YT_VIDEO = 'BQ2n6SN7gOY';
+const FRAGMENTS = [
+  {id:'fom',title:'Family of Man',cat:'Media Apparatus',icon:'◯',color:'#4A90E2',start:27,end:53,desc:'A new way of seeing the world, an alternative to the horrors of Nazism and communism.'},
+  {id:'self',title:'Individual Self',cat:'Core Concept',icon:'◐',color:'#62ff87',start:67,end:78,desc:'At the center of that world is the individual self, making their own story.'},
+  {id:'fairy',title:'Unreal Fairyland',cat:'Systemic Critique',icon:'◑',color:'#E24A4A',start:197,end:204,desc:'The world that concealed the harsh reality of power.'},
+  {id:'grand',title:'Grand Stories',cat:'Core Concept',icon:'◒',color:'#62ff87',start:143,end:148,desc:'Believed deeply in their power to move people and inspire change.'},
+  {id:'boom',title:'Societal Boom',cat:'Systemic Control',icon:'◓',color:'#ff9ecb',start:230,end:237,desc:'Society lets you go far, but as soon as you ask questions, boom.'},
+  {id:'crack',title:'Crack Epidemic',cat:'Systemic Event',icon:'◔',color:'#ffd166',start:291,end:300,desc:'Crack swept through black communities, Afeni became addicted.'}
+];
+
+const N=8, CELL=80;
+let grid, score=0, moves=30, collected=[];
+const canvas=document.getElementById('board');
+if(!canvas){
+  console.error('ERROR: Canvas element not found!');
+  alert('Canvas not found - check HTML structure');
+}
+const ctx=canvas ? canvas.getContext('2d') : null;
+let sel=null;
+
+function startGame(){
+  console.log('Starting game...');
+  document.getElementById('start').style.display='none';
+  document.getElementById('game').classList.add('show');
+  newGame();
+  console.log('Game started, grid:', grid);
+}
+
+function newGame(){
+  grid=[];
+  score=0;
+  moves=30;
+  collected=[];
+  for(let r=0;r<N;r++){
+    grid[r]=[];
+    for(let c=0;c<N;c++){
+      let t;
+      do{
+        t=Math.floor(Math.random()*6);
+      }while((c>1&&grid[r][c-1]===t&&grid[r][c-2]===t)||(r>1&&grid[r-1][c]===t&&grid[r-2][c]===t));
+      grid[r][c]=t;
+    }
+  }
+  updateUI();
+  console.log('Grid created:', grid);
+}
+
+let animTime = 0;
+function draw(){
+  animTime += 0.016;
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(0,0,640,640);
+  
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const t=grid[r][c];
+      if(t<0)continue;
+      
+      const x=c*CELL+CELL/2;
+      const y=r*CELL+CELL/2;
+      const rad=CELL*0.42;
+      
+      // Pulsing glow effect
+      const pulse = Math.sin(animTime*2 + r*0.3 + c*0.3)*0.1 + 0.9;
+      
+      // Outer glow
+      ctx.save();
+      ctx.globalAlpha=0.3*pulse;
+      const glowGrd=ctx.createRadialGradient(x,y,rad*0.5,x,y,rad*1.3);
+      glowGrd.addColorStop(0,FRAGMENTS[t].color);
+      glowGrd.addColorStop(1,'transparent');
+      ctx.fillStyle=glowGrd;
+      ctx.beginPath();
+      ctx.arc(x,y,rad*1.3,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Main candy with gradient
+      const grd=ctx.createRadialGradient(x-rad*0.3,y-rad*0.3,rad*0.2,x,y,rad);
+      grd.addColorStop(0,'#fff');
+      grd.addColorStop(0.2,FRAGMENTS[t].color+'ee');
+      grd.addColorStop(0.7,FRAGMENTS[t].color);
+      grd.addColorStop(1,FRAGMENTS[t].color+'88');
+      ctx.fillStyle=grd;
+      ctx.beginPath();
+      ctx.arc(x,y,rad,0,Math.PI*2);
+      ctx.fill();
+      
+      // Glossy highlight
+      ctx.save();
+      ctx.globalAlpha=0.4;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();
+      ctx.arc(x-rad*0.25,y-rad*0.25,rad*0.3,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Border with shadow
+      ctx.save();
+      ctx.shadowColor='#000';
+      ctx.shadowBlur=8;
+      ctx.strokeStyle='#000';
+      ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.arc(x,y,rad,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+      
+      // Icon with glow
+      ctx.save();
+      ctx.shadowColor=FRAGMENTS[t].color;
+      ctx.shadowBlur=10;
+      ctx.fillStyle='#fff';
+      ctx.font='bold 28px system-ui';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(FRAGMENTS[t].icon,x,y);
+      ctx.restore();
+      
+      // Selection highlight with animation
+      if(sel&&sel.r===r&&sel.c===c){
+        ctx.save();
+        ctx.strokeStyle='#ffd400';
+        ctx.lineWidth=4;
+        ctx.shadowColor='#ffd400';
+        ctx.shadowBlur=15*pulse;
+        ctx.strokeRect(c*CELL+4,r*CELL+4,CELL-8,CELL-8);
+        ctx.restore();
+      }
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+function updateUI(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('moves').textContent=moves;
+  
+  const frag=document.getElementById('fragments');
+  frag.innerHTML='';
+  collected.forEach(f=>{
+    const div=document.createElement('div');
+    div.className='fragment';
+    div.style.borderColor=f.color;
+    div.innerHTML=`
+      <span class="fragment-icon" style="color:${f.color}">${f.icon}</span>
+      <span class="fragment-title">${f.title}</span>
+      <span class="fragment-cat">${f.cat}</span>
+    `;
+    div.onclick=()=>showVideo(f);
+    frag.appendChild(div);
+  });
+  
+  document.getElementById('timeline').classList.toggle('show',collected.length>0);
+}
+
+function showVideo(frag){
+  console.log('Playing fragment:', frag.title);
+  const modal=document.getElementById('videoModal');
+  document.getElementById('modalTitle').innerHTML=`${frag.icon} ${frag.title}`;
+  document.getElementById('modalCat').textContent=frag.cat;
+  document.getElementById('modalDesc').textContent=frag.desc;
+  document.getElementById('modalVideo').src=`https://www.youtube-nocookie.com/embed/${YT_VIDEO}?start=${frag.start}&end=${frag.end}&autoplay=1`;
+  modal.style.display='flex';
+}
+
+function closeModal(){
+  const modal=document.getElementById('videoModal');
+  modal.style.display='none';
+  document.getElementById('modalVideo').src='';
+}
+
+let dragging=false;
+let dragStart=null;
+
+canvas.onmousedown=(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=Math.floor((e.clientX-rect.left)/(rect.width/N));
+  const y=Math.floor((e.clientY-rect.top)/(rect.height/N));
+  if(y<0||x<0||y>=N||x>=N)return;
+  console.log('Mouse down at grid:', {r:y,c:x}, 'candy type:', grid[y][x]);
+  dragging=true;
+  dragStart={r:y,c:x};
+  sel={r:y,c:x};
+  draw();
+};
+
+canvas.onmousemove=(e)=>{
+  if(!dragging||!dragStart)return;
+  const rect=canvas.getBoundingClientRect();
+  const x=Math.floor((e.clientX-rect.left)/(rect.width/N));
+  const y=Math.floor((e.clientY-rect.top)/(rect.height/N));
+  
+  const dr=y-dragStart.r;
+  const dc=x-dragStart.c;
+  
+  if(Math.abs(dr)>0||Math.abs(dc)>0){
+    let targetR=dragStart.r;
+    let targetC=dragStart.c;
+    
+    if(Math.abs(dr)>Math.abs(dc)){
+      targetR=dragStart.r+(dr>0?1:-1);
+    }else if(Math.abs(dc)>0){
+      targetC=dragStart.c+(dc>0?1:-1);
+    }
+    
+    if(targetR>=0&&targetR<N&&targetC>=0&&targetC<N){
+      trySwap(dragStart.r,dragStart.c,targetR,targetC);
+      dragging=false;
+      dragStart=null;
+      sel=null;
+    }
+  }
+};
+
+canvas.onmouseup=()=>{
+  dragging=false;
+  dragStart=null;
+  sel=null;
+  draw();
+};
+
+function trySwap(r1,c1,r2,c2){
+  console.log('Attempting swap:', {r1,c1,r2,c2}, 'Types:', grid[r1][c1], '<->', grid[r2][c2]);
+  // Swap
+  const tmp=grid[r1][c1];
+  grid[r1][c1]=grid[r2][c2];
+  grid[r2][c2]=tmp;
+  draw();
+  
+  // Check matches
+  const matched=getMatchedCells();
+  console.log('Matched cells:', matched.length);
+  if(matched.length>0){
+    console.log('MATCH FOUND! Processing...');
+    // Collect fragments
+    const types=new Set();
+    matched.forEach(([r,c])=>{
+      types.add(grid[r][c]);
+      grid[r][c]=-1;
+    });
+    
+    types.forEach(t=>{
+      const frag=FRAGMENTS[t];
+      if(!collected.find(f=>f.id===frag.id)){
+        collected.push(frag);
+      }
+    });
+    
+    score+=matched.length*60;
+    moves--;
+    
+    // Refill
+    setTimeout(()=>{
+      dropAndRefill();
+      updateUI();
+      draw();
+    },200);
+  }else{
+    console.log('NO MATCH - swapping back');
+    // Swap back
+    setTimeout(()=>{
+      grid[r1][c1]=grid[r2][c2];
+      grid[r2][c2]=tmp;
+      draw();
+    }, 300);
+  }
+}
+
+function getMatchedCells(){
+  const matched=[];
+  const marked=Array(N).fill(0).map(()=>Array(N).fill(false));
+  
+  // Horizontal
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N-2;c++){
+      if(grid[r][c]>=0&&grid[r][c]===grid[r][c+1]&&grid[r][c]===grid[r][c+2]){
+        marked[r][c]=marked[r][c+1]=marked[r][c+2]=true;
+      }
+    }
+  }
+  
+  // Vertical
+  for(let c=0;c<N;c++){
+    for(let r=0;r<N-2;r++){
+      if(grid[r][c]>=0&&grid[r][c]===grid[r+1][c]&&grid[r][c]===grid[r+2][c]){
+        marked[r][c]=marked[r+1][c]=marked[r+2][c]=true;
+      }
+    }
+  }
+  
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      if(marked[r][c])matched.push([r,c]);
+    }
+  }
+  
+  return matched;
+}
+
+function dropAndRefill(){
+  // Drop
+  for(let c=0;c<N;c++){
+    let writeRow=N-1;
+    for(let r=N-1;r>=0;r--){
+      if(grid[r][c]>=0){
+        grid[writeRow][c]=grid[r][c];
+        if(writeRow!==r)grid[r][c]=-1;
+        writeRow--;
+      }
+    }
+  }
+  
+  // Refill
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      if(grid[r][c]===-1){
+        grid[r][c]=Math.floor(Math.random()*6);
+      }
+    }
+  }
+  
+  // Check for cascades
+  const matched=getMatchedCells();
+  if(matched.length>0){
+    matched.forEach(([r,c])=>grid[r][c]=-1);
+    score+=matched.length*60;
+    setTimeout(()=>{
+      dropAndRefill();
+      updateUI();
+      draw();
+    },200);
+  }
+}
+
+function findMatches(){
+  const matches=[];
+  // Horizontal
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N-2;c++){
+      if(grid[r][c]===grid[r][c+1]&&grid[r][c]===grid[r][c+2]){
+        matches.push({r,c},{r,c:c+1},{r,c:c+2});
+      }
+    }
+  }
+  // Vertical
+  for(let c=0;c<N;c++){
+    for(let r=0;r<N-2;r++){
+      if(grid[r][c]===grid[r+1][c]&&grid[r][c]===grid[r+2][c]){
+        matches.push({r,c},{r:r+1,c},{r:r+2,c});
+      }
+    }
+  }
+  return matches;
+}
+
+// Test on load
+console.log('Matrix Crush loaded!');
+console.log('Canvas:', canvas, 'Context:', ctx);
+console.log('Fragments:', FRAGMENTS);
+console.log('Ready to play - click "Begin Assembly"');
+</script>
+</body>
+</html>

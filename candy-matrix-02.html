@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<title> GARDEN</title>
+<style>
+body { margin:0; overflow:hidden; background:#000; }
+.glyph { position:fixed; left:10px; font-size:32px; color:#0ff; cursor:pointer; 
+  text-shadow:0 0 10px #0ff; z-index:10; user-select:none; transition:all 0.2s; }
+.glyph:hover { transform:scale(1.2); }
+#g1 { top:20px; }
+#g2 { top:80px; }
+#g3 { top:140px; }
+#g4 { top:200px; }
+#g5 { top:260px; }
+#g7 { top:320px; }
+#g6 { top:380px; }
+.play-controls { position:fixed; top:50%; right:100px; transform:translateY(-50%); 
+  display:none; flex-direction:column; gap:8px; z-index:10; }
+.play-controls.active { display:flex; }
+.play-btn { padding:6px 12px; background:rgba(0,255,255,0.1); color:#0ff; 
+  border:1px solid #0ff; cursor:pointer; font-weight:bold; font-size:11px; 
+  transition:all 0.2s; text-transform:uppercase; letter-spacing:1px; }
+.play-btn:hover { background:rgba(0,255,255,0.3); }
+.mode-btn { padding:6px 12px; background:rgba(0,0,0,0.8); color:#0ff; 
+  border:1px solid #0ff; cursor:pointer; font-size:10px; 
+  transition:all 0.2s; text-transform:uppercase; }
+.mode-btn.selected { background:rgba(0,255,255,0.2); border-width:2px; }
+.dots { position:fixed; top:10px; left:60px; z-index:10; display:flex; gap:4px; flex-wrap:wrap; max-width:150px; }
+.dot { display:inline-block; width:12px; height:12px; background:#333; margin:2px; 
+  border-radius:50%; transition:all 0.3s; }
+.dot.on { background:#0ff; box-shadow:0 0 10px #0ff; }
+.bar { position:fixed; bottom:0; left:0; right:0; height:2px; background:#0ff; 
+  box-shadow:0 0 10px #0ff; }
+.timeline-player { position:fixed; top:60px; right:0; bottom:0; width:72px; 
+  background:rgba(0,0,0,0.78); border-left:2px solid #0ff; display:none; z-index:5; 
+  padding:8px 4px; overflow-y:auto; overflow-x:hidden; }
+.timeline-player.active { display:flex; flex-direction:column; gap:8px; align-items:center; }
+.timeline-player.collapsed { width:0; padding:0; border-left:none; pointer-events:none; }
+.timeline-handle { position:fixed; right:0; top:50%; transform:translateY(-50%);
+  width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff;
+  color:#0ff; display:flex; align-items:center; justify-content:center; z-index:6; cursor:pointer;
+  backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); }
+.timeline-handle:active { background:rgba(0,255,255,0.25); }
+.close-timeline { position:absolute; top:5px; right:5px; color:#0ff; cursor:pointer; 
+  font-size:16px; z-index:10; padding:2px 6px; }
+.close-timeline:hover { color:#fff; background:rgba(0,255,255,0.2); }
+.segment-strip { width:100%; border:1px solid #0ff; 
+  display:flex; flex-direction:column; align-items:center; background:#000; 
+  padding:4px; cursor:pointer; transition:all 0.2s; margin-bottom:8px; }
+.segment-strip:hover { transform:scale(1.02); box-shadow:0 0 10px #0ff; }
+.strip-header { font-size:9px; color:#0ff; text-transform:uppercase; 
+  font-weight:bold; margin-bottom:4px; letter-spacing:1px; text-align:center; }
+.thumbnails-grid { display:flex; flex-wrap:wrap; gap:2px; justify-content:center; 
+  width:100%; }
+.thumbnails-grid canvas { width:60px !important; height:60px !important; 
+  display:block; border:1px solid rgba(0,255,255,0.3); }
+.timeline-label { font-size:9px; color:#0ff; text-transform:uppercase; 
+  letter-spacing:1px; margin-bottom:8px; text-align:center; writing-mode:horizontal-tb; }
+.seq-count { position:fixed; top:20px; right:100px; font-size:18px; color:#0ff; 
+  text-shadow:0 0 10px #0ff; z-index:10; font-weight:bold; display:none; }
+.seq-count.active { display:block; }
+.preview-panel { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+  width:95%; max-width:700px; height:88vh; background:rgba(0,0,0,0.98); border:3px solid #0ff;
+  display:none; z-index:500; padding:20px; box-shadow:0 0 40px rgba(0,255,255,0.5); }
+.preview-panel.active { display:flex; flex-direction:column; }
+.preview-title { color:#0ff; font-size:14px; font-weight:bold; margin-bottom:10px; text-align:center; }
+.preview-panel video { width:100%; height:45%; object-fit:contain; background:#000; border:1px solid #333; }
+.preview-scrubber { width:100%; height:50px; background:#111; border:1px solid #0ff; 
+  margin-top:10px; position:relative; cursor:pointer; overflow:hidden; }
+.scrubber-progress { position:absolute; left:0; top:0; height:100%; background:rgba(0,255,255,0.2); 
+  pointer-events:none; }
+.scrubber-playhead { position:absolute; left:0; top:0; width:3px; height:100%; background:#0ff; 
+  box-shadow:0 0 10px #0ff; pointer-events:none; z-index:2; }
+.scrubber-thumbnails { position:absolute; inset:0; display:flex; pointer-events:none; opacity:0.4; }
+.scrubber-thumb { flex:1; background-size:cover; background-position:center; border-right:1px solid #222; }
+.temporal-position { font-size:10px; color:#888; margin-top:8px; padding:8px; background:#0a0a0a;
+  border:1px solid #222; font-family:monospace; line-height:1.8; }
+.temporal-position span { color:#0ff; font-weight:bold; }
+.preview-annotation { width:100%; margin-top:8px; padding:10px; background:#0a0a0a; border:1px solid #333;
+  color:#0ff; font-size:11px; resize:vertical; min-height:70px; font-family:monospace; }
+.preview-annotation::placeholder { color:#555; }
+.preview-controls { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
+.preview-btn { padding:8px 14px; background:rgba(0,255,255,0.2); color:#0ff; border:1px solid #0ff;
+  cursor:pointer; font-weight:bold; font-size:10px; transition:all 0.2s; }
+.preview-btn:hover { background:#0ff; color:#000; }
+.close-preview { position:absolute; top:10px; right:10px; color:#0ff; cursor:pointer;
+  font-size:24px; z-index:10; }
+@media (max-width: 768px) {
+  .timeline-player { width:56px; padding:6px 3px; background:rgba(0,0,0,0.74); }
+  .segment-strip { margin-bottom:6px; padding:3px; }
+  .strip-header { display:none; }
+  .thumbnails-grid canvas { width:44px !important; height:44px !important; }
+}
+.segment-strip.playing { background:#0ff; color:#000; }
+.export-menu { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+  background:rgba(0,0,0,0.95); border:2px solid #0ff; padding:20px; z-index:200;
+  display:none; flex-direction:column; gap:12px; }
+.export-menu.active { display:flex; }
+.export-menu-title { color:#0ff; font-size:14px; font-weight:bold; 
+  text-transform:uppercase; margin-bottom:10px; text-align:center; }
+.export-option { padding:12px 20px; background:rgba(0,255,255,0.1); color:#0ff;
+  border:1px solid #0ff; cursor:pointer; text-transform:uppercase; font-size:12px;
+  font-weight:bold; transition:all 0.2s; text-align:center; }
+.export-option:hover { background:#0ff; color:#000; }
+.recursive-view { position:fixed; inset:0; background:#000; z-index:300;
+  display:none; flex-direction:column; }
+.recursive-view.active { display:flex; }
+.recursive-header { padding:12px 20px; border-bottom:1px solid #222; display:flex;
+  justify-content:space-between; align-items:center; }
+.recursive-title { color:#0ff; font-size:18px; font-weight:bold; }
+.recursive-breadcrumb { color:#666; font-size:12px; margin-top:4px; }
+.close-recursive { color:#0ff; cursor:pointer; font-size:28px; padding:0 8px; }
+.close-recursive:hover { color:#fff; }
+.recursive-container { flex:1; overflow:hidden; position:relative; }
+.recursive-columns { position:absolute; inset:0; display:flex; gap:8px; padding:8px; overflow-x:auto; transform:translateX(0); transition:transform 0.4s ease; }
+.recursive-column { width:calc(16.66666% - 6px); flex-shrink:0; height:100%; overflow-y:auto; overflow-x:hidden;
+  padding:8px 4px; display:flex; flex-direction:column; gap:6px; background:rgba(0,0,0,0.3);
+  border-left:2px solid #0ff; }
+.layer-header { color:#0ff; font-size:10px; font-weight:bold; text-transform:uppercase;
+  padding:4px 6px; border-bottom:1px solid #333; position:sticky; top:0; background:#000; z-index:10;
+  text-align:center; letter-spacing:0.5px; }
+.time-lane { width:100%; border:1px solid #0ff; display:flex; flex-direction:column; 
+  background:#000; padding:4px; cursor:pointer; transition:all 0.2s; align-items:center;
+  margin-bottom:6px; }
+.time-lane:hover { transform:scale(1.01); box-shadow:0 0 10px rgba(0,255,255,0.5); }
+.time-lane:active { transform:scale(0.99); }
+.time-lane.playing { background:#0ff; color:#000; border-color:#0ff; }
+.time-lane.playing .lane-header { color:#000; }
+.time-lane.playing .lane-info { color:#000; }
+.time-lane.selected { border:2px solid #0ff; box-shadow:0 0 15px rgba(0,255,255,0.6); }
+.time-lane.connected { border:2px solid rgba(0,255,255,0.4); background:rgba(0,255,255,0.1); }
+@keyframes pulseGlow { 0%{ box-shadow:0 0 0 rgba(0,255,255,0.0);} 50%{ box-shadow:0 0 20px rgba(0,255,255,0.9);} 100%{ box-shadow:0 0 0 rgba(0,255,255,0.0);} }
+.time-lane.selected { animation:pulseGlow 1.2s ease-out 1; }
+.lane-header { font-size:8px; color:#0ff; text-transform:uppercase; 
+  font-weight:bold; letter-spacing:0.5px; margin-bottom:3px; text-align:center; width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lane-thumbs { display:grid; grid-template-columns:repeat(2, 1fr); gap:2px; width:100%; }
+.lane-thumbs img { width:100%; aspect-ratio:1; object-fit:cover; border:1px solid rgba(0,255,255,0.3); }
+.lane-info { font-size:7px; color:#888; text-align:center; margin-top:3px; width:100%; }
+.nav-hint { position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+  color:#666; font-size:12px; text-align:center; pointer-events:none; }
+.recursive-nav-arrows { display:none; }
+.mobile-controls { position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+  display:none; gap:12px; z-index:150; }
+.mobile-controls.active { display:flex; }
+.mobile-btn { width:60px; height:60px; background:rgba(0,255,255,0.2); 
+  border:3px solid #0ff; border-radius:50%; color:#0ff; font-size:28px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:all 0.2s; user-select:none; box-shadow:0 0 20px rgba(0,255,255,0.4); }
+.mobile-btn:active { background:rgba(0,255,255,0.5); transform:scale(0.9); }
+.mobile-btn.center { width:70px; height:70px; font-size:32px; }
+@media (min-width: 768px) { .mobile-controls { display:none !important; } }
+</style>
+</head>
+<body>
+<div class="glyph" id="g1" title="Pause/Play">⏯</div>
+<div class="glyph" id="g2" title="Hold Piece">◎</div>
+<div class="glyph" id="g3" title="Restart Game">⎌</div>
+<div class="glyph" id="g4" title="Rotate Piece">•</div>
+<div class="glyph" id="g5" title="Drop Fast">⊂⊃</div>
+<div class="glyph" id="g7" title="Reset Camera View">◎̌</div>
+<div class="glyph" id="g6" title="Export Menu">⎙</div>
+<div class="mobile-controls" id="mobileControls">
+  <div class="mobile-btn" id="mobLeft">◀</div>
+  <div class="mobile-btn center" id="mobRotate">↻</div>
+  <div class="mobile-btn" id="mobRight">▶</div>
+  <div class="mobile-btn" id="mobDown">▼</div>
+</div>
+<div class="dots" id="dots"></div>
+<div class="bar"></div>
+<div class="seq-count" id="seqCount">SEQ 0</div>
+<div class="play-controls" id="playControls">
+  <button class="play-btn" onclick="playCurrentMode()">PLAY</button>
+  <button class="mode-btn selected" data-mode="sequence" onclick="setPlayMode('sequence')">SEQ</button>
+  <button class="mode-btn" data-mode="full" onclick="setPlayMode('full')">FULL</button>
+</div>
+<div class="timeline-player" id="timelinePlayer">
+  <div class="close-timeline" onclick="closeTimeline()">×</div>
+  <div class="timeline-label">SEQ</div>
+</div>
+<div class="timeline-handle" id="timelineHandle">❯</div>
+<div class="preview-panel" id="previewPanel">
+  <div class="close-preview" onclick="closePreview()">×</div>
+  <div class="preview-title" id="previewTitle">Video Preview</div>
+  <video id="previewVideo" playsinline></video>
+  <div class="preview-scrubber" id="previewScrubber">
+    <div class="scrubber-thumbnails" id="scrubberThumbs"></div>
+    <div class="scrubber-progress" id="scrubberProgress"></div>
+    <div class="scrubber-playhead" id="scrubberPlayhead"></div>
+  </div>
+  <div class="temporal-position" id="temporalPosition">
+    <div>Time: <span id="currentTime">0.0s</span> / <span id="totalTime">0.0s</span></div>
+    <div>Scale: <span id="scaleInfo">—</span></div>
+  </div>
+  <textarea class="preview-annotation" id="previewAnnotation" placeholder="Add notes, thoughts, or temporal observations..."></textarea>
+  <div class="preview-controls">
+    <button class="preview-btn" onclick="togglePlayPreview()">⏯ Play/Pause</button>
+    <button class="preview-btn" onclick="skipBack()">⏪ -5s</button>
+    <button class="preview-btn" onclick="skipForward()">⏩ +5s</button>
+    <button class="preview-btn" onclick="saveAnnotation()">💾 Save Note</button>
+  </div>
+</div>
+<div class="export-menu" id="exportMenu">
+  <div class="close-preview" onclick="closeExportMenu()">×</div>
+  <div class="export-menu-title">View & Export</div>
+  <div class="export-option" onclick="showRecursiveView()">🌀 Recursive Timeline View</div>
+  <div class="export-option" onclick="exportSequenceA4()">📄 Sequence Timeline (A4)</div>
+  <div class="export-option" onclick="exportGridMosaic()">🖼 Grid Mosaic (A4)</div>
+  <div class="export-option" onclick="exportGridMosaicWithBG()">🖼 Grid Mosaic + Background (A4)</div>
+  <div class="export-option" onclick="exportEDL()">📝 Edit Decision List</div>
+</div>
+<div class="recursive-view" id="recursiveView">
+  <div class="recursive-header">
+    <div>
+      <div class="recursive-title" id="recursiveTitle">RECURSIVE TIMELINE</div>
+      <div class="recursive-breadcrumb" id="recursiveBreadcrumb">Atoms › Beats › Scenes › Acts › 3-Act › Whole</div>
+    </div>
+    <div class="close-recursive" onclick="closeRecursiveView()">×</div>
+  </div>
+  <div class="recursive-container">
+    <div class="recursive-columns" id="recursiveColumns"></div>
+    <div class="nav-hint">← Swipe to navigate layers →</div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script>
+const W=10, H=20, S=1;
+let scene, camera, renderer, grid=[], pieces=[], current, hold, paused=false, score=0, fragments=[], timeline=[];
+let cameraTarget=null, focusBlock=null, focusBlockPos=null, holdTimer=null, timelineVideo=null, timelineIndex=0;
+let videoRingBuffer = {};
+let playMode = 'sequence';
+let synth = null;
+let ghostWallUpdateTimer = null;
+
+const MEDIA = [
+  {id:'v01',title:'Family',color:0xC8E6C9,file:'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4'},
+  {id:'v02',title:'Self',color:0xAED581,file:'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4'},
+  {id:'v03',title:'Utopia',color:0x9CCC65,file:'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4'},
+  {id:'v04',title:'Stories',color:0xF44336,file:'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4'},
+  {id:'v05',title:'Harsh',color:0xEF5350,file:'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4'},
+  {id:'v06',title:'Fairy',color:0xFFCDD2,file:'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4'},
+  {id:'v07',title:'Civil',color:0xBDBDBD,file:'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4'},
+  {id:'v08',title:'Boom',color:0x616161,file:'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4'},
+  {id:'v09',title:'Thug',color:0xFF7043,file:'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4'},
+  {id:'v10',title:'Prison',color:0x78909C,file:'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4'},
+  {id:'v11',title:'Culture',color:0x90CAF9,file:'MEDIA/video_3ca5a80acfde4d4cbd79d94d7605320d.mp4'},
+  {id:'v12',title:'Chaos',color:0x42A5F5,file:'MEDIA/video_3cff4bd16de5427894d5cba1e1e385fb.mp4'},
+  {id:'v13',title:'Complex',color:0x2196F3,file:'MEDIA/video_4dd2ee3dbd36497084a52af94e3da979.mp4'},
+  {id:'v14',title:'Patterns',color:0x1976D2,file:'MEDIA/video_4e317f6ef3334999997fb40ac8257b521.mp4'},
+  {id:'v15',title:'Selves',color:0xFFB74D,file:'MEDIA/video_63ff0f9940cc4592b4441f2154e7d123.mp4'},
+  {id:'v16',title:'Mission',color:0x8BC34A,file:'MEDIA/video_6579a780ae594edb83a690b0dc3468d6.mp4'},
+  {id:'v17',title:'Bust',color:0xBCAAA4,file:'MEDIA/video_660de41592134e2489e5e0664ca3ac57.mp4'},
+  {id:'v18',title:'Trails',color:0x689F38,file:'MEDIA/video_66eb582f7c3c4322823fce3ab08cd1af.mp4'},
+  {id:'v19',title:'9/11',color:0xD32F2F,file:'MEDIA/video_6b720ebb7d604cf5a1162ade16ef45fa.mp4'},
+  {id:'v20',title:'Conscious',color:0xAFB42B,file:'MEDIA/video_7404528be4e546dd96305460876438c3.mp4'},
+  {id:'v21',title:'Speak',color:0xF06292,file:'MEDIA/video_7421c0db16f34650b3a4e035793cd128.mp4'},
+  {id:'v22',title:'Scene22',color:0xBA68C8,file:'MEDIA/video_742d9608b41f474fbed54ef2f8c408aa.mp4'},
+  {id:'v23',title:'Scene23',color:0x9575CD,file:'MEDIA/video_7a3cebeef6544f778247918c5a820e47.mp4'},
+  {id:'v24',title:'Scene24',color:0x7986CB,file:'MEDIA/video_7b94990ada2744bb8fdc631159bf3e89.mp4'},
+  {id:'v25',title:'Scene25',color:0x64B5F6,file:'MEDIA/video_7dd04a1baf2441ff88096efe9cfa9c14.mp4'},
+  {id:'v26',title:'Scene26',color:0x4FC3F7,file:'MEDIA/video_8040315874d14fd7ab34d1a8960eebb0.mp4'},
+  {id:'v27',title:'Scene27',color:0x4DD0E1,file:'MEDIA/video_85db0227eea74a2d95191d74497ea214.mp4'},
+  {id:'v28',title:'Scene28',color:0x4DB6AC,file:'MEDIA/video_8d84e63bb7524b1a850612a7eecd1d1e.mp4'},
+  {id:'v29',title:'Scene29',color:0x81C784,file:'MEDIA/video_8f1a7f1e1a334cdf9208b5946969b691.mp4'},
+  {id:'v30',title:'Scene30',color:0xAED581,file:'MEDIA/video_97f853e665434903b8768b5f3430b93d.mp4'},
+  {id:'v31',title:'Scene31',color:0xDCE775,file:'MEDIA/video_98e8654eabe3436e9d44c67916c14d28.mp4'},
+  {id:'v32',title:'Scene32',color:0xFFF176,file:'MEDIA/video_9fc306d9816c48e782063216a09a3a74.mp4'},
+  {id:'v33',title:'Scene33',color:0xFFD54F,file:'MEDIA/video_9fd24d09d52e42d5beae9952ddd0444c.mp4'},
+  {id:'v34',title:'Scene34',color:0xFFB74D,file:'MEDIA/video_adc91bd7f5384d1297042833675813d9.mp4'},
+  {id:'v35',title:'Scene35',color:0xFFA726,file:'MEDIA/video_ae6bc654fa724459ab6ad31f08342d29.mp4'},
+  {id:'v36',title:'Scene36',color:0xFF7043,file:'MEDIA/video_b3d9fe27233c477292aab4239eed1b08.mp4'},
+  {id:'v37',title:'Scene37',color:0xE57373,file:'MEDIA/video_b481340670b64d4189f8fe0270436329.mp4'},
+  {id:'v38',title:'Scene38',color:0xF06292,file:'MEDIA/video_b538c7ec6b634707af8b6a5b4aabdb6f.mp4'},
+  {id:'v39',title:'Scene39',color:0xBA68C8,file:'MEDIA/video_b7c4908b702f4d77986d03ccbf4ee9d7.mp4'},
+  {id:'v40',title:'Scene40',color:0x9575CD,file:'MEDIA/video_c02fccca1a264aaf86cddc620b16ca5b.mp4'},
+  {id:'v41',title:'Scene41',color:0x7986CB,file:'MEDIA/video_c1e680e7523647a9ab441d66c0ea8200.mp4'},
+  {id:'v42',title:'Scene42',color:0x64B5F6,file:'MEDIA/video_c4906e0b3da24f11be68dde4c4c59cca.mp4'},
+  {id:'v43',title:'Scene43',color:0x4FC3F7,file:'MEDIA/video_c7387ae6b119498588975e54c3991097.mp4'},
+  {id:'v44',title:'Scene44',color:0x4DD0E1,file:'MEDIA/video_c9d18827c251421499c0c679665fcb6b.mp4'},
+  {id:'v45',title:'Scene45',color:0x4DB6AC,file:'MEDIA/video_d119202594d54f6baeb084b9f918682e.mp4'},
+  {id:'v46',title:'Scene46',color:0x81C784,file:'MEDIA/video_d216d4ed13a74083bc1414427d93b6ef.mp4'},
+  {id:'v47',title:'Scene47',color:0xAED581,file:'MEDIA/video_d8c1e1812f3f4477ad1ea5afba750261.mp4'},
+  {id:'v48',title:'Scene48',color:0xDCE775,file:'MEDIA/video_ddb407bcc9b24ef9ae0e3dfcfd99fb72.mp4'},
+  {id:'v49',title:'Scene49',color:0xFFF176,file:'MEDIA/video_e12fb3631ca341a78bc30a14f94615b6.mp4'},
+  {id:'v50',title:'Scene50',color:0xFFD54F,file:'MEDIA/video_e2a01bc15607456a9abb5a16960969c0.mp4'}
+];
+
+// SHAPES - Tetris pieces
+const SHAPES = [
+  [[1,1,1,1]], // I
+  [[1,1],[1,1]], // O
+  [[0,1,0],[1,1,1]], // T
+  [[1,0,0],[1,1,1]], // L
+  [[0,0,1],[1,1,1]], // J
+  [[0,1,1],[1,1,0]], // S
+  [[1,1,0],[0,1,1]]  // Z
+];
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0a);
+  
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(W/2, H/2, H*1.2);
+  camera.lookAt(W/2, H/2, 0);
+  
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+  
+  // Grid
+  grid = Array.from({length:H}, ()=>Array(W).fill(null));
+  
+  // Lights
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.4);
+  dir.position.set(5, 10, 7);
+  scene.add(dir);
+  
+  // Init audio
+  if(window.Tone){
+    synth = new Tone.PolySynth(Tone.Synth).toDestination();
+  }
+  
+  // Dots
+  const dotsEl = document.getElementById('dots');
+  for(let i=0; i<7; i++){
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dotsEl.appendChild(dot);
+  }
+  
+  spawnPiece();
+  animate();
+}
+
+function spawnPiece(){
+  const shape = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+  const media = MEDIA[Math.floor(Math.random()*MEDIA.length)];
+  
+  const videoEl = document.createElement('video');
+  videoEl.src = media.file;
+  videoEl.crossOrigin = 'anonymous';
+  videoEl.loop = true;
+  videoEl.muted = true;
+  videoEl.playsInline = true;
+  videoEl.play().catch(()=>{});
+  
+  const texture = new THREE.VideoTexture(videoEl);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  
+  current = {
+    shape,
+    x: Math.floor(W/2 - shape[0].length/2),
+    y: H - shape.length,
+    color: media.color,
+    media,
+    videoEl,
+    texture,
+    meshes: []
+  };
+  
+  drawPiece();
+  
+  if(collision()){
+    console.log('Game Over');
+    paused = true;
+  }
+}
+
+function drawPiece(){
+  if(!current) return;
+  
+  current.meshes.forEach(m => scene.remove(m));
+  current.meshes = [];
+  
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(current.shape[y][x]){
+        const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+        const mat = new THREE.MeshPhongMaterial({
+          map: current.texture,
+          color: current.color,
+          emissive: current.color,
+          emissiveIntensity: 0.2
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(current.x + x, current.y - y, 0);
+        scene.add(mesh);
+        current.meshes.push(mesh);
+      }
+    }
+  }
+}
+
+function collision(){
+  if(!current) return false;
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(current.shape[y][x]){
+        const gx = current.x + x;
+        const gy = current.y - y;
+        if(gx<0 || gx>=W || gy<0) return true;
+        if(grid[gy] && grid[gy][gx]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function lockPiece(){
+  if(!current) return;
+  
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(current.shape[y][x]){
+        const gx = current.x + x;
+        const gy = current.y - y;
+        if(gy >= 0 && gy < H && gx >= 0 && gx < W){
+          grid[gy][gx] = {
+            color: current.color,
+            media: current.media,
+            texture: current.texture,
+            videoEl: current.videoEl
+          };
+        }
+      }
+    }
+  }
+  
+  // Add to timeline
+  const segment = {
+    media: current.media,
+    startTime: timeline.reduce((sum, s) => sum + s.duration, 0),
+    duration: 2.5,
+    thumbnails: []
+  };
+  timeline.push(segment);
+  
+  current.meshes.forEach(m => scene.remove(m));
+  current = null;
+  
+  clearLines();
+  renderLockedBlocks();
+  updateTimeline();
+  spawnPiece();
+}
+
+function clearLines(){
+  let cleared = 0;
+  for(let y=H-1; y>=0; y--){
+    if(grid[y].every(cell => cell !== null)){
+      grid.splice(y, 1);
+      grid.push(Array(W).fill(null));
+      cleared++;
+      y++;
+    }
+  }
+  if(cleared > 0){
+    score += cleared;
+    document.querySelectorAll('.dot')[Math.min(score-1, 6)]?.classList.add('on');
+    renderLockedBlocks();
+    updateTimeline();
+    playSound('clear', 800);
+  }
+}
+
+function renderLockedBlocks(){
+  scene.children.filter(c => c.userData.locked).forEach(c => scene.remove(c));
+  
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      if(grid[y][x]){
+        const cell = grid[y][x];
+        const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+        const mat = new THREE.MeshPhongMaterial({
+          map: cell.texture,
+          color: cell.color,
+          emissive: cell.color,
+          emissiveIntensity: 0.15
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, 0);
+        mesh.userData.locked = true;
+        scene.add(mesh);
+      }
+    }
+  }
+}
+
+function updateTimeline(){
+  const playerEl = document.getElementById('timelinePlayer');
+  const seqCount = document.getElementById('seqCount');
+  
+  if(timeline.length === 0){
+    playerEl.classList.remove('active');
+    seqCount.classList.remove('active');
+    return;
+  }
+  
+  playerEl.classList.add('active');
+  seqCount.classList.add('active');
+  
+  const label = playerEl.querySelector('.timeline-label');
+  playerEl.innerHTML = '';
+  playerEl.appendChild(label);
+  
+  timeline.forEach((segment, i) => {
+    const strip = document.createElement('div');
+    strip.className = 'segment-strip';
+    strip.innerHTML = `<div class="strip-header">#${i+1} ${segment.media.title}</div>`;
+    strip.onclick = () => previewSegment(i);
+    playerEl.appendChild(strip);
+  });
+  
+  seqCount.textContent = `SEQ ${timeline.length}`;
+  
+  const playControls = document.getElementById('playControls');
+  if(timeline.length > 0){
+    playControls.classList.add('active');
+  }
+  
+  console.log(`✓ Timeline: ${timeline.length} segments`);
+}
+
+function previewSegment(index){
+  const segment = timeline[index];
+  const previewPanel = document.getElementById('previewPanel');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewTitle = document.getElementById('previewTitle');
+  
+  previewVideo.src = segment.media.file;
+  previewVideo.currentTime = 0;
+  previewTitle.textContent = segment.media.title;
+  
+  previewPanel.classList.add('active');
+  previewVideo.play();
+}
+
+function closePreview(){
+  document.getElementById('previewPanel').classList.remove('active');
+  document.getElementById('previewVideo').pause();
+}
+
+function moveDown(){
+  if(!current) return;
+  current.y--;
+  if(collision()){
+    current.y++;
+    lockPiece();
+  } else {
+    drawPiece();
+  }
+}
+
+function moveLeft(){
+  if(!current) return;
+  current.x--;
+  if(collision()) current.x++;
+  drawPiece();
+}
+
+function moveRight(){
+  if(!current) return;
+  current.x++;
+  if(collision()) current.x--;
+  drawPiece();
+}
+
+function rotate(){
+  if(!current) return;
+  const old = current.shape;
+  current.shape = current.shape[0].map((_, i) => current.shape.map(row => row[i]).reverse());
+  if(collision()) current.shape = old;
+  drawPiece();
+}
+
+function playSound(type, freq){
+  if(!synth) return;
+  synth.triggerAttackRelease(freq, '0.1');
+}
+
+function haptic(ms){
+  if(navigator.vibrate) navigator.vibrate(ms);
+}
+
+// Controls
+document.getElementById('g1').onclick = () => paused = !paused;
+document.getElementById('g3').onclick = () => location.reload();
+document.getElementById('g4').onclick = rotate;
+document.getElementById('g5').onclick = () => { while(!collision()){ current.y--; } current.y++; lockPiece(); };
+document.getElementById('g6').onclick = () => document.getElementById('exportMenu').classList.toggle('active');
+
+document.addEventListener('keydown', e => {
+  if(paused) return;
+  if(e.key === 'ArrowLeft') moveLeft();
+  if(e.key === 'ArrowRight') moveRight();
+  if(e.key === 'ArrowDown') moveDown();
+  if(e.key === 'ArrowUp') rotate();
+  if(e.key === ' ') { e.preventDefault(); while(!collision()){ current.y--; } current.y++; lockPiece(); }
+});
+
+function closeExportMenu(){
+  document.getElementById('exportMenu').classList.remove('active');
+}
+
+function closeRecursiveView(){
+  document.getElementById('recursiveView').classList.remove('active');
+}
+
+function showRecursiveView(){
+  closeExportMenu();
+  document.getElementById('recursiveView').classList.add('active');
+}
+
+function exportSequenceA4(){
+  console.log('Export A4 sequence');
+  closeExportMenu();
+}
+
+function exportGridMosaic(){
+  console.log('Export grid mosaic');
+  closeExportMenu();
+}
+
+function exportGridMosaicWithBG(){
+  console.log('Export grid mosaic with background');
+  closeExportMenu();
+}
+
+function exportEDL(){
+  console.log('Export EDL');
+  closeExportMenu();
+}
+
+function closeTimeline(){
+  document.getElementById('timelinePlayer').classList.remove('active');
+}
+
+// Game loop
+let lastDrop = 0, time = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  time += 0.016;
+  
+  if(!paused && current){
+    const now = Date.now();
+    if(now - lastDrop > 1000){
+      moveDown();
+      lastDrop = now;
+    }
+  }
+  
+  renderer.render(scene, camera);
+}
+
+// Resize
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+init();
+</script>
+</body>
+</html>

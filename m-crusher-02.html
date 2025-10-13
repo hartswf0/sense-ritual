@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Editor: Film Assembly</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* Bauhaus Grid System */
+        .container {
+            display: grid;
+            grid-template-rows: 60px 1fr 80px;
+            height: 100vh;
+            gap: 2px;
+            background: #000;
+        }
+
+        /* Header - Minimal */
+        .header {
+            background: #111;
+            border-bottom: 2px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #FFD700;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stat-item {
+            color: #FFD700;
+        }
+
+        /* Main Grid - 5 rows x 10 columns */
+        .grid-container {
+            display: grid;
+            grid-template-rows: repeat(5, 1fr);
+            gap: 2px;
+            background: #000;
+            padding: 2px;
+        }
+
+        .lane {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+        }
+
+        .cell {
+            background: #111;
+            border: 1px solid #222;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+
+        .cell:hover {
+            border-color: #FFD700;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .cell.has-video {
+            border-color: #FFD700;
+        }
+
+        .cell.selected {
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Video Preview in Cell */
+        .cell-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .cell-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 8px;
+            font-size: 10px;
+            color: #FFD700;
+            font-weight: 700;
+            text-shadow: 0 1px 3px #000;
+        }
+
+        .cell-number {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        /* Sequence Display - Bottom */
+        .sequence-bar {
+            background: #111;
+            border-top: 2px solid #333;
+            display: flex;
+            overflow-x: auto;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .sequence-item {
+            min-width: 120px;
+            height: 60px;
+            background: #222;
+            border: 2px solid #FFD700;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .sequence-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .sequence-label {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: rgba(0,0,0,0.9);
+            color: #FFD700;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .sequence-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #f00;
+            color: #fff;
+            width: 20px;
+            height: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        /* Controls - Bauhaus buttons */
+        .controls {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            width: 50px;
+            height: 50px;
+            background: #FFD700;
+            border: none;
+            color: #000;
+            font-size: 20px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #fff;
+            transform: scale(1.1);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #111;
+            border: 3px solid #FFD700;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #FFD700;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .modal-body {
+            color: #fff;
+            line-height: 1.8;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 15px;
+            background: #FFD700;
+            border: none;
+            color: #000;
+            font-weight: 900;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-btn.secondary {
+            background: #333;
+            color: #FFD700;
+        }
+
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FFD700;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #FFD700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">MATRIX EDITOR</div>
+            <div class="stats">
+                <div class="stat-item">CLIPS: <span id="clipCount">0</span></div>
+                <div class="stat-item">SEQUENCE: <span id="seqCount">0</span></div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-container" id="gridContainer"></div>
+
+        <!-- Sequence Bar -->
+        <div class="sequence-bar" id="sequenceBar">
+            <div style="color: #FFD700; font-size: 12px; padding: 20px; opacity: 0.5;">
+                Click cells to add clips to sequence →
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="btn" id="clearBtn" title="Clear">✕</button>
+        <button class="btn" id="exportBtn" title="Export">↓</button>
+        <button class="btn" id="helpBtn" title="Help">?</button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">HELP</div>
+            <div class="modal-body" id="modalBody">
+                <p><strong>Matrix Editor</strong> - Assemble documentary sequences</p>
+                <br>
+                <p><strong>How to use:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Click any cell to load a video clip</li>
+                    <li>Clips appear in sequence at bottom</li>
+                    <li>Click sequence items to remove them</li>
+                    <li>Export when ready</li>
+                </ul>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn" id="modalClose">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🎬 Matrix Editor Loading...');
+
+        const YOUTUBE_VIDEO_ID = 'BQ2n6SN7gOY';
+        
+        const FRAGMENTS = [
+            { id: 1, title: 'Family of Man', start: 27, end: 53, icon: '◯' },
+            { id: 2, title: 'Individual Self', start: 67, end: 78, icon: '◆' },
+            { id: 3, title: 'Unreal Fairyland', start: 197, end: 204, icon: '◇' },
+            { id: 4, title: 'Grand Stories', start: 143, end: 148, icon: '◈' },
+            { id: 5, title: 'Societal Boom', start: 230, end: 237, icon: '◊' },
+            { id: 6, title: 'Crack Epidemic', start: 291, end: 300, icon: '◉' },
+            { id: 7, title: 'Mass Incarceration', start: 1070, end: 1078, icon: '◎' },
+            { id: 8, title: 'Saudi Dream', start: 379, end: 384, icon: '○' },
+            { id: 9, title: 'Zubaydah Diary', start: 1166, end: 1172, icon: '●' },
+            { id: 10, title: 'Jihad Disintegration', start: 1237, end: 1248, icon: '◐' },
+            { id: 11, title: 'Perpetual Now', start: 1313, end: 1320, icon: '◑' },
+            { id: 12, title: 'CIA Interrogation', start: 2604, end: 2616, icon: '◒' },
+            { id: 13, title: 'Godzilla Fear', start: 2664, end: 2675, icon: '◓' },
+            { id: 14, title: 'Chaos Theory', start: 664, end: 669, icon: '◔' },
+            { id: 15, title: 'Complexity Theory', start: 738, end: 751, icon: '◕' },
+            { id: 16, title: 'Neural Networks', start: 3595, end: 3606, icon: '◖' },
+            { id: 17, title: 'Algorithms', start: 3650, end: 3670, icon: '◗' },
+            { id: 18, title: 'Surveillance', start: 3700, end: 3720, icon: '◘' },
+            { id: 19, title: 'Filter Bubbles', start: 3750, end: 3770, icon: '◙' },
+            { id: 20, title: 'Attention Economy', start: 3800, end: 3820, icon: '◚' }
+        ];
+
+        const state = {
+            cells: [],
+            sequence: [],
+            selectedCell: null
+        };
+
+        function buildVideoEmbed(fragment) {
+            return `https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?start=${fragment.start}&end=${fragment.end}&autoplay=1&mute=1&loop=1&playlist=${YOUTUBE_VIDEO_ID}&controls=0&modestbranding=1`;
+        }
+
+        function init() {
+            console.log('🎮 Initializing grid...');
+            const container = document.getElementById('gridContainer');
+            
+            // Create 5 lanes x 10 cells = 50 cells
+            for (let lane = 0; lane < 5; lane++) {
+                const laneDiv = document.createElement('div');
+                laneDiv.className = 'lane';
+                
+                for (let col = 0; col < 10; col++) {
+                    const cellIndex = lane * 10 + col;
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.index = cellIndex;
+                    
+                    // Assign random fragment to each cell
+                    const fragment = FRAGMENTS[cellIndex % FRAGMENTS.length];
+                    
+                    cell.innerHTML = `
+                        <div class="loading">...</div>
+                        <div class="cell-overlay">
+                            <div class="cell-number">${fragment.icon}</div>
+                            <div>${fragment.title}</div>
+                        </div>
+                    `;
+                    
+                    cell.addEventListener('click', () => {
+                        console.log('📌 Cell clicked:', cellIndex);
+                        selectCell(cellIndex, fragment);
+                    });
+                    
+                    laneDiv.appendChild(cell);
+                    state.cells.push({ element: cell, fragment, loaded: false });
+                    
+                    // Load video after a delay
+                    setTimeout(() => loadCellVideo(cellIndex), 100 * cellIndex);
+                }
+                
+                container.appendChild(laneDiv);
+            }
+            
+            setupControls();
+            updateStats();
+        }
+
+        function loadCellVideo(index) {
+            const cell = state.cells[index];
+            if (!cell || cell.loaded) return;
+            
+            console.log('🎥 Loading video for cell', index);
+            
+            const iframe = document.createElement('iframe');
+            iframe.className = 'cell-video';
+            iframe.src = buildVideoEmbed(cell.fragment);
+            iframe.frameBorder = '0';
+            iframe.allow = 'autoplay; encrypted-media';
+            
+            // Remove loading indicator
+            const loading = cell.element.querySelector('.loading');
+            if (loading) loading.remove();
+            
+            // Insert video before overlay
+            cell.element.insertBefore(iframe, cell.element.firstChild);
+            cell.element.classList.add('has-video');
+            cell.loaded = true;
+        }
+
+        function selectCell(index, fragment) {
+            console.log('✅ Adding to sequence:', fragment.title);
+            
+            // Visual feedback
+            const cell = state.cells[index];
+            cell.element.classList.add('selected');
+            setTimeout(() => cell.element.classList.remove('selected'), 300);
+            
+            // Add to sequence
+            state.sequence.push({ ...fragment, cellIndex: index });
+            renderSequence();
+            updateStats();
+        }
+
+        function renderSequence() {
+            const bar = document.getElementById('sequenceBar');
+            bar.innerHTML = '';
+            
+            state.sequence.forEach((item, idx) => {
+                const seqItem = document.createElement('div');
+                seqItem.className = 'sequence-item';
+                
+                const iframe = document.createElement('iframe');
+                iframe.src = buildVideoEmbed(item);
+                iframe.frameBorder = '0';
+                iframe.allow = 'autoplay; encrypted-media';
+                
+                const label = document.createElement('div');
+                label.className = 'sequence-label';
+                label.textContent = `${idx + 1}. ${item.title}`;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'sequence-remove';
+                removeBtn.textContent = '✕';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeFromSequence(idx);
+                };
+                
+                seqItem.appendChild(iframe);
+                seqItem.appendChild(label);
+                seqItem.appendChild(removeBtn);
+                bar.appendChild(seqItem);
+            });
+            
+            console.log('📊 Sequence updated:', state.sequence.length, 'clips');
+        }
+
+        function removeFromSequence(index) {
+            console.log('🗑️ Removing from sequence:', index);
+            state.sequence.splice(index, 1);
+            renderSequence();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('clipCount').textContent = FRAGMENTS.length;
+            document.getElementById('seqCount').textContent = state.sequence.length;
+        }
+
+        function setupControls() {
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                if (confirm('Clear entire sequence?')) {
+                    console.log('🧹 Clearing sequence');
+                    state.sequence = [];
+                    renderSequence();
+                    updateStats();
+                }
+            });
+            
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                if (state.sequence.length === 0) {
+                    alert('No clips in sequence!');
+                    return;
+                }
+                
+                console.log('💾 Exporting sequence...');
+                exportSequence();
+            });
+            
+            document.getElementById('helpBtn').addEventListener('click', () => {
+                showModal('HELP', `
+                    <p><strong>Matrix Editor</strong> - Documentary Assembly Interface</p>
+                    <br>
+                    <p><strong>Instructions:</strong></p>
+                    <ul style="margin-left: 20px; line-height: 2;">
+                        <li>Click any cell to preview and add clip</li>
+                        <li>Build your sequence in order (bottom bar)</li>
+                        <li>Click ✕ on sequence items to remove</li>
+                        <li>Click ↓ to export final sequence</li>
+                        <li>Each cell plays a fragment from "Can't Get You Out of My Head"</li>
+                    </ul>
+                `);
+            });
+            
+            document.getElementById('modalClose').addEventListener('click', () => {
+                document.getElementById('modal').classList.remove('show');
+            });
+        }
+
+        function showModal(title, body) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function exportSequence() {
+            const data = {
+                title: 'Matrix Editor Sequence',
+                timestamp: new Date().toISOString(),
+                totalClips: state.sequence.length,
+                totalDuration: state.sequence.reduce((sum, s) => sum + (s.end - s.start), 0),
+                clips: state.sequence.map((s, idx) => ({
+                    order: idx + 1,
+                    title: s.title,
+                    icon: s.icon,
+                    start: s.start,
+                    end: s.end,
+                    duration: s.end - s.start,
+                    cellIndex: s.cellIndex
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `matrix_sequence_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('✅ Export complete:', data);
+            alert(`Exported ${state.sequence.length} clips!`);
+        }
+
+        // Boot
+        init();
+        console.log('✅ Matrix Editor Ready');
+    </script>
+</body>
+</html>
