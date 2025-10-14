@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Narrative Assembly Systems</title>
+<style>
+  :root {
+    --black: #000;
+    --white: #fff;
+    --red: #E24A4A;
+    --cyan: #00ffff;
+    --yellow: #FFE66D;
+    --gray: #666;
+  }
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: var(--black);
+    color: var(--white);
+    line-height: 1.6;
+  }
+  
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+  
+  h1 {
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+  
+  .subtitle {
+    font-size: clamp(14px, 2.5vw, 18px);
+    color: var(--gray);
+    margin-bottom: 60px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  
+  .systems-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    margin: 60px 0;
+  }
+  
+  .system-card {
+    border: 3px solid var(--white);
+    padding: 40px 30px;
+    background: var(--black);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  
+  .system-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+  }
+  
+  .matrix::before { background: var(--red); }
+  .garden::before { background: var(--cyan); }
+  .flux::before { background: var(--yellow); }
+  .prime::before { background: #BB86FC; }
+  .chat::before { background: #FF6B6B; }
+  
+  .system-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 60px rgba(255,255,255,0.1);
+  }
+  
+  .system-title {
+    font-size: 24px;
+    font-weight: 900;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+  }
+  
+  .system-desc {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  
+  .system-link {
+    display: block;
+    margin-top: 20px;
+    padding: 12px;
+    border: 2px solid var(--white);
+    text-align: center;
+    text-decoration: none;
+    color: var(--white);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    font-size: 13px;
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+  
+  .matrix .system-link:hover { background: var(--red); border-color: var(--red); }
+  .garden .system-link:hover { background: var(--cyan); border-color: var(--cyan); }
+  .flux .system-link:hover { background: var(--yellow); border-color: var(--yellow); }
+  .prime .system-link:hover { background: #BB86FC; border-color: #BB86FC; }
+  .chat .system-link:hover { background: #FF6B6B; border-color: #FF6B6B; }
+  
+  .nav-footer {
+    margin-top: 80px;
+    padding-top: 40px;
+    border-top: 3px solid #222;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .nav-btn {
+    padding: 16px 32px;
+    border: 2px solid var(--white);
+    background: transparent;
+    color: var(--white);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    font-size: 12px;
+    text-transform: uppercase;
+    transition: all 0.3s;
+  }
+  
+  .nav-btn:hover {
+    background: var(--white);
+    color: var(--black);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Narrative Assembly</h1>
+  <div class="subtitle">Three Systems • One Structure</div>
+  
+  <p style="font-size: 16px; max-width: 800px; margin-bottom: 60px; line-height: 1.8;">
+    Three distinct interfaces for assembling narrative films from fragments. Each system transforms gameplay into cinematic sequences through unique procedural rhetoric.
+  </p>
+
+  <div class="systems-grid">
+    <!-- Matrix Editor -->
+    <div class="system-card matrix">
+      <div class="system-title">Matrix Editor</div>
+      <div class="system-desc">Lane-based defense system inspired by Plants vs Zombies. Fragments advance as threats to be captured and chained.</div>
+      <a href="matrix-editor.html" class="system-link">Launch Editor</a>
+    </div>
+    
+    <!-- Garden -->
+    <div class="system-card garden">
+      <div class="system-title">Garden</div>
+      <div class="system-desc">Tetris-inspired spatial arrangement system. Fragments fall as blocks to be rotated and placed in the grid.</div>
+      <a href="garden-with-beats.html" class="system-link">Launch Garden</a>
+    </div>
+    
+    <!-- Flux Garden -->
+    <div class="system-card flux">
+      <div class="system-title">Flux Garden</div>
+      <div class="system-desc">Match-3 mechanics with flow field visualization. Fragments are matched by type to create sequences.</div>
+      <a href="m-crusher-09-with-beats.html" class="system-link">Launch Flux Garden</a>
+    </div>
+    
+    <!-- Prime System -->
+    <div class="system-card prime">
+      <div class="system-title">Prime Assembly</div>
+      <div class="system-desc">Core narrative structure with beat tracking and syntagma selection. The foundation for all systems.</div>
+      <a href="a3.html" class="system-link">View A3 Structure</a>
+      <a href="synt.html" class="system-link" style="margin-top: 10px;">Syntagma Codes</a>
+      <a href="THREE_GAMES.html" class="system-link" style="margin-top: 10px;">System Comparison</a>
+    </div>
+    
+    <!-- Chat Video Interfaces -->
+    <div class="system-card chat">
+      <div class="system-title">TV Swiper</div>
+      <div class="system-desc">Vertical feed for TV content discovery</div>
+      <a href="STONE/tv-swiper.html" class="system-link">Launch TV Swiper</a>
+    </div>
+    
+    <div class="system-card chat">
+      <div class="system-title">Swiper Sogo</div>
+      <div class="system-desc">Fixed position chat video interface</div>
+      <a href="swiper-sogo-fixed.html" class="system-link">Launch Swiper Sogo</a>
+    </div>
+  </div>
+  
+  <div class="nav-footer">
+    <a href="prompt-lab.html" class="nav-btn">Prompt Lab</a>
+    <a href="index.html" class="nav-btn">Main Index</a>
+    <a href="FINAL-FIXES-NEEDED.md" class="nav-btn">Development Notes</a>
+  </div>
+</div>
+
+</body>
+</html>

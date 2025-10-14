@@ -1,0 +1,1769 @@
+--- START OF FILE m-crusher-09-with-beats.html ---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="manifest.json">
+  <title>ORGANIC GARDEN — Flowing Flux Fields</title>
+  <style>
+    :root{
+      --bg:#0a0a0a; --ui:#111; --line:#222;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:#0ff; font-family:-apple-system,sans-serif;}
+    
+    .wrap{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+    
+    /* Header */
+    header{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--ui); border-bottom:2px solid var(--line);}
+    .brand{font-weight:900; letter-spacing:3px; font-size:16px; color:#0ff;}
+    .stats{display:flex; gap:16px; font-size:12px; font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:#0ff;}
+    
+    /* Game Area */
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg);}
+    canvas{background:#0d0d0d; border:2px solid var(--line); border-radius:8px; touch-action:none; image-rendering:pixelated;}
+    
+    /* Video Preview */
+    .video-preview{position:absolute; top:20px; right:20px; width:160px; height:90px; border:2px solid #0ff; background:#000; overflow:hidden; pointer-events:none; opacity:0.8;}
+    .video-preview video{width:100%; height:100%; object-fit:cover;}
+    .video-label{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.9); padding:2px 6px; font-size:10px; color:#0ff; font-weight:700;}
+    
+    /* Fullscreen collected video layer */
+    #collectedVideoLayer{position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.5s;}
+    #collectedVideoLayer.active{opacity:0.6;}
+    #collectedVideoLayer video{width:100%; height:100%; object-fit:cover;}
+    
+    @media (max-width: 640px) {
+      .video-preview{width:120px; height:68px; top:10px; right:10px;}
+    }
+    
+    /* Toolbar: fixed bottom, concise */
+    .toolbar{position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:8px; padding:10px; background:rgba(0,0,0,0.85); border-top:2px solid #0ff; z-index:120;}
+    .btn{appearance:none; border:none; color:#0ff; background:rgba(0,255,255,0.1); border:1px solid #0ff; padding:8px 10px; border-radius:4px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; min-height:44px;}
+    .btn:active{transform:scale(0.95); background:#0ff; color:#000;}
+    
+    /* Timeline lane (narrow) */
+    .timeline-panel{position:fixed; right:0; top:60px; bottom:50px; width:72px; background:rgba(0,0,0,0.78); border-left:2px solid #0ff; padding:6px 4px; overflow-y:auto; transform:translateX(0); transition:width 0.25s ease, padding 0.25s ease; z-index:100; display:flex; flex-direction:column; gap:6px;}
+    .timeline-panel.collapsed{width:0; padding:0; border-left:none; pointer-events:none;}
+    .timeline-title{font-size:10px; font-weight:900; color:#0ff; margin:0 0 6px; text-align:center; letter-spacing:1px;}
+    .clip-item{width:100%; aspect-ratio:16/9; margin-bottom:8px; border:2px solid #333; cursor:pointer; position:relative; overflow:hidden;}
+    .clip-item video{width:100%; height:100%; object-fit:cover;}
+    .clip-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.9); padding:3px; font-size:8px; color:#0ff; text-align:center; text-transform:uppercase; letter-spacing:0.5px;}
+    .clip-item.locked .clip-label{background:rgba(0,0,0,0.6); color:#666;}
+    .clip-item.locked::after {
+      content: '🔒';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .clip-item.muted{filter:grayscale(100%); opacity:0.7;}
+    
+    .sequence-player{position:sticky; bottom:0; background:#0b0b0b; border-top:2px solid #0ff; padding:8px;}
+    .sequence-player video{width:100%; aspect-ratio:16/9; background:#000; border:2px solid #0ff;}
+
+    /* Timeline handle */
+    .timeline-handle{position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff; color:#0ff; display:flex; align-items:center; justify-content:center; z-index:110; cursor:pointer; backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); font-weight:900;}
+    .timeline-handle:active{background:rgba(0,255,255,0.25);}
+    
+    @media (max-width: 768px) {
+      .timeline-panel{width:160px;}
+      .toolbar{grid-template-columns:repeat(3,1fr);}
+    }
+    
+    /* Shape Colors - High Contrast Bauhaus */
+    .color-0{border-color:#FF6B6B !important;} /* Red */
+    .color-1{border-color:#4ECDC4 !important;} /* Cyan */
+    .color-2{border-color:#FFE66D !important;} /* Yellow */
+    .color-3{border-color:#95E1D3 !important;} /* Mint */
+    .color-4{border-color:#F38181 !important;} /* Coral */
+    .color-5{border-color:#AA96DA !important;} /* Purple */
+    .color-6{border-color:#A8E6CF !important;} /* Green */
+    .color-7{border-color:#FFB74D !important;} /* Orange */
+    .color-8{border-color:#FCBAD3 !important;} /* Pink */
+    .color-9{border-color:#FFA07A !important;} /* Salmon */
+    
+    /* Loading */
+    .loading{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; color:#0ff; font-weight:900;}
+    
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal.show{display:flex;}
+    .modal-content{text-align:center; padding:40px;}
+    .modal-title{font-size:48px; font-weight:900; color:#0ff; margin-bottom:20px;}
+    .modal-stats{font-size:18px; color:#666; margin-bottom:30px;}
+    .modal-btn{padding:16px 40px; background:#0ff; border:none; color:#000; font-weight:900; font-size:16px; cursor:pointer; margin:5px;}
+    
+    /* Export Menu */
+    .export-menu{position:fixed; bottom:100px; right:20px; background:rgba(17,17,17,0.98); border:2px solid #0ff; padding:16px; border-radius:8px; display:none; z-index:200;}
+    .export-menu.show{display:block;}
+    .export-option{padding:12px; margin:4px 0; background:rgba(0,255,255,0.1); border:2px solid #0ff; color:#0ff; cursor:pointer; font-weight:900; font-size:12px; text-align:center;}
+    .export-option:hover{background:#0ff; color:#000;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">FLUX GARDEN</div>
+    <div class="stats">
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
+      <div class="stat">CLIPS <span class="stat-value" id="clips">0</span></div>
+    </div>
+  </header>
+  
+  <div id="gameArea">
+    <div class="loading" id="loading">LOADING...</div>
+    <div id="collectedVideoLayer">
+      <video id="collectedVideo" muted loop playsinline></video>
+    </div>
+    <canvas id="game"></canvas>
+    <div class="video-preview" id="videoPreview" style="display:none;">
+      <video id="previewVideo" muted loop playsinline></video>
+      <div class="video-label" id="videoLabel">Scene 01</div>
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="pauseBtn">PAUSE</button>
+    <button class="btn" id="playSequenceBtn">PLAY SEQ</button>
+    <button class="btn" id="exportBtn">EXP</button>
+    <button class="btn" id="audioBtn">AUDIO</button>
+    <button class="btn" id="hapticsBtn">HAPTICS</button>
+    <button class="btn" id="automataBtn">CA</button>
+  </div>
+</div>
+
+<div class="timeline-panel" id="timelinePanel">
+  <div class="timeline-title">SEQUENCE</div>
+  <div id="clipList"></div>
+  <div class="sequence-player" id="sequencePlayerWrap" style="display:none;">
+    <video id="sequencePlayer" controls playsinline></video>
+    <div class="clip-label" id="sequencePlayerLabel">—</div>
+  </div>
+</div>
+<div class="timeline-handle" id="timelineHandle">></div>
+
+<div class="export-menu" id="exportMenu">
+  <div class="export-option" onclick="exportJSON()">📄 JSON</div>
+  <div class="export-option" onclick="exportEDL()">🎬 EDL</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">SEQUENCE COMPLETE</div>
+    <div class="modal-stats" id="modalStats"></div>
+    <button class="modal-btn" onclick="location.reload()">NEW SEQUENCE</button>
+    <button class="modal-btn" onclick="document.getElementById('exportMenu').classList.toggle('show')">EXPORT</button>
+  </div>
+</div>
+
+<script>
+console.log('🌊 FLUX GARDEN — Organic Flow Fields Loading...');
+
+// ==============================================================================
+// CONFIGURATION SURFACE (SINGLE SOURCE OF TRUTH)
+// ==============================================================================
+const config = {
+  gridSize: 8,
+  cellSize: 50,
+  automata: {
+    enabledDefault: false, // Cellular Automata default state
+    updateEveryNFrames: 8,  // CA logic update frequency
+    decayLimit: 120,       // Frames before stable cell decays
+    propagationChance: 0.3, // Chance for a cell to adopt neighbor type
+    popDuration: 30        // Frames for pop animation
+  },
+  motion: {
+    breatheScaleMax: 0.03, // Max additional scale for breathing (e.g., 0.03 means 3%)
+    breathePeriodFrames: 180, // Period for breathing animation (e.g., 180 frames = 3 seconds at 60fps)
+    popScaleMax: 0.15,     // Max additional scale for pop animation (e.g., 0.15 means 1.15x)
+    popDurationMs: 250,    // Duration of pop animation in ms
+    flowStrength: 5,       // Strength of Perlin flow field displacement
+    flowNoiseFreq: 0.05,   // Base frequency for Perlin noise
+    flowSpeed: 0.001,      // Speed of Perlin noise evolution
+    respectReducedMotion: true // Disable complex motion if user prefers
+  },
+  hints: {
+    idleFirstMs: 4000,     // Delay before first hint appears
+    idleEscalateMs: 8000,  // Delay before hint adds wiggle
+    cooldownMs: 6000,      // Cooldown after an action before hints reappear
+    glowAlpha: 0.3,        // Max alpha for hint glow
+    wigglePx: 4,           // Max displacement for hint wiggle
+    wiggleFreqHz: 1.5,     // Frequency of hint wiggle
+    minMatchCells: 3       // Minimum cells for a hint to trigger (e.g., standard 3-in-a-row)
+  },
+  input: {
+    hitMinPx: 44,          // Minimum interactive hit area (CSS pixels)
+    slopPx: 8,             // Pointer drag/tap drift tolerance (not fully implemented with click listener)
+    invalidSnapMs: 150     // Duration of swap-back animation (visual effect, not implemented in this version)
+  },
+  toggles: {
+    hapticsDefault: false, // Haptics default state
+    audioDefault: true     // Audio default state
+  },
+  audio: {
+    bgVolumeMax: 0.3,      // Max volume for background videos
+    hintSilent: true       // Hints should not make sound
+  },
+  videoCells: {
+    segmentsPerType: 4,    // Number of time segments per video file
+    segmentLengthSec: 10,  // Duration of each video segment
+    assignMode: "deterministic", // "deterministic" or "random"
+    assignFormula: "(r * config.gridSize + c) % config.videoCells.segmentsPerType", // Formula for deterministic assignment
+    driftPctPerSec: 0.002  // Small drift for mosaic sampling (0.2% per second)
+  },
+  timeline: {
+    clipDurationDefaultSec: 5, // Default duration for clips in EDL export
+    halfSilenceRule: true // Apply mute every other clip
+  }
+};
+
+// ==============================================================================
+// TYPE CATALOG
+// ==============================================================================
+// Each type now includes segment information and a unicode symbol (for potential future display)
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Blush', color: '#FFD3D3', symbol: '❀', shape: 'circle'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Sky', color: '#D4E7FF', symbol: '☁', shape: 'square'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Cream', color: '#FFF5D4', symbol: '★', shape: 'triangle'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Mint', color: '#D4F4DD', symbol: '🌿', shape: 'hexagon'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Peach', color: '#FFE4D4', symbol: '🔶', shape: 'diamond'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Lavender', color: '#E8D4FF', symbol: '💜', shape: 'pentagon'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Sage', color: '#D9EAD3', symbol: '✨', shape: 'star'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Apricot', color: '#FFE0CC', symbol: '🍑', shape: 'roundsquare'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Rose', color: '#FFD4E5', symbol: '🌹', shape: 'octagon'},
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Sand', color: '#F4E8D4', symbol: '➕', shape: 'cross'}
+};
+
+const TYPE_SEGMENTS = {}; // Populated by initTypeSegments
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const game = {
+  grid: [],
+  selected: null,
+  score: 0,
+  moves: 30,
+  sequence: [],
+  busy: false,
+  sounds: { match: null, swap: null, win: null, error: null },
+  audioEnabled: config.toggles.audioDefault,
+  hapticsEnabled: config.toggles.hapticsDefault,
+  automataEnabled: config.toggles.automataDefault,
+  autoPlay: true, // Auto-play sequence after match
+  typeSegmentVideos: {}, // Stores actual <video> elements
+  segmentUsage: {}, // Tracks usage for coherent sequences (not per-cell anymore, but for new clip selection)
+  collectedTypes: new Set(),
+  typePlaybackTime: {}, // Not used as videos loop independently
+  automataFrame: 0,
+  flowField: [],
+  flowTime: 0,
+  clearFlash: [], // Not used as per prompt: "No flashing/pulsing except on clear events"
+  autoClear: true, // Auto-clear matches (procedural film mode)
+  paused: false, // Pause auto-generation
+  currentCollectedVideo: null, // Full video playing behind shapes
+
+  // Hint system variables
+  lastInputTime: Date.now(),
+  lastHintTime: 0,
+  hintCell: null, // {r, c} of the cell to hint
+  hintWiggleOffset: {x: 0, y: 0}
+};
+
+// CELLULAR AUTOMATA STATES
+const CELL_STATES = {
+  STABLE: 'stable',
+  MATCHING: 'matching', // Cell identified as part of a match
+  BURSTING: 'bursting', // Cell exploding/popping
+  DECAYING: 'decaying', // Cell fading out naturally
+  MERGING: 'merging'   // Not implemented, but kept for concept
+};
+
+// Init type-segment videos: create looping videos for each type×segment pair
+function initTypeSegments() {
+  const segmentCount = config.videoCells.segmentsPerType;
+  const segmentLength = config.videoCells.segmentLengthSec;
+
+  for (let t = 0; t < 10; t++) {
+    TYPE_SEGMENTS[t] = [];
+    game.segmentUsage[t] = 0; // Reset usage counter for coherent selection
+    for (let s = 0; s < segmentCount; s++) {
+      const start = s * segmentLength;
+      const end = start + segmentLength;
+      TYPE_SEGMENTS[t].push({
+        index: s,
+        start,
+        end,
+        title: `${TYPE_SOURCES[t].title} ${s+1}`,
+        file: TYPE_SOURCES[t].file
+      });
+      
+      const key = `${t}_${s}`;
+      const v = document.createElement('video');
+      v.src = TYPE_SOURCES[t].file;
+      v.muted = true;
+      v.playsinline = true;
+      v.loop = false; // We'll handle looping manually per segment
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      
+      // Start playing when metadata loads
+      v.addEventListener('loadedmetadata', () => {
+        try {
+          // Ensure currentTime is within bounds, especially for short videos
+          const actualStart = Math.min(start, v.duration - 0.1);
+          v.currentTime = Math.max(0, actualStart);
+          v.play().catch(e => console.warn('Video autoplay blocked for segment:', key, e));
+        } catch(e) {
+          console.error('Error setting currentTime or playing video for segment:', key, e);
+        }
+      });
+      
+      // Loop within segment range
+      v.addEventListener('timeupdate', () => {
+        if (!v.paused && v.currentTime >= end) {
+          try {
+            v.currentTime = start;
+          } catch(e) {}
+        }
+      });
+      
+      // Auto-retry playing if it stops unexpectedly
+      v.addEventListener('pause', () => {
+        setTimeout(() => {
+          if (v.paused && v.readyState >= 2) {
+            v.play().catch(()=>{});
+          }
+        }, 100);
+      });
+      
+      v.load(); // Trigger load
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created:', Object.keys(game.typeSegmentVideos).length);
+  
+  // Try to play all videos after a short delay
+  setTimeout(() => {
+    Object.values(game.typeSegmentVideos).forEach(v => {
+      if (v.paused && v.readyState >= 2) {
+        v.play().catch(()=>{});
+      }
+    });
+    console.log('✓ Videos playback initiated');
+  }, 500);
+}
+
+// Helper: map grid cell to segment index (deterministic variety)
+function segmentIndexForCell(r, c) {
+  // Use the formula from config for deterministic assignment
+  return eval(config.videoCells.assignFormula); // eval is used for simple math formulas from config
+}
+
+// Helper: get next unused segment for a type (for coherent sequences)
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = 0;
+  const segIdx = game.segmentUsage[type] % config.videoCells.segmentsPerType;
+  game.segmentUsage[type]++; // Increment for next time
+  return segIdx;
+}
+
+// PERLIN NOISE - Simple 2D Perlin for organic flow
+function perlin2D(x, y) {
+  // Simplified Perlin - use sin waves for organic feel
+  const freq = config.motion.flowNoiseFreq;
+  const speed = config.motion.flowSpeed;
+  return (
+    Math.sin(x * freq + game.flowTime * speed) * Math.cos(y * freq) * 0.5 +
+    Math.sin(x * freq * 2 - game.flowTime * speed * 2) * Math.sin(y * freq * 2) * 0.3 +
+    Math.cos(x * freq * 1.5 + y * freq * 1.5 + game.flowTime * speed * 1.5) * 0.2
+  );
+}
+
+// Initialize flow field
+function initFlowField() {
+  game.flowField = [];
+  for (let r = 0; r < config.gridSize; r++) {
+    game.flowField[r] = [];
+    for (let c = 0; c < config.gridSize; c++) {
+      game.flowField[r][c] = {dx: 0, dy: 0};
+    }
+  }
+}
+
+// Update flow field with Perlin noise
+function updateFlowField() {
+  for (let r = 0; r < config.gridSize; r++) {
+    for (let c = 0; c < config.gridSize; c++) {
+      const angle = perlin2D(c * 10, r * 10) * Math.PI * 2;
+      game.flowField[r][c] = {
+        dx: Math.cos(angle) * config.motion.flowStrength,
+        dy: Math.sin(angle) * config.motion.flowStrength
+      };
+    }
+  }
+}
+
+// SHAPE RENDERING - Draw distinct geometric shapes
+function drawShape(ctx, x, y, size, type, color, scale = 1, rotation = 0) {
+  const cx = x + config.cellSize / 2;
+  const cy = y + config.cellSize / 2;
+  const r = size * 0.4 * scale; // Adjust radius by scale
+  
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rotation);
+  ctx.beginPath();
+  
+  switch (TYPE_SOURCES[type].shape) {
+    case 'circle':
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      break;
+    case 'square':
+      ctx.rect(-r, -r, r * 2, r * 2);
+      break;
+    case 'triangle':
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r * 0.866, r * 0.5);
+      ctx.lineTo(-r * 0.866, r * 0.5);
+      ctx.closePath();
+      break;
+    case 'hexagon':
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'diamond':
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r, 0);
+      ctx.lineTo(0, r);
+      ctx.lineTo(-r, 0);
+      ctx.closePath();
+      break;
+    case 'pentagon':
+      for (let i = 0; i < 5; i++) {
+        const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'star':
+      for (let i = 0; i < 10; i++) {
+        const a = (Math.PI * 2 / 10) * i - Math.PI / 2;
+        const rad = i % 2 === 0 ? r : r * 0.5;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'roundsquare':
+      const rr = r * 0.3;
+      ctx.moveTo(-r + rr, -r);
+      ctx.arcTo(r, -r, r, r, rr);
+      ctx.arcTo(r, r, -r, r, rr);
+      ctx.arcTo(-r, r, -r, -r, rr);
+      ctx.arcTo(-r, -r, r, -r, rr);
+      ctx.closePath();
+      break;
+    case 'octagon':
+      for (let i = 0; i < 8; i++) {
+        const a = (Math.PI / 4) * i;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'cross':
+      const w = r * 0.4;
+      ctx.rect(-w, -r, w * 2, r * 2);
+      ctx.rect(-r, -w, r * 2, w * 2);
+      break;
+    default:
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+  }
+  ctx.restore(); // Restore translation and rotation
+}
+
+// CELLULAR AUTOMATA FUNCTIONS
+
+// Create a cell object
+function createCell(type, r, c) {
+  return {
+    type,
+    state: CELL_STATES.STABLE,
+    timer: 0,
+    brightness: 0.5, // Not actively used but part of CA concept
+    lastChange: 0,
+    breathePhase: Math.random() * Math.PI * 2, // Random breathing offset
+    popScale: 0, // For pop animation
+    segmentIdx: segmentIndexForCell(r, c) // Assign segment on creation
+  };
+}
+
+// Get Moore neighborhood (8 surrounding cells)
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < config.gridSize && nc >= 0 && nc < config.gridSize) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+// Calculate similarity between two cells (0-1) - simplified for CA
+function cellSimilarity(cell1, cell2) {
+  if (!cell1 || !cell2) return 0;
+  return cell1.type === cell2.type ? 0.9 : 0.1; // Simple type similarity
+}
+
+// Apply cellular automata rules to all cells
+function applyAutomataRules() {
+  if (!game.automataEnabled) return; // Only apply if enabled
+  
+  const newStates = [];
+  for (let r = 0; r < config.gridSize; r++) {
+    newStates[r] = [];
+    for (let c = 0; c < config.gridSize; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      const newCellState = {...cell}; // Start with current cell state
+      newCellState.timer++;
+      
+      const neighbors = getNeighbors(r, c);
+      const similarNeighbors = neighbors.filter(n => cellSimilarity(cell, n.cell) > 0.8);
+      
+      switch (cell.state) {
+        case CELL_STATES.STABLE:
+          // RULE 1: PROPAGATION - adopt majority neighbor type
+          if (Math.random() < config.automata.propagationChance) {
+            const typeCounts = {};
+            neighbors.forEach(n => {
+              typeCounts[n.cell.type] = (typeCounts[n.cell.type] || 0) + 1;
+            });
+            let dominantType = -1;
+            let maxCount = 0;
+            for (const typeStr in typeCounts) {
+              const type = parseInt(typeStr);
+              if (typeCounts[type] > maxCount) {
+                maxCount = typeCounts[type];
+                dominantType = type;
+              }
+            }
+            if (dominantType !== cell.type && maxCount >= 4) { // Needs sufficient majority
+              newCellState.type = dominantType;
+              newCellState.timer = 0; // Reset timer on type change
+            }
+          }
+          // RULE 2: DECAY - inactive cells fade
+          else if (cell.timer > config.automata.decayLimit) {
+            newCellState.state = CELL_STATES.DECAYING;
+            newCellState.timer = 0;
+          }
+          break;
+        case CELL_STATES.DECAYING:
+          // Reset decaying cells after animation completes
+          if (cell.timer > config.automata.popDuration) { // Reuse popDuration for decay animation length
+            newCellState.type = randomCandyType();
+            newCellState.segmentIdx = segmentIndexForCell(r, c);
+            newCellState.state = CELL_STATES.STABLE;
+            newCellState.timer = 0;
+          }
+          break;
+        case CELL_STATES.MATCHING: // Should only be entered by game logic, not CA rules
+        case CELL_STATES.BURSTING: // Should only be entered by game logic
+          // Handled externally or will transition to STABLE after pop animation
+          if (cell.timer > config.automata.popDuration) {
+            newCellState.type = randomCandyType();
+            newCellState.segmentIdx = segmentIndexForCell(r, c);
+            newCellState.state = CELL_STATES.STABLE;
+            newCellState.timer = 0;
+          }
+          break;
+      }
+      newStates[r][c] = newCellState;
+    }
+  }
+  game.grid = newStates;
+}
+
+// ✅ SOUND SYSTEM - Web Audio API
+function initSounds() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  game.sounds.match = () => {
+    if (!game.audioEnabled) return;
+    playTone(audioContext, 523.25, 0.1); // C5
+  };
+  
+  game.sounds.swap = () => {
+    if (!game.audioEnabled) return;
+    playTone(audioContext, 392, 0.05); // G4
+  };
+  
+  game.sounds.win = () => {
+    if (!game.audioEnabled) return;
+    playTone(audioContext, 523.25, 0.1);
+    setTimeout(() => playTone(audioContext, 659.25, 0.1), 100);
+    setTimeout(() => playTone(audioContext, 783.99, 0.2), 200);
+  };
+  
+  game.sounds.error = () => {
+    if (!game.audioEnabled) return;
+    playTone(audioContext, 200, 0.1);
+  };
+  
+  console.log('🔊 Sound system initialized');
+}
+
+function playTone(ctx, frequency, duration) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+// ✅ HAPTIC FEEDBACK
+function haptic(pattern) {
+  if (game.hapticsEnabled && navigator.vibrate) {
+    if (config.motion.respectReducedMotion && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Skip haptics if user prefers reduced motion (can be too intense)
+      return;
+    }
+    navigator.vibrate(pattern);
+  }
+}
+
+// INIT
+function init() {
+  console.log('🎮 Initializing...');
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  canvas.addEventListener('pointerdown', handlePointerDown);
+  canvas.addEventListener('pointerup', handlePointerUp);
+  canvas.addEventListener('pointermove', handlePointerMove); // For hint system
+  window.addEventListener('keydown', handleKeyDown);
+
+  // Update button texts based on initial config
+  document.getElementById('audioBtn').textContent = game.audioEnabled ? 'AUDIO' : 'MUTE';
+  document.getElementById('hapticsBtn').textContent = game.hapticsEnabled ? 'HAPTICS' : 'HAPTICS OFF';
+  document.getElementById('automataBtn').textContent = game.automataEnabled ? 'CA ON' : 'CA OFF';
+  
+  document.getElementById('pauseBtn').addEventListener('click', togglePause);
+  document.getElementById('exportBtn').addEventListener('click', toggleExportMenu);
+  document.getElementById('audioBtn').addEventListener('click', toggleAudio);
+  document.getElementById('hapticsBtn').addEventListener('click', toggleHaptics);
+  document.getElementById('automataBtn').addEventListener('click', toggleAutomata);
+  document.getElementById('playSequenceBtn').addEventListener('click', startSequencePlayback);
+  document.getElementById('timelineHandle').addEventListener('click', () => {
+    document.getElementById('timelinePanel').classList.toggle('collapsed');
+  });
+  
+  // Close export menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('exportMenu');
+    const btn = document.getElementById('exportBtn');
+    if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('show');
+    }
+  });
+  
+  initSounds();
+  initTypeSegments(); // This also triggers video loading
+  initFlowField();
+  createGrid();
+  draw(); // Start the game loop
+  
+  // BEAT COLLECTION SYSTEM: Initialize
+  if(typeof BeatCollectionSystem !== 'undefined'){
+    BeatCollectionSystem.init({
+      flashColor: '#00ffff',
+      totalBeats: 15,
+      completionSound: true
+    });
+    console.log('✓ Beat Collection System initialized');
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('videoPreview').style.display = 'block';
+}
+
+function resize() {
+  const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+  canvas.width = config.gridSize * config.cellSize;
+  canvas.height = config.gridSize * config.cellSize;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+
+function createGrid() {
+  game.grid = [];
+  for (let r = 0; r < config.gridSize; r++) {
+    game.grid[r] = [];
+    for (let c = 0; c < config.gridSize; c++) {
+      game.grid[r][c] = createCell(randomCandyType(), r, c);
+    }
+  }
+  
+  // Remove initial matches
+  let matchesFound = true;
+  while (matchesFound) {
+    matchesFound = false;
+    findMatches().forEach(({r, c}) => {
+      game.grid[r][c] = createCell(randomCandyType(), r, c);
+      matchesFound = true;
+    });
+  }
+  
+  console.log('✓ Living grid created - cells are now autonomous agents');
+}
+
+function randomCandyType() {
+  return Math.floor(Math.random() * 10);
+}
+
+function draw() {
+  // Check for reduced motion preference
+  const reduceMotion = config.motion.respectReducedMotion && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Auto-clear matches if not paused
+  if (!game.paused && !game.busy && game.autoClear) {
+    const matches = findMatches();
+    if (matches.length > 0) {
+      processMatches(matches);
+    }
+  }
+  
+  // Update flow time and field
+  game.flowTime++;
+  if (game.automataFrame % 10 === 0 && !reduceMotion) {
+    updateFlowField();
+  }
+  
+  // Apply automata rules periodically (only if not paused)
+  game.automataFrame++;
+  if (!game.paused && game.automataFrame % config.automata.updateEveryNFrames === 0) {
+    applyAutomataRules();
+  }
+
+  // Hint system update
+  if (!game.paused && !game.busy && Date.now() - game.lastInputTime > config.hints.idleFirstMs && Date.now() - game.lastHintTime > config.hints.cooldownMs) {
+      game.hintCell = findBestHint();
+      if (game.hintCell) {
+          game.lastHintTime = Date.now(); // Reset hint timer if a hint is found
+      }
+  } else if (Date.now() - game.lastInputTime < config.hints.idleFirstMs) {
+      game.hintCell = null; // Clear hint if recent input
+  }
+  
+  // Soft gradient background
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, '#1a1a1a');
+  grad.addColorStop(1, '#0f0f0f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw cells with organic shapes
+  for (let r = 0; r < config.gridSize; r++) {
+    for (let c = 0; c < config.gridSize; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      // Apply flow field displacement
+      const flow = game.flowField[r][c];
+      const xBase = c * config.cellSize;
+      const yBase = r * config.cellSize;
+      const xOffset = reduceMotion ? 0 : flow.dx;
+      const yOffset = reduceMotion ? 0 : flow.dy;
+
+      // Organic breathing scale
+      let breatheScale = 1;
+      if (!reduceMotion) {
+        const breatheProgress = (game.flowTime + cell.breathePhase) / config.motion.breathePeriodFrames;
+        breatheScale = 1 + Math.sin(breatheProgress * Math.PI * 2) * config.motion.breatheScaleMax;
+      }
+      
+      const x = xBase + xOffset;
+      const y = yBase + yOffset;
+
+      // Get video for mosaic sampling
+      const key = `${cell.type}_${cell.segmentIdx}`;
+      const video = game.typeSegmentVideos[key];
+      
+      ctx.save();
+      
+      // Satisfying POP animation on BURSTING
+      if (cell.state === CELL_STATES.BURSTING) {
+        const progress = cell.timer / config.automata.popDuration;
+        const popScale = 1 + Math.sin(Math.min(1, progress) * Math.PI) * config.motion.popScaleMax;
+        const alpha = 1 - progress;
+        
+        ctx.globalAlpha = alpha;
+        ctx.translate(x + config.cellSize/2, y + config.cellSize/2);
+        ctx.scale(popScale, popScale);
+        ctx.translate(-(x + config.cellSize/2), -(y + config.cellSize/2));
+      }
+      
+      // Draw shape-clipped video
+      if (video && video.readyState >= 2) {
+        ctx.save();
+        
+        // Apply breathing scale
+        ctx.translate(x + config.cellSize/2, y + config.cellSize/2);
+        ctx.scale(breatheScale, breatheScale);
+        ctx.translate(-(x + config.cellSize/2), -(y + config.cellSize/2));
+        
+        // Create shape path for clipping
+        drawShape(ctx, x, y, config.cellSize, cell.type);
+        ctx.clip();
+        
+        // Calculate spatial sample region with drift
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const cellW = vw / config.gridSize;
+        const cellH = vh / config.gridSize;
+        let sx = c * cellW;
+        let sy = r * cellH;
+
+        if (!reduceMotion) {
+          const driftAmountX = (config.flowTime * config.videoCells.driftPctPerSec * vw) % vw;
+          const driftAmountY = (config.flowTime * config.videoCells.driftPctPctPerSec * vh) % vh;
+          sx = (sx + driftAmountX) % vw;
+          sy = (sy + driftAmountY) % vh;
+        }
+        
+        // Draw video region
+        ctx.drawImage(
+          video,
+          sx, sy, cellW, cellH,
+          x + 4, y + 4, config.cellSize - 8, config.cellSize - 8
+        );
+        
+        ctx.restore();
+      }
+      
+      // GLASSMORPHIC shape overlay with breathing
+      ctx.save();
+      ctx.translate(x + config.cellSize/2, y + config.cellSize/2);
+      ctx.scale(breatheScale, breatheScale);
+      ctx.translate(-(x + config.cellSize/2), -(y + config.cellSize/2));
+      
+      drawShape(ctx, x, y, config.cellSize, cell.type);
+      
+      // Frosted glass effect: white with low opacity
+      const cx = x + config.cellSize / 2;
+      const cy = y + config.cellSize / 2;
+      const rad = config.cellSize * 0.4;
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      
+      // QUIET cells: dim overlay more significantly
+      let overlayOpacity = 0.3; // Default for active cells
+      if (cell.state === CELL_STATES.STABLE) {
+        overlayOpacity = 0.5; // More prominent overlay for quiet cells
+      }
+      
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${overlayOpacity})`);
+      gradient.addColorStop(1, TYPE_SOURCES[cell.type].color + '20');
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // Subtle pastel tint stroke with soft glow
+      ctx.strokeStyle = TYPE_SOURCES[cell.type].color + 'A0';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = TYPE_SOURCES[cell.type].color + '60';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      
+      ctx.restore();
+      
+      // Selection indicator - inviting pulse
+      if (game.selected && game.selected.r === r && game.selected.c === c) {
+        const pulse = Math.sin(game.flowTime * 0.01) * 0.5 + 0.5;
+        ctx.save();
+        ctx.translate(x + config.cellSize/2, y + config.cellSize/2);
+        ctx.scale(1.1 + pulse * 0.05, 1.1 + pulse * 0.05); // Smaller pulse
+        ctx.translate(-(x + config.cellSize/2), -(y + config.cellSize/2));
+        
+        drawShape(ctx, x, y, config.cellSize, cell.type);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + pulse * 0.4})`;
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ffffff';
+        ctx.stroke();
+        ctx.restore();
+      }
+      
+      // Hint for potential matches - gentle nudge
+      if (game.hintCell && game.hintCell.r === r && game.hintCell.c === c) {
+        const hintPulse = Math.sin(game.flowTime * (config.hints.wiggleFreqHz * Math.PI / 30)) * 0.5 + 0.5;
+        ctx.save();
+
+        // Apply gentle wiggle if idle duration is long enough
+        let hintX = x, hintY = y;
+        if (Date.now() - game.lastInputTime > config.hints.idleEscalateMs && !reduceMotion) {
+            const wigglePhase = (game.flowTime * config.hints.wiggleFreqHz / 60) * Math.PI * 2;
+            hintX += Math.sin(wigglePhase) * config.hints.wigglePx;
+            hintY += Math.cos(wigglePhase) * config.hints.wigglePx; // Different phase for Y for circular wiggle
+        }
+
+        drawShape(ctx, hintX, hintY, config.cellSize, cell.type);
+        ctx.strokeStyle = `rgba(255, 255, 100, ${config.hints.glowAlpha + hintPulse * (config.hints.glowAlpha / 2)})`;
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(255, 255, 100, 0.5)';
+        ctx.stroke();
+        ctx.restore();
+      }
+      
+      ctx.restore();
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+// Global variable to track the initial pointer down position for slop tolerance
+let initialPointerPos = { x: 0, y: 0 };
+let isPointerDown = false;
+
+function handlePointerDown(e) {
+  if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+    initialPointerPos = { x: e.clientX, y: e.clientY };
+    isPointerDown = true;
+  }
+  // For mouse, we can just treat it as a direct click
+}
+
+function handlePointerMove(e) {
+  if (isPointerDown) {
+    const dx = Math.abs(e.clientX - initialPointerPos.x);
+    const dy = Math.abs(e.clientY - initialPointerPos.y);
+    if (dx > config.input.slopPx || dy > config.input.slopPx) {
+      // User dragged beyond slop, treat as drag, not a simple tap
+      isPointerDown = false; // Prevent it from triggering handleClick on pointerup
+    }
+  }
+}
+
+function handlePointerUp(e) {
+  game.lastInputTime = Date.now(); // Reset hint timer on any input
+  game.hintCell = null; // Clear hint instantly
+  
+  if (isPointerDown || e.pointerType === 'mouse') { // If it's a tap (within slop) or a mouse click
+    handleClick(e);
+  }
+  isPointerDown = false;
+}
+
+function handleClick(e) {
+  if (game.busy) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  
+  const col = Math.floor((x / rect.width) * config.gridSize);
+  const row = Math.floor((y / rect.height) * config.gridSize);
+  
+  // Bounds check
+  if (row < 0 || row >= config.gridSize || col < 0 || col >= config.gridSize) return;
+  if (!game.grid[row] || !game.grid[row][col]) return;
+  
+  console.log('👆 Click:', row, col);
+  
+  if (!game.selected) {
+    game.selected = {r: row, c: col};
+    const cell = game.grid[row][col];
+    console.log('✓ Selected:', row, col, '- type:', cell.type, 'state:', cell.state);
+    haptic(15); // Pattern: 15ms
+    game.sounds.swap();
+    
+    // Update video preview
+    const seg = TYPE_SEGMENTS[cell.type][cell.segmentIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    document.getElementById('previewVideo').currentTime = seg.start;
+    document.getElementById('previewVideo').play().catch(()=>{});
+    document.getElementById('videoLabel').textContent = seg.title;
+  } else {
+    const {r: r1, c: c1} = game.selected;
+    const r2 = row, c2 = col;
+    
+    // Check if adjacent
+    const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+    
+    if (adjacent) {
+      console.log('🔄 Swapping:', [r1,c1], 'with', [r2,c2]);
+      haptic(30); // Pattern: 30ms
+      trySwap(r1, c1, r2, c2);
+    } else {
+      console.log('❌ Not adjacent, or re-selected same cell');
+      game.sounds.error();
+      haptic([10, 50, 10]); // Pattern: 10ms on, 50ms off, 10ms on
+    }
+    
+    game.selected = null;
+  }
+}
+
+function handleKeyDown(e) {
+  if (game.busy) return;
+  game.lastInputTime = Date.now();
+  game.hintCell = null; // Clear hint on keyboard input
+
+  let targetR = game.selected ? game.selected.r : Math.floor(config.gridSize / 2);
+  let targetC = game.selected ? game.selected.c : Math.floor(config.gridSize / 2);
+
+  const move = (dr, dc) => {
+    targetR = Math.max(0, Math.min(config.gridSize - 1, targetR + dr));
+    targetC = Math.max(0, Math.min(config.gridSize - 1, targetC + dc));
+    game.selected = { r: targetR, c: targetC };
+    haptic(10);
+  };
+
+  switch (e.key) {
+    case 'ArrowUp':
+    case 'w': move(-1, 0); e.preventDefault(); break;
+    case 'ArrowDown':
+    case 's': move(1, 0); e.preventDefault(); break;
+    case 'ArrowLeft':
+    case 'a': move(0, -1); e.preventDefault(); break;
+    case 'ArrowRight':
+    case 'd': move(0, 1); e.preventDefault(); break;
+    case 'Enter':
+    case ' ':
+      if (game.selected) {
+        // Simulate a click on the selected cell
+        const tempEvent = {
+          clientX: (game.selected.c + 0.5) * canvas.width / config.gridSize + canvas.getBoundingClientRect().left,
+          clientY: (game.selected.r + 0.5) * canvas.height / config.gridSize + canvas.getBoundingClientRect().top
+        };
+        handleClick(tempEvent);
+        game.selected = null; // Clear selection after attempted action
+      }
+      e.preventDefault();
+      break;
+  }
+}
+
+// Find a good hint cell
+function findBestHint() {
+  let bestMatch = [];
+  let hintCell = null;
+
+  // Iterate over all cells
+  for (let r = 0; r < config.gridSize; r++) {
+    for (let c = 0; c < config.gridSize; c++) {
+      // Check adjacent cells for a potential swap
+      const directions = [[0, 1], [1, 0]]; // Only check right and down to avoid duplicates
+      for (const [dr, dc] of directions) {
+        const nr = r + dr;
+        const nc = c + dc;
+
+        if (nr >= 0 && nr < config.gridSize && nc >= 0 && nc < config.gridSize) {
+          // Simulate swap
+          [game.grid[r][c], game.grid[nr][nc]] = [game.grid[nr][nc], game.grid[r][c]];
+          const matches = findMatches();
+          // Swap back
+          [game.grid[r][c], game.grid[nr][nc]] = [game.grid[nr][nc], game.grid[r][c]];
+
+          if (matches.length >= config.hints.minMatchCells) {
+            // Prioritize more matches. If equal, prefer earlier cell (r,c)
+            if (matches.length > bestMatch.length) {
+              bestMatch = matches;
+              hintCell = {r, c}; // Hint the initial cell of the swap
+            } else if (matches.length === bestMatch.length) {
+                // Heuristic: If equal matches, prefer the swap that involves a lower-index cell
+                if (!hintCell || r < hintCell.r || (r === hintCell.r && c < hintCell.c)) {
+                    hintCell = {r, c};
+                }
+            }
+          }
+        }
+      }
+    }
+  }
+  return hintCell;
+}
+
+function trySwap(r1, c1, r2, c2) {
+  // Ensure we're not busy with another action
+  if (game.busy) return;
+  game.busy = true;
+  game.lastInputTime = Date.now(); // Reset hint timer on action
+  game.hintCell = null; // Clear hint instantly
+  
+  // Swap visually (instant for now, could be animated)
+  [game.grid[r1][c1], game.grid[r2][c2]] = [game.grid[r2][c2], game.grid[r1][c1]];
+  
+  // Check for matches
+  const matches = findMatches();
+  
+  if (matches.length === 0) {
+    // No match - swap back (animated revert could go here)
+    console.log('↩️ No match - reverting');
+    setTimeout(() => { // Small delay to show invalid swap before reverting
+      [game.grid[r1][c1], game.grid[r2][c2]] = [game.grid[r2][c2], game.grid[r1][c1]];
+      game.sounds.error();
+      haptic([10, 50, 10]); // Error haptic
+      game.busy = false;
+    }, config.input.invalidSnapMs);
+    return;
+  }
+  
+  console.log('✓ Match found:', matches.length, 'cells');
+  game.sounds.match();
+  haptic(50); // Match haptic
+  game.moves--;
+  document.getElementById('moves').textContent = game.moves;
+  
+  processMatches(matches);
+}
+
+function findMatches() {
+  const matches = [];
+  const checked = new Set();
+  
+  // Horizontal
+  for (let r = 0; r < config.gridSize; r++) {
+    for (let c = 0; c < config.gridSize - 2; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      if (game.grid[r][c+1] && game.grid[r][c+2] &&
+          game.grid[r][c+1].type === cell.type && game.grid[r][c+2].type === cell.type) {
+        for (let i = 0; i < 3; i++) {
+          const key = `${r},${c+i}`;
+          if (!checked.has(key)) {
+            matches.push({r, c: c+i});
+            checked.add(key);
+          }
+        }
+      }
+    }
+  }
+  
+  // Vertical
+  for (let c = 0; c < config.gridSize; c++) {
+    for (let r = 0; r < config.gridSize - 2; r++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      if (game.grid[r+1][c] && game.grid[r+2][c] &&
+          game.grid[r+1][c].type === cell.type && game.grid[r+2][c].type === cell.type) {
+        for (let i = 0; i < 3; i++) {
+          const key = `${r+i},${c}`;
+          if (!checked.has(key)) {
+            matches.push({r: r+i, c});
+            checked.add(key);
+          }
+        }
+      }
+    }
+  }
+  
+  return matches;
+}
+
+function processMatches(matches) {
+  // game.busy is already set to true in trySwap, or implicitly true during cascades
+  
+  // Collect unique types from matched cells
+  const matchedTypes = new Set();
+  matches.forEach(({r, c}) => {
+    const cell = game.grid[r][c];
+    if (cell) {
+      matchedTypes.add(cell.type);
+      game.grid[r][c].state = CELL_STATES.BURSTING; // Set state to bursting
+      game.grid[r][c].timer = 0; // Reset timer for pop animation
+    }
+    game.score += 10;
+  });
+  
+  // Wait for pop animation to finish before clearing cells
+  setTimeout(() => {
+    // Clear the cells and add to sequence
+    let lastCollectedSeg = null;
+    matchedTypes.forEach(type => {
+      const segIdx = nextSegmentForType(type);
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const newClip = {
+        title: seg.title,
+        file: seg.file,
+        start: seg.start,
+        end: seg.end,
+        locked: true, // Clips are locked by default
+        muted: config.timeline.halfSilenceRule ? (game.sequence.length % 2 === 0) : false // Half-silence rule
+      };
+      game.sequence.push(newClip);
+      lastCollectedSeg = seg;
+      
+      // BEAT COLLECTION: Collect beat for each match
+      if(typeof BeatCollectionSystem !== 'undefined'){
+        const beatIndex = BeatCollectionSystem.collectedBeats.length;
+        if(beatIndex < SAVE_THE_CAT_BEATS.length){
+          const beat = SAVE_THE_CAT_BEATS[beatIndex];
+          BeatCollectionSystem.collect({
+            beatNumber: beat.number,
+            beatName: beat.name,
+            syntagma: beat.suggestedSyntagma,
+            clips: [{
+              type: type,
+              title: newClip.title,
+              file: newClip.file,
+              start: newClip.start,
+              end: newClip.end,
+              locked: newClip.locked,
+              muted: newClip.muted
+            }],
+            metadata: {
+              matchType: type,
+              matchCount: matches.length,
+              flowTime: game.flowTime,
+              score: game.score
+            }
+          });
+        }
+      }
+    });
+
+    // Actually remove the cells after pop animation
+    matches.forEach(({r, c}) => {
+        game.grid[r][c] = null;
+    });
+    
+    // Play collected video FULLSCREEN behind all shapes (glassmorphic)
+    if (lastCollectedSeg) {
+      playCollectedVideoFullscreen(lastCollectedSeg);
+    }
+    
+    document.getElementById('score').textContent = game.score;
+    document.getElementById('clips').textContent = game.sequence.length;
+    
+    updateTimeline();
+    maybeAutoPlaySequence();
+    
+    // Drop and refill
+    setTimeout(() => {
+      dropCandies();
+      refillGrid();
+      
+      // Check for cascades
+      const newMatches = findMatches();
+      if (newMatches.length > 0) {
+        console.log('🔁 Cascade:', newMatches.length, 'matches');
+        haptic(50); // Cascade haptic
+        processMatches(newMatches); // Recursively process cascades
+      } else {
+        game.busy = false;
+        checkGameOver();
+      }
+    }, 150); // Short delay after refill to allow visual update before next checks
+
+  }, config.automata.popDurationMs); // Wait for bursting animation
+  
+  console.log('💥 Processed matches:', matches.length, '- Score:', game.score);
+}
+
+function dropCandies() {
+  for (let c = 0; c < config.gridSize; c++) {
+    let writePos = config.gridSize - 1;
+    for (let r = config.gridSize - 1; r >= 0; r--) {
+      if (game.grid[r][c]) {
+        if (writePos !== r) {
+          game.grid[writePos][c] = game.grid[r][c];
+          game.grid[r][c] = null;
+        }
+        writePos--;
+      }
+    }
+  }
+}
+
+function refillGrid() {
+  for (let r = 0; r < config.gridSize; r++) {
+    for (let c = 0; c < config.gridSize; c++) {
+      if (!game.grid[r][c]) {
+        game.grid[r][c] = createCell(randomCandyType(), r, c);
+      }
+    }
+  }
+}
+
+function updateTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  const clipList = document.getElementById('clipList');
+  const wrap = document.getElementById('sequencePlayerWrap');
+  
+  clipList.innerHTML = '';
+  
+  if (game.sequence.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  game.sequence.forEach((clipData, i) => {
+    const clip = document.createElement('div');
+    clip.className = `clip-item ${clipData.locked ? 'locked' : ''} ${clipData.muted ? 'muted' : ''}`;
+    
+    const vid = document.createElement('video');
+    vid.src = clipData.file;
+    vid.muted = true;
+    vid.playsinline = true;
+    vid.preload = 'metadata'; // Only load metadata for thumbnail
+    vid.currentTime = clipData.start; // Set to start time for thumbnail
+    vid.load(); // Load the metadata
+    
+    const label = document.createElement('div');
+    label.className = 'clip-label';
+    label.textContent = `${i + 1}. ${clipData.title}`;
+    
+    clip.appendChild(vid);
+    clip.appendChild(label);
+
+    // Toggle locked state on click
+    clip.onclick = () => {
+      clipData.locked = !clipData.locked;
+      clip.classList.toggle('locked', clipData.locked);
+      // Optional: toggle mute as well if unlocked
+      // if (!clipData.locked && config.timeline.halfSilenceRule) {
+      //   clipData.muted = !clipData.muted;
+      //   clip.classList.toggle('muted', clipData.muted);
+      // }
+      haptic(10);
+      game.sounds.swap();
+      console.log(`Clip ${i+1} ${clipData.locked ? 'locked' : 'unlocked'}`);
+    };
+    clipList.appendChild(clip);
+  });
+  
+  if (game.sequence.length > 0) {
+    panel.classList.add('active');
+    wrap.style.display = 'block';
+  }
+}
+
+// Sequence Player
+function startSequencePlayback() {
+  const unlockedClips = game.sequence.filter(c => !c.locked);
+  if (unlockedClips.length === 0) {
+    alert('No unlocked clips in sequence to play! Tap clips in the timeline to unlock them.');
+    return;
+  }
+  
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  
+  document.getElementById('timelinePanel').classList.add('active');
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  
+  let idx = 0;
+  const playIdx = (i) => {
+    const v = unlockedClips[i];
+    if (!v) {
+        label.textContent = "No Unlocked Clips";
+        player.pause();
+        player.src = '';
+        return;
+    }
+    player.src = v.file;
+    label.textContent = `${i+1}. ${v.title}`;
+    player.muted = v.muted; // Apply mute rule to player
+    const start = v.start ?? 0;
+    const end = v.end ?? null;
+
+    player.onloadedmetadata = () => {
+      try { player.currentTime = start; } catch(e) {}
+      player.play().catch(()=>{});
+    };
+    
+    if (end != null) {
+      player.ontimeupdate = () => {
+        if (player.currentTime >= end) {
+          player.ontimeupdate = null;
+          idx = (idx + 1) % unlockedClips.length;
+          playIdx(idx);
+        }
+      };
+    } else {
+      player.ontimeupdate = null;
+    }
+  };
+  player.onended = () => { idx = (idx + 1) % unlockedClips.length; playIdx(idx); };
+  playIdx(idx);
+}
+
+function playSingleInPlayer(v) {
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  player.src = v.file;
+  label.textContent = v.title;
+  player.muted = v.muted; // Apply mute rule
+  const start = v.start ?? 0;
+  const end = v.end ?? null;
+  player.onloadedmetadata = () => {
+    try { player.currentTime = start; } catch(e) {}
+    player.play().catch(()=>{});
+  };
+  if (end != null) {
+    player.ontimeupdate = () => {
+      if (player.currentTime >= end) {
+        try { player.currentTime = start; } catch(e) {} // Loop single clip
+      }
+    };
+  } else {
+    player.ontimeupdate = null;
+  }
+}
+
+function checkGameOver() {
+  if (game.moves <= 0) {
+    showModal();
+  }
+}
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const stats = document.getElementById('modalStats');
+  
+  stats.innerHTML = `
+    <div>SCORE: ${game.score}</div>
+    <div>CLIPS: ${game.sequence.length}</div>
+    <div style="margin-top:20px;font-size:14px;color:#0ff;">🎬 Your film is ready to export!</div>
+  `;
+  
+  game.sounds.win();
+  haptic([100, 50, 100, 50, 200]);
+  
+  modal.classList.add('show');
+  console.log('🏁 Game Over - Film Complete!');
+}
+
+function toggleTimeline() { // No longer used, handle is primary
+  const panel = document.getElementById('timelinePanel');
+  panel.classList.toggle('collapsed');
+  console.log('📋 Timeline toggled');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('show');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleAudio() {
+  game.audioEnabled = !game.audioEnabled;
+  const btn = document.getElementById('audioBtn');
+  btn.textContent = game.audioEnabled ? 'AUDIO' : 'MUTE';
+  console.log('🔊 Audio:', game.audioEnabled);
+  haptic(10);
+}
+
+function toggleHaptics() {
+  game.hapticsEnabled = !game.hapticsEnabled;
+  const btn = document.getElementById('hapticsBtn');
+  btn.textContent = game.hapticsEnabled ? 'HAPTICS' : 'HAPTICS OFF';
+  console.log('📳 Haptics:', game.hapticsEnabled);
+  haptic(10); // Provide feedback for the toggle itself
+}
+
+function toggleAutomata() {
+  game.automataEnabled = !game.automataEnabled;
+  const btn = document.getElementById('automataBtn');
+  btn.textContent = game.automataEnabled ? 'CA ON' : 'CA OFF';
+  console.log('🤖 Cellular Automata:', game.automataEnabled);
+  haptic(10);
+}
+
+function togglePause() {
+  game.paused = !game.paused;
+  const btn = document.getElementById('pauseBtn');
+  btn.textContent = game.paused ? 'PLAY' : 'PAUSE';
+  console.log('⏸ Paused:', game.paused);
+  haptic(10);
+}
+
+function playCollectedVideoFullscreen(segment) {
+  const layer = document.getElementById('collectedVideoLayer');
+  const video = document.getElementById('collectedVideo');
+  
+  if (!layer || !video) {
+    console.warn('Collected video layer not found');
+    return;
+  }
+  
+  video.src = segment.file;
+  video.muted = false; // Allow audio for collected videos
+  video.volume = config.audio.bgVolumeMax; // Subtle background audio
+  
+  layer.classList.add('active');
+  
+  video.onloadedmetadata = () => {
+    try {
+      video.currentTime = segment.start || 0;
+      video.play().catch(e => {
+        console.warn('Fullscreen video play blocked, retrying muted:', e);
+        video.muted = true; // Retry muted
+        video.play().catch(()=>{});
+      });
+    } catch(e) {
+      console.error('Video seek error:', e);
+    }
+  };
+  
+  video.ontimeupdate = () => {
+    if (segment.end && video.currentTime >= segment.end) {
+      try {
+        video.currentTime = segment.start || 0;
+        if (video.paused) video.play().catch(()=>{});
+      } catch(e) {}
+    }
+  };
+  
+  video.onpause = () => {
+    setTimeout(() => {
+      if (video.paused && layer.classList.contains('active')) {
+        video.play().catch(()=>{});
+      }
+    }, 100);
+  };
+  
+  video.load();
+  game.currentCollectedVideo = segment;
+  
+  console.log('🎬 Playing fullscreen:', segment.title);
+}
+
+// AUTO PLAY HELPERS - unchanged
+function updateAutoPlayButton() {
+  // Currently no explicit UI button for autoPlay, handled by playSequenceBtn
+}
+
+function maybeAutoPlaySequence() {
+  if (!game.autoPlay) return;
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  const hasSrc = !!player.src && player.src.length > 0;
+  if (!hasSrc || player.paused) {
+    startSequencePlayback();
+  }
+}
+
+// ✅ EXPORT FUNCTIONS
+
+function exportJSON() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  const data = {
+    title: 'Flux Garden Sequence',
+    timestamp: new Date().toISOString(),
+    score: game.score,
+    moves: 30 - game.moves,
+    clips: game.sequence.length,
+    sequence: game.sequence.map((v, i) => ({
+      order: i + 1,
+      title: v.title,
+      file: v.file,
+      start: v.start,
+      end: v.end,
+      locked: v.locked,
+      muted: v.muted
+    }))
+  };
+  
+  downloadFile('flux_garden_sequence.json', JSON.stringify(data, null, 2));
+  console.log('✓ JSON exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportEDL() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  let edl = 'TITLE: Flux Garden Sequence\n\n';
+  let recordIn = 0;
+  
+  game.sequence.forEach((v, i) => {
+    const duration = config.timeline.clipDurationDefaultSec;
+    const recordOut = recordIn + duration;
+    
+    edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+    edl += `${formatTimecode(v.start)} ${formatTimecode(v.start + duration)} `; // Source In/Out
+    edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`;        // Record In/Out
+    edl += `* FROM CLIP: ${v.title}\n`;
+    edl += `* SOURCE FILE: ${v.file}\n`;
+    if (v.locked) edl += `* STATUS: LOCKED\n`;
+    if (v.muted) edl += `* AUDIO: MUTED (Half-Silence Rule)\n`;
+    edl += `\n`;
+    
+    recordIn = recordOut;
+  });
+  
+  downloadFile('flux_garden_sequence.edl', edl);
+  console.log('✓ EDL exported');
+  game.sounds.match();
+  haptic(30);
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function formatTimecode(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const f = 0; // Assuming 0 frames for simplicity, EDL typically uses 24 or 30 fps
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+
+// Global game object for beat collection system
+window.game = {
+  get sequences() {
+    if(typeof BeatCollectionSystem !== 'undefined' && BeatCollectionSystem.collectedBeats) {
+      return BeatCollectionSystem.collectedBeats.map((beat, idx) => ({
+        beatNumber: beat.beatNumber,
+        beatName: beat.beatName,
+        syntagmaType: beat.syntagma,
+        act: beat.beatNumber <= 5 ? 'act1' : beat.beatNumber <= 10 ? 'act2a' : beat.beatNumber <= 12 ? 'act2b' : 'act3',
+        clips: beat.clips || [],
+        fragments: beat.clips || []
+      }));
+    }
+    return game.sequence.map((v, i) => ({
+      beatNumber: i + 1, // Using sequence index as beat number
+      beatName: `Clip ${i + 1}`,
+      syntagmaType: 'AS', // Default or deduce if possible
+      clips: [{
+        type: null, // Type info not stored in main sequence items
+        title: v.title,
+        file: v.file,
+        start: v.start,
+        end: v.end,
+        locked: v.locked,
+        muted: v.muted
+      }],
+      fragments: [{
+        type: null,
+        title: v.title,
+        file: v.file,
+        start: v.start,
+        end: v.end,
+        locked: v.locked,
+        muted: v.muted
+      }]
+    }));
+  },
+  get chains() {
+    return this.sequences;
+  },
+  get score() { return game.score; },
+  get fragments() { return game.sequence; },
+  filmTitle: "Flux Garden Assembly",
+  filmLogline: "A film assembled through match-3 flow field gameplay"
+};
+
+// Export functions for final-screen.html
+window.exportFinalCutOTI = function() {
+  const oti = {
+    version: "1.0",
+    title: window.game.filmTitle,
+    logline: window.game.filmLogline,
+    timestamp: new Date().toISOString(),
+    coherenceScore: game.score * 10,
+    sourceVideo: "flux_garden_assembly",
+    sourceTool: "Flux Garden (Match-3)",
+    sequences: window.game.sequences
+  };
+  
+  const blob = new Blob([JSON.stringify(oti, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'flux-garden-assembly.oti.json';
+  a.click();
+};
+
+window.exportFinalCutEDL = function() {
+  alert('EDL export coming soon! Use OTI JSON for now.');
+};
+
+window.exportStorymap = function() {
+  alert('Storymap export coming soon! Use OTI JSON for now.');
+};
+
+window.exportShotlist = function() {
+  alert('Shotlist export coming soon! Use OTI JSON for now.');
+};
+
+window.exportChartD3 = function() {
+  alert('Chart export coming soon! Use OTI JSON for now.');
+};
+
+window.exportAllFormats = function() {
+  exportFinalCutOTI();
+};
+</script>
+
+<!-- BEAT COLLECTION SYSTEM -->
+<script src="beat-collection-system.js"></script>
+
+</body>
+</html>

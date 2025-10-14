@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="manifest.json">
+  <title>ORGANIC GARDEN — Flowing Flux Fields</title>
+  <style>
+    :root{
+      --bg:#0a0a0a; --ui:#111;
+      --line-soft:#1a1a1a; /* Softer line for less harsh borders */
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:#0ff; font-family:-apple-system,sans-serif;}
+    
+    .wrap{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+    
+    /* Header - More Compact */
+    header{display:flex; align-items:center; justify-content:space-between; padding:8px 16px; /* Reduced padding */ background:var(--ui); border-bottom:2px solid var(--line-soft); /* Softer line */}
+    .brand{font-weight:900; letter-spacing:3px; font-size:14px; /* Reduced font size */ color:#0ff;}
+    .stats{display:flex; gap:12px; /* Reduced gap */ font-size:11px; /* Reduced font size */ font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:#0ff;}
+    
+    /* Game Area */
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg);}
+    canvas{background:#0d0d0d; border:2px solid var(--line-soft); border-radius:8px; touch-action:none; image-rendering:pixelated;
+      min-width: 44px; min-height: 44px;
+    }
+    
+    /* Cell Preview (moved to timeline panel, starts hidden) */
+    .cell-preview{position:relative; width:100%; aspect-ratio:16/9; border:2px solid #0ff; background:#000; overflow:hidden; pointer-events:none; opacity:0.8; margin-bottom: 8px;}
+    .cell-preview video{width:100%; height:100%; object-fit:cover;}
+    .cell-label{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.9); padding:2px 6px; font-size:10px; color:#0ff; font-weight:700;}
+    
+    /* Fullscreen collected video layer */
+    #collectedVideoLayer{position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.5s;}
+    #collectedVideoLayer.active{opacity:0.6;}
+    #collectedVideoLayer video{width:100%; height:100%; object-fit:cover;}
+    
+    @media (max-width: 640px) {
+      /* cell-preview is in timeline-panel, so no specific gameArea override needed here */
+    }
+    
+    /* Toolbar: fixed bottom, more concise */
+    .toolbar{position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:6px; /* Reduced gap */ padding:6px 8px; /* Reduced padding */ background:rgba(0,0,0,0.85); border-top:2px solid #0ff; z-index:120;}
+    .btn{
+      appearance:none; border:none; color:#0ff; background:rgba(0,255,255,0.1); border:1px solid #0ff; padding:6px 8px; /* Reduced padding */ border-radius:4px; font-size:10px; /* Reduced font size */ font-weight:800; letter-spacing:1px; text-transform:uppercase;
+      min-width: 44px; min-height: 44px; /* WCAG touch target */
+      cursor: pointer;
+    }
+    .btn:active{transform:scale(0.95); background:#0ff; color:#000;}
+    .btn:focus-visible{outline:2px solid #fff; outline-offset:2px;} /* High contrast focus */
+
+    /* Timeline lane (narrow) */
+    .timeline-panel{position:fixed; right:0; top:48px; /* Adjusted top to fit smaller header */ bottom:48px; /* Adjusted bottom to fit smaller toolbar */ width:72px; background:rgba(0,0,0,0.78); border-left:2px solid #0ff; padding:6px 4px; overflow-y:auto; transform:translateX(0); transition:width 0.25s ease, padding 0.25s ease; z-index:100; display:flex; flex-direction:column; gap:6px;}
+    .timeline-panel.collapsed{width:0; padding:0; border-left:none; pointer-events:none;}
+    .timeline-title{font-size:10px; font-weight:900; color:#0ff; margin:0 0 6px; text-align:center; letter-spacing:1px;}
+    .clip-item{width:100%; aspect-ratio:16/9; margin-bottom:8px; border:2px solid #333; cursor:pointer; position:relative; overflow:hidden;}
+    .clip-item video{width:100%; height:100%; object-fit:cover;}
+    .clip-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.9); padding:3px; font-size:8px; color:#0ff; text-align:center; text-transform:uppercase; letter-spacing:0.5px;}
+    .sequence-player{position:sticky; bottom:0; background:#0b0b0b; border-top:2px solid #0ff; padding:8px;}
+    .sequence-player video{width:100%; aspect-ratio:16/9; background:#000; border:2px solid #0ff; margin-bottom: 8px;} /* Added margin for play button */
+
+    /* Timeline controls (play/export) */
+    .timeline-controls{display:flex; justify-content:center; gap:4px; margin-top:4px;}
+    .timeline-controls .btn{flex:1; width:auto; font-size:9px; padding:4px 6px; min-width:unset; min-height:unset;}
+
+
+    /* Timeline handle */
+    .timeline-handle{position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff; color:#0ff; display:flex; align-items:center; justify-content:center; z-index:110; cursor:pointer; backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); font-weight:900;}
+    .timeline-handle:active{background:rgba(0,255,255,0.25);}
+    .timeline-handle:focus-visible{outline:2px solid #fff; outline-offset:2px;}
+    
+    @media (max-width: 768px) {
+      .toolbar{gap: 4px; padding: 8px;}
+    }
+    @media (max-width: 640px) {
+      .timeline-panel{width:160px;}
+      .toolbar{grid-template-columns:repeat(4,1fr); /* Adjust for fewer buttons */ padding:8px;}
+      .btn{font-size: 10px; padding: 6px 8px;}
+      .timeline-panel{top: 48px; bottom: 48px;} /* Consistent sizing */
+    }
+    
+    /* Shape Colors - High Contrast Bauhaus */
+    .color-0{border-color:#FF6B6B !important;} /* Red */
+    .color-1{border-color:#4ECDC4 !important;} /* Cyan */
+    .color-2{border-color:#FFE66D !important;} /* Yellow */
+    .color-3{border-color:#95E1D3 !important;} /* Mint */
+    .color-4{border-color:#F38181 !important;} /* Coral */
+    .color-5{border-color:#AA96DA !important;} /* Purple */
+    .color-6{border-color:#A8E6CF !important;} /* Green */
+    .color-7{border-color:#FFB74D !important;} /* Orange */
+    .color-8{border-color:#FFD4E5 !important;} /* Rose Pink (was FCBAD3 Pink) */
+    .color-9{border-color:#FFA07A !important;} /* Salmon */
+    
+    /* Loading */
+    .loading{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; color:#0ff; font-weight:900;}
+    
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal.show{display:flex;}
+    .modal-content{text-align:center; padding:40px;}
+    .modal-title{font-size:48px; font-weight:900; color:#0ff; margin-bottom:20px;}
+    .modal-stats{font-size:18px; color:#666; margin-bottom:30px;}
+    .modal-btn{
+      padding:16px 40px; background:#0ff; border:none; color:#000; font-weight:900; font-size:16px; cursor:pointer; margin:5px;
+      min-width: 44px; min-height: 44px;
+    }
+    .modal-btn:focus-visible{outline:2px solid #fff; outline-offset:2px;}
+    
+    /* Export Menu */
+    .export-menu{position:fixed; bottom:100px; right:20px; background:rgba(17,17,17,0.98); border:2px solid #0ff; padding:16px; border-radius:8px; display:none; z-index:200;}
+    .export-menu.show{display:block;}
+    .export-option{
+      padding:12px; margin:4px 0; background:rgba(0,255,255,0.1); border:2px solid #0ff; color:#0ff; cursor:pointer; font-weight:900; font-size:12px; text-align:center;
+      min-width: 44px; min-height: 44px;
+    }
+    .export-option:hover{background:#0ff; color:#000;}
+    .export-option:focus-visible{outline:2px solid #fff; outline-offset:2px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">FLUX GARDEN</div>
+    <div class="stats">
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
+      <div class="stat">CLIPS <span class="stat-value" id="clips">0</span></div>
+    </div>
+  </header>
+  
+  <div id="gameArea">
+    <div class="loading" id="loading">LOADING...</div>
+    <div id="collectedVideoLayer">
+      <video id="collectedVideo" muted loop playsinline></video>
+    </div>
+    <canvas id="game"></canvas>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="pauseBtn">PAUSE</button>
+    <button class="btn" id="soundBtn">MUTE</button>
+    <button class="btn" id="hapticsBtn">HAPTICS OFF</button>
+    <button class="btn" id="automataBtn">AUTOMATA OFF</button>
+  </div>
+</div>
+
+<div class="timeline-panel" id="timelinePanel">
+  <div class="timeline-title">SEQUENCE</div>
+  <!-- Cell Preview (always first in panel, starts hidden) -->
+  <div class="cell-preview" id="timelineCellPreview" style="display:none;">
+    <video id="previewVideo" muted loop playsinline></video>
+    <div class="cell-label" id="videoLabel">No Selection</div>
+  </div>
+  <div id="clipList"></div>
+  <!-- Sequence Player (always last in panel, conditional display) -->
+  <div class="sequence-player" id="sequencePlayerWrap" style="display:none;">
+    <video id="sequencePlayer" controls playsinline></video>
+    <div class="timeline-controls">
+      <button class="btn" id="playSequenceBtn">PLAY SEQUENCE</button>
+      <button class="btn" id="exportBtn">EXPORT</button>
+    </div>
+  </div>
+</div>
+<div class="timeline-handle" id="timelineHandle">></div>
+
+<div class="export-menu" id="exportMenu">
+  <div class="export-option" role="button" tabindex="0" onclick="exportJSON()">📄 JSON</div>
+  <div class="export-option" role="button" tabindex="0" onclick="exportEDL()">🎬 EDL</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">SEQUENCE COMPLETE</div>
+    <div class="modal-stats" id="modalStats"></div>
+    <button class="modal-btn" onclick="location.reload()">NEW SEQUENCE</button>
+    <button class="modal-btn" onclick="document.getElementById('exportMenu').classList.toggle('show')">EXPORT</button>
+  </div>
+</div>
+
+<script>
+console.log('🌊 FLUX GARDEN — Organic Flow Fields Loading...');
+
+/*
+🌊 ORGANIC FLUX GARDEN
+A living video organism with smooth flowing boundaries and organic shapes
+
+CONCEPT: Marching Squares + Cellular Automata + Perlin Flow Fields
+- Smooth organic boundaries between cell types (marching squares)
+- Each type has distinct geometric shape (circle, square, triangle, etc.)
+- Perlin noise-driven flow fields create fluid motion
+- Soft pastel colors blend organically
+- No flashing/pulsing except on clear events
+
+VISUAL SYSTEM:
+- Marching squares for smooth iso-contours between types
+- Metaball-style blending at boundaries
+- Flow field displacement for organic movement
+- Soft gradients replace hard borders
+
+SHAPES PER TYPE:
+0: Circle, 1: Square, 2: Triangle, 3: Hexagon, 4: Diamond
+5: Pentagon, 6: Star, 7: Rounded Square, 8: Octagon, 9: Cross
+
+COLOR PALETTE: Soft pastels
+- Muted, low-saturation tones
+- Smooth color transitions
+- Organic gradient overlays
+
+EMERGENT FLOW:
+- Cells flow and shift like liquid
+- Boundaries breathe and undulate
+- Types cluster into organic pools
+- Smooth state transitions (no harsh flashes)
+*/
+
+// TYPE-SEGMENT MODE: Each candy type has one source video, auto-sliced into segments
+
+// SOFT PASTEL COLORS - muted, organic tones
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Blush', color: '#FFD3D3', shape: 'circle'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Sky', color: '#D4E7FF', shape: 'square'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Cream', color: '#FFF5D4', shape: 'triangle'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Mint', color: '#D4F4DD', shape: 'hexagon'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Peach', color: '#FFE4D4', shape: 'diamond'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Lavender', color: '#E8D4FF', shape: 'pentagon'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Sage', color: '#D9EAD3', shape: 'star'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Apricot', color: '#FFE0CC', shape: 'roundsquare'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Rose', color: '#FFD4E5', shape: 'octagon'}, /* Updated from original FCBAD3 */
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Sand', color: '#F4E8D4', shape: 'cross'}
+};
+
+// Auto-slice each type into segments (4 per type, 10s each)
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+const typeUsage = {}; // Track which segment index to use next per type
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  typeUsage[t] = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+const VIDEOS = []; // Not used in segment mode
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const GRID_SIZE = 8;
+const CELL_SIZE = 50;
+
+// AUTOMATA CONSTANTS
+const CELL_STATES = {
+  STABLE: 'stable',
+  MATCHING: 'matching',
+  BURSTING: 'bursting',
+  DECAYING: 'decaying',
+  MERGING: 'merging'
+};
+
+const AUTOMATA_CONFIG = {
+  SIMILARITY_THRESHOLD: 0.7,
+  DECAY_LIMIT: 120,
+  PROPAGATION_CHANCE: 0.3,
+  FUSION_THRESHOLD: 0.8,
+  UPDATE_FREQUENCY: 3,
+  FLOW_STRENGTH: 5, // Increased flux movement
+  BREATHE_SPEED: 0.002, // Organic breathing rate
+  POP_DURATION: 30 // Frames for satisfying pop animation
+};
+
+// NEW: GAME_CONFIG for tunable parameters
+const GAME_CONFIG = {
+  hints: {
+    idleFirstMs: 4000,
+    idleEscalateMs: 8000,
+    cooldownMs: 6000,
+    glowAlpha: 0.3, // Max opacity for hint glow
+    wigglePx: 4 // Max px for hint wiggle
+  },
+  motion: {
+    breatheScaleMax: 0.03, // Global limit for ambient breathe/scale
+    popScaleMax: 0.15, // Pop/burst animation scale cap
+    popMs: 250, // Pop/burst animation duration in ms (converted to frames)
+    reducedMotionRespect: true // Respect prefers-reduced-motion
+  },
+  input: {
+    hitMinPx: 44, // Minimum touch target size (CSS pixels) - handled by global CSS + canvas sizing
+    slopPx: 8, // Pixel tolerance for finger drift when detecting click location
+    invalidSnapMs: 150 // Duration for invalid swap snap-back animation
+  },
+  toggles: {
+    hapticsDefault: false, // Haptics ON/OFF (default OFF)
+    automataDefault: false // Automata ON/OFF (default OFF)
+  },
+  automata: {
+    updateEveryNFrames: 8, // Apply rules no more than every N frames
+    neverDuringDrag: true // Don't apply rules during user input (busy state)
+  },
+  audio: {
+    bgVolumeMax: 0.3, // Cap background video volume
+    hintSilent: true // No audio for hints
+  }
+};
+
+AUTOMATA_CONFIG.POP_DURATION = Math.round(GAME_CONFIG.motion.popMs / (1000 / 60)); // Convert ms to frames at 60fps
+
+// SAVE THE CAT BEATS - 15 beat narrative structure
+const SAVE_THE_CAT_BEATS = [
+  {number: 1, name: 'Opening Image', suggestedSyntagma: 'DS'},
+  {number: 2, name: 'Theme Stated', suggestedSyntagma: 'AS'},
+  {number: 3, name: 'Set-Up', suggestedSyntagma: 'DS'},
+  {number: 4, name: 'Catalyst', suggestedSyntagma: 'SC'},
+  {number: 5, name: 'Debate', suggestedSyntagma: 'PS'},
+  {number: 6, name: 'Break into Two', suggestedSyntagma: 'SC'},
+  {number: 7, name: 'B Story', suggestedSyntagma: 'ALT'},
+  {number: 8, name: 'Fun and Games', suggestedSyntagma: 'ES'},
+  {number: 9, name: 'Midpoint', suggestedSyntagma: 'SC'},
+  {number: 10, name: 'Bad Guys Close In', suggestedSyntagma: 'OS'},
+  {number: 11, name: 'All Is Lost', suggestedSyntagma: 'AS'},
+  {number: 12, name: 'Dark Night of the Soul', suggestedSyntagma: 'BS'},
+  {number: 13, name: 'Break into Three', suggestedSyntagma: 'SC'},
+  {number: 14, name: 'Finale', suggestedSyntagma: 'OS'},
+  {number: 15, name: 'Final Image', suggestedSyntagma: 'AS'}
+];
+
+const game = {
+  grid: [],
+  selected: null,
+  score: 0,
+  moves: 30,
+  sequence: [],
+  busy: false,
+  loadedVideos: {},
+  sounds: {
+    match: null,
+    swap: null,
+    win: null,
+    error: null,
+    invalid: null // For invalid swaps
+  },
+  soundEnabled: true,
+  hapticsEnabled: GAME_CONFIG.toggles.hapticsDefault, // NEW: Haptics toggle state
+  automataEnabled: GAME_CONFIG.toggles.automataDefault, // NEW: Automata toggle state
+  autoPlay: true,
+  useTypeSegments: true,
+  typeSegmentVideos: {},
+  segmentUsage: {},
+  collectedTypes: new Set(),
+  typePlaybackTime: {},
+  automataFrame: 0,
+  cellBrightness: {},
+  flowField: [],
+  flowTime: 0,
+  clearFlash: [],
+  autoClear: true, // Auto-clear matches (procedural film mode)
+  paused: false, // Pause auto-generation
+  currentCollectedVideo: null, // Full video playing behind shapes
+  idleTimer: 0, // NEW: For hint system
+  hint: { cell1: null, cell2: null, state: 'none', cooldown: 0 }, // NEW: Hint system state
+  keyboardSelected: {r: 0, c: 0}, // NEW: For keyboard navigation
+  prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, // NEW: Accessibility
+  swapAnimation: null // NEW: For animating swaps (and snap-back)
+};
+
+// Init type-segment videos: create looping videos for each type×segment pair
+function initTypeSegments() {
+  for (let type = 0; type < 10; type++) {
+    for (let segIdx = 0; segIdx < SEGMENTS_PER_TYPE; segIdx++) {
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const key = `${type}_${segIdx}`;
+      const v = document.createElement('video');
+      v.src = seg.file;
+      v.muted = true;
+      v.playsinline = true;
+      v.loop = false; // We'll handle looping manually
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      
+      // Start playing when metadata loads
+      v.addEventListener('loadedmetadata', () => {
+        try {
+          // Play from segment start, ensuring it's not beyond video duration
+          v.currentTime = Math.min(seg.start, v.duration - 0.2); 
+          v.play().catch(e => console.log('Video autoplay blocked (segment video):', e));
+        } catch(e) {}
+      });
+      
+      // Loop within segment range
+      v.addEventListener('timeupdate', () => {
+        if (v.currentTime >= seg.end) {
+          try {
+            v.currentTime = seg.start;
+            if (v.paused) v.play().catch(()=>{});
+          } catch(e) {}
+        }
+      });
+      
+      // Auto-retry playing if it stops
+      v.addEventListener('pause', () => {
+        setTimeout(() => {
+          if (v.paused) v.play().catch(()=>{});
+        }, 100);
+      });
+      
+      // Trigger load
+      v.load();
+      
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created:', Object.keys(game.typeSegmentVideos).length);
+  
+  // Try to play all videos after a short delay
+  setTimeout(() => {
+    Object.values(game.typeSegmentVideos).forEach(v => {
+      if (v.paused && v.readyState >= 2) {
+        v.play().catch(()=>{});
+      }
+    });
+    console.log('✓ Videos playback initiated');
+  }, 500);
+}
+
+// Helper: map grid cell to segment index (deterministic variety)
+function segmentIndexForCell(type, r, c) {
+  return (r + c * 3) % SEGMENTS_PER_TYPE;
+}
+
+// Helper: get next unused segment for a type (for coherent sequences)
+function nextSegmentForType(type) {
+  if (!game.segmentUsage[type]) game.segmentUsage[type] = [];
+  let minUsed = Infinity;
+  let minIdx = 0;
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const used = game.segmentUsage[type].filter(u => u === s).length;
+    if (used < minUsed) {
+      minUsed = used;
+      minIdx = s;
+    }
+  }
+  game.segmentUsage[type].push(minIdx);
+  return minIdx;
+}
+
+// PERLIN NOISE - Simple 2D Perlin for organic flow
+function perlin2D(x, y) {
+  // Simplified Perlin - use sin waves for organic feel
+  const freq1 = 0.05;
+  const freq2 = 0.1;
+  const freq3 = 0.03;
+  return (
+    Math.sin(x * freq1 + game.flowTime * 0.001) * Math.cos(y * freq1) * 0.5 +
+    Math.sin(x * freq2 - game.flowTime * 0.002) * Math.sin(y * freq2) * 0.3 +
+    Math.cos(x * freq3 + y * freq3 + game.flowTime * 0.0015) * 0.2
+  );
+}
+
+// Initialize flow field
+function initFlowField() {
+  game.flowField = [];
+  for (let r = 0; r < GRID_SIZE; r++) {
+    game.flowField[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      game.flowField[r][c] = {dx: 0, dy: 0};
+    }
+  }
+}
+
+// Update flow field with Perlin noise
+function updateFlowField() {
+  if (!game.automataEnabled && GAME_CONFIG.automata.neverDuringDrag && game.busy) {
+    // If automata is off, and we are busy, don't update flow field either
+    return;
+  }
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const angle = perlin2D(c * 10, r * 10) * Math.PI * 2;
+      // Increased flow strength for more alive movement
+      game.flowField[r][c] = {
+        dx: Math.cos(angle) * AUTOMATA_CONFIG.FLOW_STRENGTH,
+        dy: Math.sin(angle) * AUTOMATA_CONFIG.FLOW_STRENGTH
+      };
+    }
+  }
+}
+
+// SHAPE RENDERING - Draw distinct geometric shapes
+function drawShape(ctx, x, y, size, type) {
+  const cx = x + CELL_SIZE / 2;
+  const cy = y + CELL_SIZE / 2;
+  const r = size * 0.4;
+  
+  ctx.beginPath();
+  
+  switch (TYPE_SOURCES[type].shape) {
+    case 'circle':
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      break;
+    case 'square':
+      ctx.rect(cx - r, cy - r, r * 2, r * 2);
+      break;
+    case 'triangle':
+      ctx.moveTo(cx, cy - r);
+      ctx.lineTo(cx + r * 0.866, cy + r * 0.5);
+      ctx.lineTo(cx - r * 0.866, cy + r * 0.5);
+      ctx.closePath();
+      break;
+    case 'hexagon':
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i;
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'diamond':
+      ctx.moveTo(cx, cy - r);
+      ctx.lineTo(cx + r, cy);
+      ctx.lineTo(cx, cy + r);
+      ctx.lineTo(cx - r, cy);
+      ctx.closePath();
+      break;
+    case 'pentagon':
+      for (let i = 0; i < 5; i++) {
+        const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'star':
+      for (let i = 0; i < 10; i++) {
+        const a = (Math.PI * 2 / 10) * i - Math.PI / 2;
+        const rad = i % 2 === 0 ? r : r * 0.5;
+        const px = cx + Math.cos(a) * rad;
+        const py = cy + Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'roundsquare':
+      const rr = r * 0.3;
+      ctx.moveTo(cx - r + rr, cy - r);
+      ctx.arcTo(cx + r, cy - r, cx + r, cy + r, rr);
+      ctx.arcTo(cx + r, cy + r, cx - r, cy + r, rr);
+      ctx.arcTo(cx - r, cy + r, cx - r, cy - r, rr);
+      ctx.arcTo(cx - r, cy - r, cx + r, cy - r, rr);
+      ctx.closePath();
+      break;
+    case 'octagon':
+      for (let i = 0; i < 8; i++) {
+        const a = (Math.PI / 4) * i;
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    case 'cross':
+      const w = r * 0.4;
+      ctx.rect(cx - w, cy - r, w * 2, r * 2);
+      ctx.rect(cx - r, cy - w, r * 2, w * 2);
+      break;
+    default:
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  }
+}
+
+// CELLULAR AUTOMATA FUNCTIONS
+
+// Create a cell object
+function createCell(type, initial = true) {
+  return {
+    type,
+    state: CELL_STATES.STABLE,
+    timer: 0,
+    brightness: 0.5,
+    lastChange: 0,
+    breathePhase: initial ? Math.random() * Math.PI * 2 : 0, // Random breathing offset for new cells
+    popScale: 0, // For pop animation
+    x_anim: null, // NEW: For swap animation
+    y_anim: null, // NEW: For swap animation
+    anim_start_time: 0, // NEW: For swap animation
+    anim_duration: 0, // NEW: For swap animation
+    anim_target_x: null, // NEW: For swap animation
+    anim_target_y: null // NEW: For swap animation
+  };
+}
+
+// Get Moore neighborhood (8 surrounding cells)
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+// Calculate similarity between two cells (0-1)
+function cellSimilarity(cell1, cell2) {
+  if (!cell1 || !cell2) return 0;
+  // Same type = high similarity
+  if (cell1.type === cell2.type) return 0.9;
+  // Similar brightness
+  const brightDiff = Math.abs(cell1.brightness - cell2.brightness);
+  return Math.max(0, 1 - brightDiff * 2);
+}
+
+// Apply cellular automata rules to all cells
+function applyAutomataRules() {
+  if (!game.automataEnabled || (GAME_CONFIG.automata.neverDuringDrag && game.busy)) { // NEW: Check automataEnabled and game.busy
+    return;
+  }
+  
+  const newStates = [];
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    newStates[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      cell.timer++;
+      const neighbors = getNeighbors(r, c);
+      
+      // Count similar neighbors
+      const similarNeighbors = neighbors.filter(n => 
+        n.cell && cellSimilarity(cell, n.cell) > AUTOMATA_CONFIG.SIMILARITY_THRESHOLD
+      );
+      
+      // RULE 1: MATCHING - similar neighbors trigger bursting
+      if (similarNeighbors.length >= 3 && cell.state === CELL_STATES.STABLE) {
+        newStates[r][c] = {...cell, state: CELL_STATES.MATCHING, timer: 0};
+      }
+      // RULE 2: BURSTING - after matching period
+      else if (cell.state === CELL_STATES.MATCHING && cell.timer > 15) {
+        newStates[r][c] = {...cell, state: CELL_STATES.BURSTING, timer: 0};
+      }
+      // RULE 3: DECAY - inactive cells fade
+      else if (cell.timer > AUTOMATA_CONFIG.DECAY_LIMIT && cell.state === CELL_STATES.STABLE) {
+        newStates[r][c] = {...cell, state: CELL_STATES.DECAYING, timer: 0};
+      }
+      // RULE 4: PROPAGATION - adopt majority neighbor type
+      else if (Math.random() < AUTOMATA_CONFIG.PROPAGATION_CHANCE && cell.state === CELL_STATES.STABLE) {
+        const typeCounts = {};
+        neighbors.forEach(n => {
+          if (n.cell) typeCounts[n.cell.type] = (typeCounts[n.cell.type] || 0) + 1;
+        });
+        const dominantType = Object.keys(typeCounts).length > 0 ? 
+          Object.keys(typeCounts).reduce((a, b) => typeCounts[a] > typeCounts[b] ? a : b) : null;
+        
+        if (dominantType !== null && parseInt(dominantType) !== cell.type && typeCounts[dominantType] >= 4) {
+          newStates[r][c] = createCell(parseInt(dominantType), false);
+        } else {
+          newStates[r][c] = cell;
+        }
+      }
+      // Reset bursting/decaying cells after animation completes
+      else if ((cell.state === CELL_STATES.BURSTING || cell.state === CELL_STATES.DECAYING) && cell.timer > AUTOMATA_CONFIG.POP_DURATION) {
+        newStates[r][c] = createCell(Math.floor(Math.random() * 10), false);
+      }
+      else {
+        newStates[r][c] = cell;
+      }
+    }
+  }
+  
+  game.grid = newStates;
+}
+
+// ✅ SOUND SYSTEM - Web Audio API
+function initSounds() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  game.sounds.match = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1); // C5
+  };
+  
+  game.sounds.swap = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 392, 0.05); // G4
+  };
+  
+  game.sounds.win = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1);
+    setTimeout(() => playTone(audioContext, 659.25, 0.1), 100);
+    setTimeout(() => playTone(audioContext, 783.99, 0.2), 200);
+  };
+  
+  game.sounds.error = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 200, 0.1);
+  };
+
+  game.sounds.invalid = () => { // NEW: Invalid swap sound
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 150, 0.08); // Low tone for invalid move
+  };
+  
+  console.log('🔊 Sound system initialized');
+}
+
+function playTone(ctx, frequency, duration) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+// ✅ HAPTIC FEEDBACK - NEW: Check game.hapticsEnabled
+function haptic(pattern = 10) {
+  if (game.hapticsEnabled && navigator.vibrate) {
+    // The prompt specifies to disable breathing/wiggles for prefers-reduced-motion,
+    // but for haptics, just "respect system setting; if unsupported, silently no-op."
+    // So, we only check game.hapticsEnabled here.
+    navigator.vibrate(pattern);
+  }
+}
+
+// INIT
+function init() {
+  console.log('🎮 Initializing...');
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  canvas.addEventListener('click', handleClick);
+  // NEW: Keyboard input
+  document.addEventListener('keydown', handleKeyDown);
+
+  document.getElementById('pauseBtn').addEventListener('click', togglePause);
+  // NEW: Play and Export buttons moved to timeline panel
+  document.getElementById('playSequenceBtn').addEventListener('click', startSequencePlayback);
+  document.getElementById('exportBtn').addEventListener('click', toggleExportMenu); // This button is now in timeline panel
+  document.getElementById('soundBtn').addEventListener('click', toggleSound);
+  document.getElementById('timelineHandle').addEventListener('click', () => {
+    document.getElementById('timelinePanel').classList.toggle('collapsed');
+  });
+  // NEW: Haptics and Automata toggles
+  document.getElementById('hapticsBtn').addEventListener('click', toggleHaptics);
+  document.getElementById('automataBtn').addEventListener('click', toggleAutomata);
+  
+  // Close export menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('exportMenu');
+    const btn = document.getElementById('exportBtn'); // This button is now in timeline-panel
+    if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) { // Add check for the button itself
+      menu.classList.remove('show');
+    }
+  });
+  
+  initSounds();
+  loadVideos();
+  if (game.useTypeSegments) initTypeSegments();
+  initFlowField();
+  createGrid();
+  updateHapticsButton(); // Set initial button state
+  updateAutomataButton(); // Set initial button state
+  draw();
+  
+  // BEAT COLLECTION SYSTEM: Initialize
+  if(typeof BeatCollectionSystem !== 'undefined'){
+    BeatCollectionSystem.init({
+      flashColor: '#00ffff',
+      totalBeats: 15,
+      completionSound: true
+    });
+    console.log('✓ Beat Collection System initialized');
+  }
+}
+
+function resize() {
+  const headerHeight = document.querySelector('header').offsetHeight;
+  const toolbarHeight = document.querySelector('.toolbar').offsetHeight;
+  // Calculate available space
+  const availableWidth = window.innerWidth - 40; // 20px padding on each side
+  const availableHeight = window.innerHeight - headerHeight - toolbarHeight - 20; // 10px top/bottom margin for canvas
+  
+  const size = Math.min(availableWidth, availableHeight, 600); // Max 600px square, but fit in frame
+  
+  canvas.width = GRID_SIZE * CELL_SIZE;
+  canvas.height = GRID_SIZE * CELL_SIZE;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+
+function loadVideos() {
+  console.log('🎥 Loading videos...');
+  
+  VIDEOS.forEach(vid => { // VIDEOS array is empty in this setup, but kept for robustness
+    const video = document.createElement('video');
+    video.src = vid.file;
+    video.muted = true;
+    video.loop = true;
+    video.playsinline = true;
+    video.preload = 'auto';
+    video.crossOrigin = 'anonymous';
+    
+    video.addEventListener('loadeddata', () => {
+      console.log('✓ Video loaded:', vid.title);
+    });
+    
+    // Defer autoplay to first draw/use to avoid blocking load
+    video.load();
+    
+    game.loadedVideos[vid.id] = video;
+  });
+  
+  document.getElementById('loading').style.display = 'none';
+  // The 'videoPreview' div (now 'timelineCellPreview') starts hidden in the HTML,
+  // it will be shown when a cell is selected.
+  console.log('✓ Videos initialized');
+}
+
+function createGrid() {
+  game.grid = [];
+  for (let r = 0; r < GRID_SIZE; r++) {
+    game.grid[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      game.grid[r][c] = createCell(randomCandyType());
+    }
+  }
+  
+  // Remove initial matches
+  while (findMatches().length > 0) {
+    findMatches().forEach(({r, c}) => {
+      game.grid[r][c] = createCell(randomCandyType());
+    });
+  }
+  
+  console.log('✓ Living grid created - cells are now autonomous agents');
+}
+
+function randomCandyType() {
+  return Math.floor(Math.random() * 10);
+}
+
+// Easing function for smooth animations
+function easeInOutSine(t) {
+  return -0.5 * (Math.cos(Math.PI * t) - 1);
+}
+
+function draw() {
+  // Auto-clear matches if not paused
+  if (!game.paused && !game.busy && game.autoClear) {
+    const matches = findMatches();
+    if (matches.length > 0) {
+      processMatches(matches);
+    }
+  }
+  
+  // Update flow time and field
+  game.flowTime++;
+  if (game.automataFrame % 10 === 0) {
+    updateFlowField();
+  }
+  
+  // Apply automata rules periodically (only if not paused)
+  game.automataFrame++;
+  if (!game.paused && game.automataFrame % GAME_CONFIG.automata.updateEveryNFrames === 0) {
+    applyAutomataRules();
+  }
+
+  // NEW: Hint system logic
+  if (!game.paused && !game.busy && game.hint.cooldown <= 0) {
+    game.idleTimer++;
+    if (game.idleTimer > (GAME_CONFIG.hints.idleFirstMs / (1000/60))) { // Convert ms to frames
+      if (game.hint.state === 'none') {
+        const hint = findValidSwap();
+        if (hint) {
+          game.hint = { cell1: hint.cell1, cell2: hint.cell2, state: 'glow', cooldown: 0 };
+          console.log('💡 Hint activated: Glow');
+        }
+      }
+      if (game.idleTimer > (GAME_CONFIG.hints.idleEscalateMs / (1000/60))) {
+        if (game.hint.state === 'glow' && game.hint.cell1) {
+          game.hint.state = 'wiggle';
+          console.log('💡 Hint escalated: Wiggle');
+        }
+      }
+    }
+  } else if (game.hint.cooldown > 0) {
+    game.hint.cooldown--;
+  }
+  
+  // Soft gradient background
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, '#1a1a1a');
+  grad.addColorStop(1, '#0f0f0f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // NO GRID LINES - organic flowing shapes only
+  
+  // Draw cells with organic shapes
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      let currentX = c * CELL_SIZE;
+      let currentY = r * CELL_SIZE;
+
+      // NEW: Apply swap animation
+      if (cell.x_anim !== null && cell.y_anim !== null) {
+        const progress = (performance.now() - cell.anim_start_time) / cell.anim_duration;
+        if (progress < 1) {
+          const easedProgress = easeInOutSine(progress);
+          currentX = cell.x_anim + (cell.anim_target_x - cell.x_anim) * easedProgress;
+          currentY = cell.y_anim + (cell.anim_target_y - cell.y_anim) * easedProgress;
+        } else {
+          // Animation finished, snap to target
+          currentX = cell.anim_target_x;
+          currentY = cell.anim_target_y;
+          cell.x_anim = null;
+          cell.y_anim = null;
+        }
+      }
+      
+      // Apply flow field displacement + organic breathing (limited)
+      const flow = game.flowField[r][c];
+      let breatheScale = 1;
+      let wiggleX = 0;
+      let wiggleY = 0;
+
+      // Defensive check for GAME_CONFIG.motion
+      const motionConfig = GAME_CONFIG.motion || {}; // Default to empty object if undefined
+      const shouldBreathe = !game.prefersReducedMotion && (motionConfig.reducedMotionRespect === true);
+
+      if (shouldBreathe) {
+        breatheScale = 1 + Math.sin(game.flowTime * AUTOMATA_CONFIG.BREATHE_SPEED + cell.breathePhase) * (motionConfig.breatheScaleMax || 0.03);
+      }
+      
+      const x = currentX + flow.dx;
+      const y = currentY + flow.dy;
+      
+      ctx.save();
+      
+      // Satisfying POP animation on BURSTING (limited)
+      if (cell.state === CELL_STATES.BURSTING) {
+        const progress = cell.timer / AUTOMATA_CONFIG.POP_DURATION;
+        if (progress < 1) {
+          // Scale up then fade
+          const popScale = 1 + Math.sin(progress * Math.PI) * (motionConfig.popScaleMax || 0.15); // NEW: Scale cap with defensive check
+          const alpha = 1 - progress;
+          
+          ctx.globalAlpha = alpha;
+          ctx.translate(x + CELL_SIZE/2, y + CELL_SIZE/2);
+          ctx.scale(popScale, popScale);
+          ctx.translate(-(x + CELL_SIZE/2), -(y + CELL_SIZE/2));
+        }
+      }
+      
+      // Draw shape-clipped video
+      const segIdx = segmentIndexForCell(cell.type, r, c);
+      const key = `${cell.type}_${segIdx}`;
+      const video = game.typeSegmentVideos[key] || game.loadedVideos[cell.type]; // game.loadedVideos[cell.type] is effectively unused in segment mode
+
+      if (video) {
+        // Force play if paused
+        if (video.paused && video.readyState >= 2) {
+          video.play().catch(()=>{});
+        }
+        
+        if (video.readyState >= 2) {
+          ctx.save();
+          
+          // Apply breathing scale
+          ctx.translate(x + CELL_SIZE/2, y + CELL_SIZE/2);
+          ctx.scale(breatheScale, breatheScale);
+          ctx.translate(-(x + CELL_SIZE/2), -(y + CELL_SIZE/2));
+          
+          // Create shape path for clipping
+          drawShape(ctx, x, y, CELL_SIZE, cell.type);
+          ctx.clip();
+          
+          // Calculate spatial sample region
+          const vw = video.videoWidth || 1920;
+          const vh = video.videoHeight || 1080;
+          const cellW = vw / GRID_SIZE;
+          const cellH = vh / GRID_SIZE;
+          const sx = c * cellW;
+          const sy = r * cellH;
+          
+          // Draw video region
+          ctx.drawImage(
+            video,
+            sx, sy, cellW, cellH,
+            x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8
+          );
+          
+          ctx.restore();
+        }
+      }
+      
+      // GLASSMORPHIC shape overlay with breathing
+      ctx.save();
+      ctx.translate(x + CELL_SIZE/2, y + CELL_SIZE/2);
+      ctx.scale(breatheScale, breatheScale);
+      ctx.translate(-(x + CELL_SIZE/2), -(y + CELL_SIZE/2));
+      
+      drawShape(ctx, x, y, CELL_SIZE, cell.type);
+      
+      // Frosted glass effect: white with low opacity
+      const cx = x + CELL_SIZE / 2;
+      const cy = y + CELL_SIZE / 2;
+      const rad = CELL_SIZE * 0.4;
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      gradient.addColorStop(1, TYPE_SOURCES[cell.type].color + '20');
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // Subtle pastel tint stroke with soft glow
+      ctx.strokeStyle = TYPE_SOURCES[cell.type].color + 'A0';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = TYPE_SOURCES[cell.type].color + '60';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      
+      ctx.restore();
+      
+      // Selection indicator - inviting pulse
+      const isSelected = (game.selected && game.selected.r === r && game.selected.c === c) ||
+                         (game.keyboardSelected && game.keyboardSelected.r === r && game.keyboardSelected.c === c); // NEW: Keyboard selection
+      
+      if (isSelected) {
+        const pulse = Math.sin(game.flowTime * 0.01) * 0.5 + 0.5;
+        ctx.save();
+        ctx.translate(x + CELL_SIZE/2, y + CELL_SIZE/2);
+        ctx.scale(1.1 + pulse * 0.05, 1.1 + pulse * 0.05); /* Reduced scale */
+        ctx.translate(-(x + CELL_SIZE/2), -(y + CELL_SIZE/2));
+        
+        drawShape(ctx, x, y, CELL_SIZE, cell.type);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + pulse * 0.4})`;
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ffffff';
+        ctx.stroke();
+        ctx.restore();
+      }
+      
+      // Hint for potential matches - gentle nudge (NEW HINT SYSTEM)
+      const isHinted = (game.hint.cell1 && game.hint.cell1.r === r && game.hint.cell1.c === c) ||
+                       (game.hint.cell2 && game.hint.cell2.r === r && game.hint.cell2.c === c);
+
+      if (isHinted && game.hint.state !== 'none') {
+        let hintPulseAlpha = 0;
+        if (game.hint.state === 'glow') {
+          hintPulseAlpha = (Math.sin(game.flowTime * 0.05) * 0.5 + 0.5) * (GAME_CONFIG.hints.glowAlpha || 0.3);
+        } else if (game.hint.state === 'wiggle') {
+          // If prefers-reduced-motion is on, wiggle is disabled.
+          if (!game.prefersReducedMotion && (motionConfig.reducedMotionRespect === true)) {
+            const wiggleMagnitude = (GAME_CONFIG.hints.wigglePx || 4);
+            wiggleX = Math.sin(game.flowTime * 0.1) * wiggleMagnitude;
+            wiggleY = Math.cos(game.flowTime * 0.1) * wiggleMagnitude;
+          }
+          hintPulseAlpha = (Math.sin(game.flowTime * 0.05) * 0.5 + 0.5) * (GAME_CONFIG.hints.glowAlpha || 0.3);
+        }
+        
+        ctx.save();
+        ctx.translate(x + wiggleX, y + wiggleY); // Apply wiggle translation
+        drawShape(ctx, 0, 0, CELL_SIZE, cell.type); // Draw at translated position relative to current transform
+        ctx.strokeStyle = `rgba(255, 255, 100, ${hintPulseAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(255, 255, 100, 0.5)';
+        ctx.stroke();
+        ctx.restore();
+      }
+      
+      ctx.restore();
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+// NEW: Function to find a single valid swap for hints
+function findValidSwap() {
+  const directions = [[0,1], [1,0]]; // Check right and down
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      for (const [dr, dc] of directions) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
+        
+        // Simulate swap
+        const temp1 = game.grid[r][c];
+        const temp2 = game.grid[nr][nc];
+        game.grid[r][c] = temp2;
+        game.grid[nr][nc] = temp1;
+
+        const hasMatch = findMatches().length > 0;
+        
+        // Swap back
+        game.grid[r][c] = temp1;
+        game.grid[nr][nc] = temp2;
+
+        if (hasMatch) {
+          return { cell1: {r,c}, cell2: {r:nr, c:nc} };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function getBorderColor(colorId) {
+  const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA', '#A8E6CF', '#FFB74D', '#FFD4E5', '#FFA07A'];
+  return colors[colorId] || '#0ff';
+}
+
+function handleClick(e) {
+  if (game.busy) return;
+  
+  // NEW: Reset idle timer and hints on any user input
+  game.idleTimer = 0;
+  game.hint = { cell1: null, cell2: null, state: 'none', cooldown: (GAME_CONFIG.hints.cooldownMs || 6000) / (1000/60) }; // Defensive check
+
+  const rect = canvas.getBoundingClientRect();
+  
+  // Account for slopPx for touch target (logic still uses exact grid, visual feedback improves experience)
+  // Convert click coordinates to canvas coordinates (which are based on GRID_SIZE * CELL_SIZE)
+  const canvasX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+  const canvasY = ((e.clientY - rect.top) / rect.height) * canvas.height;
+  
+  const col = Math.floor(canvasX / CELL_SIZE);
+  const row = Math.floor(canvasY / CELL_SIZE);
+  
+  // Bounds check
+  if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+  if (!game.grid[row] || !game.grid[row][col]) return;
+  
+  console.log('👆 Click:', row, col);
+  
+  if (!game.selected) {
+    game.selected = {r: row, c: col};
+    // NEW: Sync keyboard selection with click selection
+    game.keyboardSelected = {r: row, c: col};
+
+    const cell = game.grid[row][col];
+    console.log('✓ Selected:', row, col, '- type:', cell.type, 'state:', cell.state);
+    haptic(10); // NEW: Haptic pattern
+    game.sounds.swap();
+    
+    // Update video preview (now in timeline panel)
+    const segIdx = segmentIndexForCell(cell.type, row, col);
+    const seg = TYPE_SEGMENTS[cell.type][segIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    // Ensure video plays muted for preview
+    document.getElementById('previewVideo').muted = true;
+    document.getElementById('videoLabel').textContent = seg.title;
+    document.getElementById('timelineCellPreview').style.display = 'block'; // Ensure preview is visible
+  } else {
+    const {r: r1, c: c1} = game.selected;
+    const r2 = row, c2 = col;
+    
+    // Check if adjacent
+    const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+    
+    if (adjacent) {
+      console.log('🔄 Swapping:', [r1,c1], 'with', [r2,c2]);
+      haptic(15); // NEW: Haptic pattern
+      trySwap(r1, c1, r2, c2);
+    } else {
+      console.log('❌ Not adjacent');
+      game.sounds.error();
+      haptic([10, 50, 10]); // NEW: Haptic pattern
+    }
+    
+    game.selected = null;
+    document.getElementById('timelineCellPreview').style.display = 'none'; // Hide preview if selection cleared/used
+    document.getElementById('videoLabel').textContent = 'No Selection';
+  }
+}
+
+// NEW: Keyboard Navigation
+function handleKeyDown(e) {
+  if (game.busy || document.activeElement !== document.body) return; // Only if not busy and not interacting with UI elements
+
+  const {r, c} = game.keyboardSelected;
+  let newR = r;
+  let newC = c;
+  let moved = false;
+
+  switch (e.key) {
+    case 'ArrowUp':
+    case 'w':
+    case 'W':
+      newR = Math.max(0, r - 1);
+      moved = true;
+      break;
+    case 'ArrowDown':
+    case 's':
+    case 'S':
+      newR = Math.min(GRID_SIZE - 1, r + 1);
+      moved = true;
+      break;
+    case 'ArrowLeft':
+    case 'a':
+    case 'A':
+      newC = Math.max(0, c - 1);
+      moved = true;
+      break;
+    case 'ArrowRight':
+    case 'd':
+    case 'D':
+      newC = Math.min(GRID_SIZE - 1, c + 1);
+      moved = true;
+      break;
+    case 'Enter':
+    case ' ': // Spacebar
+      e.preventDefault(); // Prevent scrolling
+      // Simulate a click on the keyboardSelected cell
+      const rect = canvas.getBoundingClientRect();
+      const clientX = rect.left + (game.keyboardSelected.c * CELL_SIZE + CELL_SIZE / 2) * (rect.width / canvas.width);
+      const clientY = rect.top + (game.keyboardSelected.r * CELL_SIZE + CELL_SIZE / 2) * (rect.height / canvas.height);
+      
+      handleClick({clientX, clientY});
+      return; // Do not update keyboardSelected state immediately after a simulated click
+  }
+
+  if (moved) {
+    game.keyboardSelected = {r: newR, c: newC};
+    game.selected = null; // Clear mouse selection if keyboard moves
+    haptic(5); // Subtle haptic for movement
+    // NEW: Reset idle timer and hints on any user input
+    game.idleTimer = 0;
+    game.hint = { cell1: null, cell2: null, state: 'none', cooldown: (GAME_CONFIG.hints.cooldownMs || 6000) / (1000/60) }; // Defensive check
+    
+    // Update video preview for keyboard selection
+    const cell = game.grid[newR][newC];
+    const segIdx = segmentIndexForCell(cell.type, newR, newC);
+    const seg = TYPE_SEGMENTS[cell.type][segIdx];
+    document.getElementById('previewVideo').src = seg.file;
+    document.getElementById('previewVideo').muted = true;
+    document.getElementById('videoLabel').textContent = seg.title;
+    document.getElementById('timelineCellPreview').style.display = 'block';
+  }
+}
+
+
+function trySwap(r1, c1, r2, c2) {
+  game.busy = true; // Block further input
+  
+  // Store initial cell states and positions for animation
+  const cell1_orig = { ...game.grid[r1][c1] };
+  const cell2_orig = { ...game.grid[r2][c2] };
+
+  // Update cell positions for animation
+  game.grid[r1][c1].x_anim = c1 * CELL_SIZE;
+  game.grid[r1][c1].y_anim = r1 * CELL_SIZE;
+  game.grid[r1][c1].anim_target_x = c2 * CELL_SIZE;
+  game.grid[r1][c1].anim_target_y = r2 * CELL_SIZE;
+  game.grid[r1][c1].anim_start_time = performance.now();
+  game.grid[r1][c1].anim_duration = (GAME_CONFIG.input.invalidSnapMs || 150); // Defensive check
+
+  game.grid[r2][c2].x_anim = c2 * CELL_SIZE;
+  game.grid[r2][c2].y_anim = r2 * CELL_SIZE;
+  game.grid[r2][c2].anim_target_x = c1 * CELL_SIZE;
+  game.grid[r2][c2].anim_target_y = r1 * CELL_SIZE;
+  game.grid[r2][c2].anim_start_time = performance.now();
+  game.grid[r2][c2].anim_duration = (GAME_CONFIG.input.invalidSnapMs || 150); // Defensive check
+
+  // Swap logical positions
+  game.grid[r1][c1] = cell2_orig;
+  game.grid[r2][c2] = cell1_orig;
+  
+  // Wait for animation to finish before checking matches
+  setTimeout(() => {
+    const matches = findMatches();
+    
+    if (matches.length === 0) {
+      // No match - swap back animation
+      console.log('↩️ No match - reverting');
+      haptic([10, 50, 10]); // NEW: Haptic pattern
+      game.sounds.invalid(); // NEW: Invalid swap sound
+
+      // Animate back to original logical positions
+      game.grid[r1][c1].x_anim = c2 * CELL_SIZE;
+      game.grid[r1][c1].y_anim = r2 * CELL_SIZE;
+      game.grid[r1][c1].anim_target_x = c1 * CELL_SIZE;
+      game.grid[r1][c1].anim_target_y = r1 * CELL_SIZE;
+      game.grid[r1][c1].anim_start_time = performance.now();
+      game.grid[r1][c1].anim_duration = (GAME_CONFIG.input.invalidSnapMs || 150); // Defensive check
+
+      game.grid[r2][c2].x_anim = c1 * CELL_SIZE;
+      game.grid[r2][c2].y_anim = r1 * CELL_SIZE;
+      game.grid[r2][c2].anim_target_x = c2 * CELL_SIZE;
+      game.grid[r2][c2].anim_target_y = r2 * CELL_SIZE;
+      game.grid[r2][c2].anim_start_time = performance.now();
+      game.grid[r2][c2].anim_duration = (GAME_CONFIG.input.invalidSnapMs || 150); // Defensive check
+
+      // Swap logical positions back
+      game.grid[r1][c1] = cell1_orig;
+      game.grid[r2][c2] = cell2_orig;
+
+      setTimeout(() => {
+        game.busy = false; // Release busy state after swap-back animation
+      }, (GAME_CONFIG.input.invalidSnapMs || 150)); // Defensive check
+      
+      return;
+    }
+    
+    console.log('✓ Match found:', matches.length, 'cells');
+    game.sounds.match();
+    haptic(20); // NEW: Haptic pattern
+    game.moves--;
+    document.getElementById('moves').textContent = game.moves;
+    
+    processMatches(matches);
+    // processMatches will handle setting game.busy = false after cascades
+  }, (GAME_CONFIG.input.invalidSnapMs || 150)); // Wait for the initial swap animation to complete (Defensive check)
+}
+
+function findMatches() {
+  const matches = [];
+  const checked = new Set();
+  
+  // Horizontal
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE - 2; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      if (game.grid[r][c+1] && game.grid[r][c+2] &&
+          game.grid[r][c+1].type === cell.type && game.grid[r][c+2].type === cell.type) {
+        for (let i = 0; i < 3; i++) {
+          const key = `${r},${c+i}`;
+          if (!checked.has(key)) {
+            matches.push({r, c: c+i});
+            checked.add(key);
+          }
+        }
+      }
+    }
+  }
+  
+  // Vertical
+  for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < GRID_SIZE - 2; r++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      if (game.grid[r+1][c] && game.grid[r+2][c] &&
+          game.grid[r+1][c].type === cell.type && game.grid[r+2][c].type === cell.type) {
+        for (let i = 0; i < 3; i++) {
+          const key = `${r+i},${c}`;
+          if (!checked.has(key)) {
+            matches.push({r: r+i, c});
+            checked.add(key);
+          }
+        }
+      }
+    }
+  }
+  
+  return matches;
+}
+
+function processMatches(matches) {
+  game.busy = true;
+  
+  // Collect unique videos
+  const matchedTypes = new Set(); // Changed from matchedVideos to matchedTypes
+  matches.forEach(({r, c}) => {
+    const cell = game.grid[r][c];
+    if (cell) matchedTypes.add(cell.type);
+    game.grid[r][c] = null;
+    game.score += 10;
+  });
+  
+  // Add to sequence: collect next unused segment for each type
+  let lastCollectedSeg = null;
+  matchedTypes.forEach(type => {
+    const segIdx = nextSegmentForType(type);
+    const seg = TYPE_SEGMENTS[type][segIdx];
+    game.sequence.push({ title: seg.title, file: seg.file, start: seg.start, end: seg.end });
+    lastCollectedSeg = seg;
+    
+    // BEAT COLLECTION: Collect beat for each match
+    if(typeof BeatCollectionSystem !== 'undefined'){
+      const beatIndex = BeatCollectionSystem.collectedBeats.length;
+      if(beatIndex < SAVE_THE_CAT_BEATS.length){
+        const beat = SAVE_THE_CAT_BEATS[beatIndex];
+        BeatCollectionSystem.collect({
+          beatNumber: beat.number,
+          beatName: beat.name,
+          syntagma: beat.suggestedSyntagma,
+          clips: [{
+            type: type,
+            title: seg.title,
+            file: seg.file,
+            start: seg.start,
+            end: seg.end
+          }],
+          metadata: {
+            matchType: type,
+            matchCount: matches.length,
+            flowTime: game.flowTime,
+            score: game.score
+          }
+        });
+      }
+    }
+    
+    // Mark type as collected for synchronized mosaic playback
+    game.collectedTypes.add(type);
+    game.typePlaybackTime[type] = 0;
+    
+    // Sync all segment videos for this type to start time
+    for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+      const key = `${type}_${s}`;
+      const vid = game.typeSegmentVideos[key];
+      if (vid) {
+        try {
+          // Play from segment start, ensuring it's not beyond video duration
+          vid.currentTime = Math.min(TYPE_SEGMENTS[type][s].start, vid.duration - 0.2);
+          vid.play().catch(()=>{});
+        } catch(e) {}
+      }
+    }
+  });
+  
+  // Play collected video FULLSCREEN behind all shapes (glassmorphic)
+  if (lastCollectedSeg) {
+    playCollectedVideoFullscreen(lastCollectedSeg);
+  }
+  
+  document.getElementById('score').textContent = game.score;
+  document.getElementById('clips').textContent = game.sequence.length;
+  
+  updateTimeline();
+  maybeAutoPlaySequence();
+  
+  // Drop and refill
+  setTimeout(() => {
+    dropCandies();
+    refillGrid();
+    
+    // Check for cascades
+    const newMatches = findMatches();
+    if (newMatches.length > 0) {
+      console.log('🔁 Cascade:', newMatches.length, 'matches');
+      haptic(30); // NEW: Haptic pattern
+      processMatches(newMatches);
+    } else {
+      game.busy = false;
+      checkGameOver();
+    }
+  }, (GAME_CONFIG.input.invalidSnapMs || 150)); // Delay to allow cascade animation logic (Defensive check)
+  
+  console.log('💥 Processed matches:', matches.length, '- Score:', game.score);
+}
+
+function dropCandies() {
+  // Fall downward: consolidate non-nulls from bottom up
+  for (let c = 0; c < GRID_SIZE; c++) {
+    let writePos = GRID_SIZE - 1;
+    for (let r = GRID_SIZE - 1; r >= 0; r--) {
+      if (game.grid[r][c]) {
+        game.grid[writePos][c] = game.grid[r][c];
+        // Reset animation properties for dropped cells
+        game.grid[writePos][c].x_anim = null;
+        game.grid[writePos][c].y_anim = null;
+        if (writePos !== r) {
+          game.grid[r][c] = null;
+        }
+        writePos--;
+      }
+    }
+  }
+}
+
+function refillGrid() {
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (!game.grid[r][c]) {
+        game.grid[r][c] = createCell(randomCandyType(), false); // NEW: createCell for new cells
+      }
+    }
+  }
+}
+
+function updateTimeline() {
+  const panel = document.getElementById('timelinePanel');
+  const clipList = document.getElementById('clipList');
+  const wrap = document.getElementById('sequencePlayerWrap');
+  
+  clipList.innerHTML = '';
+  
+  game.sequence.forEach((video, i) => {
+    const clip = document.createElement('div');
+    clip.className = 'clip-item';
+    
+    const vid = document.createElement('video');
+    vid.src = video.file;
+    vid.muted = true;
+    vid.playsinline = true;
+    
+    const label = document.createElement('div');
+    label.className = 'clip-label';
+    label.textContent = `${i + 1}. ${video.title}`;
+    
+    clip.appendChild(vid);
+    clip.appendChild(label);
+    clip.onclick = () => playSingleInPlayer(video);
+    clipList.appendChild(clip);
+  });
+  
+  if (game.sequence.length > 0) {
+    // panel.classList.add('active'); // No longer automatically active, user can collapse
+    wrap.style.display = 'block';
+  }
+}
+
+// Sequence Player
+function startSequencePlayback() {
+  if (game.sequence.length === 0) {
+    console.log('No clips in sequence to play.');
+    return;
+  }
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  // Ensure timeline + player UI visible
+  document.getElementById('timelinePanel').classList.remove('collapsed'); // Make sure it's not collapsed
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  
+  let currentClipIndex = 0;
+
+  const playCurrentClip = () => {
+    const v = game.sequence[currentClipIndex];
+    if (!v) {
+        console.log('Sequence playback finished or clip not found.');
+        player.pause();
+        player.src = ''; // Clear source
+        label.textContent = '—';
+        return;
+    }
+
+    player.src = v.file;
+    label.textContent = `${currentClipIndex + 1}. ${v.title}`;
+    const start = v.start ?? 0;
+    const end = v.end ?? null;
+
+    player.onloadedmetadata = () => {
+      try { 
+        player.currentTime = start;
+        player.play().catch(e => console.log('Sequence Player autoplay blocked:', e));
+      } catch(e) {
+        console.error('Sequence Player seek error:', e);
+      }
+    };
+
+    // Use ontimeupdate for segment looping, and onended for advancing to next clip if no specific end
+    player.ontimeupdate = () => {
+      if (end != null && player.currentTime >= end) {
+        player.pause(); // Pause when segment ends
+        player.ontimeupdate = null; // Clear handler
+        currentClipIndex = (currentClipIndex + 1) % game.sequence.length;
+        playCurrentClip(); // Play next clip
+      }
+    };
+    
+    // Fallback/alternative for advancing to next clip if ontimeupdate doesn't trigger or segment end isn't defined
+    player.onended = () => {
+        // If ontimeupdate already handled the segment end and advanced, this might be redundant or trigger unexpectedly.
+        // It's safer to only use onended if the clip is expected to play to its natural end, or if ontimeupdate wasn't used.
+        if (end == null || player.currentTime < end - 0.1) { // Only if not already handled by ontimeupdate for explicit segments
+            currentClipIndex = (currentClipIndex + 1) % game.sequence.length;
+            playCurrentClip();
+        }
+    };
+  };
+
+  playCurrentClip(); // Start playback of the first clip
+}
+
+function playSingleInPlayer(v) {
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  player.src = v.file;
+  label.textContent = v.title;
+  const start = v.start ?? 0;
+  const end = v.end ?? null;
+  player.onloadedmetadata = () => {
+    try { player.currentTime = start; } catch(e) {}
+    player.play().catch(()=>{});
+  };
+  if (end != null) {
+    player.ontimeupdate = () => {
+      if (player.currentTime >= end) {
+        try { player.currentTime = start; } catch(e) {} // Loop single segment
+      }
+    };
+  } else {
+    player.ontimeupdate = null; // Clear if no end time, play full video
+  }
+}
+
+function checkGameOver() {
+  if (game.moves <= 0) {
+    showModal();
+  }
+}
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const stats = document.getElementById('modalStats');
+  
+  stats.innerHTML = `
+    <div>SCORE: ${game.score}</div>
+    <div>CLIPS: ${game.sequence.length}</div>
+    <div style="margin-top:20px;font-size:14px;color:#0ff;">🎬 Your film is ready to export!</div>
+  `;
+  
+  game.sounds.win();
+  haptic([100, 50, 100, 50, 200]); // NEW: Haptic pattern
+  
+  modal.classList.add('show');
+  console.log('🏁 Game Over - Film Complete!');
+}
+
+function showHint() { // This function is no longer called, hint system is automatic
+  console.log('💡 Hint: Look for 3 in a row!');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function shuffle() {
+  console.log('🔀 Shuffling...');
+  createGrid();
+  game.moves = Math.max(5, game.moves);
+  document.getElementById('moves').textContent = game.moves;
+  game.sounds.match();
+  haptic(20); // NEW: Haptic pattern
+}
+
+function toggleTimeline() { // This is triggered by timelineHandle click directly now
+  const panel = document.getElementById('timelinePanel');
+  panel.classList.toggle('active');
+  console.log('📋 Timeline toggled');
+  game.sounds.swap();
+  haptic(10); // NEW: Haptic pattern
+}
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('show');
+  game.sounds.swap();
+  haptic(10); // NEW: Haptic pattern
+}
+
+function toggleSound() {
+  game.soundEnabled = !game.soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = game.soundEnabled ? 'MUTE' : 'UNMUTE';
+  console.log('🔊 Sound:', game.soundEnabled);
+  haptic(10); // NEW: Haptic pattern
+}
+
+function updateHapticsButton() { // NEW: Update button state
+  const btn = document.getElementById('hapticsBtn');
+  btn.textContent = game.hapticsEnabled ? 'HAPTICS ON' : 'HAPTICS OFF';
+}
+
+function toggleHaptics() { // NEW: Haptics toggle
+  game.hapticsEnabled = !game.hapticsEnabled;
+  updateHapticsButton();
+  console.log('🖐️ Haptics:', game.hapticsEnabled);
+  if (game.hapticsEnabled) haptic(20); // Give feedback when turned on
+}
+
+function updateAutomataButton() { // NEW: Update button state
+  const btn = document.getElementById('automataBtn');
+  btn.textContent = game.automataEnabled ? 'AUTOMATA ON' : 'AUTOMATA OFF';
+}
+
+function toggleAutomata() { // NEW: Automata toggle
+  game.automataEnabled = !game.automataEnabled;
+  updateAutomataButton();
+  console.log('⚙️ Automata:', game.automataEnabled);
+  haptic(10); // NEW: Haptic pattern
+}
+
+
+function togglePause() {
+  game.paused = !game.paused;
+  const btn = document.getElementById('pauseBtn');
+  btn.textContent = game.paused ? 'PLAY' : 'PAUSE';
+  console.log('⏸ Paused:', game.paused);
+  haptic(10); // NEW: Haptic pattern
+}
+
+function playCollectedVideoFullscreen(segment) {
+  const layer = document.getElementById('collectedVideoLayer');
+  const video = document.getElementById('collectedVideo');
+  
+  if (!layer || !video) {
+    console.warn('Collected video layer not found');
+    return;
+  }
+  
+  // Set source and play
+  video.src = segment.file;
+  video.muted = false; // Allow audio for collected videos
+  video.volume = GAME_CONFIG.audio.bgVolumeMax || 0.3; // NEW: Subtle background audio, capped (Defensive check)
+  
+  // Show layer with fade-in
+  layer.classList.add('active');
+  
+  // Wait for metadata then seek and play
+  video.onloadedmetadata = () => {
+    try {
+      video.currentTime = segment.start || 0;
+      video.play().catch(e => {
+        console.log('Fullscreen video play blocked:', e);
+        video.muted = true; // Retry muted
+        video.play().catch(()=>{});
+      });
+    } catch(e) {
+      console.error('Video seek error:', e);
+    }
+  };
+  
+  // Track for looping at segment end
+  video.ontimeupdate = () => {
+    if (segment.end && video.currentTime >= segment.end) {
+      try {
+        video.currentTime = segment.start || 0;
+        if (video.paused) video.play().catch(()=>{});
+      } catch(e) {}
+    }
+  };
+  
+  // Auto-retry if paused
+  video.onpause = () => {
+    setTimeout(() => {
+      if (video.paused && layer.classList.contains('active')) {
+        video.play().catch(()=>{});
+      }
+    }, 100);
+  };
+  
+  // Trigger load
+  video.load();
+  
+  // Keep playing this video as background
+  game.currentCollectedVideo = segment;
+  
+  console.log('🎬 Playing fullscreen:', segment.title);
+}
+
+// AUTO PLAY HELPERS
+function updateAutoPlayButton() {
+  // AutoPlay button removed from main toolbar
+}
+
+function toggleAutoPlay() {
+  // AutoPlay button removed from main toolbar
+}
+
+function maybeAutoPlaySequence() {
+  if (!game.autoPlay) return;
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  // If nothing loaded or player is paused without a source, start playback
+  const hasSrc = !!player.src && player.src.length > 0;
+  if (!hasSrc || player.paused) {
+    startSequencePlayback();
+  }
+}
+
+// ✅ EXPORT FUNCTIONS
+
+function exportJSON() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  const data = {
+    title: 'Flux Garden Sequence',
+    timestamp: new Date().toISOString(),
+    score: game.score,
+    moves: 30 - game.moves,
+    clips: game.sequence.length,
+    sequence: game.sequence.map((v, i) => ({
+      order: i + 1,
+      id: v.title, // Use title as a simple ID for export
+      title: v.title,
+      file: v.file,
+      start: v.start,
+      end: v.end
+    }))
+  };
+  
+  downloadFile('flux_garden_sequence.json', JSON.stringify(data, null, 2));
+  console.log('✓ JSON exported');
+  game.sounds.match();
+  haptic(30); // NEW: Haptic pattern
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportEDL() {
+  if (game.sequence.length === 0) {
+    alert('No clips in sequence!');
+    return;
+  }
+  
+  let edl = 'TITLE: Flux Garden Sequence\n\n';
+  let recordIn = 0; // Record time in seconds
+  
+  game.sequence.forEach((v, i) => {
+    // Determine clip duration. Default to 5s if not specified, or use (end-start)
+    const clipDuration = (v.end != null && v.start != null) ? (v.end - v.start) : 5; 
+    const recordOut = recordIn + clipDuration;
+    
+    // Convert source segment start/end to timecode
+    const sourceIn = v.start != null ? v.start : 0;
+    const sourceOut = v.end != null ? v.end : clipDuration; // If end not specified, take duration from start
+
+    edl += `EVENT NUMBER: ${String(i + 1).padStart(3, '0')}\n`;
+    edl += `  CLIP NAME: ${v.title}\n`;
+    edl += `  FROM CLIP: ${v.file}\n`;
+    edl += `  SOURCE FILE: ${v.file}\n`;
+    edl += `  FADE: IN 00:00:00:00 OUT 00:00:00:00\n`; // No fades for simplicity
+    edl += `  START: ${formatTimecode(sourceIn)}\n`;
+    edl += `  END:   ${formatTimecode(sourceOut)}\n`;
+    edl += `  RECORD IN:  ${formatTimecode(recordIn)}\n`;
+    edl += `  RECORD OUT: ${formatTimecode(recordOut)}\n\n`;
+    
+    recordIn = recordOut;
+  });
+  
+  downloadFile('flux_garden_sequence.edl', edl);
+  console.log('✓ EDL exported');
+  game.sounds.match();
+  haptic(30); // NEW: Haptic pattern
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function formatTimecode(seconds) {
+  // Assuming 30 frames per second for EDL
+  const framesPerSecond = 30;
+  const totalFrames = Math.floor(seconds * framesPerSecond);
+
+  const h = Math.floor(totalFrames / (3600 * framesPerSecond));
+  const m = Math.floor((totalFrames % (3600 * framesPerSecond)) / (60 * framesPerSecond));
+  const s = Math.floor(((totalFrames % (3600 * framesPerSecond)) % (60 * framesPerSecond)) / framesPerSecond);
+  const f = Math.floor(totalFrames % framesPerSecond);
+  
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+}
+
+function exportMosaic() {
+  alert('Mosaic HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function exportTimeline() {
+  alert('Timeline HTML export is disabled in this build. Use JSON or EDL.');
+  document.getElementById('exportMenu').classList.remove('show');
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+
+// Global game object for beat collection system
+window.game = {
+  get sequences() {
+    if(typeof BeatCollectionSystem !== 'undefined' && BeatCollectionSystem.collectedBeats) {
+      return BeatCollectionSystem.collectedBeats.map((beat, idx) => ({
+        beatNumber: beat.beatNumber,
+        beatName: beat.beatName,
+        syntagmaType: beat.syntagma,
+        act: beat.beatNumber <= 5 ? 'act1' : beat.beatNumber <= 10 ? 'act2a' : 'act2b', // Adjusted acts based on Blake Snyder's 15 beats structure
+        clips: beat.clips || [],
+        fragments: beat.clips || []
+      }));
+    }
+    return game.sequence;
+  },
+  get chains() {
+    return this.sequences;
+  },
+  get score() { return game.score; },
+  get fragments() { return game.sequence; },
+  filmTitle: "Flux Garden Assembly",
+  filmLogline: "A film assembled through match-3 flow field gameplay"
+};
+
+// Export functions for final-screen.html
+window.exportFinalCutOTI = function() {
+  const oti = {
+    version: "1.0",
+    title: window.game.filmTitle,
+    logline: window.game.filmLogline,
+    timestamp: new Date().toISOString(),
+    coherenceScore: game.score * 10,
+    sourceVideo: "flux_garden_assembly",
+    sourceTool: "Flux Garden (Match-3)",
+    sequences: window.game.sequences
+  };
+  
+  const blob = new Blob([JSON.stringify(oti, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'flux-garden-assembly.oti.json';
+  a.click();
+};
+
+window.exportFinalCutEDL = function() {
+  alert('EDL export coming soon! Use OTI JSON for now.');
+};
+
+window.exportStorymap = function() {
+  alert('Storymap export coming soon! Use OTI JSON for now.');
+};
+
+window.exportShotlist = function() {
+  alert('Shotlist export coming soon! Use OTI JSON for now.');
+};
+
+window.exportChartD3 = function() {
+  alert('Chart export coming soon! Use OTI JSON for now.');
+};
+
+window.exportAllFormats = function() {
+  exportFinalCutOTI();
+};
+</script>
+
+<!-- BEAT COLLECTION SYSTEM -->
+<script src="beat-collection-system.js"></script>
+
+</body>
+</html>

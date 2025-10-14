@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MESHWORK 725 × BEATS - Narrative Mosaic</title>
+  <style>
+    :root{
+      --bg:#0a0a0a; --ui:#111; --line:#222;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%; margin:0; background:var(--bg); color:#0ff; font-family:-apple-system,sans-serif;}
+    
+    .wrap{display:flex; flex-direction:column; height:100vh; height:100dvh;}
+    
+    /* Header */
+    header{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--ui); border-bottom:2px solid var(--line);}
+    .brand{font-weight:900; letter-spacing:3px; font-size:16px; color:#0ff;}
+    .stats{display:flex; gap:16px; font-size:12px; font-weight:700;}
+    .stat{color:#666;}
+    .stat-value{color:#0ff;}
+    .beat-indicator{font-weight:700; color:#FFD700; font-size:10px;}
+    
+    /* Game Area */
+    #gameArea{position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg);}
+    canvas{background:#0d0d0d; border:2px solid var(--line); border-radius:8px; touch-action:none;}
+    
+    /* Beat Flash Overlay */
+    .beat-flash{position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.3s ease-out; background:radial-gradient(circle, rgba(0,255,255,0.3) 0%, transparent 70%);}
+    .beat-flash.active{opacity:1;}
+    
+    /* Video Preview */
+    .video-preview{position:absolute; top:20px; right:20px; width:160px; height:90px; border:2px solid #0ff; background:#000; overflow:hidden; pointer-events:none; opacity:0.8;}
+    .video-preview video{width:100%; height:100%; object-fit:cover;}
+    .video-label{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.9); padding:2px 6px; font-size:10px; color:#0ff; font-weight:700;}
+    
+    @media (max-width: 640px) {
+      .video-preview{width:120px; height:68px; top:10px; right:10px;}
+    }
+    
+    /* Toolbar */
+    .toolbar{position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; gap:8px; padding:10px; background:rgba(0,0,0,0.85); border-top:2px solid #0ff; z-index:120;}
+    .btn{appearance:none; border:none; color:#0ff; background:rgba(0,255,255,0.1); border:1px solid #0ff; padding:8px 10px; border-radius:4px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;}
+    .btn:active{transform:scale(0.95); background:#0ff; color:#000;}
+    
+    /* Timeline */
+    .timeline-panel{position:fixed; right:0; top:60px; bottom:50px; width:72px; background:rgba(0,0,0,0.78); border-left:2px solid #0ff; padding:6px 4px; overflow-y:auto; transform:translateX(0); transition:width 0.25s ease, padding 0.25s ease; z-index:100; display:flex; flex-direction:column; gap:6px;}
+    .timeline-panel.collapsed{width:0; padding:0; border-left:none; pointer-events:none;}
+    .timeline-title{font-size:10px; font-weight:900; color:#0ff; margin:0 0 6px; text-align:center; letter-spacing:1px;}
+    .clip-item{width:100%; aspect-ratio:16/9; margin-bottom:8px; border:2px solid #333; cursor:pointer; position:relative; overflow:hidden;}
+    .clip-item video{width:100%; height:100%; object-fit:cover;}
+    .clip-label{position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.9); padding:3px; font-size:8px; color:#0ff; text-align:center; text-transform:uppercase; letter-spacing:0.5px;}
+    .clip-item.locked{border-color:#666 !important; opacity:0.6; filter:grayscale(100%);}
+    .clip-item.locked .clip-label::after{content:"🔒"; position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); font-size:1.5em;}
+    .clip-item.muted{opacity:0.4; filter:grayscale(100%);}
+    .clip-item.beat{border-color:#FFD700 !important; box-shadow:0 0 10px rgba(255,215,0,0.5);}
+    .sequence-player{position:sticky; bottom:0; background:#0b0b0b; border-top:2px solid #0ff; padding:8px;}
+    .sequence-player video{width:100%; aspect-ratio:16/9; background:#000; border:2px solid #0ff;}
+    .timeline-handle{position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff; color:#0ff; display:flex; align-items:center; justify-content:center; z-index:110; cursor:pointer; backdrop-filter:blur(2px); box-shadow:inset 0 0 10px rgba(0,255,255,0.25); font-weight:900;}
+    .timeline-handle:active{background:rgba(0,255,255,0.25);}
+    
+    @media (max-width: 768px) {
+      .timeline-panel{width:160px;}
+    }
+    
+    /* Loading */
+    .loading{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; color:#0ff; font-weight:900;}
+    
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000;}
+    .modal.show{display:flex;}
+    .modal-content{text-align:center; padding:40px;}
+    .modal-title{font-size:48px; font-weight:900; color:#0ff; margin-bottom:20px;}
+    .modal-stats{font-size:18px; color:#666; margin-bottom:30px;}
+    .modal-btn{padding:16px 40px; background:#0ff; border:none; color:#000; font-weight:900; font-size:16px; cursor:pointer; margin:5px;}
+    
+    /* Export Menu */
+    .export-menu{position:fixed; bottom:100px; right:20px; background:rgba(17,17,17,0.98); border:2px solid #0ff; padding:16px; border-radius:8px; display:none; z-index:200;}
+    .export-menu.show{display:block;}
+    .export-option{padding:12px; margin:4px 0; background:rgba(0,255,255,0.1); border:2px solid #0ff; color:#0ff; cursor:pointer; font-weight:900; font-size:12px; text-align:center;}
+    .export-option:hover{background:#0ff; color:#000;}
+    
+    /* Settings Panel */
+    .settings-panel{position:fixed; top:60px; left:20px; background:rgba(17,17,17,0.95); border:2px solid #0ff; padding:16px; border-radius:8px; z-index:150; max-width:280px; display:none;}
+    .settings-title{font-size:14px; font-weight:900; color:#0ff; margin-bottom:12px; letter-spacing:2px;}
+    .settings-group{margin-bottom:16px;}
+    .settings-label{font-size:11px; color:#999; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;}
+    .settings-select{width:100%; padding:8px; background:#000; border:1px solid #0ff; color:#0ff; font-size:11px; font-weight:700; border-radius:4px; cursor:pointer;}
+    .settings-slider{width:100%; margin-top:4px; height:30px; -webkit-appearance:none; appearance:none; background:#000; border:1px solid #0ff; border-radius:4px; outline:none;}
+    .settings-slider::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:20px; height:20px; background:#0ff; cursor:pointer; border-radius:50%;}
+    .settings-slider::-moz-range-thumb{width:20px; height:20px; background:#0ff; cursor:pointer; border-radius:50%; border:none;}
+    .settings-value{display:inline-block; color:#0ff; font-size:10px; font-weight:700; margin-left:8px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">MESHWORK × BEATS</div>
+    <div class="stats">
+      <div class="stat">SCORE <span class="stat-value" id="score">0</span></div>
+      <div class="stat">MOVES <span class="stat-value" id="moves">30</span></div>
+      <div class="stat">CLIPS <span class="stat-value" id="clips">0</span></div>
+      <div class="beat-indicator" id="beatIndicator">BEAT 1: Opening Image</div>
+    </div>
+  </header>
+  
+  <div id="gameArea">
+    <div class="loading" id="loading">LOADING...</div>
+    <div class="beat-flash" id="beatFlash"></div>
+    <canvas id="game"></canvas>
+    <div class="video-preview" id="videoPreview" style="display:none;">
+      <video id="previewVideo" muted loop playsinline></video>
+      <div class="video-label" id="videoLabel">Scene 01</div>
+    </div>
+  </div>
+  
+  <div class="toolbar">
+    <button class="btn" id="playSequenceBtn">PLAY</button>
+    <button class="btn" id="autoPlayBtn">AUTO</button>
+    <button class="btn" id="shuffleBtn">SHUF</button>
+    <button class="btn" id="hintBtn">HINT</button>
+    <button class="btn" id="settingsBtn">SET</button>
+    <button class="btn" id="exportBtn">EXP</button>
+    <button class="btn" id="soundBtn">SND</button>
+  </div>
+</div>
+
+<div class="timeline-panel" id="timelinePanel">
+  <div class="timeline-title">SEQUENCE</div>
+  <div id="clipList"></div>
+  <div class="sequence-player" id="sequencePlayerWrap" style="display:none;">
+    <video id="sequencePlayer" controls playsinline></video>
+    <div class="clip-label" id="sequencePlayerLabel">—</div>
+  </div>
+</div>
+<div class="timeline-handle" id="timelineHandle">></div>
+
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-title">VISUAL SETTINGS</div>
+  
+  <div class="settings-group">
+    <div class="settings-label">Symbol Blend Mode</div>
+    <select class="settings-select" id="blendMode">
+      <option value="source-over">Normal</option>
+      <option value="screen" selected>Screen (Lighten)</option>
+      <option value="multiply">Multiply (Darken)</option>
+      <option value="overlay">Overlay (Contrast)</option>
+      <option value="color-dodge">Color Dodge (Bright)</option>
+    </select>
+  </div>
+  
+  <div class="settings-group">
+    <div class="settings-label">Symbol Size <span class="settings-value" id="symbolSizeVal">70%</span></div>
+    <input type="range" class="settings-slider" id="symbolSize" min="30" max="100" value="70">
+  </div>
+  
+  <div class="settings-group">
+    <div class="settings-label">Glow Intensity <span class="settings-value" id="glowIntensityVal">15px</span></div>
+    <input type="range" class="settings-slider" id="glowIntensity" min="0" max="30" value="15">
+  </div>
+</div>
+
+<div class="export-menu" id="exportMenu">
+  <div class="export-option" onclick="exportJSON()">📄 JSON</div>
+  <div class="export-option" onclick="exportEDL()">🎬 EDL</div>
+  <div class="export-option" onclick="exportBeats()">📖 BEATS</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title">SEQUENCE COMPLETE</div>
+    <div class="modal-stats" id="modalStats"></div>
+    <button class="modal-btn" onclick="location.reload()">NEW SEQUENCE</button>
+    <button class="modal-btn" onclick="document.getElementById('exportMenu').classList.toggle('show')">EXPORT</button>
+  </div>
+</div>
+
+<script>
+console.log('🌊 MESHWORK × BEATS - Hybrid Narrative Editor Loading...');
+
+// SAVE THE CAT BEAT STRUCTURE (15 beats)
+const SAVE_THE_CAT_BEATS = [
+  {number: 1, name: 'Opening Image', act: 1},
+  {number: 2, name: 'Theme Stated', act: 1},
+  {number: 3, name: 'Set-Up', act: 1},
+  {number: 4, name: 'Catalyst', act: 1},
+  {number: 5, name: 'Debate', act: 1},
+  {number: 6, name: 'Break into Two', act: 2},
+  {number: 7, name: 'B Story', act: 2},
+  {number: 8, name: 'Fun and Games', act: 2},
+  {number: 9, name: 'Midpoint', act: 2},
+  {number: 10, name: 'Bad Guys Close In', act: 2},
+  {number: 11, name: 'All Is Lost', act: 2},
+  {number: 12, name: 'Dark Night of the Soul', act: 2},
+  {number: 13, name: 'Break into Three', act: 3},
+  {number: 14, name: 'Finale', act: 3},
+  {number: 15, name: 'Final Image', act: 3}
+];
+
+// TYPE SOURCES with unicode symbols - BRIGHT colors
+const TYPE_SOURCES = {
+  0: {file: 'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4', title: 'Crimson', color: '#FF6666', symbol: '❀'},
+  1: {file: 'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4', title: 'Azure', color: '#00FFFF', symbol: '✿'},
+  2: {file: 'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4', title: 'Amber', color: '#FFFF00', symbol: '✾'},
+  3: {file: 'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4', title: 'Jade', color: '#88FFCC', symbol: '❁'},
+  4: {file: 'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4', title: 'Flame', color: '#FF8888', symbol: '✽'},
+  5: {file: 'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4', title: 'Violet', color: '#DD88FF', symbol: '❃'},
+  6: {file: 'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4', title: 'Emerald', color: '#88FFAA', symbol: '✺'},
+  7: {file: 'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4', title: 'Gold', color: '#FFBB66', symbol: '⋈'},
+  8: {file: 'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4', title: 'Rose', color: '#FFBBDD', symbol: '✻'},
+  9: {file: 'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4', title: 'Stone', color: '#EEEEEE', symbol: '⊛'}
+};
+
+const SEGMENTS_PER_TYPE = 4;
+const TYPE_SEGMENTS = {};
+
+for (let t = 0; t < 10; t++) {
+  TYPE_SEGMENTS[t] = [];
+  for (let s = 0; s < SEGMENTS_PER_TYPE; s++) {
+    const start = s * 10;
+    const end = start + 10;
+    TYPE_SEGMENTS[t].push({
+      index: s,
+      start,
+      end,
+      title: `${TYPE_SOURCES[t].title} ${s+1}`,
+      file: TYPE_SOURCES[t].file
+    });
+  }
+}
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const GRID_SIZE = 8;
+const CELL_SIZE = 50;
+
+const JITTER_AMOUNT_FACTOR = 0.2;
+const BULGE_AMOUNT_FACTOR = 0.6;
+
+const CELL_STATES = {
+  BURSTING: 'bursting',
+  QUIET: 'quiet',
+  LISTEN: 'listen'
+};
+
+const AUTOMATA_CONFIG = {
+  UPDATE_FREQUENCY: 1,
+  MATCH_LENGTH: 3,
+  BURST_DURATION: 30
+};
+
+const SEASONS = {
+  driftFactor: 0.0003,
+  tensionGain: 0.002,
+  bulgeSpeed: 0.015
+};
+
+let seasonPhase = 0;
+
+const game = {
+  grid: [],
+  selected: null,
+  score: 0,
+  moves: 30,
+  sequence: [],
+  beats: [], // Collected beats
+  currentBeat: 0,
+  busy: false,
+  typeSegmentVideos: {},
+  sounds: {match: null, swap: null, win: null, error: null},
+  soundEnabled: true,
+  autoPlay: true,
+  jitteredPoints: [],
+  automataFrame: 0,
+  hintActive: false,
+  hintCoords: null
+};
+
+const visualSettings = {
+  blendMode: 'screen',
+  symbolSize: 0.7,
+  glowIntensity: 15
+};
+
+const breathing = {
+  time: 0,
+  speed: 0.0008,
+  getBreathe: function() {
+    return 0.85 + Math.sin(this.time) * 0.15;
+  }
+};
+
+// Init type segments
+function initTypeSegments() {
+  let loadedCount = 0;
+  const totalVideos = 10 * SEGMENTS_PER_TYPE;
+  
+  for (let type = 0; type < 10; type++) {
+    for (let segIdx = 0; segIdx < SEGMENTS_PER_TYPE; segIdx++) {
+      const seg = TYPE_SEGMENTS[type][segIdx];
+      const key = `${type}_${segIdx}`;
+      const v = document.createElement('video');
+      v.src = seg.file;
+      v.muted = true;
+      v.playsinline = true;
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      
+      v.addEventListener('loadedmetadata', () => {
+        try {
+          v.currentTime = Math.min(seg.start, Math.max(0, v.duration - 0.2));
+          v.play().catch(e => console.log('Video autoplay blocked:', e));
+        } catch(e) {}
+      });
+      
+      v.addEventListener('timeupdate', () => {
+        if (v.currentTime >= seg.end) {
+          try { v.currentTime = seg.start; } catch(e) {}
+        }
+      });
+      
+      v.addEventListener('loadeddata', () => {
+        loadedCount++;
+        console.log(`Video loaded: ${loadedCount}/${totalVideos}`);
+        if (loadedCount === totalVideos) {
+          console.log('All videos loaded');
+        }
+      });
+      
+      v.load();
+      game.typeSegmentVideos[key] = v;
+    }
+  }
+  console.log('✓ Type-segment videos created');
+}
+
+function segmentIndexForCell(type, r, c) {
+  return (r * GRID_SIZE + c) % SEGMENTS_PER_TYPE;
+}
+
+function createCell(type) {
+  return {
+    type,
+    state: CELL_STATES.QUIET,
+    timer: 0,
+    tension: 0,
+    drift: {
+      dx: (Math.random()*2-1)*SEASONS.driftFactor,
+      dy: (Math.random()*2-1)*SEASONS.driftFactor
+    }
+  };
+}
+
+function getNeighbors(r, c) {
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        neighbors.push({r: nr, c: nc, cell: game.grid[nr][nc]});
+      }
+    }
+  }
+  return neighbors;
+}
+
+function applyAutomataRules() {
+  seasonPhase += SEASONS.bulgeSpeed;
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      if (cell.state === CELL_STATES.BURSTING) {
+        cell.timer++;
+      }
+      
+      cell.tension = (0.5 + 0.5 * Math.sin(game.automataFrame * SEASONS.tensionGain + (r+c)*0.5));
+    }
+  }
+}
+
+function findMatches() {
+  const matches = [];
+  const checked = new Set();
+  
+  // Horizontal
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell || checked.has(`${r},${c}`)) continue;
+      
+      const horizontalRun = [];
+      for (let k = c; k < GRID_SIZE; k++) {
+        if (game.grid[r][k] && game.grid[r][k].type === cell.type) {
+          horizontalRun.push({r, c: k});
+        } else break;
+      }
+      if (horizontalRun.length >= AUTOMATA_CONFIG.MATCH_LENGTH) {
+        horizontalRun.forEach(coord => {
+          matches.push(coord);
+          checked.add(`${coord.r},${coord.c}`);
+        });
+      }
+    }
+  }
+  
+  // Vertical
+  for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < GRID_SIZE; r++) {
+      const cell = game.grid[r][c];
+      if (!cell || checked.has(`${r},${c}`)) continue;
+      
+      const verticalRun = [];
+      for (let k = r; k < GRID_SIZE; k++) {
+        if (game.grid[k][c] && game.grid[k][c].type === cell.type) {
+          verticalRun.push({r: k, c});
+        } else break;
+      }
+      if (verticalRun.length >= AUTOMATA_CONFIG.MATCH_LENGTH) {
+        verticalRun.forEach(coord => {
+          matches.push(coord);
+          checked.add(`${coord.r},${coord.c}`);
+        });
+      }
+    }
+  }
+  
+  return matches;
+}
+
+function processMatches(matches) {
+  game.busy = true;
+  game.hintActive = false;
+  
+  // Mark as bursting
+  matches.forEach(({r, c}) => {
+    const cell = game.grid[r][c];
+    if (cell) {
+      cell.state = CELL_STATES.BURSTING;
+      cell.timer = 0;
+    }
+  });
+  
+  game.sounds.match();
+  haptic(20);
+  
+  // Beat flash effect
+  triggerBeatFlash();
+  
+  setTimeout(() => {
+    const matchedTypes = new Set();
+    matches.forEach(({r, c}) => {
+      const cell = game.grid[r][c];
+      if (cell) matchedTypes.add(cell.type);
+      game.grid[r][c] = null;
+      game.score += 10;
+    });
+    
+    document.getElementById('score').textContent = game.score;
+    
+    // Collect beat
+    if (game.currentBeat < SAVE_THE_CAT_BEATS.length) {
+      const beat = SAVE_THE_CAT_BEATS[game.currentBeat];
+      const beatData = {
+        beatNumber: beat.number,
+        beatName: beat.name,
+        act: beat.act,
+        clips: []
+      };
+      
+      matchedTypes.forEach(type => {
+        const segIdx = (game.currentBeat % SEGMENTS_PER_TYPE);
+        const seg = TYPE_SEGMENTS[type][segIdx];
+        const newClip = {
+          title: seg.title,
+          file: seg.file,
+          start: seg.start,
+          end: seg.end,
+          locked: true,
+          mute: (game.sequence.length % 2 === 0),
+          beatNumber: beat.number,
+          beatName: beat.name
+        };
+        game.sequence.push(newClip);
+        beatData.clips.push(newClip);
+      });
+      
+      game.beats.push(beatData);
+      game.currentBeat++;
+      updateBeatIndicator();
+    }
+    
+    document.getElementById('clips').textContent = game.sequence.length;
+    updateTimeline();
+    
+    refillGrid();
+    
+    const newMatches = findMatches();
+    if (newMatches.length > 0) {
+      processMatches(newMatches);
+    } else {
+      game.busy = false;
+      checkGameOver();
+    }
+  }, AUTOMATA_CONFIG.BURST_DURATION * (1000/60));
+}
+
+function triggerBeatFlash() {
+  const flash = document.getElementById('beatFlash');
+  flash.classList.add('active');
+  setTimeout(() => flash.classList.remove('active'), 300);
+}
+
+function updateBeatIndicator() {
+  const indicator = document.getElementById('beatIndicator');
+  if (game.currentBeat < SAVE_THE_CAT_BEATS.length) {
+    const beat = SAVE_THE_CAT_BEATS[game.currentBeat];
+    indicator.textContent = `BEAT ${beat.number}: ${beat.name}`;
+  } else {
+    indicator.textContent = `COMPLETE - ${SAVE_THE_CAT_BEATS.length} BEATS`;
+  }
+}
+
+// Sound system
+function initSounds() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  game.sounds.match = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.15);
+  };
+  
+  game.sounds.swap = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 392, 0.05);
+  };
+  
+  game.sounds.win = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 523.25, 0.1);
+    setTimeout(() => playTone(audioContext, 659.25, 0.1), 100);
+    setTimeout(() => playTone(audioContext, 783.99, 0.2), 200);
+  };
+  
+  game.sounds.error = () => {
+    if (!game.soundEnabled) return;
+    playTone(audioContext, 200, 0.1);
+  };
+}
+
+function playTone(ctx, frequency, duration) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.frequency.value = frequency;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+function haptic(pattern = 10) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function hexToRgba(hex, alpha) {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = "0x" + hex[1] + hex[1];
+    g = "0x" + hex[2] + hex[2];
+    b = "0x" + hex[3] + hex[3];
+  } else if (hex.length === 7) {
+    r = "0x" + hex[1] + hex[2];
+    g = "0x" + hex[3] + hex[4];
+    b = "0x" + hex[5] + hex[6];
+  }
+  return `rgba(${+r},${+g},${+b},${alpha})`;
+}
+
+// INIT
+function init() {
+  console.log('🎮 Initializing Hybrid Editor...');
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  canvas.addEventListener('click', handleClick);
+  
+  document.getElementById('hintBtn').addEventListener('click', showHint);
+  document.getElementById('shuffleBtn').addEventListener('click', shuffle);
+  document.getElementById('exportBtn').addEventListener('click', toggleExportMenu);
+  document.getElementById('soundBtn').addEventListener('click', toggleSound);
+  document.getElementById('playSequenceBtn').addEventListener('click', startSequencePlayback);
+  document.getElementById('autoPlayBtn').addEventListener('click', toggleAutoPlay);
+  document.getElementById('settingsBtn').addEventListener('click', toggleSettings);
+  document.getElementById('timelineHandle').addEventListener('click', () => {
+    document.getElementById('timelinePanel').classList.toggle('collapsed');
+  });
+  
+  updateAutoPlayButton();
+  updateBeatIndicator();
+  
+  // Settings controls
+  document.getElementById('blendMode').addEventListener('change', (e) => {
+    visualSettings.blendMode = e.target.value;
+  });
+  
+  document.getElementById('symbolSize').addEventListener('input', (e) => {
+    visualSettings.symbolSize = e.target.value / 100;
+    document.getElementById('symbolSizeVal').textContent = e.target.value + '%';
+  });
+  
+  document.getElementById('glowIntensity').addEventListener('input', (e) => {
+    visualSettings.glowIntensity = parseInt(e.target.value);
+    document.getElementById('glowIntensityVal').textContent = e.target.value + 'px';
+  });
+  
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('exportMenu');
+    const btn = document.getElementById('exportBtn');
+    if (menu && btn && !menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('show');
+    }
+  });
+  
+  initSounds();
+  initTypeSegments();
+  createGrid();
+  draw();
+  
+  setTimeout(() => {
+    const loading = document.getElementById('loading');
+    if (loading) {
+      loading.style.transition = 'opacity 1s ease-out';
+      loading.style.opacity = '0';
+      setTimeout(() => loading.style.display = 'none', 1000);
+    }
+  }, 2000);
+  
+  // Start videos on interaction
+  let videosStarted = false;
+  const startAllVideos = () => {
+    if (videosStarted) return;
+    videosStarted = true;
+    
+    Object.values(game.typeSegmentVideos).forEach(video => {
+      if (video && video.paused) {
+        video.play().catch(() => {});
+      }
+    });
+    
+    setInterval(() => {
+      Object.values(game.typeSegmentVideos).forEach(video => {
+        if (video && video.paused && video.readyState >= 2) {
+          video.play().catch(() => {});
+        }
+      });
+    }, 2000);
+  };
+  
+  setTimeout(startAllVideos, 1000);
+  document.addEventListener('click', startAllVideos, { once: true });
+}
+
+function resize() {
+  const isMobile = window.innerWidth <= 768;
+  const size = isMobile ? 
+    Math.min(window.innerWidth - 20, window.innerHeight - 150) : 
+    Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+  
+  canvas.width = GRID_SIZE * CELL_SIZE;
+  canvas.height = GRID_SIZE * CELL_SIZE;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+
+function generateJitteredPoints() {
+  game.jitteredPoints = [];
+  const jitterMax = CELL_SIZE * JITTER_AMOUNT_FACTOR;
+  
+  for (let r = 0; r <= GRID_SIZE; r++) {
+    game.jitteredPoints[r] = [];
+    for (let c = 0; c <= GRID_SIZE; c++) {
+      let x = c * CELL_SIZE;
+      let y = r * CELL_SIZE;
+      
+      const jitterScaleX = (c === 0 || c === GRID_SIZE) ? 0.2 : 1;
+      const jitterScaleY = (r === 0 || r === GRID_SIZE) ? 0.2 : 1;
+      
+      const jitterX = (Math.random() * 2 - 1) * jitterMax * jitterScaleX;
+      const jitterY = (Math.random() * 2 - 1) * jitterMax * jitterScaleY;
+      
+      game.jitteredPoints[r][c] = { x: x + jitterX, y: y + jitterY };
+    }
+  }
+}
+
+function getCellCorners(r, c) {
+  const p0 = game.jitteredPoints[r][c];
+  const p1 = game.jitteredPoints[r][c+1];
+  const p2 = game.jitteredPoints[r+1][c+1];
+  const p3 = game.jitteredPoints[r+1][c];
+  return [p0, p1, p2, p3];
+}
+
+function drawWavyEdgeSegment(context, p1, p2, segmentSeed, typeInfluence) {
+  const midX = (p1.x + p2.x) / 2;
+  const midY = (p1.y + p2.y) / 2;
+  
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  
+  let normalX = 0, normalY = 0;
+  if (length > 0) {
+    normalX = -dy / length;
+    normalY = dx / length;
+  }
+  
+  const typeBulgeFactor = 1 + (typeInfluence % 3) * 0.1;
+  const animatedBulge = Math.sin(seasonPhase + segmentSeed * 0.1) * BULGE_AMOUNT_FACTOR * (CELL_SIZE / 2) * typeBulgeFactor;
+  
+  const controlX = midX + normalX * animatedBulge;
+  const controlY = midY + normalY * animatedBulge;
+  
+  context.quadraticCurveTo(controlX, controlY, p2.x, p2.y);
+}
+
+function drawWavyQuadPath(context, corners, r, c, cellType) {
+  context.beginPath();
+  context.moveTo(corners[0].x, corners[0].y);
+  
+  const numSides = corners.length;
+  for (let i = 0; i < numSides; i++) {
+    const p1 = corners[i];
+    const p2 = corners[(i + 1) % numSides];
+    const segmentSeed = (r * GRID_SIZE + c) * 10 + i;
+    drawWavyEdgeSegment(context, p1, p2, segmentSeed, cellType);
+  }
+  context.closePath();
+}
+
+function createGrid() {
+  game.grid = [];
+  generateJitteredPoints();
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    game.grid[r] = [];
+    for (let c = 0; c < GRID_SIZE; c++) {
+      game.grid[r][c] = createCell(Math.floor(Math.random() * 10));
+    }
+  }
+  
+  let safetyCounter = 0;
+  while (findMatches().length > 0 && safetyCounter < 100) {
+    findMatches().forEach(({r, c}) => {
+      game.grid[r][c] = createCell(Math.floor(Math.random() * 10));
+    });
+    safetyCounter++;
+  }
+  
+  if (safetyCounter >= 100) {
+    console.warn('Grid generation reached safety limit');
+  }
+  
+  console.log('✓ Grid created');
+}
+
+const offscreenVideoCanvas = document.createElement('canvas');
+offscreenVideoCanvas.width = CELL_SIZE;
+offscreenVideoCanvas.height = CELL_SIZE;
+const offscreenVideoCtx = offscreenVideoCanvas.getContext('2d');
+
+function draw() {
+  game.automataFrame++;
+  breathing.time += breathing.speed;
+  
+  if (game.automataFrame % AUTOMATA_CONFIG.UPDATE_FREQUENCY === 0) {
+    applyAutomataRules();
+  }
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      const polygonCorners = getCellCorners(r, c);
+      const segIdx = segmentIndexForCell(cell.type, r, c);
+      const key = `${cell.type}_${segIdx}`;
+      const video = game.typeSegmentVideos[key];
+      
+      ctx.save();
+      
+      // Bursting animation
+      if (cell.state === CELL_STATES.BURSTING) {
+        const burstProgress = cell.timer / AUTOMATA_CONFIG.BURST_DURATION;
+        const scale = 1 + burstProgress * 0.5;
+        const alpha = 1 - burstProgress;
+        
+        ctx.globalAlpha = alpha;
+        const cellCenterX = (polygonCorners[0].x + polygonCorners[1].x + polygonCorners[2].x + polygonCorners[3].x) / 4;
+        const cellCenterY = (polygonCorners[0].y + polygonCorners[1].y + polygonCorners[2].y + polygonCorners[3].y) / 4;
+        ctx.translate(cellCenterX, cellCenterY);
+        ctx.scale(scale, scale);
+        ctx.translate(-cellCenterX, -cellCenterY);
+      }
+      
+      // Colored backing
+      const backingColor = TYPE_SOURCES[cell.type].color;
+      const backingAlpha = 0.3 + (0.1 * breathing.getBreathe());
+      ctx.fillStyle = hexToRgba(backingColor, backingAlpha);
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+      ctx.fill();
+      
+      // Video mosaic
+      if (video && video.readyState >= 2) {
+        ctx.save();
+        
+        const minX = Math.min(...polygonCorners.map(p => p.x));
+        const maxX = Math.max(...polygonCorners.map(p => p.x));
+        const minY = Math.min(...polygonCorners.map(p => p.y));
+        const maxY = Math.max(...polygonCorners.map(p => p.y));
+        
+        const padding = CELL_SIZE * 0.5; // Increased from 0.3 to 0.5
+        const drawX = minX - padding;
+        const drawY = minY - padding;
+        const drawW = (maxX - minX) + padding * 2;
+        const drawH = (maxY - minY) + padding * 2;
+        
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+        ctx.clip();
+        
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const srcCellW = vw / GRID_SIZE;
+        const srcCellH = vh / GRID_SIZE;
+        
+        const driftX = (cell.drift.dx * cell.timer * vw);
+        const driftY = (cell.drift.dy * cell.timer * vh);
+        
+        const srcX = ((c * srcCellW + driftX) - padding * (vw/canvas.width)) % vw;
+        const srcY = ((r * srcCellH + driftY) - padding * (vh/canvas.height)) % vh;
+        const srcW = srcCellW * (drawW / CELL_SIZE);
+        const srcH = srcCellH * (drawH / CELL_SIZE);
+        
+        ctx.drawImage(
+          video,
+          srcX < 0 ? srcX + vw : srcX,
+          srcY < 0 ? srcY + vh : srcY,
+          srcW, srcH,
+          drawX, drawY, drawW, drawH
+        );
+        
+        ctx.restore();
+      }
+      
+      // Symbol overlay
+      const center = polygonCorners.reduce((acc, p) => ({x: acc.x + p.x, y: acc.y + p.y}), {x:0, y:0});
+      center.x /= polygonCorners.length;
+      center.y /= polygonCorners.length;
+      
+      const symbol = TYPE_SOURCES[cell.type].symbol;
+      const symbolColor = TYPE_SOURCES[cell.type].color;
+      const breathe = breathing.getBreathe();
+      const symbolOpacity = 1.0; // Increased from 0.85
+      
+      ctx.save();
+      ctx.globalCompositeOperation = visualSettings.blendMode;
+      
+      const fontSize = CELL_SIZE * visualSettings.symbolSize;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      ctx.shadowColor = hexToRgba(symbolColor, symbolOpacity * 0.8);
+      ctx.shadowBlur = visualSettings.glowIntensity * 2; // Increased glow
+      
+      ctx.fillStyle = hexToRgba(symbolColor, symbolOpacity);
+      ctx.fillText(symbol, center.x, center.y);
+      ctx.fillText(symbol, center.x, center.y);
+      
+      ctx.restore();
+      
+      // Selected highlight
+      if (game.selected && game.selected.r === r && game.selected.c === c) {
+        ctx.strokeStyle = '#0ff';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#0ff';
+        ctx.shadowBlur = 15;
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      
+      // Hint highlight
+      if (game.hintActive && game.hintCoords && 
+          ((game.hintCoords.r1 === r && game.hintCoords.c1 === c) || 
+           (game.hintCoords.r2 === r && game.hintCoords.c2 === c))) {
+        const hintPulse = 0.5 + 0.5 * Math.sin(game.automataFrame / 10);
+        ctx.strokeStyle = `rgba(255, 255, 0, ${hintPulse})`;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = `rgba(255, 255, 0, ${hintPulse * 0.7})`;
+        ctx.shadowBlur = 10;
+        drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      
+      ctx.restore();
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+function handleClick(e) {
+  if (game.busy) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+  
+  let clickedCellR = -1;
+  let clickedCellC = -1;
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = game.grid[r][c];
+      if (!cell) continue;
+      
+      const polygonCorners = getCellCorners(r, c);
+      drawWavyQuadPath(ctx, polygonCorners, r, c, cell.type);
+      
+      if (ctx.isPointInPath(clickX, clickY)) {
+        clickedCellR = r;
+        clickedCellC = c;
+      }
+    }
+  }
+  ctx.beginPath();
+  
+  if (clickedCellR === -1) {
+    game.selected = null;
+    game.hintActive = false;
+    return;
+  }
+  
+  const row = clickedCellR;
+  const col = clickedCellC;
+  
+  if (!game.selected) {
+    game.selected = {r: row, c: col};
+    haptic(10);
+    game.sounds.swap();
+    game.hintActive = false;
+  } else {
+    const {r: r1, c: c1} = game.selected;
+    const r2 = row, c2 = col;
+    
+    const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+    
+    if (adjacent) {
+      trySwap(r1, c1, r2, c2);
+    } else {
+      if (r1 === r2 && c1 === c2) {
+        game.selected = null;
+      } else {
+        game.selected = {r: row, c: col};
+      }
+      game.sounds.error();
+      haptic([10, 50, 10]);
+      game.hintActive = false;
+    }
+  }
+}
+
+function trySwap(r1, c1, r2, c2) {
+  game.busy = true;
+  game.hintActive = false;
+  
+  const tempCell = game.grid[r1][c1];
+  game.grid[r1][c1] = game.grid[r2][c2];
+  game.grid[r2][c2] = tempCell;
+  
+  setTimeout(() => {
+    const matches = findMatches();
+    
+    if (matches.length === 0) {
+      const tempCellBack = game.grid[r1][c1];
+      game.grid[r1][c1] = game.grid[r2][c2];
+      game.grid[r2][c2] = tempCellBack;
+      game.sounds.error();
+      haptic([10, 50, 10]);
+      game.busy = false;
+    } else {
+      game.moves--;
+      document.getElementById('moves').textContent = game.moves;
+      processMatches(matches);
+    }
+    game.selected = null;
+    checkGameOver();
+  }, 200);
+}
+
+function refillGrid() {
+  for (let c = 0; c < GRID_SIZE; c++) {
+    const existingCells = [];
+    for (let r = GRID_SIZE - 1; r >= 0; r--) {
+      if (game.grid[r][c]) {
+        existingCells.push(game.grid[r][c]);
+      }
+    }
+    for (let r = 0; r < GRID_SIZE; r++) {
+      if (r < existingCells.length) {
+        game.grid[GRID_SIZE - 1 - r][c] = existingCells[r];
+      } else {
+        game.grid[GRID_SIZE - 1 - r][c] = createCell(Math.floor(Math.random() * 10));
+      }
+    }
+  }
+}
+
+function updateTimeline() {
+  const clipList = document.getElementById('clipList');
+  clipList.innerHTML = '';
+  
+  game.sequence.forEach((video, i) => {
+    const clip = document.createElement('div');
+    clip.className = 'clip-item';
+    if (video.mute) clip.classList.add('muted');
+    if (video.locked) clip.classList.add('locked');
+    if (video.beatNumber) clip.classList.add('beat');
+    
+    const vid = document.createElement('video');
+    vid.src = video.file;
+    vid.muted = true;
+    vid.playsinline = true;
+    
+    const label = document.createElement('div');
+    label.className = 'clip-label';
+    label.textContent = video.beatName ? `${video.beatName}` : `${i + 1}. ${video.title}`;
+    
+    clip.appendChild(vid);
+    clip.appendChild(label);
+    clip.onclick = () => {
+      if (video.locked) {
+        video.locked = false;
+        updateTimeline();
+      } else {
+        playSingleInPlayer(video);
+      }
+    };
+    clipList.appendChild(clip);
+  });
+  
+  if (game.sequence.length > 0) {
+    document.getElementById('timelinePanel').classList.add('active');
+    document.getElementById('sequencePlayerWrap').style.display = 'block';
+  }
+}
+
+function startSequencePlayback() {
+  if (game.sequence.length === 0) return;
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  
+  document.getElementById('timelinePanel').classList.remove('collapsed');
+  document.getElementById('sequencePlayerWrap').style.display = 'block';
+  
+  let idx = 0;
+  
+  const playIdx = (i) => {
+    while (i < game.sequence.length && game.sequence[i].locked) {
+      i++;
+    }
+    if (i >= game.sequence.length) {
+      label.textContent = "No Unlocked Clips";
+      return;
+    }
+    
+    const v = game.sequence[i];
+    player.src = v.file;
+    label.textContent = v.beatName || v.title;
+    
+    player.onloadedmetadata = () => {
+      try { player.currentTime = v.start || 0; } catch(e) {}
+      player.muted = !!v.mute || !game.soundEnabled;
+      player.play().catch(() => {});
+    };
+    
+    if (v.end) {
+      player.ontimeupdate = () => {
+        if (player.currentTime >= v.end) {
+          player.ontimeupdate = null;
+          playIdx((i + 1) % game.sequence.length);
+        }
+      };
+    }
+  };
+  
+  player.onended = () => playIdx((idx + 1) % game.sequence.length);
+  playIdx(idx);
+}
+
+function playSingleInPlayer(v) {
+  const player = document.getElementById('sequencePlayer');
+  const label = document.getElementById('sequencePlayerLabel');
+  
+  if (v.locked) {
+    label.textContent = "Clip Locked! 🔒";
+    return;
+  }
+  
+  player.src = v.file;
+  label.textContent = v.beatName || v.title;
+  
+  player.onloadedmetadata = () => {
+    try { player.currentTime = v.start || 0; } catch(e) {}
+    player.muted = !!v.mute || !game.soundEnabled;
+    player.play().catch(() => {});
+  };
+}
+
+function checkGameOver() {
+  if (game.moves <= 0 || game.currentBeat >= SAVE_THE_CAT_BEATS.length) {
+    showModal();
+  }
+}
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const stats = document.getElementById('modalStats');
+  
+  stats.innerHTML = `
+    <div>SCORE: ${game.score}</div>
+    <div>CLIPS: ${game.sequence.length}</div>
+    <div>BEATS: ${game.beats.length}/${SAVE_THE_CAT_BEATS.length}</div>
+    <div style="margin-top:20px;font-size:14px;color:#0ff;">🎬 Your narrative film is ready!</div>
+  `;
+  
+  game.sounds.win();
+  haptic([100, 50, 100, 50, 200]);
+  modal.classList.add('show');
+}
+
+function showHint() {
+  if (game.busy || game.hintActive) return;
+  
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (c + 1 < GRID_SIZE) {
+        [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]];
+        if (findMatches().length > 0) {
+          [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]];
+          game.hintActive = true;
+          game.hintCoords = { r1: r, c1: c, r2: r, c2: c + 1 };
+          game.sounds.swap();
+          haptic(10);
+          setTimeout(() => {
+            game.hintActive = false;
+            game.hintCoords = null;
+          }, 2000);
+          return;
+        }
+        [game.grid[r][c], game.grid[r][c+1]] = [game.grid[r][c+1], game.grid[r][c]];
+      }
+      if (r + 1 < GRID_SIZE) {
+        [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]];
+        if (findMatches().length > 0) {
+          [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]];
+          game.hintActive = true;
+          game.hintCoords = { r1: r, c1: c, r2: r + 1, c2: c };
+          game.sounds.swap();
+          haptic(10);
+          setTimeout(() => {
+            game.hintActive = false;
+            game.hintCoords = null;
+          }, 2000);
+          return;
+        }
+        [game.grid[r][c], game.grid[r+1][c]] = [game.grid[r+1][c], game.grid[r][c]];
+      }
+    }
+  }
+  game.sounds.error();
+  haptic([10, 50, 10]);
+}
+
+function shuffle() {
+  game.busy = true;
+  game.selected = null;
+  game.hintActive = false;
+  
+  setTimeout(() => {
+    createGrid();
+    game.moves = Math.max(5, game.moves);
+    document.getElementById('moves').textContent = game.moves;
+    game.sounds.match();
+    haptic(20);
+    game.busy = false;
+  }, 300);
+}
+
+function toggleExportMenu() {
+  document.getElementById('exportMenu').classList.toggle('show');
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleSettings() {
+  const panel = document.getElementById('settingsPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  game.sounds.swap();
+  haptic(10);
+}
+
+function toggleSound() {
+  game.soundEnabled = !game.soundEnabled;
+  document.getElementById('soundBtn').textContent = game.soundEnabled ? 'SND' : 'MUTE';
+  haptic(10);
+}
+
+function updateAutoPlayButton() {
+  document.getElementById('autoPlayBtn').textContent = game.autoPlay ? 'AUTO ON' : 'AUTO OFF';
+}
+
+function toggleAutoPlay() {
+  game.autoPlay = !game.autoPlay;
+  updateAutoPlayButton();
+}
+
+// EXPORT FUNCTIONS
+function exportJSON() {
+  const data = {
+    title: 'Meshwork × Beats Sequence',
+    timestamp: new Date().toISOString(),
+    score: game.score,
+    beats: game.beats,
+    sequence: game.sequence
+  };
+  downloadFile('meshwork-beats-sequence.json', JSON.stringify(data, null, 2));
+  game.sounds.match();
+  haptic(30);
+}
+
+function exportEDL() {
+  let edl = 'TITLE: Meshwork × Beats Sequence\n\n';
+  let recordIn = 0;
+  
+  game.sequence.forEach((v, i) => {
+    if (v.locked) return;
+    const duration = (v.end - v.start) || 10;
+    const recordOut = recordIn + duration;
+    
+    edl += `${String(i + 1).padStart(3, '0')}  001      V     C        `;
+    edl += `${formatTimecode(v.start)} ${formatTimecode(v.end)} `;
+    edl += `${formatTimecode(recordIn)} ${formatTimecode(recordOut)}\n`;
+    edl += `* BEAT: ${v.beatName || 'N/A'}${v.mute ? ' [MUTED]' : ''}\n`;
+    edl += `* SOURCE FILE: ${v.file}\n\n`;
+    
+    recordIn = recordOut;
+  });
+  
+  downloadFile('meshwork-beats-sequence.edl', edl);
+  game.sounds.match();
+  haptic(30);
+}
+
+function exportBeats() {
+  let beatDoc = 'SAVE THE CAT BEAT SHEET\n';
+  beatDoc += '=' .repeat(50) + '\n\n';
+  
+  game.beats.forEach(beat => {
+    beatDoc += `BEAT ${beat.beatNumber}: ${beat.beatName} (Act ${beat.act})\n`;
+    beatDoc += '-'.repeat(50) + '\n';
+    beat.clips.forEach((clip, i) => {
+      beatDoc += `  ${i+1}. ${clip.title} (${clip.start}s - ${clip.end}s)\n`;
+    });
+    beatDoc += '\n';
+  });
+  
+  downloadFile('meshwork-beats-structure.txt', beatDoc);
+  game.sounds.match();
+  haptic(30);
+}
+
+function formatTimecode(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:00`;
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>

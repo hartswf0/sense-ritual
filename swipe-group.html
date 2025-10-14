@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swipe Interface Collection</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --ui: #111;
+      --line: #222;
+      --accent: #0ff;
+      --text: #fff;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    h1 {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+    
+    .subtitle {
+      font-size: 18px;
+      color: #666;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .systems-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+    
+    .system-card {
+      background: var(--ui);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .system-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0,255,255,0.1);
+      border-color: var(--accent);
+    }
+    
+    .card-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    
+    .card-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .card-desc {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .card-preview {
+      height: 200px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    
+    .card-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.8;
+    }
+    
+    .card-footer {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .launch-btn {
+      padding: 10px 20px;
+      background: rgba(0,255,255,0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    
+    .launch-btn:hover {
+      background: var(--accent);
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Swipe Systems</h1>
+      <p class="subtitle">Collection of narrative assembly interfaces using swiping mechanics</p>
+    </header>
+    
+    <div class="systems-grid">
+      <!-- Matrix Editor -->
+      <div class="system-card">
+        <div class="card-header">
+          <div class="card-title">Matrix Editor</div>
+          <div class="card-desc">Lane-based defense system</div>
+        </div>
+        <div class="card-preview">
+          <img src="matrix-preview.jpg" alt="Matrix Editor Preview">
+        </div>
+        <div class="card-footer">
+          <a href="matrix-editor.html" class="launch-btn">Launch</a>
+        </div>
+      </div>
+      
+      <!-- Garden -->
+      <div class="system-card">
+        <div class="card-header">
+          <div class="card-title">Garden</div>
+          <div class="card-desc">Tetris-inspired spatial arrangement</div>
+        </div>
+        <div class="card-preview">
+          <img src="garden-preview.jpg" alt="Garden Preview">
+        </div>
+        <div class="card-footer">
+          <a href="garden-with-beats.html" class="launch-btn">Launch</a>
+        </div>
+      </div>
+      
+      <!-- Flux Garden -->
+      <div class="system-card">
+        <div class="card-header">
+          <div class="card-title">Flux Garden</div>
+          <div class="card-desc">Match-3 mechanics with flow fields</div>
+        </div>
+        <div class="card-preview">
+          <img src="flux-preview.jpg" alt="Flux Garden Preview">
+        </div>
+        <div class="card-footer">
+          <a href="flux-garden-09.html" class="launch-btn">Launch</a>
+        </div>
+      </div>
+      
+      <!-- Meshwork 725 -->
+      <div class="system-card">
+        <div class="card-header">
+          <div class="card-title">Meshwork 725</div>
+          <div class="card-desc">Voronoi-based narrative assembly</div>
+        </div>
+        <div class="card-preview">
+          <img src="meshwork-preview.jpg" alt="Meshwork Preview">
+        </div>
+        <div class="card-footer">
+          <a href="meshwork-725.html" class="launch-btn">Launch</a>
+        </div>
+      </div>
+      
+      <!-- Swiper Core -->
+      <div class="system-card">
+        <div class="card-header">
+          <div class="card-title">Swiper Core</div>
+          <div class="card-desc">Original swipe-based interface</div>
+        </div>
+        <div class="card-preview">
+          <img src="core-preview.jpg" alt="Core Preview">
+        </div>
+        <div class="card-footer">
+          <a href="swiper-core.html" class="launch-btn">Launch</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
