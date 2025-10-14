@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Final Cut Assembly — Sense Ritual</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: #000;
+  color: #fff;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+/* Hero Section */
+.hero {
+  text-align: center;
+  padding: 60px 20px;
+  border-bottom: 3px solid #333;
+}
+
+.hero-title {
+  font-size: clamp(48px, 8vw, 96px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #00ffff, #ff00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(14px, 2.5vw, 18px);
+  color: #666;
+  margin-bottom: 40px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.score-card {
+  background: #0a0a0a;
+  border: 2px solid #333;
+  padding: 30px 20px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.score-card:hover {
+  border-color: #00ffff;
+  transform: translateY(-4px);
+}
+
+.score-value {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 900;
+  color: #00ffff;
+  margin-bottom: 8px;
+}
+
+.score-label {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* Beat List */
+.beats-section {
+  margin: 60px 0;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.act-group {
+  margin-bottom: 40px;
+}
+
+.act-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #333;
+}
+
+.act-number {
+  font-size: 48px;
+  font-weight: 900;
+  color: #333;
+  line-height: 1;
+}
+
+.act-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.beat-list {
+  display: grid;
+  gap: 16px;
+}
+
+.beat-item {
+  background: #0a0a0a;
+  border-left: 4px solid #00ffff;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 20px;
+  align-items: center;
+  transition: all 0.3s;
+}
+
+.beat-item:hover {
+  background: #111;
+  transform: translateX(4px);
+}
+
+.beat-number {
+  font-size: 28px;
+  font-weight: 900;
+  color: #00ffff;
+  width: 60px;
+  text-align: center;
+}
+
+.beat-content {
+  flex: 1;
+}
+
+.beat-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.beat-meta {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.meta-badge {
+  padding: 4px 12px;
+  background: rgba(0,255,255,0.1);
+  border: 1px solid rgba(0,255,255,0.3);
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.beat-duration {
+  font-size: 24px;
+  font-weight: 700;
+  color: #666;
+}
+
+/* Export Actions */
+.export-section {
+  margin: 60px 0;
+  padding: 60px 40px;
+  background: #0a0a0a;
+  border: 3px solid #333;
+  text-align: center;
+}
+
+.export-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.export-btn {
+  padding: 20px;
+  border: 2px solid #fff;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-btn:hover {
+  background: #fff;
+  color: #000;
+  transform: scale(1.05);
+}
+
+.export-icon {
+  font-size: 32px;
+}
+
+/* Act Colors */
+.act-group.act1 .act-number { color: #4ECDC4; }
+.act-group.act1 .beat-item { border-left-color: #4ECDC4; }
+.act-group.act1 .beat-number { color: #4ECDC4; }
+
+.act-group.act2a .act-number { color: #FFE66D; }
+.act-group.act2a .beat-item { border-left-color: #FFE66D; }
+.act-group.act2a .beat-number { color: #FFE66D; }
+
+.act-group.act2b .act-number { color: #F38181; }
+.act-group.act2b .beat-item { border-left-color: #F38181; }
+.act-group.act2b .beat-number { color: #F38181; }
+
+.act-group.act3 .act-number { color: #AA96DA; }
+.act-group.act3 .beat-item { border-left-color: #AA96DA; }
+.act-group.act3 .beat-number { color: #AA96DA; }
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 80px 20px;
+  font-size: 18px;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+  
+  .export-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="hero">
+    <h1 class="hero-title">FINAL CUT</h1>
+    <div class="hero-subtitle">15 Beats Assembled</div>
+    
+    <div class="score-grid" id="scoreGrid">
+      <div class="score-card">
+        <div class="score-value" id="totalBeats">15</div>
+        <div class="score-label">Beats Collected</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" id="totalClips">0</div>
+        <div class="score-label">Total Clips</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" id="totalDuration">0s</div>
+        <div class="score-label">Runtime</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" id="coherenceScore">0</div>
+        <div class="score-label">Coherence Score</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="beats-section">
+    <h2 class="section-title">Narrative Structure</h2>
+    <div id="beatsContainer"></div>
+  </div>
+
+  <div class="export-section">
+    <h2 class="section-title">Export Your Film</h2>
+    <p style="color: #666; margin-top: 16px;">Choose your export format:</p>
+    
+    <div class="export-buttons">
+      <button class="export-btn" onclick="exportOTI()">
+        <div class="export-icon">📄</div>
+        <div>OTI JSON</div>
+        <div style="font-size: 10px; opacity: 0.6;">Narrative Data</div>
+      </button>
+      
+      <button class="export-btn" onclick="exportEDL()">
+        <div class="export-icon">🎬</div>
+        <div>EDL</div>
+        <div style="font-size: 10px; opacity: 0.6;">NLE Import</div>
+      </button>
+      
+      <button class="export-btn" onclick="exportStorymap()">
+        <div class="export-icon">📋</div>
+        <div>Storymap</div>
+        <div style="font-size: 10px; opacity: 0.6;">Markdown Doc</div>
+      </button>
+      
+      <button class="export-btn" onclick="exportShotlist()">
+        <div class="export-icon">🎯</div>
+        <div>Shotlist</div>
+        <div style="font-size: 10px; opacity: 0.6;">AI Prompts</div>
+      </button>
+      
+      <button class="export-btn" onclick="exportChart()">
+        <div class="export-icon">📊</div>
+        <div>Chart.D3</div>
+        <div style="font-size: 10px; opacity: 0.6;">Visualization</div>
+      </button>
+      
+      <button class="export-btn" onclick="exportFFmpeg()">
+        <div class="export-icon">▶️</div>
+        <div>FFmpeg Script</div>
+        <div style="font-size: 10px; opacity: 0.6;">Render Video</div>
+      </button>
+      
+      <button class="export-btn" onclick="exportAll()">
+        <div class="export-icon">📦</div>
+        <div>Export All</div>
+        <div style="font-size: 10px; opacity: 0.6;">All Formats</div>
+      </button>
+      
+      <button class="export-btn" onclick="sendToPromptLab()">
+        <div class="export-icon">🚀</div>
+        <div>Prompt Lab</div>
+        <div style="font-size: 10px; opacity: 0.6;">Generate Film</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Get data from opener window or localStorage
+let gameData = null;
+let sourceTool = 'unknown';
+
+function init() {
+  // Try to get data from opener window
+  if (window.opener && window.opener.game) {
+    gameData = window.opener.game;
+    sourceTool = window.opener.document.title.split(':')[0].toLowerCase();
+  }
+  // Fallback to localStorage
+  else if (localStorage.getItem('final_cut_data')) {
+    const data = JSON.parse(localStorage.getItem('final_cut_data'));
+    gameData = data.game;
+    sourceTool = data.sourceTool || 'unknown';
+  }
+  
+  if (!gameData) {
+    document.querySelector('.hero').innerHTML = '<div class="loading">No game data found. Please complete your film in the editor first.</div>';
+    return;
+  }
+  
+  renderScores();
+  renderBeats();
+}
+
+function renderScores() {
+  const beats = gameData.chains || gameData.sequences || gameData.beatsCollected || [];
+  const totalClips = beats.reduce((sum, b) => {
+    if (b.fragments) return sum + b.fragments.length;
+    if (b.clips) return sum + b.clips.length;
+    return sum + 1;
+  }, 0);
+  
+  const totalDuration = beats.reduce((sum, b) => {
+    if (b.fragments) {
+      return sum + b.fragments.reduce((s, f) => s + (f.end - f.start), 0);
+    }
+    return sum;
+  }, 0);
+  
+  const coherenceScore = gameData.score || gameData.coherenceScore || Math.floor(totalClips * 100 + totalDuration * 2);
+  
+  document.getElementById('totalBeats').textContent = beats.length;
+  document.getElementById('totalClips').textContent = totalClips;
+  document.getElementById('totalDuration').textContent = Math.round(totalDuration) + 's';
+  document.getElementById('coherenceScore').textContent = coherenceScore;
+}
+
+function renderBeats() {
+  const beats = gameData.chains || gameData.sequences || gameData.beatsCollected || [];
+  const container = document.getElementById('beatsContainer');
+  
+  // Group by act
+  const acts = {
+    act1: { name: 'Setup', beats: [] },
+    act2a: { name: 'Confrontation', beats: [] },
+    act2b: { name: 'Crisis', beats: [] },
+    act3: { name: 'Resolution', beats: [] }
+  };
+  
+  beats.forEach(beat => {
+    const act = beat.act || (beat.beatNumber <= 5 ? 'act1' : beat.beatNumber <= 10 ? 'act2a' : beat.beatNumber <= 12 ? 'act2b' : 'act3');
+    if (acts[act]) {
+      acts[act].beats.push(beat);
+    }
+  });
+  
+  let html = '';
+  Object.entries(acts).forEach(([actKey, actData]) => {
+    if (actData.beats.length === 0) return;
+    
+    html += `
+      <div class="act-group ${actKey}">
+        <div class="act-header">
+          <div class="act-number">${actKey.toUpperCase()}</div>
+          <div class="act-name">${actData.name}</div>
+        </div>
+        <div class="beat-list">
+          ${actData.beats.map((beat, idx) => {
+            const clipCount = beat.fragments?.length || beat.clips?.length || 1;
+            const duration = beat.fragments ? 
+              beat.fragments.reduce((s, f) => s + (f.end - f.start), 0) : 0;
+            const syntagma = beat.syntagmaType || beat.syntagma || 'N/A';
+            const syntagmaName = beat.syntagmaName || '';
+            
+            return `
+              <div class="beat-item">
+                <div class="beat-number">${beat.beatNumber || idx + 1}</div>
+                <div class="beat-content">
+                  <div class="beat-name">${beat.beatName || beat.name || 'Untitled'}</div>
+                  <div class="beat-meta">
+                    <span class="meta-badge">${syntagma}${syntagmaName ? ' - ' + syntagmaName : ''}</span>
+                    <span class="meta-badge">${clipCount} clips</span>
+                  </div>
+                </div>
+                <div class="beat-duration">${Math.round(duration)}s</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+// Export functions
+function exportOTI() {
+  if (window.opener && window.opener.exportFinalCutOTI) {
+    window.opener.exportFinalCutOTI();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function exportEDL() {
+  if (window.opener && window.opener.exportFinalCutEDL) {
+    window.opener.exportFinalCutEDL();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function exportStorymap() {
+  if (window.opener && window.opener.exportStorymap) {
+    window.opener.exportStorymap();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function exportShotlist() {
+  if (window.opener && window.opener.exportShotlist) {
+    window.opener.exportShotlist();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function exportChart() {
+  if (window.opener && window.opener.exportChartD3) {
+    window.opener.exportChartD3();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function exportFFmpeg() {
+  if (window.opener && window.opener.generateFFmpegScript) {
+    window.opener.generateFFmpegScript();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function exportAll() {
+  if (window.opener && window.opener.exportAllFormats) {
+    window.opener.exportAllFormats();
+  } else {
+    alert('Export function not available. Please use the export button in the main editor.');
+  }
+}
+
+function sendToPromptLab() {
+  // Build OTI from current game data
+  if (!gameData) {
+    alert('No game data available. Please complete your film first.');
+    return;
+  }
+  
+  const oti = buildOTI(gameData);
+  
+  // Save to localStorage for prompt-lab to read
+  localStorage.setItem('oti_export', JSON.stringify(oti));
+  
+  // Open prompt-lab in new window
+  const promptLab = window.open('prompt-lab.html', '_blank');
+  
+  // Provide feedback
+  if (promptLab) {
+    const btn = event.target;
+    btn.textContent = '✓ Sent to Prompt Lab!';
+    btn.style.background = '#00ff00';
+    setTimeout(() => {
+      btn.textContent = 'Prompt Lab';
+      btn.style.background = '';
+    }, 2000);
+  } else {
+    alert('Popup blocked! Please allow popups for this site.');
+  }
+}
+
+function buildOTI(game) {
+  // Get sequences from game data
+  const sequences = game.chains || game.sequences || [];
+  
+  // Calculate metadata
+  const totalClips = sequences.reduce((sum, seq) => {
+    const clips = seq.clips || seq.fragments || [];
+    return sum + clips.length;
+  }, 0);
+  
+  const totalDuration = sequences.reduce((sum, seq) => {
+    const clips = seq.clips || seq.fragments || [];
+    return sum + clips.reduce((clipSum, clip) => {
+      const duration = clip.duration || (clip.end - clip.start) || 0;
+      return clipSum + duration;
+    }, 0);
+  }, 0);
+  
+  // Build OTI format compatible with prompt-lab
+  return {
+    version: "1.0",
+    title: game.filmTitle || "Untitled Documentary",
+    logline: game.filmLogline || "A film assembled through gameplay.",
+    timestamp: new Date().toISOString(),
+    coherenceScore: game.score || 0,
+    sourceVideo: game.sourceVideo || "gameplay_assembly",
+    sourceTool: sourceTool || document.title,
+    metadata: {
+      totalClips: totalClips,
+      totalDuration: Math.round(totalDuration),
+      beatsCollected: sequences.length,
+      tool: sourceTool || document.title
+    },
+    sequences: sequences.map((seq, idx) => ({
+      id: idx + 1,
+      sequenceNumber: idx + 1,
+      beatNumber: seq.beatNumber || idx + 1,
+      beatName: seq.beatName || seq.name || `Sequence ${idx + 1}`,
+      act: seq.act || (seq.beatNumber <= 5 ? 'act1' : seq.beatNumber <= 10 ? 'act2a' : seq.beatNumber <= 12 ? 'act2b' : 'act3'),
+      syntagmaType: seq.syntagmaType || seq.syntagma || 'DS',
+      syntagmaName: seq.syntagmaName || '',
+      clips: (seq.clips || seq.fragments || []).map(clip => ({
+        clipId: clip.clipId || clip.title || clip.id || 'clip',
+        title: clip.title || 'Untitled',
+        category: clip.category || clip.type || '',
+        icon: clip.icon || '🎬',
+        sourceIn: clip.sourceIn || clip.start || 0,
+        sourceOut: clip.sourceOut || clip.end || 0,
+        duration: clip.duration || (clip.end - clip.start) || 0,
+        description: clip.description || clip.desc || '',
+        tags: clip.tags || []
+      }))
+    }))
+  };
+}
+
+init();
+</script>
+
+</body>
+</html>

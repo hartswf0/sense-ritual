@@ -1,0 +1,965 @@
+{
+  "version": "1.0",
+  "title": "Filter Bubbles: A Documentary",
+  "logline": "A documentary assembled through interactive gameplay in Matrix Editor",
+  "timestamp": "2025-10-14T06:02:00.000Z",
+  "coherenceScore": 3310,
+  "sourceVideo": "NICK/",
+  "sourceTool": "Matrix Editor",
+  "metadata": {
+    "totalClips": 46,
+    "totalDuration": 466,
+    "beatsCollected": 15,
+    "tool": "Matrix Editor",
+    "videoDirectory": "NICK/"
+  },
+  "sequences": [
+    {
+      "id": 1,
+      "sequenceNumber": 1,
+      "beatNumber": 1,
+      "beatName": "Opening Image",
+      "act": "act1",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "filter-bubble-isolation",
+          "title": "Filter Bubbles",
+          "category": "Media Apparatus",
+          "icon": "\u25e1",
+          "sourceIn": 0,
+          "sourceOut": 20,
+          "duration": 20,
+          "description": "Algorithms isolate us in personalized realities.",
+          "quote": "Algorithms isolate us in personalized realities.",
+          "tags": [
+            "Media Apparatus",
+            "Opening Image"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Filter_Bubbles_documentary_opening_image_icon__algorithms_iso_be430d70-6919-4ac3-a009-45c1ea3eff22_3.mp4"
+        },
+        {
+          "clipId": "zubaydah-diary-fragments",
+          "title": "Zubaydah's Diary",
+          "category": "Personal Apparatus",
+          "icon": "\u25d7",
+          "sourceIn": 0,
+          "sourceOut": 6,
+          "duration": 6,
+          "description": "Memories in fragments, nothing linked them, made no sense.",
+          "quote": "Memories in fragments, nothing linked them, made no sense.",
+          "tags": [
+            "Personal Apparatus",
+            "Opening Image"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_51c60d7b-87db-40ff-a116-4e1941bc37c1_0.mp4"
+        },
+        {
+          "clipId": "afeni-fairyland-conceal",
+          "title": "Unreal Fairyland",
+          "category": "Systemic Critique",
+          "icon": "\u25d1",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "The world that concealed the harsh reality of power.",
+          "quote": "The world that concealed the harsh reality of power.",
+          "tags": [
+            "Systemic Critique",
+            "Opening Image"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "sequenceNumber": 2,
+      "beatNumber": 2,
+      "beatName": "Theme Stated",
+      "act": "act1",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "mass-incarceration-clinton",
+          "title": "Mass Incarceration",
+          "category": "Systemic Control",
+          "icon": "\u25d5",
+          "sourceIn": 0,
+          "sourceOut": 8,
+          "duration": 8,
+          "description": "Hundreds of thousands imprisoned with no hope of parole.",
+          "quote": "Hundreds of thousands imprisoned with no hope of parole.",
+          "tags": [
+            "Systemic Control",
+            "Theme Stated"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4"
+        },
+        {
+          "clipId": "afeni-fairyland-conceal",
+          "title": "Unreal Fairyland",
+          "category": "Systemic Critique",
+          "icon": "\u25d1",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "The world that concealed the harsh reality of power.",
+          "quote": "The world that concealed the harsh reality of power.",
+          "tags": [
+            "Systemic Critique",
+            "Theme Stated"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4"
+        },
+        {
+          "clipId": "society-boom-q",
+          "title": "Societal Boom",
+          "category": "Systemic Control",
+          "icon": "\u25d3",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Society lets you go far, but as soon as you ask questions, boom.",
+          "quote": "Society lets you go far, but as soon as you ask questions, boom.",
+          "tags": [
+            "Systemic Control",
+            "Theme Stated"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "sequenceNumber": 3,
+      "beatNumber": 3,
+      "beatName": "Set-Up",
+      "act": "act1",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "zubaydah-perpetual-now",
+          "title": "Perpetual Now",
+          "category": "Emotional State",
+          "icon": "\u25d9",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Trapped in perpetual now, haunted by fragments.",
+          "quote": "Trapped in perpetual now, haunted by fragments.",
+          "tags": [
+            "Emotional State",
+            "Set-Up"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4"
+        },
+        {
+          "clipId": "cia-godzilla-fear",
+          "title": "Godzilla Fear",
+          "category": "Systemic Impact",
+          "icon": "\u25db",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "Disconnected memories spread fear across America.",
+          "quote": "Disconnected memories spread fear across America.",
+          "tags": [
+            "Systemic Impact",
+            "Set-Up"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4"
+        },
+        {
+          "clipId": "complexity-theory-patterns",
+          "title": "Complexity Theory",
+          "category": "Scientific Theory",
+          "icon": "\u25dd",
+          "sourceIn": 0,
+          "sourceOut": 13,
+          "duration": 13,
+          "description": "Computers see hidden patterns, make chaos manageable.",
+          "quote": "Computers see hidden patterns, make chaos manageable.",
+          "tags": [
+            "Scientific Theory",
+            "Set-Up"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Complexity_Theory_scene_computers_see_hidden_patterns_make_ch_bfe9532d-fd6e-4440-b908-8896d1f6f6a0_1.mp4"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "sequenceNumber": 4,
+      "beatNumber": 4,
+      "beatName": "Catalyst",
+      "act": "act1",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "zubaydah-diary-fragments",
+          "title": "Zubaydah's Diary",
+          "category": "Personal Apparatus",
+          "icon": "\u25d7",
+          "sourceIn": 0,
+          "sourceOut": 6,
+          "duration": 6,
+          "description": "Memories in fragments, nothing linked them, made no sense.",
+          "quote": "Memories in fragments, nothing linked them, made no sense.",
+          "tags": [
+            "Personal Apparatus",
+            "Catalyst"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_51c60d7b-87db-40ff-a116-4e1941bc37c1_0.mp4"
+        },
+        {
+          "clipId": "jihad-disintegration-factions",
+          "title": "Jihad Disintegration",
+          "category": "Systemic Event",
+          "icon": "\u25d8",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "Organization disintegrating, all solidarity gone.",
+          "quote": "Organization disintegrating, all solidarity gone.",
+          "tags": [
+            "Systemic Event",
+            "Catalyst"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Jihad_Disintegration_scene_organization_disintegrating_all_so_70d4c74b-8c2d-4312-a5ef-0218606eeb09_2.mp4"
+        },
+        {
+          "clipId": "society-boom-q",
+          "title": "Societal Boom",
+          "category": "Systemic Control",
+          "icon": "\u25d3",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Society lets you go far, but as soon as you ask questions, boom.",
+          "quote": "Society lets you go far, but as soon as you ask questions, boom.",
+          "tags": [
+            "Systemic Control",
+            "Catalyst"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "sequenceNumber": 5,
+      "beatNumber": 5,
+      "beatName": "Debate",
+      "act": "act1",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "society-boom-q",
+          "title": "Societal Boom",
+          "category": "Systemic Control",
+          "icon": "\u25d3",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Society lets you go far, but as soon as you ask questions, boom.",
+          "quote": "Society lets you go far, but as soon as you ask questions, boom.",
+          "tags": [
+            "Systemic Control",
+            "Debate"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4"
+        },
+        {
+          "clipId": "tupac-grand-stories",
+          "title": "Grand Stories",
+          "category": "Core Concept",
+          "icon": "\u25d2",
+          "sourceIn": 0,
+          "sourceOut": 5,
+          "duration": 5,
+          "description": "Believed deeply in their power to move people and inspire change.",
+          "quote": "Believed deeply in their power to move people and inspire change.",
+          "tags": [
+            "Core Concept",
+            "Debate"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/grand-stories.mp4"
+        },
+        {
+          "clipId": "saudi-dream-corrupt",
+          "title": "Saudi Dream Society",
+          "category": "Systemic Critique",
+          "icon": "\u25d6",
+          "sourceIn": 0,
+          "sourceOut": 5,
+          "duration": 5,
+          "description": "Billions created a dreamlike society, deeply corrupt.",
+          "quote": "Billions created a dreamlike society, deeply corrupt.",
+          "tags": [
+            "Systemic Critique",
+            "Debate"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "sequenceNumber": 6,
+      "beatNumber": 6,
+      "beatName": "Break into Two",
+      "act": "act2a",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "bayer-individual-self",
+          "title": "Individual Self",
+          "category": "Core Concept",
+          "icon": "\u25d0",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "At the center of that world is the individual self, making their own story.",
+          "quote": "At the center of that world is the individual self, making their own story.",
+          "tags": [
+            "Core Concept",
+            "Break into Two"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4"
+        },
+        {
+          "clipId": "afeni-fairyland-conceal",
+          "title": "Unreal Fairyland",
+          "category": "Systemic Critique",
+          "icon": "\u25d1",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "The world that concealed the harsh reality of power.",
+          "quote": "The world that concealed the harsh reality of power.",
+          "tags": [
+            "Systemic Critique",
+            "Break into Two"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4"
+        },
+        {
+          "clipId": "fom-exhibition-1950s",
+          "title": "Family of Man",
+          "category": "Media Apparatus",
+          "icon": "\u25ef",
+          "sourceIn": 0,
+          "sourceOut": 26,
+          "duration": 26,
+          "description": "A new way of seeing the world, an alternative to the horrors of Nazism and communism.",
+          "quote": "A new way of seeing the world, an alternative to the horrors of Nazism and communism.",
+          "tags": [
+            "Media Apparatus",
+            "Break into Two"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Family_of_Man_scene_a_new_way_of_seeing_the_world_an_alternat_3390e6d3-e91d-46b6-bfeb-d75a6314cc5e_1.mp4"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "sequenceNumber": 7,
+      "beatNumber": 7,
+      "beatName": "B Story",
+      "act": "act2a",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "surveillance-capitalism",
+          "title": "Surveillance Capitalism",
+          "category": "Systemic Control",
+          "icon": "\u25e0",
+          "sourceIn": 0,
+          "sourceOut": 20,
+          "duration": 20,
+          "description": "Extracting behavioral data to predict and modify.",
+          "quote": "Extracting behavioral data to predict and modify.",
+          "tags": [
+            "Systemic Control",
+            "B Story"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Surveillance_Capitalism_scene_extracting_behavioral_data_to_p_4095cf7a-0bb3-46a1-9144-5d2b0e6f6446_0.mp4"
+        },
+        {
+          "clipId": "crack-epidemic-afeni-fall",
+          "title": "Crack Epidemic",
+          "category": "Systemic Event",
+          "icon": "\u25d4",
+          "sourceIn": 0,
+          "sourceOut": 9,
+          "duration": 9,
+          "description": "Crack swept through black communities, Afeni became addicted.",
+          "quote": "Crack swept through black communities, Afeni became addicted.",
+          "tags": [
+            "Systemic Event",
+            "B Story"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Crack_Epidemic_scene_crack_swept_through_black_communities_Af_27c4f242-b297-4372-b27d-848d3b7e553f_1.mp4"
+        },
+        {
+          "clipId": "chaos-theory-unpredictable",
+          "title": "Chaos Theory",
+          "category": "Scientific Theory",
+          "icon": "\u25dc",
+          "sourceIn": 0,
+          "sourceOut": 5,
+          "duration": 5,
+          "description": "Tiny changes have massive catastrophic consequences.",
+          "quote": "Tiny changes have massive catastrophic consequences.",
+          "tags": [
+            "Scientific Theory",
+            "B Story"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Chaos_Theory_scene_tiny_changes_have_massive_catastrophic_con_23725a73-86c1-419f-85bd-9ce51ff8d2f6_0.mp4"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "sequenceNumber": 8,
+      "beatNumber": 8,
+      "beatName": "Fun and Games",
+      "act": "act2a",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "zubaydah-perpetual-now",
+          "title": "Perpetual Now",
+          "category": "Emotional State",
+          "icon": "\u25d9",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Trapped in perpetual now, haunted by fragments.",
+          "quote": "Trapped in perpetual now, haunted by fragments.",
+          "tags": [
+            "Emotional State",
+            "Fun and Games"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4"
+        },
+        {
+          "clipId": "algorithms-predict-behavior",
+          "title": "Predictive Algorithms",
+          "category": "Technological Apparatus",
+          "icon": "\u25df",
+          "sourceIn": 0,
+          "sourceOut": 20,
+          "duration": 20,
+          "description": "Algorithms that predict and shape human behavior.",
+          "quote": "Algorithms that predict and shape human behavior.",
+          "tags": [
+            "Technological Apparatus",
+            "Fun and Games"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Predictive_Algorithms_scene_algorithms_that_predict_and_shape_ffc3ae51-0647-4fc0-bb52-e6334448010d_2.mp4"
+        },
+        {
+          "clipId": "bayer-individual-self",
+          "title": "Individual Self",
+          "category": "Core Concept",
+          "icon": "\u25d0",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "At the center of that world is the individual self, making their own story.",
+          "quote": "At the center of that world is the individual self, making their own story.",
+          "tags": [
+            "Core Concept",
+            "Fun and Games"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "sequenceNumber": 9,
+      "beatNumber": 9,
+      "beatName": "Midpoint",
+      "act": "act2a",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "cia-godzilla-fear",
+          "title": "Godzilla Fear",
+          "category": "Systemic Impact",
+          "icon": "\u25db",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "Disconnected memories spread fear across America.",
+          "quote": "Disconnected memories spread fear across America.",
+          "tags": [
+            "Systemic Impact",
+            "Midpoint"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4"
+        },
+        {
+          "clipId": "hinton-neural-networks",
+          "title": "Neural Networks",
+          "category": "Technological Apparatus",
+          "icon": "\u25de",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "AI learns from mass data, ignores all human stories.",
+          "quote": "AI learns from mass data, ignores all human stories.",
+          "tags": [
+            "Technological Apparatus",
+            "Midpoint"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4"
+        },
+        {
+          "clipId": "society-boom-q",
+          "title": "Societal Boom",
+          "category": "Systemic Control",
+          "icon": "\u25d3",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Society lets you go far, but as soon as you ask questions, boom.",
+          "quote": "Society lets you go far, but as soon as you ask questions, boom.",
+          "tags": [
+            "Systemic Control",
+            "Midpoint"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "sequenceNumber": 10,
+      "beatNumber": 10,
+      "beatName": "Bad Guys Close In",
+      "act": "act2a",
+      "syntagmaType": "OS",
+      "syntagmaName": "Ordinary Sequence",
+      "clips": [
+        {
+          "clipId": "bayer-individual-self",
+          "title": "Individual Self",
+          "category": "Core Concept",
+          "icon": "\u25d0",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "At the center of that world is the individual self, making their own story.",
+          "quote": "At the center of that world is the individual self, making their own story.",
+          "tags": [
+            "Core Concept",
+            "Bad Guys Close In"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4"
+        },
+        {
+          "clipId": "saudi-dream-corrupt",
+          "title": "Saudi Dream Society",
+          "category": "Systemic Critique",
+          "icon": "\u25d6",
+          "sourceIn": 0,
+          "sourceOut": 5,
+          "duration": 5,
+          "description": "Billions created a dreamlike society, deeply corrupt.",
+          "quote": "Billions created a dreamlike society, deeply corrupt.",
+          "tags": [
+            "Systemic Critique",
+            "Bad Guys Close In"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4"
+        },
+        {
+          "clipId": "bayer-individual-self",
+          "title": "Individual Self",
+          "category": "Core Concept",
+          "icon": "\u25d0",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "At the center of that world is the individual self, making their own story.",
+          "quote": "At the center of that world is the individual self, making their own story.",
+          "tags": [
+            "Core Concept",
+            "Bad Guys Close In"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4"
+        },
+        {
+          "clipId": "bayer-individual-self",
+          "title": "Individual Self",
+          "category": "Core Concept",
+          "icon": "\u25d0",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "At the center of that world is the individual self, making their own story.",
+          "quote": "At the center of that world is the individual self, making their own story.",
+          "tags": [
+            "Core Concept",
+            "Bad Guys Close In"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "sequenceNumber": 11,
+      "beatNumber": 11,
+      "beatName": "All Is Lost",
+      "act": "act2b",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "hinton-neural-networks",
+          "title": "Neural Networks",
+          "category": "Technological Apparatus",
+          "icon": "\u25de",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "AI learns from mass data, ignores all human stories.",
+          "quote": "AI learns from mass data, ignores all human stories.",
+          "tags": [
+            "Technological Apparatus",
+            "All Is Lost"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4"
+        },
+        {
+          "clipId": "mass-incarceration-clinton",
+          "title": "Mass Incarceration",
+          "category": "Systemic Control",
+          "icon": "\u25d5",
+          "sourceIn": 0,
+          "sourceOut": 8,
+          "duration": 8,
+          "description": "Hundreds of thousands imprisoned with no hope of parole.",
+          "quote": "Hundreds of thousands imprisoned with no hope of parole.",
+          "tags": [
+            "Systemic Control",
+            "All Is Lost"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4"
+        },
+        {
+          "clipId": "hinton-neural-networks",
+          "title": "Neural Networks",
+          "category": "Technological Apparatus",
+          "icon": "\u25de",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "AI learns from mass data, ignores all human stories.",
+          "quote": "AI learns from mass data, ignores all human stories.",
+          "tags": [
+            "Technological Apparatus",
+            "All Is Lost"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "sequenceNumber": 12,
+      "beatNumber": 12,
+      "beatName": "Dark Night of the Soul",
+      "act": "act2b",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "saudi-dream-corrupt",
+          "title": "Saudi Dream Society",
+          "category": "Systemic Critique",
+          "icon": "\u25d6",
+          "sourceIn": 0,
+          "sourceOut": 5,
+          "duration": 5,
+          "description": "Billions created a dreamlike society, deeply corrupt.",
+          "quote": "Billions created a dreamlike society, deeply corrupt.",
+          "tags": [
+            "Systemic Critique",
+            "Dark Night of the Soul"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4"
+        },
+        {
+          "clipId": "mass-incarceration-clinton",
+          "title": "Mass Incarceration",
+          "category": "Systemic Control",
+          "icon": "\u25d5",
+          "sourceIn": 0,
+          "sourceOut": 8,
+          "duration": 8,
+          "description": "Hundreds of thousands imprisoned with no hope of parole.",
+          "quote": "Hundreds of thousands imprisoned with no hope of parole.",
+          "tags": [
+            "Systemic Control",
+            "Dark Night of the Soul"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4"
+        },
+        {
+          "clipId": "hinton-neural-networks",
+          "title": "Neural Networks",
+          "category": "Technological Apparatus",
+          "icon": "\u25de",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "AI learns from mass data, ignores all human stories.",
+          "quote": "AI learns from mass data, ignores all human stories.",
+          "tags": [
+            "Technological Apparatus",
+            "Dark Night of the Soul"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "sequenceNumber": 13,
+      "beatNumber": 13,
+      "beatName": "Break into Three",
+      "act": "act3",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "surveillance-capitalism",
+          "title": "Surveillance Capitalism",
+          "category": "Systemic Control",
+          "icon": "\u25e0",
+          "sourceIn": 0,
+          "sourceOut": 20,
+          "duration": 20,
+          "description": "Extracting behavioral data to predict and modify.",
+          "quote": "Extracting behavioral data to predict and modify.",
+          "tags": [
+            "Systemic Control",
+            "Break into Three"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Surveillance_Capitalism_scene_extracting_behavioral_data_to_p_4095cf7a-0bb3-46a1-9144-5d2b0e6f6446_0.mp4"
+        },
+        {
+          "clipId": "algorithms-predict-behavior",
+          "title": "Predictive Algorithms",
+          "category": "Technological Apparatus",
+          "icon": "\u25df",
+          "sourceIn": 0,
+          "sourceOut": 20,
+          "duration": 20,
+          "description": "Algorithms that predict and shape human behavior.",
+          "quote": "Algorithms that predict and shape human behavior.",
+          "tags": [
+            "Technological Apparatus",
+            "Break into Three"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Predictive_Algorithms_scene_algorithms_that_predict_and_shape_ffc3ae51-0647-4fc0-bb52-e6334448010d_2.mp4"
+        },
+        {
+          "clipId": "cia-godzilla-fear",
+          "title": "Godzilla Fear",
+          "category": "Systemic Impact",
+          "icon": "\u25db",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "Disconnected memories spread fear across America.",
+          "quote": "Disconnected memories spread fear across America.",
+          "tags": [
+            "Systemic Impact",
+            "Break into Three"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "sequenceNumber": 14,
+      "beatNumber": 14,
+      "beatName": "Finale",
+      "act": "act3",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "cia-enhanced-interrogation",
+          "title": "CIA Interrogation",
+          "category": "Systemic Control",
+          "icon": "\u25da",
+          "sourceIn": 0,
+          "sourceOut": 12,
+          "duration": 12,
+          "description": "Waterboarding 83 times to create learned helplessness.",
+          "quote": "Waterboarding 83 times to create learned helplessness.",
+          "tags": [
+            "Systemic Control",
+            "Finale"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/cia-interrogation.mp4"
+        },
+        {
+          "clipId": "cia-godzilla-fear",
+          "title": "Godzilla Fear",
+          "category": "Systemic Impact",
+          "icon": "\u25db",
+          "sourceIn": 0,
+          "sourceOut": 11,
+          "duration": 11,
+          "description": "Disconnected memories spread fear across America.",
+          "quote": "Disconnected memories spread fear across America.",
+          "tags": [
+            "Systemic Impact",
+            "Finale"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4"
+        },
+        {
+          "clipId": "zubaydah-perpetual-now",
+          "title": "Perpetual Now",
+          "category": "Emotional State",
+          "icon": "\u25d9",
+          "sourceIn": 0,
+          "sourceOut": 7,
+          "duration": 7,
+          "description": "Trapped in perpetual now, haunted by fragments.",
+          "quote": "Trapped in perpetual now, haunted by fragments.",
+          "tags": [
+            "Emotional State",
+            "Finale"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "sequenceNumber": 15,
+      "beatNumber": 15,
+      "beatName": "Final Image",
+      "act": "act3",
+      "syntagmaType": "PS",
+      "syntagmaName": "Parallel Syntagma",
+      "clips": [
+        {
+          "clipId": "mass-incarceration-clinton",
+          "title": "Mass Incarceration",
+          "category": "Systemic Control",
+          "icon": "\u25d5",
+          "sourceIn": 0,
+          "sourceOut": 8,
+          "duration": 8,
+          "description": "Hundreds of thousands imprisoned with no hope of parole.",
+          "quote": "Hundreds of thousands imprisoned with no hope of parole.",
+          "tags": [
+            "Systemic Control",
+            "Final Image"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4"
+        },
+        {
+          "clipId": "mass-incarceration-clinton",
+          "title": "Mass Incarceration",
+          "category": "Systemic Control",
+          "icon": "\u25d5",
+          "sourceIn": 0,
+          "sourceOut": 8,
+          "duration": 8,
+          "description": "Hundreds of thousands imprisoned with no hope of parole.",
+          "quote": "Hundreds of thousands imprisoned with no hope of parole.",
+          "tags": [
+            "Systemic Control",
+            "Final Image"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4"
+        },
+        {
+          "clipId": "tupac-grand-stories",
+          "title": "Grand Stories",
+          "category": "Core Concept",
+          "icon": "\u25d2",
+          "sourceIn": 0,
+          "sourceOut": 5,
+          "duration": 5,
+          "description": "Believed deeply in their power to move people and inspire change.",
+          "quote": "Believed deeply in their power to move people and inspire change.",
+          "tags": [
+            "Core Concept",
+            "Final Image"
+          ],
+          "color": "#E24A4A",
+          "videoFile": "NICK/grand-stories.mp4"
+        }
+      ]
+    }
+  ]
+}

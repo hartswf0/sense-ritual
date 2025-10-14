@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<title> GARDEN</title>
+<style>
+body { margin:0; overflow:hidden; background:#000; }
+.glyph { position:fixed; left:10px; font-size:32px; color:#0ff; cursor:pointer; 
+  text-shadow:0 0 10px #0ff; z-index:10; user-select:none; transition:all 0.2s; }
+.glyph:hover { transform:scale(1.2); }
+#g1 { top:20px; }
+#g2 { top:80px; }
+#g3 { top:140px; }
+#g4 { top:200px; }
+#g5 { top:260px; }
+#g7 { top:320px; }
+#g6 { top:380px; }
+.play-controls { position:fixed; top:50%; right:100px; transform:translateY(-50%); 
+  display:none; flex-direction:column; gap:8px; z-index:10; }
+.play-controls.active { display:flex; }
+.play-btn { padding:6px 12px; background:rgba(0,255,255,0.1); color:#0ff; 
+  border:1px solid #0ff; cursor:pointer; font-weight:bold; font-size:11px; 
+  transition:all 0.2s; text-transform:uppercase; letter-spacing:1px; }
+.play-btn:hover { background:rgba(0,255,255,0.3); }
+.mode-btn { padding:6px 12px; background:rgba(0,0,0,0.8); color:#0ff; 
+  border:1px solid #0ff; cursor:pointer; font-size:10px; 
+  transition:all 0.2s; text-transform:uppercase; }
+.mode-btn.selected { background:rgba(0,255,255,0.2); border-width:2px; }
+.dots { position:fixed; top:10px; left:60px; z-index:10; display:flex; gap:4px; flex-wrap:wrap; max-width:150px; }
+.dot { display:inline-block; width:12px; height:12px; background:#333; margin:2px; 
+  border-radius:50%; transition:all 0.3s; }
+.dot.on { background:#0ff; box-shadow:0 0 10px #0ff; }
+.bar { position:fixed; bottom:0; left:0; right:0; height:2px; background:#0ff; 
+  box-shadow:0 0 10px #0ff; }
+.timeline-player { position:fixed; top:60px; right:0; bottom:0; width:72px; 
+  background:rgba(0,0,0,0.78); border-left:2px solid #0ff; display:none; z-index:5; 
+  padding:8px 4px; overflow-y:auto; overflow-x:hidden; }
+.timeline-player.active { display:flex; flex-direction:column; gap:8px; align-items:center; }
+.timeline-player.collapsed { width:0; padding:0; border-left:none; pointer-events:none; }
+.timeline-handle { position:fixed; right:0; top:50%; transform:translateY(-50%);
+  width:22px; height:72px; background:rgba(0,255,255,0.12); border-left:2px solid #0ff;
+  color:#0ff; display:flex; align-items:center; justify-content:center; z-index:6; cursor:pointer;
+  backdrop-filter: blur(2px); box-shadow: inset 0 0 10px rgba(0,255,255,0.25); }
+.timeline-handle:active { background:rgba(0,255,255,0.25); }
+.close-timeline { position:absolute; top:5px; right:5px; color:#0ff; cursor:pointer; 
+  font-size:16px; z-index:10; padding:2px 6px; }
+.close-timeline:hover { color:#fff; background:rgba(0,255,255,0.2); }
+.segment-strip { width:100%; border:1px solid #0ff; 
+  display:flex; flex-direction:column; align-items:center; background:#000; 
+  padding:4px; cursor:pointer; transition:all 0.2s; margin-bottom:8px; }
+.segment-strip:hover { transform:scale(1.02); box-shadow:0 0 10px #0ff; }
+.strip-header { font-size:9px; color:#0ff; text-transform:uppercase; 
+  font-weight:bold; margin-bottom:4px; letter-spacing:1px; text-align:center; }
+.thumbnails-grid { display:flex; flex-wrap:wrap; gap:2px; justify-content:center; 
+  width:100%; }
+.thumbnails-grid canvas { width:60px !important; height:60px !important; 
+  display:block; border:1px solid rgba(0,255,255,0.3); }
+.timeline-label { font-size:9px; color:#0ff; text-transform:uppercase; 
+  letter-spacing:1px; margin-bottom:8px; text-align:center; writing-mode:horizontal-tb; }
+.seq-count { position:fixed; top:20px; right:100px; font-size:18px; color:#0ff; 
+  text-shadow:0 0 10px #0ff; z-index:10; font-weight:bold; display:none; }
+.seq-count.active { display:block; }
+.preview-panel { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+  width:95%; max-width:700px; height:88vh; background:rgba(0,0,0,0.98); border:3px solid #0ff;
+  display:none; z-index:500; padding:20px; box-shadow:0 0 40px rgba(0,255,255,0.5); }
+.preview-panel.active { display:flex; flex-direction:column; }
+.preview-title { color:#0ff; font-size:14px; font-weight:bold; margin-bottom:10px; text-align:center; }
+.preview-panel video { width:100%; height:45%; object-fit:contain; background:#000; border:1px solid #333; }
+.preview-scrubber { width:100%; height:50px; background:#111; border:1px solid #0ff; 
+  margin-top:10px; position:relative; cursor:pointer; overflow:hidden; }
+.scrubber-progress { position:absolute; left:0; top:0; height:100%; background:rgba(0,255,255,0.2); 
+  pointer-events:none; }
+.scrubber-playhead { position:absolute; left:0; top:0; width:3px; height:100%; background:#0ff; 
+  box-shadow:0 0 10px #0ff; pointer-events:none; z-index:2; }
+.scrubber-thumbnails { position:absolute; inset:0; display:flex; pointer-events:none; opacity:0.4; }
+.scrubber-thumb { flex:1; background-size:cover; background-position:center; border-right:1px solid #222; }
+.temporal-position { font-size:10px; color:#888; margin-top:8px; padding:8px; background:#0a0a0a;
+  border:1px solid #222; font-family:monospace; line-height:1.8; }
+.temporal-position span { color:#0ff; font-weight:bold; }
+.preview-annotation { width:100%; margin-top:8px; padding:10px; background:#0a0a0a; border:1px solid #333;
+  color:#0ff; font-size:11px; resize:vertical; min-height:70px; font-family:monospace; }
+.preview-annotation::placeholder { color:#555; }
+.preview-controls { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
+.preview-btn { padding:8px 14px; background:rgba(0,255,255,0.2); color:#0ff; border:1px solid #0ff;
+  cursor:pointer; font-weight:bold; font-size:10px; transition:all 0.2s; }
+.preview-btn:hover { background:#0ff; color:#000; }
+.close-preview { position:absolute; top:10px; right:10px; color:#0ff; cursor:pointer;
+  font-size:24px; z-index:10; }
+
+/* Hide side play controls when timeline is collapsed (mobile) */
+.timeline-collapsed #playControls { display:none !important; }
+.timeline-player.collapsed ~ .play-controls { display:none !important; }
+.timeline-collapsed .play-controls { display:none !important; }
+
+/* Mobile alley tightening */
+@media (max-width: 768px) {
+  .timeline-player { width:56px; padding:6px 3px; background:rgba(0,0,0,0.74); }
+  .segment-strip { margin-bottom:6px; padding:3px; }
+  .strip-header { display:none; }
+  .thumbnails-grid canvas { width:44px !important; height:44px !important; }
+}
+.segment-strip.playing { background:#0ff; color:#000; }
+.export-menu { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+  background:rgba(0,0,0,0.95); border:2px solid #0ff; padding:20px; z-index:200;
+  display:none; flex-direction:column; gap:12px; }
+.export-menu.active { display:flex; }
+.export-menu-title { color:#0ff; font-size:14px; font-weight:bold; 
+  text-transform:uppercase; margin-bottom:10px; text-align:center; }
+.export-option { padding:12px 20px; background:rgba(0,255,255,0.1); color:#0ff;
+  border:1px solid #0ff; cursor:pointer; text-transform:uppercase; font-size:12px;
+  font-weight:bold; transition:all 0.2s; text-align:center; }
+.export-option:hover { background:#0ff; color:#000; }
+.recursive-view { position:fixed; inset:0; background:#000; z-index:300;
+  display:none; flex-direction:column; }
+.recursive-view.active { display:flex; }
+.recursive-header { padding:12px 20px; border-bottom:1px solid #222; display:flex;
+  justify-content:space-between; align-items:center; }
+.recursive-title { color:#0ff; font-size:18px; font-weight:bold; }
+.recursive-breadcrumb { color:#666; font-size:12px; margin-top:4px; }
+.close-recursive { color:#0ff; cursor:pointer; font-size:28px; padding:0 8px; }
+.close-recursive:hover { color:#fff; }
+.recursive-container { flex:1; overflow:hidden; position:relative; }
+.recursive-columns { position:absolute; inset:0; display:flex; gap:8px; padding:8px; overflow-x:auto; }
+.recursive-column { width:160px; flex-shrink:0; height:100%; overflow-y:auto; overflow-x:hidden;
+  padding:8px 4px; display:flex; flex-direction:column; gap:6px; background:rgba(0,0,0,0.3);
+  border-left:2px solid #0ff; }
+.layer-header { color:#0ff; font-size:10px; font-weight:bold; text-transform:uppercase;
+  padding:4px 6px; border-bottom:1px solid #333; position:sticky; top:0; background:#000; z-index:10;
+  text-align:center; letter-spacing:0.5px; }
+.time-lane { width:100%; border:1px solid #0ff; display:flex; flex-direction:column; 
+  background:#000; padding:4px; cursor:pointer; transition:all 0.2s; align-items:center;
+  margin-bottom:6px; }
+.time-lane:hover { transform:scale(1.01); box-shadow:0 0 10px rgba(0,255,255,0.5); }
+.time-lane:active { transform:scale(0.99); }
+.time-lane.playing { background:#0ff; color:#000; border-color:#0ff; }
+.time-lane.playing .lane-header { color:#000; }
+.time-lane.playing .lane-info { color:#000; }
+.time-lane.selected { border:2px solid #0ff; box-shadow:0 0 15px rgba(0,255,255,0.6); }
+.time-lane.connected { border:2px solid rgba(0,255,255,0.4); background:rgba(0,255,255,0.1); }
+@keyframes pulseGlow { 0%{ box-shadow:0 0 0 rgba(0,255,255,0.0);} 50%{ box-shadow:0 0 20px rgba(0,255,255,0.9);} 100%{ box-shadow:0 0 0 rgba(0,255,255,0.0);} }
+.time-lane.selected { animation:pulseGlow 1.2s ease-out 1; }
+.lane-header { font-size:8px; color:#0ff; text-transform:uppercase; 
+  font-weight:bold; letter-spacing:0.5px; margin-bottom:3px; text-align:center; width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lane-thumbs { display:grid; grid-template-columns:repeat(2, 1fr); gap:2px; width:100%; }
+.lane-thumbs img { width:100%; aspect-ratio:1; object-fit:cover; border:1px solid rgba(0,255,255,0.3); }
+.lane-info { font-size:7px; color:#888; text-align:center; margin-top:3px; width:100%; }
+.nav-hint { position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+  color:#666; font-size:12px; text-align:center; pointer-events:none; }
+/* Hide swipe arrows - all columns visible simultaneously */
+.recursive-nav-arrows { display:none; }
+@media (min-width: 768px) {
+  .recursive-column { min-width:33.333%; }
+  .recursive-columns { transition:transform 0.4s ease; }
+}
+.mobile-controls { position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+  display:none; gap:12px; z-index:150; }
+.mobile-controls.active { display:flex; }
+.mobile-btn { width:60px; height:60px; background:rgba(0,255,255,0.2); 
+  border:3px solid #0ff; border-radius:50%; color:#0ff; font-size:28px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:all 0.2s; user-select:none; box-shadow:0 0 20px rgba(0,255,255,0.4); }
+.mobile-btn:active { background:rgba(0,255,255,0.5); transform:scale(0.9); }
+.mobile-btn.center { width:70px; height:70px; font-size:32px; }
+@media (min-width: 768px) { .mobile-controls { display:none !important; } }
+</style>
+</head>
+<body>
+<div class="glyph" id="g1" title="Pause/Play">⏯</div>
+<div class="glyph" id="g2" title="Hold Piece">◎</div>
+<div class="glyph" id="g3" title="Restart Game">⎌</div>
+<div class="glyph" id="g4" title="Rotate Piece">•</div>
+<div class="glyph" id="g5" title="Drop Fast">⊂⊃</div>
+<div class="glyph" id="g7" title="Reset Camera View">◎̌</div>
+<div class="glyph" id="g6" title="Export Menu">⎙</div>
+<div class="mobile-controls" id="mobileControls">
+  <div class="mobile-btn" id="mobLeft">◀</div>
+  <div class="mobile-btn center" id="mobRotate">↻</div>
+  <div class="mobile-btn" id="mobRight">▶</div>
+  <div class="mobile-btn" id="mobDown">▼</div>
+</div>
+<div class="dots" id="dots"></div>
+<div class="bar"></div>
+<div class="seq-count" id="seqCount">SEQ 0</div>
+<div class="play-controls" id="playControls">
+  <button class="play-btn" onclick="playCurrentMode()">PLAY</button>
+  <button class="mode-btn selected" data-mode="sequence" onclick="setPlayMode('sequence')">SEQ</button>
+  <button class="mode-btn" data-mode="full" onclick="setPlayMode('full')">FULL</button>
+</div>
+<div class="timeline-player" id="timelinePlayer">
+  <div class="close-timeline" onclick="closeTimeline()">×</div>
+  <div class="timeline-label">SEQ</div>
+</div>
+<div class="timeline-handle" id="timelineHandle">❯</div>
+<div class="preview-panel" id="previewPanel">
+  <div class="close-preview" onclick="closePreview()">×</div>
+  <div class="preview-title" id="previewTitle">Video Preview</div>
+  <video id="previewVideo" playsinline></video>
+  <div class="preview-scrubber" id="previewScrubber">
+    <div class="scrubber-thumbnails" id="scrubberThumbs"></div>
+    <div class="scrubber-progress" id="scrubberProgress"></div>
+    <div class="scrubber-playhead" id="scrubberPlayhead"></div>
+  </div>
+  <div class="temporal-position" id="temporalPosition">
+    <div>Time: <span id="currentTime">0.0s</span> / <span id="totalTime">0.0s</span></div>
+    <div>Scale: <span id="scaleInfo">—</span></div>
+  </div>
+  <textarea class="preview-annotation" id="previewAnnotation" placeholder="Add notes, thoughts, or temporal observations..."></textarea>
+  <div class="preview-controls">
+    <button class="preview-btn" onclick="togglePlayPreview()">⏯ Play/Pause</button>
+    <button class="preview-btn" onclick="skipBack()">⏪ -5s</button>
+    <button class="preview-btn" onclick="skipForward()">⏩ +5s</button>
+    <button class="preview-btn" onclick="saveAnnotation()">💾 Save Note</button>
+  </div>
+</div>
+<div class="export-menu" id="exportMenu">
+  <div class="close-preview" onclick="closeExportMenu()">×</div>
+  <div class="export-menu-title">View & Export</div>
+  <div class="export-option" onclick="showRecursiveView()">🌀 Recursive Timeline View</div>
+  <div class="export-option" onclick="exportSequenceA4()">📄 Sequence Timeline (A4)</div>
+  <div class="export-option" onclick="exportGridMosaic()">🖼 Grid Mosaic (A4)</div>
+  <div class="export-option" onclick="exportGridMosaicWithBG()">🖼 Grid Mosaic + Background (A4)</div>
+  <div class="export-option" onclick="exportEDL()">📝 Edit Decision List</div>
+</div>
+<div class="recursive-view" id="recursiveView">
+  <div class="recursive-header">
+    <div>
+      <div class="recursive-title" id="recursiveTitle">RECURSIVE TIMELINE</div>
+      <div class="recursive-breadcrumb" id="recursiveBreadcrumb">Atoms › Beats › Scenes › Acts › 3-Act › Whole</div>
+    </div>
+    <div class="close-recursive" onclick="closeRecursiveView()">×</div>
+  </div>
+  <div class="recursive-container">
+    <div class="recursive-columns" id="recursiveColumns"></div>
+    <div class="nav-hint">← Swipe to navigate layers →</div>
+    <div class="recursive-nav-arrows">
+      <div class="recursive-arrow left" id="recursiveArrowLeft" onclick="navigateRecursiveLayer(-1)">◀</div>
+      <div class="recursive-arrow right" id="recursiveArrowRight" onclick="navigateRecursiveLayer(1)">▶</div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script>
+/*
+  GARDEN - A TRULY DIFFERENT WAY OF MAKING VIDEO
+  
+  NOT: linear timeline, drag clips, scrub playhead
+  BUT: spatial arrangement → temporal sequence
+  
+  PARADIGM SHIFTS:
+  1. GAMEPLAY AS EDITING INTERFACE
+     - Tetris moves = editorial decisions
+     - Spatial layout = shot order (left→right)
+     - Block width = shot duration (1s per block)
+  
+  2. FREEZE-FRAME MOSAIC
+     - Video textures freeze on impact
+     - Each block captures moment → becomes image
+     - Grid = collage of frozen moments
+     - Export = perfect A4 phone wallpaper
+  
+  3. RING BUFFER MEMORY
+     - Each video remembers its position
+     - Returning to same video continues from last second
+     - No repeats until all 54 videos used
+     - Natural memory rhythm
+  
+  4. KINETIC VIDEO EDITING
+     - Ghost wall shows current video magnified
+     - Camera follows attention (smooth lerping)
+     - Sound design rewards every action
+     - Touch/click to inspect frozen frames
+  
+  5. PROCEDURAL MONTAGE
+     - Sequence mode: plays your edit (1-10s segments)
+     - Full mode: all source videos end-to-end
+     - EDL export: industry-standard edit list
+     - Timeline strips: visual sequence builder
+  
+  RESULT: Video editing becomes physical play, spatial thinking,
+  muscle memory. The edit emerges from gameplay rhythm, not
+  timeline manipulation. Every session creates unique montage.
+  
+  This is foraging, not farming.
+  This is gardening, not construction.
+  This is discovery, not assembly.
+*/
+
+const W=10, H=20, S=1;
+let scene, camera, renderer, grid=[], pieces=[], current, hold, paused=false, score=0, fragments=[], timeline=[];
+let cameraTarget=null, focusBlock=null, focusBlockPos=null, holdTimer=null, timelineVideo=null, timelineIndex=0;
+let videoRingBuffer = {}; // Track how far we've used each video
+let playMode = 'sequence'; // 'sequence' or 'full'
+let synth = null; // Tone.js synth for sound
+let ghostWallUpdateTimer = null; // Throttle ghost wall updates
+
+// Global game object for beat collection system
+window.game = {
+  get sequences() { 
+    // Map timeline segments to beat sequences
+    if(typeof BeatCollectionSystem !== 'undefined' && BeatCollectionSystem.collectedBeats) {
+      return BeatCollectionSystem.collectedBeats.map((beat, idx) => ({
+        beatNumber: beat.beatNumber,
+        beatName: beat.beatName,
+        syntagmaType: beat.syntagma,
+        act: beat.beatNumber <= 5 ? 'act1' : beat.beatNumber <= 10 ? 'act2a' : beat.beatNumber <= 12 ? 'act2b' : 'act3',
+        clips: beat.clips || [],
+        fragments: beat.clips || []
+      }));
+    }
+    return timeline;
+  },
+  get chains() {
+    // Alias for Matrix Editor compatibility
+    return this.sequences;
+  },
+  get score() { return score; },
+  get fragments() { return fragments; },
+  filmTitle: "Garden Assembly",
+  filmLogline: "A film assembled through Tetris gameplay"
+};
+
+// MEDIA - All videos from MEDIA directory
+// SAVE THE CAT BEATS - 15 beat narrative structure
+const SAVE_THE_CAT_BEATS = [
+  {number: 1, name: 'Opening Image', suggestedSyntagma: 'DS'},
+  {number: 2, name: 'Theme Stated', suggestedSyntagma: 'AS'},
+  {number: 3, name: 'Set-Up', suggestedSyntagma: 'DS'},
+  {number: 4, name: 'Catalyst', suggestedSyntagma: 'SC'},
+  {number: 5, name: 'Debate', suggestedSyntagma: 'PS'},
+  {number: 6, name: 'Break into Two', suggestedSyntagma: 'SC'},
+  {number: 7, name: 'B Story', suggestedSyntagma: 'ALT'},
+  {number: 8, name: 'Fun and Games', suggestedSyntagma: 'ES'},
+  {number: 9, name: 'Midpoint', suggestedSyntagma: 'SC'},
+  {number: 10, name: 'Bad Guys Close In', suggestedSyntagma: 'OS'},
+  {number: 11, name: 'All Is Lost', suggestedSyntagma: 'AS'},
+  {number: 12, name: 'Dark Night of the Soul', suggestedSyntagma: 'BS'},
+  {number: 13, name: 'Break into Three', suggestedSyntagma: 'SC'},
+  {number: 14, name: 'Finale', suggestedSyntagma: 'OS'},
+  {number: 15, name: 'Final Image', suggestedSyntagma: 'AS'}
+];
+
+const MEDIA = [
+  {id:'v01',title:'Family',color:0xC8E6C9,file:'MEDIA/video_0443d3f46b1f433597e8d9d89469cad8.mp4'},
+  {id:'v02',title:'Self',color:0xAED581,file:'MEDIA/video_06ac4003fedc438588cf48eb594c8f22.mp4'},
+  {id:'v03',title:'Utopia',color:0x9CCC65,file:'MEDIA/video_0e770098e193417596602ae22ae3ab30.mp4'},
+  {id:'v04',title:'Stories',color:0xF44336,file:'MEDIA/video_0eb7d2bceba7433ba17f37bbfc2a5007.mp4'},
+  {id:'v05',title:'Harsh',color:0xEF5350,file:'MEDIA/video_14c639e88a2c4718aee990049945815c.mp4'},
+  {id:'v06',title:'Fairy',color:0xFFCDD2,file:'MEDIA/video_219ff5b76d874686bcfecbe4d10f5c83.mp4'},
+  {id:'v07',title:'Civil',color:0xBDBDBD,file:'MEDIA/video_27b3377368254f1babcfb96a0c47859a.mp4'},
+  {id:'v08',title:'Boom',color:0x616161,file:'MEDIA/video_29245c98b1904304bdaa5513eb2ddc76.mp4'},
+  {id:'v09',title:'Thug',color:0xFF7043,file:'MEDIA/video_3250a9cf85244759a18a4db13c37d174.mp4'},
+  {id:'v10',title:'Prison',color:0x78909C,file:'MEDIA/video_37ed60eedd054e2aaa8bb1448f65d760.mp4'},
+  {id:'v11',title:'Culture',color:0x90CAF9,file:'MEDIA/video_3ca5a80acfde4d4cbd79d94d7605320d.mp4'},
+  {id:'v12',title:'Chaos',color:0x42A5F5,file:'MEDIA/video_3cff4bd16de5427894d5cba1e1e385fb.mp4'},
+  {id:'v13',title:'Complex',color:0x2196F3,file:'MEDIA/video_4dd2ee3dbd36497084a52af94e3da979.mp4'},
+  {id:'v14',title:'Patterns',color:0x1976D2,file:'MEDIA/video_4e317f6ef3334999997fb40ac8257b521.mp4'},
+  {id:'v15',title:'Selves',color:0xFFB74D,file:'MEDIA/video_63ff0f9940cc4592b4441f2154e7d123.mp4'},
+  {id:'v16',title:'Mission',color:0x8BC34A,file:'MEDIA/video_6579a780ae594edb83a690b0dc3468d6.mp4'},
+  {id:'v17',title:'Bust',color:0xBCAAA4,file:'MEDIA/video_660de41592134e2489e5e0664ca3ac57.mp4'},
+  {id:'v18',title:'Trails',color:0x689F38,file:'MEDIA/video_66eb582f7c3c4322823fce3ab08cd1af.mp4'},
+  {id:'v19',title:'9/11',color:0xD32F2F,file:'MEDIA/video_6b720ebb7d604cf5a1162ade16ef45fa.mp4'},
+  {id:'v20',title:'Conscious',color:0xAFB42B,file:'MEDIA/video_7404528be4e546dd96305460876438c3.mp4'},
+  {id:'v21',title:'Speak',color:0xF06292,file:'MEDIA/video_7421c0db16f34650b3a4e035793cd128.mp4'},
+  {id:'v22',title:'Scene22',color:0xBA68C8,file:'MEDIA/video_742d9608b41f474fbed54ef2f8c408aa.mp4'},
+  {id:'v23',title:'Scene23',color:0x9575CD,file:'MEDIA/video_7a3cebeef6544f778247918c5a820e47.mp4'},
+  {id:'v24',title:'Scene24',color:0x7986CB,file:'MEDIA/video_7b94990ada2744bb8fdc631159bf3e89.mp4'},
+  {id:'v25',title:'Scene25',color:0x64B5F6,file:'MEDIA/video_7dd04a1baf2441ff88096efe9cfa9c14.mp4'},
+  {id:'v26',title:'Scene26',color:0x4FC3F7,file:'MEDIA/video_8040315874d14fd7ab34d1a8960eebb0.mp4'},
+  {id:'v27',title:'Scene27',color:0x4DD0E1,file:'MEDIA/video_85db0227eea74a2d95191d74497ea214.mp4'},
+  {id:'v28',title:'Scene28',color:0x4DB6AC,file:'MEDIA/video_8d84e63bb7524b1a850612a7eecd1d1e.mp4'},
+  {id:'v29',title:'Scene29',color:0x81C784,file:'MEDIA/video_8f1a7f1e1a334cdf9208b5946969b691.mp4'},
+  {id:'v30',title:'Scene30',color:0xAED581,file:'MEDIA/video_97f853e665434903b8768b5f3430b93d.mp4'},
+  {id:'v31',title:'Scene31',color:0xDCE775,file:'MEDIA/video_98e8654eabe3436e9d44c67916c14d28.mp4'},
+  {id:'v32',title:'Scene32',color:0xFFF176,file:'MEDIA/video_9fc306d9816c48e782063216a09a3a74.mp4'},
+  {id:'v33',title:'Scene33',color:0xFFD54F,file:'MEDIA/video_9fd24d09d52e42d5beae9952ddd0444c.mp4'},
+  {id:'v34',title:'Scene34',color:0xFFB74D,file:'MEDIA/video_adc91bd7f5384d1297042833675813d9.mp4'},
+  {id:'v35',title:'Scene35',color:0xFFA726,file:'MEDIA/video_ae6bc654fa724459ab6ad31f08342d29.mp4'},
+  {id:'v36',title:'Scene36',color:0xFF7043,file:'MEDIA/video_b3d9fe27233c477292aab4239eed1b08.mp4'},
+  {id:'v37',title:'Scene37',color:0xE57373,file:'MEDIA/video_b481340670b64d4189f8fe0270436329.mp4'},
+  {id:'v38',title:'Scene38',color:0xF06292,file:'MEDIA/video_b538c7ec6b634707af8b6a5b4aabdb6f.mp4'},
+  {id:'v39',title:'Scene39',color:0xBA68C8,file:'MEDIA/video_b7c4908b702f4d77986d03ccbf4ee9d7.mp4'},
+  {id:'v40',title:'Scene40',color:0x9575CD,file:'MEDIA/video_c02fccca1a264aaf86cddc620b16ca5b.mp4'},
+  {id:'v41',title:'Scene41',color:0x7986CB,file:'MEDIA/video_c1e680e7523647a9ab441d66c0ea8200.mp4'},
+  {id:'v42',title:'Scene42',color:0x64B5F6,file:'MEDIA/video_c4906e0b3da24f11be68dde4c4c59cca.mp4'},
+  {id:'v43',title:'Scene43',color:0x4FC3F7,file:'MEDIA/video_c7387ae6b119498588975e54c3991097.mp4'},
+  {id:'v44',title:'Scene44',color:0x4DD0E1,file:'MEDIA/video_c9d18827c251421499c0c679665fcb6b.mp4'},
+  {id:'v45',title:'Scene45',color:0x4DB6AC,file:'MEDIA/video_d119202594d54f6baeb084b9f918682e.mp4'},
+  {id:'v46',title:'Scene46',color:0x81C784,file:'MEDIA/video_d216d4ed13a74083bc1414427d93b6ef.mp4'},
+  {id:'v47',title:'Scene47',color:0xAED581,file:'MEDIA/video_d8c1e1812f3f4477ad1ea5afba750261.mp4'},
+  {id:'v48',title:'Scene48',color:0xDCE775,file:'MEDIA/video_ddb407bcc9b24ef9ae0e3dfcfd99fb72.mp4'},
+  {id:'v49',title:'Scene49',color:0xFFF176,file:'MEDIA/video_e12fb3631ca341a78bc30a14f94615b6.mp4'},
+  {id:'v50',title:'Scene50',color:0xFFD54F,file:'MEDIA/video_e2a01bc15607456a9abb5a16960969c0.mp4'},
+  {id:'v51',title:'Scene51',color:0xFFB74D,file:'MEDIA/video_e7795f8fa691488b99f32331190288fa.mp4'},
+  {id:'v52',title:'Scene52',color:0xFFA726,file:'MEDIA/video_e9e1880a62da45b4b812f68c764e350d.mp4'},
+  {id:'v53',title:'Scene53',color:0xFF7043,file:'MEDIA/video_ea4c944bddee440f9c39fed7d8c0f431.mp4'},
+  {id:'v54',title:'Scene54',color:0xE57373,file:'MEDIA/video_f3530daa37604db896e2109af55a1c2e.mp4'}
+];
+
+// VIDEO BAG SYSTEM - ensures all videos used before repeating
+let videoBag = [];
+
+function getNextVideo(){
+  if(videoBag.length === 0){
+    // Refill and shuffle
+    videoBag = [...MEDIA];
+    for(let i=videoBag.length-1; i>0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [videoBag[i], videoBag[j]] = [videoBag[j], videoBag[i]];
+    }
+    console.log('🔄 Video bag refilled & shuffled');
+  }
+  return videoBag.pop();
+}
+
+// SOUND DESIGN
+function initSound(){
+  synth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'triangle' },
+    envelope: { attack: 0.002, decay: 0.15, sustain: 0.08, release: 0.4 }
+  }).toDestination();
+  synth.volume.value = -14;
+  console.log('✓ Sound initialized');
+}
+
+function playSound(type, freq){
+  if(!synth) return;
+  
+  try {
+    if(type === 'focus'){
+      synth.triggerAttackRelease([freq, freq*1.5], '0.15');
+      haptic(8);
+    } else if(type === 'unfocus'){
+      synth.triggerAttackRelease([freq, freq*0.75], '0.2');
+      haptic(6);
+    } else if(type === 'move'){
+      synth.triggerAttackRelease(freq, '0.04');
+      haptic(3);
+    } else if(type === 'rotate'){
+      synth.triggerAttackRelease([freq, freq*1.2], '0.08');
+      haptic(5);
+    } else if(type === 'lock'){
+      // Satisfying lock-in sound: chord!
+      synth.triggerAttackRelease([freq, freq*1.25, freq*1.5], '0.5');
+      haptic(20); // Strong haptic feedback
+    } else if(type === 'clear'){
+      synth.triggerAttackRelease([freq, freq*1.25, freq*1.5, freq*2], '0.7');
+      haptic(30); // Very satisfying
+    }
+  } catch(e){
+    console.warn('Sound error:', e);
+  }
+}
+
+function haptic(ms){
+  if('vibrate' in navigator){
+    try {
+      navigator.vibrate(ms);
+    } catch(e){}
+  }
+}
+
+// INIT
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0a);
+  
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(W/2, H/2, H*1.2);
+  camera.lookAt(W/2, H/2, 0);
+  
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+  
+  // GRID
+  const gridHelper = new THREE.GridHelper(W, W, 0x333, 0x1a1a1a);
+  gridHelper.rotation.x = Math.PI/2;
+  gridHelper.position.set(W/2, H/2, -0.1);
+  scene.add(gridHelper);
+  
+  // GHOST WALL - sliced video with glassmorphic effect
+  const aspectW = 9;
+  const aspectH = 16;
+  const ghostWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, H),
+    new THREE.MeshBasicMaterial({transparent:true, opacity:0, side:THREE.DoubleSide})
+  );
+  ghostWall.position.set(W/2, H/2, -1);
+  scene.add(ghostWall);
+  window.ghostWall = ghostWall;
+  
+  // REMOVED PLAYHEAD - confusing for users
+  
+  // LIGHTS
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const light = new THREE.DirectionalLight(0xffffff, 0.8);
+  light.position.set(5,5,5);
+  scene.add(light);
+  
+  // GRID ARRAY
+  for(let y=0; y<H; y++) grid[y] = Array(W).fill(null);
+  
+  // DOTS
+  for(let i=0; i<49; i++){
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    document.getElementById('dots').appendChild(dot);
+  }
+  
+  // Init sound on first interaction
+  document.addEventListener('click', ()=> {
+    if(!synth) initSound();
+  }, {once: true});
+  
+  // GLYPHS
+  document.getElementById('g1').onclick = ()=> paused=!paused;
+  document.getElementById('g2').onclick = holdPiece;
+  document.getElementById('g3').onclick = rewind;
+  document.getElementById('g7').onclick = resetCameraView;
+  document.getElementById('g6').onclick = showExportMenu;
+  
+  // TOUCH & CLICK
+  renderer.domElement.addEventListener('touchstart', onTouch, {passive: false});
+  renderer.domElement.addEventListener('touchend', onTouchEnd, {passive: false});
+  renderer.domElement.addEventListener('click', onClick);
+  
+  // Show mobile controls on touch devices
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const mobileControls = document.getElementById('mobileControls');
+  
+  if(isMobile){
+    mobileControls.classList.add('active');
+    console.log('✓ Mobile controls activated (Touch device detected)');
+  } else {
+    console.log('✓ Desktop mode - mobile controls hidden');
+    console.log('  Tip: To test mobile controls on desktop, run: document.getElementById("mobileControls").classList.add("active")');
+  }
+  
+  // FORCE SHOW on small screens (width < 768px)
+  if(window.innerWidth < 768){
+    mobileControls.classList.add('active');
+    console.log('✓ Mobile controls activated (Small screen detected)');
+  }
+  
+  // MOBILE CONTROLS
+  document.getElementById('mobLeft').addEventListener('touchstart', (e)=> {
+    e.preventDefault();
+    movePiece(-1);
+  });
+  document.getElementById('mobRight').addEventListener('touchstart', (e)=> {
+    e.preventDefault();
+    movePiece(1);
+  });
+  document.getElementById('mobRotate').addEventListener('touchstart', (e)=> {
+    e.preventDefault();
+    rotatePiece();
+  });
+  document.getElementById('mobDown').addEventListener('touchstart', (e)=> {
+    e.preventDefault();
+    moveDown();
+  });
+  
+  // KEYS
+  addEventListener('keydown', e=>{
+    if(e.key==='ArrowLeft'){ e.preventDefault(); movePiece(-1); }
+    if(e.key==='ArrowRight'){ e.preventDefault(); movePiece(1); }
+    if(e.key==='ArrowUp'){ e.preventDefault(); rotatePiece(); }
+    if(e.key==='ArrowDown'){ e.preventDefault(); moveDown(); }
+    if(e.key===' '){ e.preventDefault(); hardDrop(); }
+    if(e.key==='c') holdPiece();
+    if(e.key==='Escape' && focusBlock) unfocusBlock();
+  });
+  
+  // BEAT COLLECTION SYSTEM: Initialize
+  if(typeof BeatCollectionSystem !== 'undefined'){
+    BeatCollectionSystem.init({
+      flashColor: '#00ffff',
+      totalBeats: 15,
+      completionSound: true
+    });
+    console.log('✓ Beat Collection System initialized');
+  }
+  
+  spawnPiece();
+  animate();
+}
+
+// SPAWN
+function spawnPiece(){
+  const media = getNextVideo(); // Use bag system - no repeats until all videos shown
+  const shapes = [
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]]
+  ];
+  const shape = shapes[Math.floor(Math.random()*shapes.length)];
+  
+  current = {
+    shape: shape,
+    x: Math.floor(W/2-shape[0].length/2),
+    y: H-1,
+    media: media,
+    mesh: createPieceMesh(shape, media)
+  };
+  
+  scene.add(current.mesh);
+  updatePiecePosition();
+  
+  // Update ghost wall with video slice (phone aspect 9:16)
+  if(current.mesh.userData.sharedVideo && window.ghostWall){
+    const tex = current.mesh.userData.sharedVideo.clone();
+    tex.repeat.set(0.5, 0.9); // Slice center portion
+    tex.offset.set(0.25, 0.05);
+    window.ghostWall.material.map = tex;
+    window.ghostWall.material.opacity = 0.2;
+    window.ghostWall.material.needsUpdate = true;
+  }
+}
+
+function createPieceMesh(shape, media){
+  const group = new THREE.Group();
+  
+  // ONE VIDEO for entire piece - mosaic style
+  let sharedVideoTex = null;
+  if(media.file){
+    const video = document.createElement('video');
+    video.src = media.file;
+    video.loop = true;
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.crossOrigin = 'anonymous';
+    video.load();
+    video.play().catch(()=>{});
+    
+    sharedVideoTex = new THREE.VideoTexture(video);
+    sharedVideoTex.minFilter = THREE.LinearFilter;
+    sharedVideoTex.magFilter = THREE.LinearFilter;
+  }
+  
+  // Store shared video for later use
+  group.userData.sharedVideo = sharedVideoTex;
+  group.userData.video = sharedVideoTex ? sharedVideoTex.image : null;
+  
+  // Calculate piece bounds for UV mapping
+  const pieceWidth = shape[0].length;
+  const pieceHeight = shape.length;
+  
+  for(let y=0; y<shape.length; y++){
+    for(let x=0; x<shape[y].length; x++){
+      if(!shape[y][x]) continue;
+      
+      const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+      
+      // MOSAIC VIDEO: Each cube shows different slice
+      let mat;
+      if(sharedVideoTex){
+        const tex = sharedVideoTex.clone();
+        tex.needsUpdate = true;
+        
+        // UV offset/repeat to show different portion
+        tex.repeat.set(1/pieceWidth, 1/pieceHeight);
+        tex.offset.set(x/pieceWidth, (pieceHeight-1-y)/pieceHeight);
+        
+        mat = new THREE.MeshBasicMaterial({
+          map: tex,
+          emissive: media.color,
+          emissiveIntensity: 0.2
+        });
+      } else {
+        mat = new THREE.MeshPhongMaterial({
+          color: media.color,
+          emissive: media.color,
+          emissiveIntensity: 0.3
+        });
+      }
+      
+      const cube = new THREE.Mesh(geo, mat);
+      cube.position.set(x*S, -y*S, 0);
+      group.add(cube);
+      
+      // HALOS
+      const ring1 = new THREE.RingGeometry(0.4, 0.42, 16);
+      const ring1Mat = new THREE.MeshBasicMaterial({color:0x00ff00, transparent:true, opacity:0.3, side:THREE.DoubleSide});
+      const r1 = new THREE.Mesh(ring1, ring1Mat);
+      r1.position.copy(cube.position);
+      r1.position.z = 0.01;
+      group.add(r1);
+      
+      // CORNER GLYPHS (only on first block)
+      if(x===0 && y===0){
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        ctx.font = '48px monospace';
+        ctx.fillStyle = '#AED581';
+        ctx.fillText('◴', 4, 48);
+        const tex = new THREE.CanvasTexture(canvas);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true}));
+        sprite.scale.set(0.2, 0.2, 1);
+        sprite.position.set(x*S-0.3, -y*S+0.3, 0.1);
+        group.add(sprite);
+      }
+    }
+  }
+  
+  group.userData = {media, sharedVideo: sharedVideoTex};
+  return group;
+}
+
+function updatePiecePosition(){
+  if(!current) return;
+  current.mesh.position.set(current.x*S + 0.5, current.y*S + 0.5, 0);
+  
+  // Throttled ghost wall update - smooth flow, no flashing
+  if(ghostWallUpdateTimer) return; // Skip if update pending
+  
+  ghostWallUpdateTimer = setTimeout(() => {
+    ghostWallUpdateTimer = null;
+    
+    // Video zoom magnifier - falling block magnifies background video
+    if(current && current.mesh.userData.sharedVideo && window.ghostWall){
+      const zoomFactor = 2.5;
+      const centerX = (current.x + 0.5) / W;
+      const centerY = (current.y + 0.5) / H;
+      
+      const tex = current.mesh.userData.sharedVideo;
+      tex.repeat.set(1 / zoomFactor, 1 / zoomFactor);
+      tex.offset.set(
+        centerX - (0.5 / zoomFactor),
+        centerY - (0.5 / zoomFactor)
+      );
+      
+      window.ghostWall.material.map = tex;
+      window.ghostWall.material.opacity = 0.25; // Slightly more subtle
+      window.ghostWall.material.needsUpdate = true;
+    }
+  }, 50); // 50ms throttle - smooth but responsive
+}
+
+// MOVEMENT
+function movePiece(dx){
+  if(!current || paused) return;
+  current.x += dx;
+  if(collision()) current.x -= dx;
+  else playSound('move', 300 + dx * 50);
+  updatePiecePosition();
+}
+
+function rotatePiece(){
+  if(!current || paused) return;
+  const old = current.shape;
+  current.shape = current.shape[0].map((_, i) => current.shape.map(row => row[i]).reverse());
+  if(collision()) current.shape = old;
+  else {
+    scene.remove(current.mesh);
+    current.mesh = createPieceMesh(current.shape, current.media);
+    scene.add(current.mesh);
+    updatePiecePosition();
+    playSound('rotate', 450);
+  }
+}
+
+function moveDown(){
+  if(!current || paused) return;
+  current.y--;
+  if(collision()){
+    current.y++;
+    lockPiece();
+  } else {
+    updatePiecePosition();
+  }
+}
+
+function hardDrop(){
+  if(!current || paused) return;
+  while(!collision()){
+    current.y--;
+    updatePiecePosition();
+  }
+  current.y++;
+  updatePiecePosition();
+  lockPiece();
+}
+
+function collision(){
+  if(!current) return false;
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(!current.shape[y][x]) continue;
+      const gx = current.x + x;
+      const gy = current.y - y;
+      if(gx<0 || gx>=W) return true;
+      if(gy<0) return true; // Hit bottom
+      if(gy>=0 && gy<H && grid[gy] && grid[gy][gx]) return true;
+    }
+  }
+  return false;
+}
+
+function lockPiece(){
+  if(!current) return;
+  
+  // Capture current video frame as static canvas texture
+  let frozenTexture = null;
+  const videoTex = current.mesh.userData.sharedVideo;
+  
+  if(videoTex && videoTex.image){
+    const video = videoTex.image;
+    
+    // Check if video has valid dimensions
+    if(video.videoWidth > 0 && video.videoHeight > 0){
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        frozenTexture = new THREE.CanvasTexture(canvas);
+        frozenTexture.minFilter = THREE.LinearFilter;
+        frozenTexture.magFilter = THREE.LinearFilter;
+        console.log('✓ Captured video frame:', canvas.width, 'x', canvas.height);
+      } catch(e){
+        console.warn('Failed to capture video frame:', e);
+      }
+    } else {
+      console.warn('Video not ready, dimensions:', video.videoWidth, video.videoHeight);
+    }
+  }
+  
+  for(let y=0; y<current.shape.length; y++){
+    for(let x=0; x<current.shape[y].length; x++){
+      if(!current.shape[y][x]) continue;
+      const gx = current.x + x;
+      const gy = current.y - y;
+      if(gy>=0 && gy<H && gx>=0 && gx<W){
+        grid[gy][gx] = {
+          media: current.media, 
+          color: current.media.color,
+          frozenTexture: frozenTexture,
+          blockX: x,
+          blockY: y,
+          pieceWidth: current.shape[0].length,
+          pieceHeight: current.shape.length
+        };
+      }
+    }
+  }
+  
+  renderLockedBlocks(); // ALWAYS render after locking
+  clearLines();
+  scene.remove(current.mesh);
+  current = null;
+  playSound('lock', 250);
+  spawnPiece();
+}
+
+function clearLines(){
+  let cleared = 0;
+  for(let y=0; y<H; y++){
+    if(grid[y].every(c=>c)){
+      cleared++;
+      console.log('LINE CLEARED:', y);
+      
+      // Group consecutive blocks into continuous segments (ring buffer)
+      // Capture block thumbnails for timeline strip
+      const lineBlocks = [];
+      for(let x=0; x<W; x++){
+        if(grid[y][x]){
+          const block = grid[y][x];
+          
+          // Capture block's frozen texture as thumbnail
+          let thumbnailCanvas = null;
+          if(block.frozenTexture && block.frozenTexture.image){
+            const srcCanvas = block.frozenTexture.image;
+            const thumbSize = 60; // Small thumbnail (fits in 80px strip)
+            const canvas = document.createElement('canvas');
+            canvas.width = thumbSize;
+            canvas.height = thumbSize;
+            const ctx = canvas.getContext('2d');
+            
+            // Calculate source rectangle (UV mapping)
+            const srcX = (block.blockX / block.pieceWidth) * srcCanvas.width;
+            const srcY = ((block.pieceHeight - 1 - block.blockY) / block.pieceHeight) * srcCanvas.height;
+            const srcW = srcCanvas.width / block.pieceWidth;
+            const srcH = srcCanvas.height / block.pieceHeight;
+            
+            ctx.drawImage(srcCanvas, srcX, srcY, srcW, srcH, 0, 0, thumbSize, thumbSize);
+            thumbnailCanvas = canvas;
+          }
+          
+          lineBlocks.push({
+            media: block.media,
+            thumbnail: thumbnailCanvas,
+            x: x
+          });
+        }
+      }
+      
+      // Group consecutive blocks into continuous segments
+      let currentSegment = null;
+      
+      for(let i=0; i<lineBlocks.length; i++){
+        const block = lineBlocks[i];
+        const videoId = block.media.id;
+        
+        // Initialize ring buffer for this video
+        if(!videoRingBuffer[videoId]){
+          videoRingBuffer[videoId] = 0;
+        }
+        
+        // If same video as current segment, extend it
+        if(currentSegment && currentSegment.media.id === videoId){
+          currentSegment.duration += 1.0;
+          currentSegment.thumbnails.push(block.thumbnail);
+        } else {
+          // Start new segment
+          if(currentSegment){
+            timeline.push(currentSegment);
+          }
+          
+          currentSegment = {
+            media: block.media,
+            duration: 1.0,
+            startTime: videoRingBuffer[videoId],
+            blockX: block.x,
+            blockY: y,
+            thumbnails: [block.thumbnail]
+          };
+        }
+        
+        // Advance ring buffer (loop at 10s)
+        videoRingBuffer[videoId] = (videoRingBuffer[videoId] + 1.0) % 10.0;
+        fragments.push(block.media);
+      }
+      
+      // Push final segment
+      if(currentSegment){
+        timeline.push(currentSegment);
+      }
+      
+      // Visual feedback - line cleared
+      const segmentCount = timeline.filter(s => s.blockY === y).length;
+      console.log(`✓ Line ${y} cleared! Created ${segmentCount} segments`);
+      
+      // Shift down
+      for(let ay=y; ay<H-1; ay++){
+        grid[ay] = grid[ay+1];
+      }
+      grid[H-1] = Array(W).fill(null);
+      y--;
+    }
+  }
+  
+  if(cleared > 0){
+    score += cleared;
+    document.querySelectorAll('.dot')[Math.min(score-1, 6)]?.classList.add('on');
+    
+    // BEAT COLLECTION: Collect beat for each line cleared
+    if(typeof BeatCollectionSystem !== 'undefined'){
+      for(let i = 0; i < cleared; i++){
+        const beatIndex = BeatCollectionSystem.collectedBeats.length;
+        if(beatIndex < SAVE_THE_CAT_BEATS.length){
+          const beat = SAVE_THE_CAT_BEATS[beatIndex];
+          BeatCollectionSystem.collect({
+            beatNumber: beat.number,
+            beatName: beat.name,
+            syntagma: beat.suggestedSyntagma,
+            clips: fragments.slice(-10), // Last 10 fragments
+            metadata: {
+              linesCleared: cleared,
+              totalScore: score,
+              timelineLength: timeline.length
+            }
+          });
+        }
+      }
+    }
+    renderLockedBlocks();
+    updateTimeline();
+    playSound('clear', 800);
+  }
+}
+
+function updateTimeline(){
+  const playerEl = document.getElementById('timelinePlayer');
+  const seqCount = document.getElementById('seqCount');
+  
+  if(timeline.length === 0){
+    playerEl.classList.remove('active');
+    seqCount.classList.remove('active');
+    return;
+  }
+  
+  playerEl.classList.add('active');
+  seqCount.classList.add('active');
+  
+  // Clear old strips (keep label)
+  const label = playerEl.querySelector('.timeline-label');
+  playerEl.innerHTML = '';
+  playerEl.appendChild(label);
+  
+  // Create segment strip for each timeline entry (VERTICAL)
+  let totalDuration = 0;
+  timeline.forEach((segment, i) => {
+    const strip = document.createElement('div');
+    strip.className = 'segment-strip';
+    
+    // Height proportional to duration
+    const height = 60 + (segment.duration * 15);
+    strip.style.minHeight = height + 'px';
+    strip.style.borderColor = `#${segment.media.color.toString(16).padStart(6, '0')}`;
+    strip.style.color = `#${segment.media.color.toString(16).padStart(6, '0')}`;
+    
+    totalDuration += segment.duration;
+    
+    const startT = segment.startTime.toFixed(1);
+    const endT = (segment.startTime + segment.duration).toFixed(1);
+    
+    strip.innerHTML = `
+      <div class="strip-header">#${i+1} ${segment.media.title} ${segment.duration.toFixed(1)}s</div>
+      <div class="thumbnails-grid"></div>
+    `;
+    
+    // Add thumbnail grid - perfect squares
+    const thumbContainer = strip.querySelector('.thumbnails-grid');
+    if(segment.thumbnails && segment.thumbnails.length > 0){
+      segment.thumbnails.forEach(thumbCanvas => {
+        if(thumbCanvas){
+          thumbContainer.appendChild(thumbCanvas);
+        }
+      });
+    }
+    
+    // Click to preview this segment
+    strip.onclick = () => previewSegment(i);
+    
+    playerEl.appendChild(strip);
+  });
+  
+  // Update sequence counter
+  seqCount.textContent = `SEQ ${timeline.length}`;
+  
+  // Show play controls if we have segments
+  const playControls = document.getElementById('playControls');
+  if(timeline.length > 0){
+    playControls.classList.add('active');
+  }
+  
+  console.log(`✓ Timeline: ${timeline.length} segments, ~${totalDuration.toFixed(1)}s total`);
+}
+
+function renderLockedBlocks(){
+  // Remove old locked blocks
+  scene.children.filter(c => c.userData.locked).forEach(c => scene.remove(c));
+  
+  // Redraw grid WITH VIDEO TEXTURES
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      if(grid[y][x]){
+        const cell = grid[y][x];
+        const geo = new THREE.BoxGeometry(S*0.9, S*0.9, S*0.9);
+        
+        let mat;
+        if(cell.frozenTexture){
+          // Clone texture for each block so UV mapping is unique
+          const tex = cell.frozenTexture.clone();
+          tex.needsUpdate = true;
+          
+          // Preserve original mosaic UV mapping - each block shows its slice
+          tex.repeat.set(1/cell.pieceWidth, 1/cell.pieceHeight);
+          tex.offset.set(
+            cell.blockX/cell.pieceWidth, 
+            (cell.pieceHeight-1-cell.blockY)/cell.pieceHeight
+          );
+          
+          mat = new THREE.MeshBasicMaterial({
+            map: tex,
+            emissive: cell.color,
+            emissiveIntensity: 0.15,
+            color: 0xffffff
+          });
+        } else {
+          mat = new THREE.MeshPhongMaterial({
+            color: cell.color,
+            emissive: cell.color,
+            emissiveIntensity: 0.3
+          });
+        }
+        
+        const cube = new THREE.Mesh(geo, mat);
+        cube.position.set(x+0.5, y+0.5, 0);
+        cube.userData.locked = true;
+        cube.userData.position = {x, y};
+        cube.userData.media = cell.media;
+        scene.add(cube);
+      }
+    }
+  }
+}
+
+function holdPiece(){
+  if(!current) return;
+  if(!hold){
+    hold = current;
+    scene.remove(current.mesh);
+    current = null;
+    spawnPiece();
+  } else {
+    [hold, current] = [current, hold];
+    scene.remove(hold.mesh);
+    hold.mesh = createPieceMesh(hold.shape, hold.media);
+    scene.add(hold.mesh);
+    updatePiecePosition();
+  }
+}
+
+function rewind(){
+  // UNDO LAST
+  console.log('⎌');
+}
+
+// CAMERA SPRING-DOLLY (NON-DISORIENTING)
+function centerCameraOnBlocks(){
+  const blocks = [];
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      if(grid[y][x]) blocks.push(new THREE.Vector3(x*S, y*S, 0));
+    }
+  }
+  
+  if(blocks.length===0) return;
+  
+  const box = new THREE.Box3();
+  blocks.forEach(p => box.expandByPoint(p));
+  const center = box.getCenter(new THREE.Vector3());
+  
+  // SPRING TARGET
+  cameraTarget = {
+    pos: center.clone().add(new THREE.Vector3(0, 0, H*1.2)),
+    look: center
+  };
+}
+
+function updateCamera(){
+  if(!cameraTarget) return;
+  
+  if(cameraTarget.followCurrent && current){
+    // Follow current piece as it falls - smooth tracking
+    const pos = new THREE.Vector3(current.x + 0.5, current.y + 0.5, 0);
+    cameraTarget.position.set(pos.x, pos.y, 8);
+    cameraTarget.lookAt = pos;
+    camera.position.lerp(cameraTarget.position, 0.08); // Smoother follow
+    camera.lookAt(cameraTarget.lookAt);
+  } else if(cameraTarget.lookAt){
+    // Smooth transition to target position
+    camera.position.lerp(cameraTarget.position, 0.06); // More fluid
+    camera.lookAt(cameraTarget.lookAt);
+    
+    // Clear target when close enough OR after timeout
+    const dist = camera.position.distanceTo(cameraTarget.position);
+    if(dist < 0.5){
+      console.log('✓ Camera reached target, distance:', dist.toFixed(2));
+      cameraTarget = null;
+    }
+  }
+}
+
+// RAYCAST TO DETECT BLOCK CLICKS
+function raycastBlock(e){
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  for(let i=0; i<intersects.length; i++){
+    const obj = intersects[i].object;
+    if(obj.userData && obj.userData.locked){
+      return obj.parent || obj;
+    }
+  }
+  return null;
+}
+
+function focusOnBlock(block){
+  if(!block || !block.userData.position) return;
+  
+  const blockPos = `${block.userData.position.x},${block.userData.position.y}`;
+  
+  // Toggle: If clicking the same block position, unfocus
+  if(focusBlockPos === blockPos){
+    console.log('✓ Toggle unfocus:', blockPos);
+    unfocusBlock();
+    return;
+  }
+  
+  console.log('✓ Focusing on block:', blockPos);
+  focusBlock = block;
+  focusBlockPos = blockPos;
+  
+  const pos = new THREE.Vector3(
+    block.userData.position.x + 0.5,
+    block.userData.position.y + 0.5,
+    0
+  );
+  
+  // Smooth camera transition
+  cameraTarget = {
+    position: new THREE.Vector3(pos.x, pos.y, 6),
+    lookAt: pos.clone(),
+    followCurrent: false
+  };
+  
+  paused = true;
+  playSound('focus', 600);
+}
+
+// TAP/HOLD FOCUS
+let touchStartTime = 0;
+let touchStartPos = {x: 0, y: 0};
+
+function onTouch(e){
+  e.preventDefault();
+  touchStartTime = Date.now();
+  const touch = e.touches[0];
+  touchStartPos = {x: touch.clientX, y: touch.clientY};
+  
+  const block = raycastBlock(touch);
+  if(!block) return;
+  
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(()=> {
+    // Only focus if finger hasn't moved much (not a swipe)
+    focusOnBlock(block);
+  }, 200);
+}
+
+function onTouchEnd(e){
+  e.preventDefault();
+  clearTimeout(holdTimer);
+  
+  const touchDuration = Date.now() - touchStartTime;
+  const touch = e.changedTouches[0];
+  const moved = Math.abs(touch.clientX - touchStartPos.x) + Math.abs(touch.clientY - touchStartPos.y);
+  
+  // Quick tap with minimal movement = toggle focus
+  if(touchDuration < 300 && moved < 20){
+    const block = raycastBlock(touch);
+    if(block){
+      focusOnBlock(block);
+    } else if(focusBlock){
+      unfocusBlock();
+    }
+  }
+}
+
+function onClick(e){
+  const block = raycastBlock(e);
+  
+  console.log('Click event:', {
+    hasBlock: !!block,
+    blockPos: block ? block.userData.position : null,
+    currentFocusPos: focusBlockPos,
+    isFocused: !!focusBlock
+  });
+  
+  if(block){
+    // focusOnBlock handles toggle internally
+    focusOnBlock(block);
+  } else if(focusBlock){
+    // Click empty space while focused = unfocus
+    console.log('Empty space clicked - unfocusing');
+    unfocusBlock();
+  } else if(current){
+    // Click on empty space - zoom to current piece and follow it
+    focusOnCurrentPiece();
+  }
+}
+
+function focusOnCurrentPiece(){
+  if(!current) return;
+  const pos = new THREE.Vector3(current.x + 0.5, current.y + 0.5, 0);
+  cameraTarget = {
+    position: new THREE.Vector3(pos.x, pos.y, 8),
+    lookAt: pos.clone(),
+    followCurrent: true
+  };
+  camera.position.set(pos.x, pos.y, 8);
+  camera.lookAt(pos);
+  paused = false;
+}
+
+function unfocusBlock(){
+  console.log('✓ Unfocusing - returning to overview');
+  cameraTarget = {
+    position: new THREE.Vector3(W/2, H/2, H*1.2),
+    lookAt: new THREE.Vector3(W/2, H/2, 0),
+    followCurrent: false
+  };
+  
+  focusBlock = null;
+  focusBlockPos = null;
+  paused = false;
+  playSound('unfocus', 400);
+}
+
+function resetCameraView(){
+  // Smart toggle: zoom in if zoomed out, zoom out if zoomed in
+  const currentDist = camera.position.distanceTo(new THREE.Vector3(W/2, H/2, 0));
+  const defaultDist = H * 1.2;
+  const isZoomedOut = currentDist > defaultDist * 0.8;
+  
+  if(isZoomedOut || !focusBlock){
+    // Zoom IN to current piece or last played segment
+    let target = null;
+    if(current){
+      target = new THREE.Vector3(current.x + current.shape[0].length/2, current.y + current.shape.length/2, 0);
+    } else if(focusBlockPos){
+      target = focusBlockPos.clone();
+    } else {
+      target = new THREE.Vector3(W/2, H/2, 0);
+    }
+    
+    cameraTarget = {
+      position: new THREE.Vector3(target.x, target.y, H * 0.4),
+      lookAt: target,
+      followCurrent: true
+    };
+    focusBlock = current;
+    focusBlockPos = target;
+    console.log('✓ Camera zoomed IN to piece');
+    playSound('focus', 500);
+    haptic(15);
+  } else {
+    // Zoom OUT to default view
+    cameraTarget = {
+      position: new THREE.Vector3(W/2, H/2, H*1.2),
+      lookAt: new THREE.Vector3(W/2, H/2, 0),
+      followCurrent: false
+    };
+    focusBlock = null;
+    focusBlockPos = null;
+    console.log('✓ Camera zoomed OUT to default');
+    playSound('unfocus', 350);
+    haptic(12);
+  }
+}
+
+function closeTimeline(){
+  const playerEl = document.getElementById('timelinePlayer');
+  const seqCount = document.getElementById('seqCount');
+  const playControls = document.getElementById('playControls');
+  
+  playerEl.classList.remove('active');
+  seqCount.classList.remove('active');
+  playControls.classList.remove('active');
+  
+  console.log('✓ Timeline closed');
+  playSound('unfocus', 300);
+}
+
+// PLAYBACK MODE FUNCTIONS
+function setPlayMode(mode){
+  playMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.mode === mode);
+  });
+  console.log('Play mode:', mode);
+}
+
+function playCurrentMode(){
+  if(timeline.length === 0) return;
+  
+  if(playMode === 'sequence'){
+    playAllSegments();
+  } else {
+    playFullClips();
+  }
+}
+
+function playFullClips(){
+  if(timeline.length === 0) return;
+  
+  // Get unique videos from timeline
+  const uniqueVideos = [];
+  const seen = new Set();
+  timeline.forEach(seg => {
+    if(!seen.has(seg.media.id)){
+      seen.add(seg.media.id);
+      uniqueVideos.push(seg.media);
+    }
+  });
+  
+  currentPreviewIndex = 0;
+  playNextFullClip(uniqueVideos);
+}
+
+function playNextFullClip(videos){
+  if(currentPreviewIndex >= videos.length){
+    console.log('✓ All full clips played');
+    closePreview();
+    return;
+  }
+  
+  const media = videos[currentPreviewIndex];
+  const video = document.getElementById('previewVideo');
+  const panel = document.getElementById('previewPanel');
+  
+  // Clear previous handlers
+  video.onended = null;
+  video.ontimeupdate = null;
+  
+  video.src = media.file;
+  video.currentTime = 0;
+  
+  // Play full clip until it ends
+  video.onended = () => {
+    console.log(`✓ Finished: ${media.title}`);
+    currentPreviewIndex++;
+    setTimeout(() => playNextFullClip(videos), 300);
+  };
+  
+  video.play().catch(e => console.warn('Playback error:', e));
+  panel.classList.add('active');
+  
+  console.log(`▶ Playing full clip ${currentPreviewIndex + 1}/${videos.length}: ${media.title}`);;
+}
+
+// PREVIEW & EXPORT FUNCTIONS
+let currentPreviewIndex = 0;
+
+function previewSegment(index){
+  const segment = timeline[index];
+  const video = document.getElementById('previewVideo');
+  const panel = document.getElementById('previewPanel');
+  
+  // Clear previous handlers
+  video.onended = null;
+  video.ontimeupdate = null;
+  
+  video.src = segment.media.file;
+  video.currentTime = segment.startTime;
+  
+  // Play only this segment's duration
+  video.ontimeupdate = () => {
+    // Add small buffer to ensure we don't cut off early
+    if(video.currentTime >= segment.startTime + segment.duration - 0.05){
+      video.pause();
+      video.ontimeupdate = null;
+    }
+  };
+  
+  video.play().catch(e => console.warn('Playback error:', e));
+  panel.classList.add('active');
+  
+  // Highlight playing strip
+  document.querySelectorAll('.segment-strip').forEach((s, i) => {
+    s.classList.toggle('playing', i === index);
+  });
+}
+
+function playAllSegments(){
+  if(timeline.length === 0) return;
+  
+  currentPreviewIndex = 0;
+  playNextSegment();
+}
+
+function playNextSegment(){
+  if(currentPreviewIndex >= timeline.length){
+    console.log('✓ Sequence playback complete');
+    closePreview();
+    return;
+  }
+  
+  const segment = timeline[currentPreviewIndex];
+  const video = document.getElementById('previewVideo');
+  const panel = document.getElementById('previewPanel');
+  
+  // Clear previous handlers
+  video.onended = null;
+  video.ontimeupdate = null;
+  
+  video.src = segment.media.file;
+  video.currentTime = segment.startTime;
+  
+  video.ontimeupdate = () => {
+    // Add small buffer to ensure we don't cut off early
+    if(video.currentTime >= segment.startTime + segment.duration - 0.05){
+      video.pause();
+      video.ontimeupdate = null;
+      currentPreviewIndex++;
+      setTimeout(() => playNextSegment(), 200);
+    }
+  };
+  
+  video.play().catch(e => console.warn('Playback error:', e));
+  panel.classList.add('active');
+  
+  // Highlight current strip
+  document.querySelectorAll('.segment-strip').forEach((s, i) => {
+    s.classList.toggle('playing', i === currentPreviewIndex);
+  });
+  
+  console.log(`▶ Segment ${currentPreviewIndex + 1}/${timeline.length}: ${segment.media.title} (${segment.duration}s)`);;
+}
+
+function closePreview(){
+  const video = document.getElementById('previewVideo');
+  const panel = document.getElementById('previewPanel');
+  
+  // Clear all handlers
+  video.onended = null;
+  video.ontimeupdate = null;
+  video.removeEventListener('timeupdate', updateScrubber);
+  
+  video.pause();
+  video.src = '';
+  panel.classList.remove('active');
+  
+  // Clear playing state from segment strips and time lanes
+  document.querySelectorAll('.segment-strip').forEach(s => {
+    s.classList.remove('playing');
+  });
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('playing');
+  });
+  
+  currentPreviewSegment = null;
+}
+
+function exportEDL(){
+  let edl = `TITLE: Garden Edit - Procedural Montage\n`;
+  edl += `FCM: NON-DROP FRAME\n\n`;
+  
+  let totalTime = 0;
+  timeline.forEach((segment, i) => {
+    const srcInTC = formatTimecode(segment.startTime);
+    const srcOutTC = formatTimecode(segment.startTime + segment.duration);
+    const recInTC = formatTimecode(totalTime);
+    const recOutTC = formatTimecode(totalTime + segment.duration);
+    
+    edl += `${String(i+1).padStart(3, '0')}  AX       V     C        ${srcInTC} ${srcOutTC} ${recInTC} ${recOutTC}\n`;
+    edl += `* FROM CLIP: ${segment.media.title}\n`;
+    edl += `* DURATION: ${segment.duration.toFixed(1)}s (${segment.startTime.toFixed(1)}s-${(segment.startTime+segment.duration).toFixed(1)}s)\n`;
+    edl += `* SOURCE FILE: ${segment.media.file}\n\n`;
+    
+    totalTime += segment.duration;
+  });
+  
+  edl += `* TOTAL DURATION: ${totalTime}s (${timeline.length} segments)\n`;
+  
+  // Download EDL
+  const blob = new Blob([edl], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `garden_edit_${Date.now()}.edl`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  console.log(`✓ EDL exported: ${timeline.length} segments, ${totalTime}s total`);
+}
+
+function formatTimecode(seconds){
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const f = Math.floor((seconds % 1) * 30); // 30fps
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
+}
+
+function showExportMenu(){
+  document.getElementById('exportMenu').classList.add('active');
+}
+
+function closeExportMenu(){
+  document.getElementById('exportMenu').classList.remove('active');
+}
+
+function showRecursiveView(){
+  if(timeline.length === 0){
+    alert('No sequence to visualize! Clear some lines first.');
+    return;
+  }
+  
+  closeExportMenu();
+  document.getElementById('recursiveView').classList.add('active');
+  renderRecursiveTimeline();
+  playSound('focus', 500);
+  haptic(15);
+}
+
+function closeRecursiveView(){
+  document.getElementById('recursiveView').classList.remove('active');
+  playSound('unfocus', 400);
+  
+  // Stop any playing recursive video
+  const previewPanel = document.getElementById('previewPanel');
+  if(previewPanel){
+    const vid = previewPanel.querySelector('video');
+    if(vid) vid.pause();
+  }
+  
+  // Clear playing state and highlights from all lanes
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('playing', 'selected', 'connected');
+  });
+  
+  // Reset selection
+  recursiveSelectedSegment = null;
+}
+
+function highlightCrossLayers(unitStart, unitEnd){
+  console.log('✓ Highlighting cross-layers:', unitStart, '->', unitEnd);
+  
+  // Clear all previous highlights
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('selected', 'connected');
+  });
+  
+  // Highlight all lanes that overlap with this time range
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    const laneStart = parseFloat(lane.dataset.unitStart);
+    const laneEnd = parseFloat(lane.dataset.unitEnd);
+    
+    // Check if this lane overlaps with selected time range
+    const overlaps = laneEnd > unitStart && laneStart < unitEnd;
+    
+    if(overlaps){
+      // Exact match = selected, partial = connected
+      const isExact = Math.abs(laneStart - unitStart) < 0.01 && Math.abs(laneEnd - unitEnd) < 0.01;
+      if(isExact){
+        lane.classList.add('selected');
+      } else {
+        lane.classList.add('connected');
+      }
+    }
+  });
+}
+
+let currentPreviewSegment = null;
+let segmentAnnotations = {}; // Store annotations by segment ID
+
+function playRecursiveSegment(segment, laneElement){
+  console.log('✓ Playing segment:', segment.media.title);
+  
+  currentPreviewSegment = segment;
+  
+  // Highlight playing lane (like segment strips)
+  document.querySelectorAll('.time-lane').forEach(lane => {
+    lane.classList.remove('playing');
+  });
+  if(laneElement){
+    laneElement.classList.add('playing');
+  }
+  
+  // Use the preview panel to play the video
+  const previewPanel = document.getElementById('previewPanel');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewTitle = document.getElementById('previewTitle');
+  const scaleInfo = document.getElementById('scaleInfo');
+  const totalTime = document.getElementById('totalTime');
+  const annotation = document.getElementById('previewAnnotation');
+  
+  // Resolve video URL - use .file property from MEDIA array
+  let videoUrl = segment.media.file || segment.media.url || segment.media.src || segment.media.path;
+  
+  if(!videoUrl){
+    console.error('✗ No video URL found for segment:', segment);
+  }
+  previewVideo.src = videoUrl;
+  previewVideo.currentTime = segment.startTime || 0;
+  
+  // Update UI
+  previewTitle.textContent = `${segment.media.title}`;
+  totalTime.textContent = segment.duration.toFixed(1) + 's';
+  const startTime = segment.startTime || 0;
+  scaleInfo.textContent = `Film time: ${startTime.toFixed(1)}s - ${(startTime + segment.duration).toFixed(1)}s`;
+  
+  // Load annotation if exists
+  const segmentKey = `${videoUrl}_${segment.startTime}`;
+  annotation.value = segmentAnnotations[segmentKey] || '';
+  
+  // Render thumbnails in scrubber
+  renderScrubberThumbnails(segment);
+  
+  // Set up scrubber interaction
+  setupScrubber(previewVideo);
+  
+  // Update playhead continuously
+  previewVideo.addEventListener('timeupdate', updateScrubber);
+  
+  previewPanel.classList.add('active');
+  
+  // Play with error handling
+  previewVideo.play().then(() => {
+    console.log('✓ Video playing successfully');
+  }).catch(err => {
+    console.error('✗ Video play error:', err);
+    // Try muting and playing again (browser autoplay policy)
+    previewVideo.muted = true;
+    previewVideo.play().then(() => {
+      console.log('✓ Video playing (muted)');
+      // Unmute after a moment
+      setTimeout(() => {
+        previewVideo.muted = false;
+      }, 100);
+    }).catch(err2 => {
+      console.error('✗ Video play failed even when muted:', err2);
+    });
+  });
+  
+  playSound('focus', 600);
+  haptic(15);
+}
+
+function renderScrubberThumbnails(segment){
+  const scrubberThumbs = document.getElementById('scrubberThumbs');
+  scrubberThumbs.innerHTML = '';
+  
+  // Get thumbnails from the segment
+  const thumbs = segment.thumbnails || [];
+  
+  if(thumbs.length > 0){
+    // Show up to 10 thumbnails evenly spaced
+    const step = Math.max(1, Math.floor(thumbs.length / 10));
+    for(let i = 0; i < Math.min(10, thumbs.length); i++){
+      const idx = Math.min(i * step, thumbs.length - 1);
+      const thumbCanvas = thumbs[idx];
+      if(thumbCanvas && thumbCanvas.toDataURL){
+        const thumb = document.createElement('div');
+        thumb.className = 'scrubber-thumb';
+        thumb.style.backgroundImage = `url(${thumbCanvas.toDataURL()})`;
+        scrubberThumbs.appendChild(thumb);
+      }
+    }
+  } else {
+    console.warn('No thumbnails available for scrubber');
+  }
+}
+
+function setupScrubber(video){
+  const scrubber = document.getElementById('previewScrubber');
+  
+  scrubber.onclick = (e) => {
+    const rect = scrubber.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percent = x / rect.width;
+    video.currentTime = video.duration * percent;
+    haptic(5);
+  };
+}
+
+function updateScrubber(){
+  const video = document.getElementById('previewVideo');
+  const progress = document.getElementById('scrubberProgress');
+  const playhead = document.getElementById('scrubberPlayhead');
+  const currentTime = document.getElementById('currentTime');
+  
+  if(!video.duration) return;
+  
+  const percent = (video.currentTime / video.duration) * 100;
+  progress.style.width = percent + '%';
+  playhead.style.left = percent + '%';
+  currentTime.textContent = video.currentTime.toFixed(1) + 's';
+}
+
+function togglePlayPreview(){
+  const video = document.getElementById('previewVideo');
+  if(video.paused){
+    video.play();
+    playSound('move', 400);
+  } else {
+    video.pause();
+    playSound('move', 300);
+  }
+  haptic(8);
+}
+
+function skipBack(){
+  const video = document.getElementById('previewVideo');
+  video.currentTime = Math.max(0, video.currentTime - 5);
+  playSound('move', 350);
+  haptic(8);
+}
+
+function skipForward(){
+  const video = document.getElementById('previewVideo');
+  video.currentTime = Math.min(video.duration, video.currentTime + 5);
+  playSound('move', 450);
+  haptic(8);
+}
+
+function saveAnnotation(){
+  if(!currentPreviewSegment) return;
+  
+  const annotation = document.getElementById('previewAnnotation');
+  const segmentKey = `${currentPreviewSegment.media.url}_${currentPreviewSegment.sourceStart}`;
+  
+  segmentAnnotations[segmentKey] = annotation.value;
+  console.log('✓ Saved annotation for', currentPreviewSegment.media.title);
+  console.log('  Note:', annotation.value);
+  
+  playSound('lock', 500);
+  haptic(20);
+  
+  // Flash the annotation box
+  annotation.style.borderColor = '#0ff';
+  annotation.style.boxShadow = '0 0 20px rgba(0,255,255,0.8)';
+  setTimeout(() => {
+    annotation.style.borderColor = '#333';
+    annotation.style.boxShadow = 'none';
+  }, 300);
+}
+
+function navigateRecursiveLayer(direction){
+  const newLayer = recursiveCurrentLayer + direction;
+  if(newLayer >= 0 && newLayer <= 5){
+    recursiveCurrentLayer = newLayer;
+    const container = document.getElementById('recursiveColumns');
+    container.style.transform = `translateX(-${recursiveCurrentLayer * 100}%)`;
+    playSound('move', 350 + recursiveCurrentLayer * 50);
+    haptic(10);
+    updateRecursiveArrows();
+  }
+}
+
+function updateRecursiveArrows(){
+  const leftArrow = document.getElementById('recursiveArrowLeft');
+  const rightArrow = document.getElementById('recursiveArrowRight');
+  
+  if(leftArrow && rightArrow){
+    leftArrow.classList.toggle('disabled', recursiveCurrentLayer === 0);
+    rightArrow.classList.toggle('disabled', recursiveCurrentLayer === 5);
+  }
+}
+
+let recursiveCurrentLayer = 0;
+let recursiveSelectedSegment = null; // Track selected segment for cross-layer highlighting
+
+function renderRecursiveTimeline(){
+  const container = document.getElementById('recursiveColumns');
+  container.innerHTML = '';
+  
+  // Calculate total duration
+  const totalDuration = timeline.reduce((sum, seg) => sum + seg.duration, 0);
+  
+  // Define 6 recursive layers
+  const layers = [
+    { units: 48, label: 'ATOMS', desc: '48 micro-units' },
+    { units: 24, label: 'BEATS', desc: '24 rhythm-units' },
+    { units: 12, label: 'SCENES', desc: '12 scene-units' },
+    { units: 6, label: 'ACTS', desc: '6 act-units' },
+    { units: 3, label: '3-ACT', desc: 'Setup • Conflict • Resolution' },
+    { units: 1, label: 'WHOLE', desc: 'Complete film' }
+  ];
+  
+  const baseUnit = totalDuration / 48; // Smallest unit
+  
+  // Update title
+  document.getElementById('recursiveTitle').textContent = 
+    `RECURSIVE TIMELINE — ${totalDuration.toFixed(1)}s`;
+  document.getElementById('recursiveBreadcrumb').textContent =
+    layers.map(l => l.label).join(' › ');
+  
+  // Create columns for each layer (like sequence viewer but horizontal lanes)
+  layers.forEach((layer, layerIdx) => {
+    const column = document.createElement('div');
+    column.className = 'recursive-column';
+    column.dataset.layer = layerIdx;
+    
+    // Layer header (sticky)
+    const header = document.createElement('div');
+    header.className = 'layer-header';
+    header.textContent = `${layer.label} — ${layer.desc}`;
+    column.appendChild(header);
+    
+    const unitDuration = baseUnit * (48 / layer.units);
+    
+    // Create lane for each time unit (like segment strips)
+    for(let unitIdx = 0; unitIdx < layer.units; unitIdx++){
+      const unitStart = unitIdx * unitDuration;
+      const unitEnd = (unitIdx + 1) * unitDuration;
+      
+      // Find which segments overlap this time range
+      let timeAccum = 0;
+      let overlappingSegments = [];
+      
+      for(let seg of timeline){
+        const segStart = timeAccum;
+        const segEnd = timeAccum + seg.duration;
+        
+        if(segEnd > unitStart && segStart < unitEnd){
+          overlappingSegments.push({...seg, segStart, segEnd});
+        }
+        timeAccum += seg.duration;
+      }
+      
+      // Only create lanes with content
+      if(overlappingSegments.length > 0){
+        const lane = document.createElement('div');
+        lane.className = 'time-lane';
+        
+        // Lane header - exactly like segment-strip
+        const dominant = overlappingSegments[0];
+        const laneHeader = document.createElement('div');
+        laneHeader.className = 'lane-header';
+        laneHeader.textContent = `#${unitIdx + 1} ${dominant.media.title} ${dominant.duration.toFixed(1)}s`;
+        laneHeader.title = `${dominant.media.title} (${dominant.duration.toFixed(1)}s)`;
+        lane.appendChild(laneHeader);
+        
+        // Scale lane height by duration (optional but helpful)
+        const heightScale = Math.max(80, 60 + (dominant.duration * 10));
+        lane.style.minHeight = heightScale + 'px';
+        
+        // Thumbnails grid - exactly like main sequence viewer
+        const allThumbs = [];
+        overlappingSegments.forEach(seg => {
+          if(seg.thumbnails){
+            seg.thumbnails.forEach(thumb => {
+              if(thumb) allThumbs.push(thumb);
+            });
+          }
+        });
+        
+        if(allThumbs.length > 0){
+          const thumbsContainer = document.createElement('div');
+          thumbsContainer.className = 'lane-thumbs';
+          
+          // Show all available thumbnails in a grid (like segment strips)
+          allThumbs.forEach((thumbCanvas, idx) => {
+            if(thumbCanvas){
+              const img = document.createElement('img');
+              img.src = thumbCanvas.toDataURL();
+              img.alt = `Frame ${idx + 1}`;
+              thumbsContainer.appendChild(img);
+            }
+          });
+          
+          lane.appendChild(thumbsContainer);
+        }
+        
+        // Lane info - time range
+        const info = document.createElement('div');
+        info.className = 'lane-info';
+        info.textContent = `${unitStart.toFixed(1)}s - ${unitEnd.toFixed(1)}s`;
+        lane.appendChild(info);
+        
+        // Store metadata on lane element for cross-layer highlighting
+        lane.dataset.unitStart = unitStart;
+        lane.dataset.unitEnd = unitEnd;
+        lane.dataset.layerIdx = layerIdx;
+        
+        // On mobile/touch: single tap plays immediately. On desktop: single click plays, dblclick also plays.
+        lane.onclick = () => {
+          haptic(10);
+          playSound('focus', 600);
+          if(overlappingSegments.length > 0){
+            const segment = overlappingSegments[0];
+            // Also reflect selection across layers for context
+            recursiveSelectedSegment = segment;
+            highlightCrossLayers(unitStart, unitEnd);
+            playRecursiveSegment(segment, lane);
+          }
+        };
+        lane.addEventListener('dblclick', () => {
+          if(overlappingSegments.length > 0){
+            playRecursiveSegment(overlappingSegments[0], lane);
+          }
+        });
+        
+        column.appendChild(lane);
+      }
+    }
+    
+    container.appendChild(column);
+  });
+  
+  // Set up horizontal scroll container
+  const columnsContainer = document.getElementById('recursiveColumns');
+  columnsContainer.style.cursor = 'grab';
+  
+  console.log('✓ Recursive timeline: all 6 layers visible simultaneously');
+}
+
+// Mobile: collapse timeline alley by default and toggle with handle
+(() => {
+  const handle = document.getElementById('timelineHandle');
+  const panel = document.getElementById('timelinePlayer');
+  if(!handle || !panel) return;
+  const isSmall = window.innerWidth <= 768;
+  if(isSmall){ panel.classList.add('collapsed'); document.body.classList.add('timeline-collapsed'); }
+  handle.addEventListener('click', () => {
+    const collapsed = panel.classList.toggle('collapsed');
+    document.body.classList.toggle('timeline-collapsed', collapsed);
+    handle.textContent = collapsed ? '❯' : '❮';
+    haptic(8);
+  });
+})();
+
+function setupRecursiveSwipe(){
+  const container = document.getElementById('recursiveColumns');
+  let startX = 0;
+  let currentX = 0;
+  let isDragging = false;
+  
+  // Touch events
+  container.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    currentX = startX;
+    isDragging = true;
+    container.style.transition = 'none'; // Disable transition during drag
+  });
+  
+  container.addEventListener('touchmove', (e) => {
+    if(!isDragging) return;
+    currentX = e.touches[0].clientX;
+    const diff = currentX - startX;
+    const currentTransform = recursiveCurrentLayer * -100;
+    container.style.transform = `translateX(calc(${currentTransform}% + ${diff}px))`;
+  });
+  
+  container.addEventListener('touchend', handleSwipeEnd);
+  
+  // Mouse events for desktop
+  container.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    currentX = startX;
+    isDragging = true;
+    container.style.transition = 'none';
+    container.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  
+  container.addEventListener('mousemove', (e) => {
+    if(!isDragging) return;
+    currentX = e.clientX;
+    const diff = currentX - startX;
+    const currentTransform = recursiveCurrentLayer * -100;
+    container.style.transform = `translateX(calc(${currentTransform}% + ${diff}px))`;
+  });
+  
+  container.addEventListener('mouseup', handleSwipeEnd);
+  container.addEventListener('mouseleave', handleSwipeEnd);
+  
+  function handleSwipeEnd(e){
+    if(!isDragging) return;
+    isDragging = false;
+    container.style.cursor = 'grab';
+    
+    // Re-enable transition
+    container.style.transition = '';
+    
+    const diff = currentX - startX;
+    const threshold = 50; // Swipe threshold in pixels
+    
+    if(Math.abs(diff) > threshold){
+      if(diff > 0 && recursiveCurrentLayer > 0){
+        // Swipe right - go to previous layer
+        recursiveCurrentLayer--;
+        haptic(10);
+      } else if(diff < 0 && recursiveCurrentLayer < 5){
+        // Swipe left - go to next layer
+        recursiveCurrentLayer++;
+        haptic(10);
+      }
+    }
+    
+    // Snap to current layer
+    container.style.transform = `translateX(-${recursiveCurrentLayer * 100}%)`;
+    playSound('move', 350);
+    updateRecursiveArrows();
+  }
+  
+  // Initial position
+  container.style.cursor = 'grab';
+  container.style.transform = `translateX(-${recursiveCurrentLayer * 100}%)`;
+}
+
+function exportSequenceA4(){
+  if(timeline.length === 0){
+    alert('No sequence to export! Clear some lines first.');
+    return;
+  }
+  
+  closeExportMenu();
+  
+  // A4 portrait: 1080 x 1920 (phone-friendly)
+  const canvas = document.createElement('canvas');
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const ctx = canvas.getContext('2d');
+  
+  // Black background
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Title
+  ctx.fillStyle = '#00ffff';
+  ctx.font = 'bold 48px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('GARDEN SEQUENCE', canvas.width/2, 60);
+  
+  // Subtitle
+  ctx.font = '24px Arial';
+  ctx.fillStyle = '#00ffff';
+  ctx.fillText(`${timeline.length} segments • ${timeline.reduce((sum, s) => sum + s.duration, 0).toFixed(1)}s total`, canvas.width/2, 100);
+  
+  // Draw each segment
+  let yOffset = 150;
+  const segmentWidth = 900;
+  const thumbnailSize = 80;
+  
+  timeline.forEach((segment, i) => {
+    if(yOffset > 1850) return; // Don't overflow page
+    
+    // Segment header
+    ctx.fillStyle = '#00ffff';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`#${i+1} ${segment.media.title} ${segment.duration.toFixed(1)}s`, 90, yOffset);
+    
+    yOffset += 30;
+    
+    // Draw thumbnails in a row
+    if(segment.thumbnails && segment.thumbnails.length > 0){
+      let xOffset = 90;
+      segment.thumbnails.forEach((thumbCanvas, idx) => {
+        if(thumbCanvas && xOffset + thumbnailSize < canvas.width - 90){
+          // Draw thumbnail
+          ctx.drawImage(thumbCanvas, xOffset, yOffset, thumbnailSize, thumbnailSize);
+          
+          // Border
+          ctx.strokeStyle = '#00ffff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(xOffset, yOffset, thumbnailSize, thumbnailSize);
+          
+          xOffset += thumbnailSize + 8;
+        }
+      });
+      
+      yOffset += thumbnailSize + 40;
+    } else {
+      yOffset += 20;
+    }
+  });
+  
+  // Download
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `garden_sequence_${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('✓ Sequence timeline exported as A4');
+  }, 'image/png');
+}
+
+function exportGridMosaic(){
+  closeExportMenu();
+  // Phone-friendly A4 portrait dimensions
+  const exportWidth = 1080;
+  const exportHeight = 1920;
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = exportWidth;
+  canvas.height = exportHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Black background
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 0, exportWidth, exportHeight);
+  
+  // Calculate block size to fit grid (10 wide x 20 tall)
+  const blockSize = Math.min(exportWidth / W, exportHeight / H);
+  const gridWidth = W * blockSize;
+  const gridHeight = H * blockSize;
+  const offsetX = (exportWidth - gridWidth) / 2;
+  const offsetY = (exportHeight - gridHeight) / 2;
+  
+  // Draw grid lines
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  for(let x=0; x<=W; x++){
+    ctx.beginPath();
+    ctx.moveTo(offsetX + x * blockSize, offsetY);
+    ctx.lineTo(offsetX + x * blockSize, offsetY + gridHeight);
+    ctx.stroke();
+  }
+  for(let y=0; y<=H; y++){
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + y * blockSize);
+    ctx.lineTo(offsetX + gridWidth, offsetY + y * blockSize);
+    ctx.stroke();
+  }
+  
+  // Draw locked blocks with video textures
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      if(grid[y][x]){
+        const cell = grid[y][x];
+        const bx = offsetX + x * blockSize;
+        const by = offsetY + (H - 1 - y) * blockSize; // Flip Y for canvas
+        
+        if(cell.frozenTexture && cell.frozenTexture.image){
+          const srcCanvas = cell.frozenTexture.image;
+          
+          // Calculate source rectangle (UV mapping)
+          const srcX = (cell.blockX / cell.pieceWidth) * srcCanvas.width;
+          const srcY = ((cell.pieceHeight - 1 - cell.blockY) / cell.pieceHeight) * srcCanvas.height;
+          const srcW = srcCanvas.width / cell.pieceWidth;
+          const srcH = srcCanvas.height / cell.pieceHeight;
+          
+          // Draw texture slice
+          ctx.drawImage(
+            srcCanvas,
+            srcX, srcY, srcW, srcH,
+            bx, by, blockSize, blockSize
+          );
+          
+          // Subtle border
+          ctx.strokeStyle = `#${cell.color.toString(16).padStart(6, '0')}33`;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(bx, by, blockSize, blockSize);
+        } else {
+          // Fallback to color
+          ctx.fillStyle = `#${cell.color.toString(16).padStart(6, '0')}`;
+          ctx.fillRect(bx, by, blockSize, blockSize);
+        }
+      }
+    }
+  }
+  
+  // Download
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `garden_mosaic_${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('✓ Grid mosaic exported');
+  }, 'image/png');
+}
+
+function exportGridMosaicWithBG(){
+  closeExportMenu();
+  const exportWidth = 1080;
+  const exportHeight = 1920;
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = exportWidth;
+  canvas.height = exportHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Capture current video frame as background (from preview or current playing video)
+  let videoSource = null;
+  
+  // Try preview panel video first
+  const previewVideo = document.getElementById('previewVideo');
+  if(previewVideo && previewVideo.src && !previewVideo.paused){
+    videoSource = previewVideo;
+  }
+  
+  // Try to find any playing video in the scene
+  if(!videoSource && current && current.videoEl && !current.videoEl.paused){
+    videoSource = current.videoEl;
+  }
+  
+  if(videoSource){
+    try{
+      const srcAR = videoSource.videoWidth / videoSource.videoHeight;
+      const dstAR = exportWidth / exportHeight;
+      let dx=0, dy=0, dw=exportWidth, dh=exportHeight;
+      if(srcAR > dstAR){
+        dh = exportHeight;
+        dw = dh * srcAR;
+        dx = (exportWidth - dw) / 2;
+      }else{
+        dw = exportWidth;
+        dh = dw / srcAR;
+        dy = (exportHeight - dh) / 2;
+      }
+      ctx.filter = 'blur(6px) saturate(1.1) brightness(0.85)';
+      ctx.drawImage(videoSource, dx, dy, dw, dh);
+      ctx.filter = 'none';
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(0, 0, exportWidth, exportHeight);
+      console.log('✓ Captured video frame as background');
+    }catch(e){
+      console.warn('Video capture failed:', e);
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, exportWidth, exportHeight);
+    }
+  } else {
+    console.log('No playing video found, using solid background');
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+  }
+  
+  // Grid placement
+  const blockSize = Math.min(exportWidth / W, exportHeight / H);
+  const gridWidth = W * blockSize;
+  const gridHeight = H * blockSize;
+  const offsetX = (exportWidth - gridWidth) / 2;
+  const offsetY = (exportHeight - gridHeight) / 2;
+  
+  // Outer frame
+  ctx.strokeStyle = '#0ff';
+  ctx.globalAlpha = 0.2;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(offsetX - 8, offsetY - 8, gridWidth + 16, gridHeight + 16);
+  ctx.globalAlpha = 1;
+  
+  // Grid lines
+  ctx.strokeStyle = '#141414';
+  ctx.lineWidth = 1;
+  for(let x=0; x<=W; x++){
+    ctx.beginPath();
+    ctx.moveTo(offsetX + x * blockSize, offsetY);
+    ctx.lineTo(offsetX + x * blockSize, offsetY + gridHeight);
+    ctx.stroke();
+  }
+  for(let y=0; y<=H; y++){
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + y * blockSize);
+    ctx.lineTo(offsetX + gridWidth, offsetY + y * blockSize);
+    ctx.stroke();
+  }
+  
+  // Draw locked blocks
+  for(let y=0; y<H; y++){
+    for(let x=0; x<W; x++){
+      if(grid[y][x]){
+        const cell = grid[y][x];
+        const bx = offsetX + x * blockSize;
+        const by = offsetY + (H - 1 - y) * blockSize;
+        
+        if(cell.frozenTexture && cell.frozenTexture.image){
+          const srcCanvas = cell.frozenTexture.image;
+          const srcX = (cell.blockX / cell.pieceWidth) * srcCanvas.width;
+          const srcY = ((cell.pieceHeight - 1 - cell.blockY) / cell.pieceHeight) * srcCanvas.height;
+          const srcW = srcCanvas.width / cell.pieceWidth;
+          const srcH = srcCanvas.height / cell.pieceHeight;
+          ctx.drawImage(srcCanvas, srcX, srcY, srcW, srcH, bx, by, blockSize, blockSize);
+          ctx.strokeStyle = `#${cell.color.toString(16).padStart(6, '0')}55`;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(bx, by, blockSize, blockSize);
+        } else {
+          ctx.fillStyle = `#${cell.color.toString(16).padStart(6, '0')}`;
+          ctx.fillRect(bx, by, blockSize, blockSize);
+        }
+      }
+    }
+  }
+  
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `garden_mosaic_bg_${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('✓ Grid mosaic + background exported');
+  }, 'image/png');
+}
+
+// GAME LOOP
+let lastDrop = 0, time = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  time += 0.016;
+  
+  if(!paused && current){
+    const now = Date.now();
+    if(now - lastDrop > 1000){
+      moveDown();
+      lastDrop = now;
+    }
+  }
+  
+  updateCamera();
+  renderer.render(scene, camera);
+}
+
+// RESIZE
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+init();
+
+// Export functions for final-screen.html
+window.exportFinalCutOTI = function() {
+  const oti = {
+    version: "1.0",
+    title: window.game.filmTitle,
+    logline: window.game.filmLogline,
+    timestamp: new Date().toISOString(),
+    coherenceScore: score * 100,
+    sourceVideo: "garden_assembly",
+    sourceTool: "Garden (Tetris)",
+    sequences: timeline.map((seg, idx) => ({
+      id: idx + 1,
+      sequenceNumber: idx + 1,
+      beatName: BeatCollectionSystem?.collectedBeats[idx]?.beatName || "Unknown",
+      beatNumber: idx + 1,
+      syntagmaType: BeatCollectionSystem?.collectedBeats[idx]?.syntagma || "DS",
+      clips: [{
+        clipId: seg.media.id,
+        title: seg.media.title,
+        sourceIn: seg.startTime,
+        sourceOut: seg.startTime + seg.duration,
+        duration: seg.duration,
+        description: `Tetris block assembly - ${seg.media.title}`
+      }]
+    }))
+  };
+  
+  const blob = new Blob([JSON.stringify(oti, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'garden-assembly.oti.json';
+  a.click();
+};
+
+window.exportFinalCutEDL = exportEDL;
+
+window.exportStorymap = function() {
+  alert('Storymap export coming soon! Use EDL or OTI for now.');
+};
+
+window.exportShotlist = function() {
+  alert('Shotlist export coming soon! Use EDL or OTI for now.');
+};
+
+window.exportChartD3 = function() {
+  alert('Chart export coming soon! Use EDL or OTI for now.');
+};
+
+window.exportAllFormats = function() {
+  exportFinalCutOTI();
+  setTimeout(() => exportEDL(), 500);
+};
+</script>
+
+<!-- BEAT COLLECTION SYSTEM -->
+<script src="beat-collection-system.js"></script>
+
+</body>
+</html>

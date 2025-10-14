@@ -1,0 +1,202 @@
+================================================================================
+FILTER BUBBLES DOCUMENTARY — COMPLETE TIMELINE MAP
+================================================================================
+
+Total Duration: 466 seconds (7 minutes 46 seconds)
+Total Clips: 46
+Total Beats: 15
+
+================================================================================
+AUDIO SYNCHRONIZATION LAYERS
+================================================================================
+
+TIME    VIDEO CLIP             TTS NARRATION          AMBIENT MUSIC
+(sec)   [Duration]             [Duration]             [Beat Texture]
+------- ---------------------- ---------------------- ----------------------
+
+        ╔═══════════════════════════════════════════════════════════════╗
+        ║ ACT 1: SETUP                                                  ║
+        ╚═══════════════════════════════════════════════════════════════╝
+
+0:00    ┌─ BEAT 1: OPENING IMAGE ──────────────────────────────────────┐
+        │ Ambient: DRONE (Deep sustained tones)                         │
+        ├───────────────────────────────────────────────────────────────┤
+0:00    │ Filter Bubbles [20s]   + TTS [3.3s]                          │
+0:20    │ Zubaydah's Diary [6s]  + TTS [4.0s]                          │
+0:26    │ Unreal Fairyland [7s]  + TTS [2.9s]                          │
+0:33    └───────────────────────────────────────────────────────────────┘
+
+0:33    ┌─ BEAT 2: THEME STATED ───────────────────────────────────────┐
+        │ Ambient: SHIMMER (High frequencies, slow modulation)          │
+        ├───────────────────────────────────────────────────────────────┤
+0:33    │ Mass Incarceration [8s] + TTS [3.1s]                         │
+0:41    │ Unreal Fairyland [7s]   + TTS [2.9s]                         │
+0:48    │ Societal Boom [7s]      + TTS [4.6s]                         │
+0:55    └───────────────────────────────────────────────────────────────┘
+
+0:55    ┌─ BEAT 3: SET-UP ─────────────────────────────────────────────┐
+        │ Ambient: PULSE (Rhythmic tremolo)                             │
+        ├───────────────────────────────────────────────────────────────┤
+0:55    │ Perpetual Now [7s]      + TTS [3.3s]                         │
+1:02    │ Godzilla Fear [11s]     + TTS [3.0s]                         │
+1:13    │ Complexity Theory [13s] + TTS [3.6s]                         │
+1:26    └───────────────────────────────────────────────────────────────┘
+
+1:26    ┌─ BEAT 4: CATALYST ───────────────────────────────────────────┐
+        │ Ambient: TENSION (Dissonant frequencies)                      │
+        ├───────────────────────────────────────────────────────────────┤
+1:26    │ Zubaydah's Diary [6s]   + TTS [4.0s]                         │
+1:32    │ Jihad Disintegration [11s] + TTS [~4s]                       │
+1:43    │ Societal Boom [7s]      + TTS [4.6s]                         │
+1:50    └───────────────────────────────────────────────────────────────┘
+
+1:50    ┌─ BEAT 5: DEBATE ─────────────────────────────────────────────┐
+        │ Ambient: DEBATE (Evolving balanced texture)                   │
+        ├───────────────────────────────────────────────────────────────┤
+1:50    │ Societal Boom [7s]      + TTS [4.6s]                         │
+1:57    │ Grand Stories [5s]      + TTS [~2.5s]                        │
+2:02    │ Saudi Dream [5s]        + TTS [~2.5s]                        │
+2:07    └───────────────────────────────────────────────────────────────┘
+
+        ╔═══════════════════════════════════════════════════════════════╗
+        ║ ACT 2A: RISING ACTION                                         ║
+        ╚═══════════════════════════════════════════════════════════════╝
+
+2:07    ┌─ BEAT 6: BREAK INTO TWO ─────────────────────────────────────┐
+        │ Ambient: TRANSITION (Rising, hopeful shift)                   │
+        ├───────────────────────────────────────────────────────────────┤
+2:07    │ Individual Self [11s]   + TTS [~4s]                          │
+2:18    │ Unreal Fairyland [7s]   + TTS [2.9s]                         │
+2:25    │ Family of Man [26s]     + TTS [~8s]                          │
+2:51    └───────────────────────────────────────────────────────────────┘
+
+2:51    ┌─ BEAT 7: B STORY ────────────────────────────────────────────┐
+        │ Ambient: NARRATIVE (Balanced, evolving)                       │
+        ├───────────────────────────────────────────────────────────────┤
+2:51    │ Surveillance Capitalism [20s] + TTS [~6s]                    │
+3:11    │ Crack Epidemic [9s]     + TTS [~3s]                          │
+3:20    │ Chaos Theory [5s]       + TTS [~2s]                          │
+3:25    └───────────────────────────────────────────────────────────────┘
+
+3:25    ┌─ BEAT 8: FUN AND GAMES ──────────────────────────────────────┐
+        │ Ambient: PLAYFUL (Light, varied)                              │
+        ├───────────────────────────────────────────────────────────────┤
+3:25    │ Perpetual Now [7s]      + TTS [3.3s]                         │
+3:32    │ Predictive Algorithms [20s] + TTS [~6s]                      │
+3:52    │ Individual Self [11s]   + TTS [~4s]                          │
+4:03    └───────────────────────────────────────────────────────────────┘
+
+4:03    ┌─ BEAT 9: MIDPOINT ───────────────────────────────────────────┐
+        │ Ambient: PEAK (Bright, ascending, maximum energy)             │
+        ├───────────────────────────────────────────────────────────────┤
+4:03    │ Godzilla Fear [11s]     + TTS [3.0s]                         │
+4:14    │ Neural Networks [11s]   + TTS [~3.5s]                        │
+4:25    │ Societal Boom [7s]      + TTS [4.6s]                         │
+4:32    └───────────────────────────────────────────────────────────────┘
+
+4:32    ┌─ BEAT 10: BAD GUYS CLOSE IN ─────────────────────────────────┐
+        │ Ambient: DARK (Low, ominous tones)                            │
+        ├───────────────────────────────────────────────────────────────┤
+4:32    │ Individual Self [11s]   + TTS [~4s]                          │
+4:43    │ Saudi Dream [5s]        + TTS [~2.5s]                        │
+4:48    │ Individual Self [11s]   + TTS [~4s]                          │
+4:59    │ Individual Self [11s]   + TTS [~4s]                          │
+5:10    └───────────────────────────────────────────────────────────────┘
+
+        ╔═══════════════════════════════════════════════════════════════╗
+        ║ ACT 2B: DARK NIGHT                                            ║
+        ╚═══════════════════════════════════════════════════════════════╝
+
+5:10    ┌─ BEAT 11: ALL IS LOST ───────────────────────────────────────┐
+        │ Ambient: DESPAIR (Descending, fading)                         │
+        ├───────────────────────────────────────────────────────────────┤
+5:10    │ Neural Networks [11s]   + TTS [~3.5s]                        │
+5:21    │ Mass Incarceration [8s] + TTS [3.1s]                         │
+5:29    │ Neural Networks [11s]   + TTS [~3.5s]                        │
+5:40    └───────────────────────────────────────────────────────────────┘
+
+5:40    ┌─ BEAT 12: DARK NIGHT ────────────────────────────────────────┐
+        │ Ambient: ABYSS (Deepest, darkest point, brown noise)          │
+        ├───────────────────────────────────────────────────────────────┤
+5:40    │ Saudi Dream [5s]        + TTS [~2.5s]                        │
+5:45    │ Mass Incarceration [8s] + TTS [3.1s]                         │
+5:53    │ Neural Networks [11s]   + TTS [~3.5s]                        │
+6:04    └───────────────────────────────────────────────────────────────┘
+
+        ╔═══════════════════════════════════════════════════════════════╗
+        ║ ACT 3: RESOLUTION                                             ║
+        ╚═══════════════════════════════════════════════════════════════╝
+
+6:04    ┌─ BEAT 13: BREAK INTO THREE ──────────────────────────────────┐
+        │ Ambient: RESOLVE (Rising, hopeful, pitch bending up)          │
+        ├───────────────────────────────────────────────────────────────┤
+6:04    │ Surveillance Capitalism [20s] + TTS [~6s]                    │
+6:24    │ Predictive Algorithms [20s] + TTS [~6s]                      │
+6:44    │ Godzilla Fear [11s]     + TTS [3.0s]                         │
+6:55    └───────────────────────────────────────────────────────────────┘
+
+6:55    ┌─ BEAT 14: FINALE ────────────────────────────────────────────┐
+        │ Ambient: CLIMAX (Maximum energy, brightness, multiple layers) │
+        ├───────────────────────────────────────────────────────────────┤
+6:55    │ CIA Interrogation [12s] + TTS [~4s]                          │
+7:07    │ Godzilla Fear [11s]     + TTS [3.0s]                         │
+7:18    │ Perpetual Now [7s]      + TTS [3.3s]                         │
+7:25    └───────────────────────────────────────────────────────────────┘
+
+7:25    ┌─ BEAT 15: FINAL IMAGE ───────────────────────────────────────┐
+        │ Ambient: RESOLUTION (Calm, settling, fade to silence)         │
+        ├───────────────────────────────────────────────────────────────┤
+7:25    │ Mass Incarceration [8s] + TTS [3.1s]                         │
+7:33    │ Mass Incarceration [8s] + TTS [3.1s]                         │
+7:41    │ Grand Stories [5s]      + TTS [~2.5s]                        │
+7:46    └───────────────────────────────────────────────────────────────┘
+
+================================================================================
+MIXING STRATEGY
+================================================================================
+
+Video Track:     Original video (832×464, H.264, 24fps)
+                 ├─ Letterbox bars added (top/bottom 100px each)
+                 ├─ Text overlays (beat name, title, quote)
+                 └─ Scaled to 1920×1080 HD
+
+Audio Layer 1:   TTS Narration (100% volume)
+                 ├─ 46 individual AIFF files
+                 ├─ Adaptive rate (140-200 wpm)
+                 └─ Synced to clip start times
+
+Audio Layer 2:   Ambient Music (30% volume)
+                 ├─ 15 generative soundscapes
+                 ├─ Brian Eno-style synthesis
+                 └─ One per beat, evolves through acts
+
+Audio Mix:       [Narration @ 100%] + [Music @ 30%] = Final Stereo Track
+                 ├─ AAC codec, 256 kbps
+                 └─ 48 kHz sample rate
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+timing_manifest.json          ← Master timing reference (all 46 clips)
+tts/clip_000.aiff             ← TTS narration clip 1
+tts/clip_001.aiff             ← TTS narration clip 2
+...
+tts/clip_045.aiff             ← TTS narration clip 46
+ambient/beat_01_final.wav     ← Music for beat 1 (to be generated)
+ambient/beat_02_final.wav     ← Music for beat 2
+...
+ambient/beat_15_final.wav     ← Music for beat 15
+ambient_soundtrack.m4a        ← Full concatenated music track
+
+================================================================================
+STATUS
+================================================================================
+
+✅ Timing manifest calculated (466s total, 15 beats, 46 clips)
+✅ TTS generation complete (46/46 narration files)
+⏳ Ambient music generation (next step)
+⏳ Video processing with overlays
+⏳ Final assembly
+
+================================================================================

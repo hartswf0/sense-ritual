@@ -1,0 +1,240 @@
+#!/bin/bash
+# Filter Bubbles: A Documentary
+# Generated: 2025-10-14T06:02:00.000Z
+# Total clips: 46
+# Runtime: 466s
+
+set -e
+
+echo "🎬 Rendering: Filter Bubbles: A Documentary"
+echo "📊 Processing 46 clips..."
+
+TEMP_DIR="temp_clips"
+mkdir -p "$TEMP_DIR"
+
+
+# BEAT 1: Opening Image
+echo "  [1/46] Filter Bubbles"
+ffmpeg -i "NICK/Filter_Bubbles_documentary_opening_image_icon__algorithms_iso_be430d70-6919-4ac3-a009-45c1ea3eff22_3.mp4" -ss 0 -t 20 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_000.mp4 -loglevel error
+
+echo "  [2/46] Zubaydah's Diary"
+ffmpeg -i "NICK/Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_51c60d7b-87db-40ff-a116-4e1941bc37c1_0.mp4" -ss 0 -t 6 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_001.mp4 -loglevel error
+
+echo "  [3/46] Unreal Fairyland"
+ffmpeg -i "NICK/Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_002.mp4 -loglevel error
+
+
+# BEAT 2: Theme Stated
+echo "  [4/46] Mass Incarceration"
+ffmpeg -i "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4" -ss 0 -t 8 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_003.mp4 -loglevel error
+
+echo "  [5/46] Unreal Fairyland"
+ffmpeg -i "NICK/Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_004.mp4 -loglevel error
+
+echo "  [6/46] Societal Boom"
+ffmpeg -i "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_005.mp4 -loglevel error
+
+
+# BEAT 3: Set-Up
+echo "  [7/46] Perpetual Now"
+ffmpeg -i "NICK/Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_006.mp4 -loglevel error
+
+echo "  [8/46] Godzilla Fear"
+ffmpeg -i "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_007.mp4 -loglevel error
+
+echo "  [9/46] Complexity Theory"
+ffmpeg -i "NICK/Complexity_Theory_scene_computers_see_hidden_patterns_make_ch_bfe9532d-fd6e-4440-b908-8896d1f6f6a0_1.mp4" -ss 0 -t 13 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_008.mp4 -loglevel error
+
+
+# BEAT 4: Catalyst
+echo "  [10/46] Zubaydah's Diary"
+ffmpeg -i "NICK/Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_51c60d7b-87db-40ff-a116-4e1941bc37c1_0.mp4" -ss 0 -t 6 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_009.mp4 -loglevel error
+
+echo "  [11/46] Jihad Disintegration"
+ffmpeg -i "NICK/Jihad_Disintegration_scene_organization_disintegrating_all_so_70d4c74b-8c2d-4312-a5ef-0218606eeb09_2.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_010.mp4 -loglevel error
+
+echo "  [12/46] Societal Boom"
+ffmpeg -i "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_011.mp4 -loglevel error
+
+
+# BEAT 5: Debate
+echo "  [13/46] Societal Boom"
+ffmpeg -i "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_012.mp4 -loglevel error
+
+echo "  [14/46] Grand Stories"
+ffmpeg -i "NICK/grand-stories.mp4" -ss 0 -t 5 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_013.mp4 -loglevel error
+
+echo "  [15/46] Saudi Dream Society"
+ffmpeg -i "NICK/Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4" -ss 0 -t 5 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_014.mp4 -loglevel error
+
+
+# BEAT 6: Break into Two
+echo "  [16/46] Individual Self"
+ffmpeg -i "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_015.mp4 -loglevel error
+
+echo "  [17/46] Unreal Fairyland"
+ffmpeg -i "NICK/Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_016.mp4 -loglevel error
+
+echo "  [18/46] Family of Man"
+ffmpeg -i "NICK/Family_of_Man_scene_a_new_way_of_seeing_the_world_an_alternat_3390e6d3-e91d-46b6-bfeb-d75a6314cc5e_1.mp4" -ss 0 -t 26 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_017.mp4 -loglevel error
+
+
+# BEAT 7: B Story
+echo "  [19/46] Surveillance Capitalism"
+ffmpeg -i "NICK/Surveillance_Capitalism_scene_extracting_behavioral_data_to_p_4095cf7a-0bb3-46a1-9144-5d2b0e6f6446_0.mp4" -ss 0 -t 20 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_018.mp4 -loglevel error
+
+echo "  [20/46] Crack Epidemic"
+ffmpeg -i "NICK/Crack_Epidemic_scene_crack_swept_through_black_communities_Af_27c4f242-b297-4372-b27d-848d3b7e553f_1.mp4" -ss 0 -t 9 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_019.mp4 -loglevel error
+
+echo "  [21/46] Chaos Theory"
+ffmpeg -i "NICK/Chaos_Theory_scene_tiny_changes_have_massive_catastrophic_con_23725a73-86c1-419f-85bd-9ce51ff8d2f6_0.mp4" -ss 0 -t 5 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_020.mp4 -loglevel error
+
+
+# BEAT 8: Fun and Games
+echo "  [22/46] Perpetual Now"
+ffmpeg -i "NICK/Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_021.mp4 -loglevel error
+
+echo "  [23/46] Predictive Algorithms"
+ffmpeg -i "NICK/Predictive_Algorithms_scene_algorithms_that_predict_and_shape_ffc3ae51-0647-4fc0-bb52-e6334448010d_2.mp4" -ss 0 -t 20 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_022.mp4 -loglevel error
+
+echo "  [24/46] Individual Self"
+ffmpeg -i "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_023.mp4 -loglevel error
+
+
+# BEAT 9: Midpoint
+echo "  [25/46] Godzilla Fear"
+ffmpeg -i "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_024.mp4 -loglevel error
+
+echo "  [26/46] Neural Networks"
+ffmpeg -i "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_025.mp4 -loglevel error
+
+echo "  [27/46] Societal Boom"
+ffmpeg -i "NICK/Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_026.mp4 -loglevel error
+
+
+# BEAT 10: Bad Guys Close In
+echo "  [28/46] Individual Self"
+ffmpeg -i "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_027.mp4 -loglevel error
+
+echo "  [29/46] Saudi Dream Society"
+ffmpeg -i "NICK/Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4" -ss 0 -t 5 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_028.mp4 -loglevel error
+
+echo "  [30/46] Individual Self"
+ffmpeg -i "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_029.mp4 -loglevel error
+
+echo "  [31/46] Individual Self"
+ffmpeg -i "NICK/Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_030.mp4 -loglevel error
+
+
+# BEAT 11: All Is Lost
+echo "  [32/46] Neural Networks"
+ffmpeg -i "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_031.mp4 -loglevel error
+
+echo "  [33/46] Mass Incarceration"
+ffmpeg -i "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4" -ss 0 -t 8 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_032.mp4 -loglevel error
+
+echo "  [34/46] Neural Networks"
+ffmpeg -i "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_033.mp4 -loglevel error
+
+
+# BEAT 12: Dark Night of the Soul
+echo "  [35/46] Saudi Dream Society"
+ffmpeg -i "NICK/Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4" -ss 0 -t 5 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_034.mp4 -loglevel error
+
+echo "  [36/46] Mass Incarceration"
+ffmpeg -i "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4" -ss 0 -t 8 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_035.mp4 -loglevel error
+
+echo "  [37/46] Neural Networks"
+ffmpeg -i "NICK/Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_036.mp4 -loglevel error
+
+
+# BEAT 13: Break into Three
+echo "  [38/46] Surveillance Capitalism"
+ffmpeg -i "NICK/Surveillance_Capitalism_scene_extracting_behavioral_data_to_p_4095cf7a-0bb3-46a1-9144-5d2b0e6f6446_0.mp4" -ss 0 -t 20 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_037.mp4 -loglevel error
+
+echo "  [39/46] Predictive Algorithms"
+ffmpeg -i "NICK/Predictive_Algorithms_scene_algorithms_that_predict_and_shape_ffc3ae51-0647-4fc0-bb52-e6334448010d_2.mp4" -ss 0 -t 20 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_038.mp4 -loglevel error
+
+echo "  [40/46] Godzilla Fear"
+ffmpeg -i "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_039.mp4 -loglevel error
+
+
+# BEAT 14: Finale
+echo "  [41/46] CIA Interrogation"
+ffmpeg -i "NICK/cia-interrogation.mp4" -ss 0 -t 12 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_040.mp4 -loglevel error
+
+echo "  [42/46] Godzilla Fear"
+ffmpeg -i "NICK/Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4" -ss 0 -t 11 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_041.mp4 -loglevel error
+
+echo "  [43/46] Perpetual Now"
+ffmpeg -i "NICK/Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4" -ss 0 -t 7 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_042.mp4 -loglevel error
+
+
+# BEAT 15: Final Image
+echo "  [44/46] Mass Incarceration"
+ffmpeg -i "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4" -ss 0 -t 8 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_043.mp4 -loglevel error
+
+echo "  [45/46] Mass Incarceration"
+ffmpeg -i "NICK/Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4" -ss 0 -t 8 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_044.mp4 -loglevel error
+
+echo "  [46/46] Grand Stories"
+ffmpeg -i "NICK/grand-stories.mp4" -ss 0 -t 5 -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -y $TEMP_DIR/clip_045.mp4 -loglevel error
+
+
+echo '🎞️  Concatenating clips...'
+cat > $TEMP_DIR/concat.txt << 'EOF'
+file 'clip_000.mp4'
+file 'clip_001.mp4'
+file 'clip_002.mp4'
+file 'clip_003.mp4'
+file 'clip_004.mp4'
+file 'clip_005.mp4'
+file 'clip_006.mp4'
+file 'clip_007.mp4'
+file 'clip_008.mp4'
+file 'clip_009.mp4'
+file 'clip_010.mp4'
+file 'clip_011.mp4'
+file 'clip_012.mp4'
+file 'clip_013.mp4'
+file 'clip_014.mp4'
+file 'clip_015.mp4'
+file 'clip_016.mp4'
+file 'clip_017.mp4'
+file 'clip_018.mp4'
+file 'clip_019.mp4'
+file 'clip_020.mp4'
+file 'clip_021.mp4'
+file 'clip_022.mp4'
+file 'clip_023.mp4'
+file 'clip_024.mp4'
+file 'clip_025.mp4'
+file 'clip_026.mp4'
+file 'clip_027.mp4'
+file 'clip_028.mp4'
+file 'clip_029.mp4'
+file 'clip_030.mp4'
+file 'clip_031.mp4'
+file 'clip_032.mp4'
+file 'clip_033.mp4'
+file 'clip_034.mp4'
+file 'clip_035.mp4'
+file 'clip_036.mp4'
+file 'clip_037.mp4'
+file 'clip_038.mp4'
+file 'clip_039.mp4'
+file 'clip_040.mp4'
+file 'clip_041.mp4'
+file 'clip_042.mp4'
+file 'clip_043.mp4'
+file 'clip_044.mp4'
+file 'clip_045.mp4'
+EOF
+
+ffmpeg -f concat -safe 0 -i $TEMP_DIR/concat.txt -c copy -y filter_bubbles_a_documentary_final.mp4 -loglevel error
+
+echo "🧹 Cleaning up..."
+rm -rf $TEMP_DIR
+
+echo "✅ COMPLETE!"
+ls -lh filter_bubbles_a_documentary_final.mp4

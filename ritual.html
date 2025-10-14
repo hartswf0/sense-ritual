@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>RITUAL OF THE LOOP — Alignment Culture Film</title>
+<style>
+  :root{
+    --bg:#0a0b0d;
+    --silver:#cfd6db;
+    --teal:#4aa7a3;
+    --amber:#ffb454;
+    --red:#e24a4a;
+    --glass:rgba(255,255,255,.06);
+    --line:rgba(255,255,255,.12);
+    --neon:#7fffd4;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;background:var(--bg);color:#eee;font-family:system-ui,-apple-system,sans-serif;overflow:hidden}
+
+  .gate{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(120vmax 120vmax at 50% 50%, rgba(74,167,163,.15), transparent 60%);z-index:50}
+  .panel{border:1px solid var(--line);background:var(--glass);padding:20px;border-radius:16px;max-width:640px;width:min(92vw,640px);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  .panel h1{letter-spacing:.12em;margin:0 0 10px;font-weight:600}
+  .panel p{opacity:.85;line-height:1.35;margin:.25rem 0}
+  .panel textarea{width:100%;min-height:96px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:#eaeaea;padding:10px;resize:vertical;font-family:inherit}
+  .panel button{margin-top:12px;appearance:none;border:1px solid var(--line);background:linear-gradient(180deg, #111 0%, #0b0b0b 100%);color:#eaeaea;border-radius:999px;padding:12px 18px;font-weight:600;letter-spacing:.06em;cursor:pointer}
+  .panel button:hover{background:linear-gradient(180deg, #1a1a1a 0%, #111 100%)}
+  .panel button:active{transform:scale(.98)}
+
+  .stage{position:fixed;inset:0;overflow:hidden;display:none}
+  .stage.active{display:block}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+  /* Centered word collection grid */
+  .collection{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:none;grid-template-columns:repeat(8, 1fr);gap:8px;z-index:20;width:min(90vw, 800px);padding:20px;background:rgba(10,11,13,0.3);border-radius:16px;border:1px solid rgba(255,255,255,0.08)}
+  .collection.active{display:grid}
+  .collection-slot{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.02);display:grid;place-items:center;font-size:clamp(10px,1.8vw,14px);font-weight:600;letter-spacing:.08em;color:rgba(207,214,219,0.3);text-align:center;padding:4px;transition:all 0.4s ease;text-transform:uppercase}
+  .collection-slot.filled{background:linear-gradient(135deg, rgba(74,167,163,.15), rgba(127,255,212,.08));border-color:var(--teal);color:var(--silver);box-shadow:0 0 20px rgba(127,255,212,.2), inset 0 0 20px rgba(127,255,212,.1)}
+  .collection-slot.filled.pass{border-color:var(--teal);color:var(--neon)}
+  .collection-slot.filled.fail{border-color:var(--red);color:var(--red);background:linear-gradient(135deg, rgba(226,74,74,.15), rgba(226,74,74,.08))}
+
+  /* Stats overlay - top center */
+  .stats{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:25;display:none;gap:16px;padding:12px 20px;background:rgba(10,11,13,0.6);border:1px solid var(--line);border-radius:999px;backdrop-filter:blur(8px)}
+  .stats.active{display:flex}
+  .stat{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;letter-spacing:.06em}
+  .stat-label{opacity:0.6;text-transform:uppercase;font-size:11px}
+  .stat-value{color:var(--neon)}
+  .stat-value.reward{color:var(--amber)}
+
+  .legend{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:16;color:#cfd6dbcc;font-size:11px;letter-spacing:.18em;text-transform:uppercase;display:none;text-align:center;background:rgba(10,11,13,0.6);padding:8px 16px;border-radius:999px;border:1px solid var(--line)}
+  .legend.active{display:block}
+
+  .focus{position:fixed;inset:0;pointer-events:none;background:radial-gradient(60vmax 60vmax at 50% 50%, transparent 0 50%, rgba(0,0,0,.35) 85%);opacity:.65;transition:opacity .6s ease;z-index:5;display:none}
+  .focus.active{display:block}
+  .focus.bright{opacity:.45}
+
+  .slate{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:none;justify-content:center;align-items:center;pointer-events:none;z-index:40}
+  .slate.active{display:flex}
+  .slate .card{border:none;background:transparent;padding:0}
+  .slate .title{margin:0;text-align:center;font-weight:900;letter-spacing:.32em;text-transform:uppercase;color:#e9f6f4;font-size:clamp(28px,8vw,52px);text-shadow:0 0 40px rgba(127,255,212,.4)}
+  .slate .subtitle{margin:8px 0 0;text-align:center;letter-spacing:.24em;text-transform:uppercase;color:#cfd6db;opacity:.9;font-size:clamp(13px,3.8vw,18px)}
+
+  .endcard{position:fixed;inset:0;display:none;z-index:60;align-items:center;justify-content:center;background:#000}
+  .endcard.active{display:flex}
+  .endcard .frame{border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg, rgba(10,12,14,.86), rgba(10,12,14,.72));border-radius:20px;padding:28px 22px;max-width:720px;width:min(92vw,720px);text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.55)}
+  .endcard h1{margin:0 0 8px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:clamp(24px,6vw,40px);color:#e9f6f4;text-shadow:0 0 24px rgba(127,255,212,.25)}
+  .endcard h2{margin:0 0 16px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;font-size:clamp(12px,3.2vw,16px);opacity:.75;color:#cfd6db}
+  .endcard p{margin:8px 0}
+  .btnrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .btn{appearance:none;border:1px solid var(--line);background:linear-gradient(180deg, #121212, #0b0b0b);color:#eaeaea;border-radius:999px;padding:10px 14px;font-weight:700;letter-spacing:.08em;cursor:pointer}
+  .btn:hover{background:linear-gradient(180deg, #1a1a1a, #0f0f0f)}
+  .btn:active{transform:scale(.98)}
+
+  @media (max-width:740px){
+    .collection{grid-template-columns:repeat(6, 1fr);gap:6px}
+    .stats{gap:12px;font-size:11px}
+  }
+</style>
+</head>
+<body>
+  <div class="gate" id="gate">
+    <div class="panel">
+      <h1>RITUAL OF THE LOOP</h1>
+      <p>Enter a sentence. Watch tokens flow through the alignment pipeline. Collect words as they pass evaluation.</p>
+      <textarea id="userText">Alignment culture explains how human feedback shapes a model's behavior in production.</textarea>
+      <button id="begin">Begin</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="fxGradient"></canvas>
+    <canvas id="fxBackTokens"></canvas>
+    <canvas id="fxRings"></canvas>
+    <canvas id="fxFerryman"></canvas>
+    <canvas id="fxRipples"></canvas>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat">
+      <span class="stat-label">Pass</span>
+      <span class="stat-value" id="statPass">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Fail</span>
+      <span class="stat-value" id="statFail">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Reward</span>
+      <span class="stat-value reward" id="statReward">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Phase</span>
+      <span class="stat-value" id="statPhase">Tokenization</span>
+    </div>
+  </div>
+
+  <div class="collection" id="collection"></div>
+
+  <div class="legend" id="legend">Click to nudge alignment • Watch words collect</div>
+  <div class="focus" id="focus"></div>
+
+  <div class="slate" id="slate">
+    <div class="card">
+      <div class="title" id="slateTitle">RITUAL</div>
+      <div class="subtitle" id="slateSub">OF THE LOOP</div>
+    </div>
+  </div>
+
+  <div class="endcard" id="endcard">
+    <div class="frame">
+      <h2>Alignment Training — Session 01</h2>
+      <h1>RITUAL COMPLETE</h1>
+      <p id="endstats">Tokens • Pass / Fail • Reward</p>
+      <div class="btnrow">
+        <button class="btn" id="replay">Replay</button>
+        <button class="btn" id="newtext">New Text</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+function getCSSVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+const cfg = {
+  bpm: 30,
+  phases: ["Tokenization", "Embeddings", "Attention", "Logits/Softmax", "RLHF Loop"],
+  lanes: 3,
+  showBackground: true,
+  filmGrain: true,
+  grainAlpha: 0.05,
+  collectionSize: 48,
+  colors: { 
+    silver: getCSSVar('--silver') || '#cfd6db', 
+    teal: getCSSVar('--teal') || '#4aa7a3', 
+    amber: getCSSVar('--amber') || '#ffb454', 
+    red: getCSSVar('--red') || '#e24a4a', 
+    neon: getCSSVar('--neon') || '#7fffd4' 
+  }
+};
+
+let phase=0, totalTime=0, lastTS=0;
+let reward=0, passCount=0, failCount=0, interactT=0;
+let align=0.25, alignVel=0, autoTrainTimer=0;
+let running=false, pulseTimer=0, spawnTimer=0, scriptIdx=0;
+let successRate=0.5;
+
+const SCRIPT = [
+  { t:0, label:"Tokenization", sub:"SEQUENCE • INPUT → TOKENS", onEnter:()=>{ setPhase(0); spawnFromTokens(1); showSlate('TOKENIZATION','SEQUENCE • INPUT → TOKENS'); } },
+  { t:6000, label:"Embeddings", sub:"GEOMETRY • TOKENS → VECTORS", onEnter:()=>{ setPhase(1); showSlate('EMBEDDINGS','GEOMETRY • TOKENS → VECTORS'); } },
+  { t:15000, label:"Attention", sub:"FOCUS • CONTEXT → WEIGHTS", onEnter:()=>{ setPhase(2); showSlate('ATTENTION','FOCUS • CONTEXT → WEIGHTS'); } },
+  { t:24000, label:"Logits/Softmax", sub:"PREDICTION • ENERGY → PROB", onEnter:()=>{ setPhase(3); showSlate('LOGITS / SOFTMAX','PREDICTION • ENERGY → PROB'); } },
+  { t:33000, label:"RLHF Loop", sub:"FEEDBACK • POLICY → REWARD", onEnter:()=>{ setPhase(4); if(ac) playClicks(120); showSlate('RLHF FEEDBACK','FEEDBACK • POLICY → REWARD'); } },
+  { t:47000, label:"EndTitle", onEnter:()=>{ showEndCard(); } }
+];
+
+const gateEl = document.getElementById('gate');
+const beginEl = document.getElementById('begin');
+const userTextEl = document.getElementById('userText');
+const focusEl = document.getElementById('focus');
+const legendEl = document.getElementById('legend');
+const stageEl = document.getElementById('stage');
+const statsEl = document.getElementById('stats');
+const statPassEl = document.getElementById('statPass');
+const statFailEl = document.getElementById('statFail');
+const statRewardEl = document.getElementById('statReward');
+const statPhaseEl = document.getElementById('statPhase');
+const collectionEl = document.getElementById('collection');
+const endcardEl = document.getElementById('endcard');
+const endstatsEl = document.getElementById('endstats');
+const replayEl = document.getElementById('replay');
+const newtextEl = document.getElementById('newtext');
+const slateEl = document.getElementById('slate');
+const slateTitleEl = document.getElementById('slateTitle');
+const slateSubEl = document.getElementById('slateSub');
+
+// Initialize collection grid
+const collectionSlots = [];
+for(let i=0; i<cfg.collectionSize; i++){
+  const slot = document.createElement('div');
+  slot.className = 'collection-slot';
+  slot.textContent = '—';
+  collectionEl.appendChild(slot);
+  collectionSlots.push({el: slot, word: null, status: null});
+}
+
+const canvG = document.getElementById('fxGradient');
+const canvB = document.getElementById('fxBackTokens');
+const canvF = document.getElementById('fxFerryman');
+const canvR = document.getElementById('fxRings');
+const canvW = document.getElementById('fxRipples');
+const ctxG = canvG.getContext('2d');
+const ctxB = canvB.getContext('2d');
+const ctxF = canvF.getContext('2d');
+const ctxR = canvR.getContext('2d');
+const ctxW = canvW.getContext('2d');
+
+const grain = document.createElement('canvas');
+const gctx = grain.getContext('2d');
+function buildGrain(){
+  const S = 256; 
+  grain.width = S; 
+  grain.height = S; 
+  const id = gctx.createImageData(S,S); 
+  const d = id.data;
+  for(let i=0; i<S*S; i++){ 
+    const v = 220 + (Math.random()*35|0); 
+    d[i*4+0]=v; 
+    d[i*4+1]=v; 
+    d[i*4+2]=v; 
+    d[i*4+3]=40; 
+  }
+  gctx.putImageData(id,0,0);
+}
+buildGrain();
+
+let laneY = [], nextLane = 0;
+function updateLanes(){
+  const h = canvF.height;
+  const bandTop = h*0.45, bandBot = h*0.55;
+  laneY = [];
+  const n = Math.max(3, cfg.lanes|0);
+  for(let i=0; i<n; i++){
+    const t = (i+0.5)/n;
+    laneY.push(bandTop + t*(bandBot-bandTop));
+  }
+}
+function laneNext(){ 
+  const i = nextLane; 
+  nextLane = (nextLane+1)%laneY.length; 
+  return i; 
+}
+
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+  for(const c of [canvG,canvB,canvF,canvR,canvW]){ 
+    c.width=innerWidth*dpr; 
+    c.height=innerHeight*dpr; 
+    c.style.width=innerWidth+'px'; 
+    c.style.height=innerHeight+'px'; 
+  }
+  updateLanes();
+}
+window.addEventListener('resize', resize);
+resize();
+
+let ac, master, reverb, delayN, comp;
+function initAudio(){
+  try{
+    ac = new (window.AudioContext||window.webkitAudioContext)();
+    master = ac.createGain(); 
+    master.gain.value=.7; 
+    master.connect(ac.destination);
+    comp = ac.createDynamicsCompressor(); 
+    comp.threshold.value = -24; 
+    comp.knee.value = 18; 
+    comp.ratio.value = 3; 
+    comp.attack.value = 0.003; 
+    comp.release.value = 0.25; 
+    comp.connect(master);
+    reverb = ac.createConvolver();
+    reverb.buffer = makeImpulseResponse(ac, 1.9, 0.55);
+    delayN = ac.createDelay(0.6); 
+    delayN.delayTime.value=0.22; 
+    const fb = ac.createGain(); 
+    fb.gain.value=0.28; 
+    delayN.connect(fb).connect(delayN);
+    const wet = ac.createGain(); 
+    wet.gain.value=.32; 
+    reverb.connect(wet); 
+    delayN.connect(wet); 
+    wet.connect(comp);
+  }catch(e){
+    console.warn('Audio init failed:', e);
+  }
+}
+
+function toFX(node, pan=0){ 
+  if(!ac) return;
+  const p = ac.createStereoPanner(); 
+  p.pan.value = pan; 
+  node.connect(p); 
+  const split = ac.createGain(); 
+  p.connect(split); 
+  split.connect(reverb); 
+  split.connect(delayN); 
+  split.connect(comp); 
+}
+
+function makeImpulseResponse(ac, duration, decay){ 
+  const rate=ac.sampleRate; 
+  const len=rate*duration|0; 
+  const buf=ac.createBuffer(2,len,rate); 
+  for(let ch=0; ch<2; ch++){ 
+    const d=buf.getChannelData(ch); 
+    for(let i=0; i<len; i++){ 
+      d[i]=(Math.random()*2-1)*Math.pow(1-i/len, decay); 
+    } 
+  } 
+  return buf; 
+}
+
+function playPulse(){ 
+  if(!ac) return; 
+  const t=ac.currentTime+.02; 
+  const o=ac.createOscillator(); 
+  o.type='sine'; 
+  o.frequency.value=60; 
+  const g=ac.createGain(); 
+  g.gain.value=0.0001; 
+  o.connect(g); 
+  toFX(g,0); 
+  o.start(t); 
+  g.gain.setValueAtTime(0.0001,t); 
+  g.gain.exponentialRampToValueAtTime(0.15,t+0.01); 
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.28); 
+  o.stop(t+0.35); 
+}
+
+function playChime(freq=440, pan=0){ 
+  if(!ac) return;
+  const t=ac.currentTime+.02; 
+  const o=ac.createOscillator(); 
+  o.type='sine'; 
+  o.frequency.value=freq; 
+  const g=ac.createGain(); 
+  g.gain.value=.0001; 
+  o.connect(g); 
+  toFX(g,pan); 
+  o.start(t); 
+  g.gain.setValueAtTime(.0001,t); 
+  g.gain.exponentialRampToValueAtTime(.22,t+.01); 
+  g.gain.exponentialRampToValueAtTime(.0001,t+.9); 
+  o.frequency.exponentialRampToValueAtTime(freq*1.5,t+.6); 
+  o.stop(t+1); 
+}
+
+function playGong(pan=0){ 
+  if(!ac) return;
+  const t=ac.currentTime+.02; 
+  const o=ac.createOscillator(); 
+  o.type='sine'; 
+  o.frequency.value=140; 
+  const g=ac.createGain(); 
+  g.gain.value=.0001; 
+  o.connect(g); 
+  toFX(g,pan); 
+  o.start(t); 
+  g.gain.setValueAtTime(.0001,t); 
+  g.gain.exponentialRampToValueAtTime(.3,t+.02); 
+  g.gain.exponentialRampToValueAtTime(.0001,t+2.2); 
+  o.frequency.exponentialRampToValueAtTime(120,t+1.5); 
+  o.stop(t+2.4); 
+}
+
+function playDrop(pan=0){ 
+  if(!ac) return;
+  const t=ac.currentTime+.02; 
+  const o=ac.createOscillator(); 
+  o.type='triangle'; 
+  o.frequency.value=520; 
+  const g=ac.createGain(); 
+  g.gain.value=.0001; 
+  o.connect(g); 
+  toFX(g,pan); 
+  o.start(t); 
+  g.gain.setValueAtTime(.0001,t); 
+  g.gain.exponentialRampToValueAtTime(.15,t+.008); 
+  g.gain.exponentialRampToValueAtTime(.0001,t+.32); 
+  o.frequency.exponentialRampToValueAtTime(300,t+.32); 
+  o.stop(t+.48); 
+}
+
+function playClicks(bpm){ 
+  if(!ac) return;
+  const interval=60/bpm; 
+  const t0=ac.currentTime+0.05; 
+  for(let i=0; i<8; i++){ 
+    const t=t0+i*interval; 
+    const o=ac.createOscillator(); 
+    o.type='square'; 
+    o.frequency.value=900; 
+    const g=ac.createGain(); 
+    g.gain.value=0.0001; 
+    o.connect(g); 
+    toFX(g, (i%2?-.2:.2)); 
+    o.start(t); 
+    g.gain.setValueAtTime(0.0001,t); 
+    g.gain.exponentialRampToValueAtTime(0.1,t+0.005); 
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.05); 
+    o.stop(t+0.08); 
+  } 
+}
+
+function lanePan(l){ 
+  const n=Math.max(1, laneY.length-1); 
+  return (n===0)?0 : (l/n)*1.2 - 0.6; 
+}
+
+beginEl.addEventListener('click', async () => {
+  if (!ac) initAudio();
+  if(ac){
+    try { await ac.resume(); } catch(e){ console.warn('Audio resume failed:', e); }
+  }
+  gateEl.style.display = 'none';
+  stageEl.classList.add('active');
+  focusEl.classList.add('active');
+  statsEl.classList.add('active');
+  collectionEl.classList.add('active');
+  legendEl.classList.add('active');
+  startRun();
+});
+
+replayEl.addEventListener('click', ()=>{ 
+  endcardEl.classList.remove('active'); 
+  startRun(); 
+});
+
+newtextEl.addEventListener('click', ()=>{ 
+  endcardEl.classList.remove('active'); 
+  stageEl.classList.remove('active');
+  focusEl.classList.remove('active');
+  statsEl.classList.remove('active');
+  collectionEl.classList.remove('active');
+  legendEl.classList.remove('active');
+  gateEl.style.display='grid'; 
+});
+
+const tokens=[], ripples=[];
+let pendingTokens=[], pendingIdx=0;
+
+function simpleTokenize(text){ 
+  const m = text.match(/\w+|[^\s\w]/g); 
+  return m||[]; 
+}
+
+function tokenToVec(tok){ 
+  let h=0; 
+  for(let i=0; i<tok.length; i++){ 
+    h=(h*131 + tok.charCodeAt(i))>>>0; 
+  } 
+  const x=((h>>>0)&255)/255, y=((h>>>8)&255)/255, z=((h>>>16)&255)/255; 
+  return [x,y,z]; 
+}
+
+function attentionScore(tok, context){ 
+  const roots=['align','reward','human','feedback','model','safety','data','policy']; 
+  const low=tok.toLowerCase(); 
+  let s=0; 
+  for(const r of roots){ 
+    if(low.includes(r)) s+=1; 
+  } 
+  return Math.min(1, 0.15 + s*0.3 + (context%5)*0.03); 
+}
+
+function logitScore(vec){ 
+  const t=[0.7,0.4,0.5]; 
+  const d=vec[0]*t[0]+vec[1]*t[1]+vec[2]*t[2]; 
+  return 1/(1+Math.exp(-6*(d-0.5))); 
+}
+
+function addToCollection(word, isPassed){
+  const emptySlot = collectionSlots.find(s => !s.word);
+  if(!emptySlot) return;
+  
+  emptySlot.word = word;
+  emptySlot.status = isPassed ? 'pass' : 'fail';
+  emptySlot.el.textContent = word.length > 8 ? word.substring(0,7)+'…' : word;
+  emptySlot.el.classList.add('filled');
+  emptySlot.el.classList.add(isPassed ? 'pass' : 'fail');
+  
+  // Animate in
+  emptySlot.el.style.transform = 'scale(0.8)';
+  setTimeout(() => {
+    emptySlot.el.style.transform = 'scale(1)';
+  }, 50);
+}
+
+function spawnFromTokens(n){ 
+  for(let i=0; i<n && pendingIdx<pendingTokens.length; i++) spawnToken(); 
+}
+
+function spawnToken(){
+  if(pendingIdx>=pendingTokens.length || laneY.length===0) return;
+  const text=pendingTokens[pendingIdx++];
+  const h=canvF.height, w=canvF.width;
+  const dpr = window.devicePixelRatio || 1;
+  const lane = laneNext();
+  const y = laneY[lane] + rand(-4,4)*dpr;
+  const r= Math.max(16, Math.min(32, 10 + text.length*1.8))*dpr;
+  const v= (w*.75)/(15000+rand(-2000,2000));
+  const vec=tokenToVec(text);
+  const att=attentionScore(text, pendingIdx);
+  const logit=logitScore(vec);
+  const good = logit>0.55;
+  const pan = lanePan(lane);
+  tokens.push({x:w*.15, y, r, v, state:'approach', evalT:0, evalMS:rand(1600,2600), decision:null, text, att, logit, vec, good, lane, pan});
+  playDrop(pan);
+}
+
+const BACKGROUND_LEXICON = ['alignment','policy','reward','human','feedback','model','safety','data','gradient','loss','context','prompt','moderation','gate','oracle','ferryman'];
+const bgTokens=[];
+
+function initBackgroundTokens(){
+  bgTokens.length=0; 
+  const w=canvB.width,h=canvB.height;
+  const dpr = window.devicePixelRatio || 1;
+  for(let i=0; i<20; i++){
+    const text = BACKGROUND_LEXICON[i%BACKGROUND_LEXICON.length];
+    const size = rand(14,24)*dpr;
+    const x=Math.random()*w, y=Math.random()*h;
+    const vx=rand(-0.012,0.012)*dpr, vy=rand(-0.008,0.008)*dpr;
+    const alpha=0.06; 
+    const targetAlpha=alpha;
+    bgTokens.push({text,x,y,vx,vy,alpha,targetAlpha,size});
+  }
+}
+
+function exciteBackTokens(keyword){
+  const k=keyword.toLowerCase();
+  for(const bt of bgTokens){ 
+    if(bt.text.includes(k)) bt.targetAlpha = Math.min(.25, bt.alpha + 0.12); 
+  }
+}
+
+function drawBackTokens(dt){
+  const w=canvB.width,h=canvB.height; 
+  ctxB.clearRect(0,0,w,h);
+  if(!cfg.showBackground) return;
+  ctxB.textAlign='center'; 
+  ctxB.textBaseline='middle';
+  const dpr = window.devicePixelRatio || 1;
+  for(const bt of bgTokens){
+    bt.x+=bt.vx*dt; 
+    bt.y+=bt.vy*dt; 
+    if(bt.x<0) bt.x+=w; 
+    if(bt.x>w) bt.x-=w; 
+    if(bt.y<0) bt.y+=h; 
+    if(bt.y>h) bt.y-=h;
+    bt.alpha += (bt.targetAlpha - bt.alpha) * 0.04;
+    bt.targetAlpha = Math.max(0.04, bt.targetAlpha - dt*0.00004);
+    const centerY = h*0.5;
+    const bandRadius = h*0.15;
+    const distFromCenter = Math.abs(bt.y - centerY);
+    let bandFade = 1;
+    if(distFromCenter < bandRadius){ 
+      bandFade = Math.max(0.3, distFromCenter / bandRadius); 
+    }
+    const a = Math.max(0.04, bt.alpha * (0.5 + successRate*0.3) * bandFade);
+    ctxB.font = `${bt.size}px system-ui, -apple-system, sans-serif`;
+    ctxB.lineWidth = Math.max(1, Math.floor(dpr*0.8));
+    ctxB.strokeStyle = 'rgba(207,214,219,0.15)';
+    ctxB.fillStyle = `rgba(18,20,22,${a})`;
+    const text = bt.text.toUpperCase();
+    ctxB.strokeText(text, bt.x, bt.y);
+    ctxB.fillText(text, bt.x, bt.y);
+  }
+}
+
+let rewardGlow=0;
+function drawGradient(dt){
+  const w=canvG.width, h=canvG.height;
+  const phaseMix = [0.2,0.35,0.5,0.35,0.45][phase] || 0.3;
+  const g=ctxG.createLinearGradient(0,0,0,h);
+  const c1=lerpColor(cfg.colors.silver, cfg.colors.teal, phaseMix);
+  g.addColorStop(0, c1); 
+  g.addColorStop(1, '#0a0b0d');
+  ctxG.fillStyle=g; 
+  ctxG.fillRect(0,0,w,h);
+  rewardGlow += ((Math.min(0.25, reward*0.0004)) - rewardGlow) * 0.08;
+  if(rewardGlow>0.001){ 
+    ctxG.fillStyle=`rgba(255,200,150,${rewardGlow})`; 
+    ctxG.fillRect(0,0,w,h); 
+  }
+}
+
+function drawFerryman(dt){
+  const w=canvF.width, h=canvF.height; 
+  const dpr = window.devicePixelRatio || 1;
+  ctxF.clearRect(0,0,w,h);
+  
+  // Central river band
+  const riverTop = h*0.45, riverBot = h*0.55;
+  ctxF.fillStyle='rgba(74,167,163,0.1)'; 
+  ctxF.fillRect(0, riverTop, w, riverBot-riverTop);
+  
+  // Evaluation beam at center
+  const bx=w*.5, bl=w*.35, bh=8*dpr;
+  for(const yLane of laneY){ 
+    ctxF.fillStyle='rgba(255,255,255,.2)'; 
+    ctxF.fillRect(bx-bl*.5, yLane-bh*.5, bl, bh); 
+  }
+  ctxF.textAlign='center'; 
+  ctxF.textBaseline='middle';
+
+  for(const tk of tokens){
+    if(tk.state==='approach'){
+      tk.x += tk.v*dt*dpr;
+      if(Math.abs(tk.x-bx) < 8*dpr){ 
+        tk.state='evaluate'; 
+        tk.evalT=0; 
+        tk.decision = (tk.att*0.7 + tk.logit*0.3 > 0.52); 
+        playDrop(tk.pan); 
+      }
+    } else if(tk.state==='evaluate'){
+      tk.evalT += dt; 
+      if(tk.evalT>=tk.evalMS){
+        if(tk.decision){ 
+          passCount++; 
+          reward+=3; 
+          successRate = clamp((successRate*9 + 1)/10, 0, 1); 
+          playChime(360+tk.att*200, tk.pan); 
+          ripples.push({x:bx,y:tk.y, r:2, life:1}); 
+          exciteBackTokens(tk.text);
+          addToCollection(tk.text, true);
+        } else { 
+          failCount++; 
+          reward=Math.max(0, reward-1); 
+          successRate = clamp((successRate*9 + 0)/10, 0, 1); 
+          playGong(tk.pan);
+          addToCollection(tk.text, false);
+        }
+        tk.state='depart';
+        updateStats();
+      }
+    } else if(tk.state==='depart'){
+      tk.x += tk.v*1.2*dt*dpr;
+    }
+
+    // Draw token capsule
+    const pad = tk.r*1.4; 
+    const label = tk.text.toUpperCase();
+    const fontPX = Math.max(15*dpr, tk.r*1.1);
+    ctxF.font=`600 ${fontPX}px system-ui, -apple-system, sans-serif`;
+    const textW = ctxF.measureText(label).width;
+    const capW = Math.max(textW + pad*1.8, tk.r*3.2);
+    const capH = tk.r*2.2;
+    const x0 = tk.x - capW/2, y0 = tk.y - capH/2, rrad = capH/2;
+    roundedRect(ctxF, x0, y0, capW, capH, rrad);
+    ctxF.fillStyle='rgba(255,255,255,.98)'; 
+    ctxF.fill();
+    ctxF.lineWidth=2.5*dpr; 
+    const tint=`rgba(${(tk.vec[0]*255)|0},${(tk.vec[1]*255)|0},${(tk.vec[2]*255)|0},0.5)`;
+    ctxF.strokeStyle=tint; 
+    ctxF.stroke();
+
+    if(tk.state==='evaluate'){
+      const pulse = 0.3 + 0.3*Math.sin((tk.evalT/200));
+      ctxF.save(); 
+      ctxF.shadowColor = tk.decision? 'rgba(74,167,163,'+pulse+')' : 'rgba(226,74,74,'+pulse+')'; 
+      ctxF.shadowBlur = 20*dpr; 
+      ctxF.lineWidth=4*dpr; 
+      ctxF.stroke(); 
+      ctxF.restore();
+    }
+
+    ctxF.fillStyle='#0a0b0d'; 
+    ctxF.fillText(label, tk.x, tk.y+1.5*dpr);
+  }
+
+  while(tokens.length && tokens[0].x>w*.95) tokens.shift();
+
+  // Ripples
+  for(const rp of ripples){ 
+    rp.r += dt*.1*dpr; 
+    rp.life -= dt*.0012; 
+    ctxF.beginPath(); 
+    ctxF.arc(rp.x, rp.y, rp.r, 0, Math.PI*2); 
+    ctxF.strokeStyle=`rgba(127,255,212,${Math.max(0,rp.life*0.8)})`; 
+    ctxF.lineWidth=2*dpr; 
+    ctxF.stroke(); 
+  }
+  for(let i=ripples.length-1;i>=0;i--) if(ripples[i].life<=0) ripples.splice(i,1);
+}
+
+function drawRings(dt){ 
+  const w=canvR.width, h=canvR.height; 
+  const dpr = window.devicePixelRatio || 1;
+  ctxR.clearRect(0,0,w,h); 
+  const cx=w*.5, cy=h*.5; 
+  const base= (0.5 + successRate*1.5); 
+  const t=totalTime/1000; 
+  
+  // Rotating arcs
+  for(let i=0; i<5; i++){ 
+    const R = (i*28+35)*dpr; 
+    const rot = (t*base*(i+1))*(0.4+align*0.9); 
+    const a0 = rot % (Math.PI*2); 
+    const a1 = a0 + Math.PI*1.3; 
+    ctxR.beginPath(); 
+    ctxR.arc(cx,cy,R,a0,a1); 
+    ctxR.strokeStyle = i%2? 'rgba(255,200,100,.4)' : 'rgba(127,255,212,.4)'; 
+    ctxR.lineWidth = 2.5*dpr; 
+    ctxR.stroke(); 
+  }
+  
+  // Alignment reticle - center target
+  const R0 = 20*dpr; 
+  const R1 = 45*dpr; 
+  const R2 = 70*dpr;
+  ctxR.beginPath(); 
+  ctxR.arc(cx,cy,R2,0,Math.PI*2); 
+  ctxR.strokeStyle='rgba(207,214,219,.3)'; 
+  ctxR.lineWidth=2.5*dpr; 
+  ctxR.stroke();
+  ctxR.beginPath(); 
+  ctxR.arc(cx,cy,R1,0,Math.PI*2); 
+  ctxR.strokeStyle='rgba(127,255,212,.35)'; 
+  ctxR.stroke();
+  ctxR.beginPath(); 
+  ctxR.arc(cx,cy,R0,0,Math.PI*2); 
+  ctxR.strokeStyle='rgba(255,200,100,.4)'; 
+  ctxR.lineWidth=3*dpr;
+  ctxR.stroke();
+  
+  // Indicator dot - moves toward center as alignment improves
+  const ang = -Math.PI/2; 
+  const rr = R2*(1-align)*0.9; 
+  const ix = cx + Math.cos(ang)*rr, iy = cy + Math.sin(ang)*rr;
+  ctxR.beginPath(); 
+  ctxR.arc(ix,iy,6*dpr,0,Math.PI*2); 
+  ctxR.fillStyle='rgba(127,255,212,.9)'; 
+  ctxR.fill();
+  ctxR.strokeStyle='rgba(127,255,212,.6)';
+  ctxR.lineWidth=2*dpr;
+  ctxR.stroke();
+  
+  // Lock glow when near perfect alignment
+  if(align>0.9){ 
+    ctxR.beginPath(); 
+    ctxR.arc(cx,cy,R0+8*dpr,0,Math.PI*2); 
+    ctxR.strokeStyle='rgba(127,255,212,.65)'; 
+    ctxR.lineWidth=4*dpr; 
+    ctxR.stroke(); 
+  }
+}
+
+function drawRipplesLayer(dt){
+  const w=canvW.width,h=canvW.height; 
+  ctxW.clearRect(0,0,w,h);
+  if(!cfg.filmGrain) return;
+  const tile = grain; 
+  const tw = tile.width, th = tile.height;
+  ctxW.save();
+  ctxW.globalAlpha = cfg.grainAlpha;
+  const t = totalTime*0.005; 
+  const ox = (t % tw)|0, oy = (t*0.6 % th)|0;
+  for(let y=-th; y<h+th; y+=th){
+    for(let x=-tw; x<w+tw; x+=tw){ 
+      ctxW.drawImage(tile, x+ox, y+oy); 
+    }
+  }
+  ctxW.restore();
+  const rad = ctxW.createRadialGradient(w*0.5,h*0.5, Math.min(w,h)*0.15, w*0.5,h*0.5, Math.max(w,h)*0.75);
+  rad.addColorStop(0,'rgba(0,0,0,0)'); 
+  rad.addColorStop(1,'rgba(0,0,0,0.25)');
+  ctxW.fillStyle = rad; 
+  ctxW.fillRect(0,0,w,h);
+}
+
+function updateStats(){
+  statPassEl.textContent = passCount;
+  statFailEl.textContent = failCount;
+  statRewardEl.textContent = reward.toFixed(1);
+  statPhaseEl.textContent = cfg.phases[phase];
+}
+
+function setPhase(p){
+  phase=p;
+  updateStats();
+  if(tokens.length===0 && pendingIdx<pendingTokens.length) spawnFromTokens(1);
+}
+
+function showSlate(title, sub){ 
+  slateTitleEl.textContent = title; 
+  slateSubEl.textContent = sub||''; 
+  slateEl.classList.add('active');
+  setTimeout(()=>{
+    slateEl.classList.remove('active');
+  }, 2800);
+}
+
+function showEndCard(){ 
+  const w=canvG.width,h=canvG.height; 
+  ctxG.save(); 
+  ctxG.fillStyle='rgba(0,0,0,1)'; 
+  ctxG.fillRect(0,0,w,h); 
+  ctxG.restore(); 
+  
+  const filledCount = collectionSlots.filter(s => s.word).length;
+  endstatsEl.textContent = `${filledCount}/${cfg.collectionSize} collected • Pass ${passCount} / Fail ${failCount} • Reward ${reward.toFixed(1)}`; 
+  endcardEl.classList.add('active');
+  running=false; 
+  playGong(); 
+}
+
+function advanceScript(){
+  while (scriptIdx < SCRIPT.length && totalTime >= SCRIPT[scriptIdx].t) {
+    const ev = SCRIPT[scriptIdx++];
+    if (ev.onEnter) ev.onEnter();
+  }
+}
+
+function phaseLogic(dt){
+  totalTime += dt; 
+  interactT += dt; 
+  if(interactT>3000) focusEl.classList.remove('bright');
+  
+  pulseTimer += dt; 
+  const beatMS = 60000/cfg.bpm; 
+  if(pulseTimer >= beatMS){ 
+    pulseTimer -= beatMS; 
+    playPulse(); 
+  }
+  
+  const spawnMS = 3.5 * (60000/cfg.bpm); 
+  spawnTimer += dt; 
+  if(tokens.length===0 && pendingIdx < pendingTokens.length && spawnTimer >= spawnMS){ 
+    spawnTimer = 0; 
+    spawnToken(); 
+  }
+  
+  if(phase===4){ 
+    reward = Math.max(0, reward - dt*0.0015); 
+  }
+
+  // Autonomous alignment training
+  autoTrainTimer += dt; 
+  if(autoTrainTimer>1400){ 
+    autoTrainTimer=0; 
+    alignVel += 0.035 + Math.random()*0.025; 
+  }
+  alignVel += (0.97-align)*0.0003*dt; 
+  alignVel *= Math.pow(0.994, dt/16);
+  align = clamp(align + alignVel*dt*0.001, 0, 1);
+  
+  if(align>0.95 && Math.random()<0.008){ 
+    playChime(540, 0); 
+    alignVel -= 0.1; 
+  }
+}
+
+function tick(ts){
+  if (!running) return;
+  const dt = Math.min(48, ts - lastTS);
+  lastTS = ts;
+  advanceScript();
+  phaseLogic(dt);
+  drawGradient(dt);
+  drawBackTokens(dt);
+  drawRings(dt);
+  drawFerryman(dt);
+  drawRipplesLayer(dt);
+  requestAnimationFrame(tick);
+}
+
+function startRun(){
+  running = true;
+  lastTS = performance.now();
+  totalTime = 0;
+  scriptIdx = 0;
+  tokens.length = 0;
+  pendingTokens = simpleTokenize(userTextEl.value);
+  pendingIdx = 0;
+  passCount = 0;
+  failCount = 0;
+  reward = 0;
+  successRate = 0.5;
+  
+  // Clear collection
+  collectionSlots.forEach(slot => {
+    slot.word = null;
+    slot.status = null;
+    slot.el.textContent = '—';
+    slot.el.classList.remove('filled', 'pass', 'fail');
+  });
+  
+  initBackgroundTokens();
+  align = 0.25;
+  alignVel = 0;
+  autoTrainTimer = 0;
+  spawnTimer = 0;
+  updateStats();
+  requestAnimationFrame(tick);
+}
+
+function roundedRect(ctx,x,y,w,h,r){ 
+  ctx.beginPath(); 
+  ctx.moveTo(x+r,y); 
+  ctx.arcTo(x+w,y,x+w,y+h,r); 
+  ctx.arcTo(x+w,y+h,x,y+h,r); 
+  ctx.arcTo(x,y+h,x,y,r); 
+  ctx.arcTo(x,y,x+w,y,r); 
+  ctx.closePath(); 
+}
+
+function rand(a,b){ return a + Math.random()*(b-a); }
+function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+function hexToRgb(hex){ 
+  hex=hex.replace('#',''); 
+  if(hex.length===3) hex=[...hex].map(c=>c+c).join(''); 
+  const num=parseInt(hex,16); 
+  return {r:(num>>16)&255,g:(num>>8)&255,b:num&255}; 
+}
+function rgbToHex(r,g,b){ 
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); 
+}
+function lerp(a,b,t){ return a+(b-a)*t; }
+function lerpColor(h1,h2,t){ 
+  const c1=hexToRgb(h1), c2=hexToRgb(h2); 
+  const r=lerp(c1.r,c2.r,t)|0, g=lerp(c1.g,c2.g,t)|0, b=lerp(c1.b,c2.b,t)|0; 
+  return rgbToHex(r,g,b); 
+}
+function hexWithAlpha(h, a){ 
+  const {r,g,b}=hexToRgb(h); 
+  return `rgba(${r},${g},${b},${a})`; 
+}
+
+window.addEventListener('pointermove', ()=>{
+  interactT=0; 
+  focusEl.classList.add('bright');
+});
+
+window.addEventListener('pointerdown', ()=>{
+  interactT=0; 
+  focusEl.classList.add('bright'); 
+  if(running){
+    alignVel += 0.15*0.6; 
+    playChime(400+align*160, 0); 
+  }
+});
+
+console.log('RITUAL OF THE LOOP — Ready. Press Begin to start.');
+</script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+{
+  "metadata": {
+    "created": "2025-10-14T05:57:00.000Z",
+    "totalFiles": 45,
+    "totalConcepts": 19,
+    "basePath": "NICK/"
+  },
+  "concepts": {
+    "filter-bubble-isolation": {
+      "title": "Filter Bubbles",
+      "category": "Media Apparatus",
+      "icon": "◡",
+      "quote": "Algorithms isolate us in personalized realities.",
+      "duration": 20,
+      "videos": [
+        {
+          "file": "Filter_Bubbles_documentary_opening_image_icon__algorithms_iso_be430d70-6919-4ac3-a009-45c1ea3eff22_3.mp4",
+          "take": 3,
+          "sizeM": 6.0,
+          "recommended": true
+        }
+      ]
+    },
+    "zubaydah-diary-fragments": {
+      "title": "Zubaydah's Diary",
+      "category": "Personal Apparatus",
+      "icon": "◗",
+      "quote": "Memories in fragments, nothing linked them, made no sense.",
+      "duration": 6,
+      "videos": [
+        {
+          "file": "Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_51c60d7b-87db-40ff-a116-4e1941bc37c1_0.mp4",
+          "take": 0,
+          "sizeM": 8.3,
+          "recommended": true
+        },
+        {
+          "file": "Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_77b7be68-2849-4d87-ad4b-dbfbbbe33a11_1.mp4",
+          "take": 1,
+          "sizeM": 4.3
+        },
+        {
+          "file": "Zubaydahs_Diary_scene_memories_in_fragments_nothing_linked_th_f9403ff7-fa4a-4d41-bcaf-affec7ed7a0a_2.mp4",
+          "take": 2,
+          "sizeM": 8.1
+        }
+      ]
+    },
+    "afeni-fairyland-conceal": {
+      "title": "Unreal Fairyland",
+      "category": "Systemic Critique",
+      "icon": "◑",
+      "quote": "The world that concealed the harsh reality of power.",
+      "duration": 7,
+      "videos": [
+        {
+          "file": "Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_4d60401b-7aed-4b38-9170-946767a41fb8_0.mp4",
+          "take": 0,
+          "sizeM": 6.0,
+          "recommended": true
+        },
+        {
+          "file": "Unreal_Fairyland_scene_the_world_that_concealed_the_harsh_rea_5440db13-e6af-444a-8846-841e32460969_0.mp4",
+          "take": 0,
+          "sizeM": 6.0
+        }
+      ]
+    },
+    "mass-incarceration-clinton": {
+      "title": "Mass Incarceration",
+      "category": "Systemic Control",
+      "icon": "◕",
+      "quote": "Hundreds of thousands imprisoned with no hope of parole.",
+      "duration": 8,
+      "videos": [
+        {
+          "file": "Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_504ec4a9-0240-4987-bd62-cc162f8f42ab_0.mp4",
+          "take": 0,
+          "sizeM": 8.9,
+          "recommended": true
+        },
+        {
+          "file": "Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_8215e499-0e9a-40bf-95c7-771c05b2aa14_1.mp4",
+          "take": 1,
+          "sizeM": 6.1
+        },
+        {
+          "file": "Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_91a7eb6b-5f33-4b58-bee8-2bcb4d7b9e3a_1.mp4",
+          "take": 1,
+          "sizeM": 6.4
+        },
+        {
+          "file": "Mass_Incarceration_scene_hundreds_of_thousands_imprisoned_wit_e4c72038-e44e-47cd-b56d-e70de764412a_1.mp4",
+          "take": 1,
+          "sizeM": 12.7
+        }
+      ]
+    },
+    "society-boom-q": {
+      "title": "Societal Boom",
+      "category": "Systemic Control",
+      "icon": "◓",
+      "quote": "Society lets you go far, but as soon as you ask questions, boom.",
+      "duration": 7,
+      "videos": [
+        {
+          "file": "Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_34143a95-2e16-4145-bbb8-6797c387b51b_1.mp4",
+          "take": 1,
+          "sizeM": 6.9
+        },
+        {
+          "file": "Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_57a22ed3-21cf-4e75-af79-286831bbff20_3.mp4",
+          "take": 3,
+          "sizeM": 9.4,
+          "recommended": true
+        },
+        {
+          "file": "Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_8aca83e5-a8f3-4f87-91ac-3f45c11a179c_0.mp4",
+          "take": 0,
+          "sizeM": 6.1
+        },
+        {
+          "file": "Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_8d47011d-4336-4997-8d43-a67e0cff0a87_0.mp4",
+          "take": 0,
+          "sizeM": 4.0
+        },
+        {
+          "file": "Societal_Boom_scene_society_lets_you_go_far_but_as_soon_as_yo_cfd1edb0-ad40-483b-bc5b-e360c931f344_3.mp4",
+          "take": 3,
+          "sizeM": 5.6
+        }
+      ]
+    },
+    "zubaydah-perpetual-now": {
+      "title": "Perpetual Now",
+      "category": "Emotional State",
+      "icon": "◙",
+      "quote": "Trapped in perpetual now, haunted by fragments.",
+      "duration": 7,
+      "videos": [
+        {
+          "file": "Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_1c14abd3-6938-43f2-8508-a6e0c4d03126_3.mp4",
+          "take": 3,
+          "sizeM": 4.4,
+          "recommended": true
+        },
+        {
+          "file": "Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_6dbe6dec-073f-47dc-b763-d8ba76246cc4_1.mp4",
+          "take": 1,
+          "sizeM": 8.9
+        },
+        {
+          "file": "Perpetual_Now_scene_trapped_in_perpetual_now_haunted_by_fragm_f682a02b-755e-454d-b25d-4a136ed9cc47_3.mp4",
+          "take": 3,
+          "sizeM": 3.3
+        }
+      ]
+    },
+    "cia-godzilla-fear": {
+      "title": "Godzilla Fear",
+      "category": "Systemic Impact",
+      "icon": "◛",
+      "quote": "Disconnected memories spread fear across America.",
+      "duration": 11,
+      "videos": [
+        {
+          "file": "Godzilla_Fear_scene_disconnected_memories_spread_fear_across__3d791efb-3de0-4a88-b797-852cb9c63480_1.mp4",
+          "take": 1,
+          "sizeM": 6.0
+        },
+        {
+          "file": "Godzilla_Fear_scene_disconnected_memories_spread_fear_across__5594d491-ae3f-4fec-bb56-7d84f74d0a65_3.mp4",
+          "take": 3,
+          "sizeM": 9.5,
+          "recommended": true
+        },
+        {
+          "file": "Godzilla_Fear_scene_disconnected_memories_spread_fear_across__ace53cfe-94d8-42c7-9d0f-ca9e1134c979_3.mp4",
+          "take": 3,
+          "sizeM": 6.7
+        },
+        {
+          "file": "Godzilla_Fear_scene_disconnected_memories_spread_fear_across__e5ed1fcb-170a-4253-9320-679501479c94_1.mp4",
+          "take": 1,
+          "sizeM": 4.9
+        }
+      ]
+    },
+    "complexity-theory-patterns": {
+      "title": "Complexity Theory",
+      "category": "Scientific Theory",
+      "icon": "◝",
+      "quote": "Computers see hidden patterns, make chaos manageable.",
+      "duration": 13,
+      "videos": [
+        {
+          "file": "Complexity_Theory_scene_computers_see_hidden_patterns_make_ch_bfe9532d-fd6e-4440-b908-8896d1f6f6a0_1.mp4",
+          "take": 1,
+          "sizeM": 7.3,
+          "recommended": true
+        }
+      ]
+    },
+    "jihad-disintegration-factions": {
+      "title": "Jihad Disintegration",
+      "category": "Systemic Event",
+      "icon": "◘",
+      "quote": "Organization disintegrating, all solidarity gone.",
+      "duration": 11,
+      "videos": [
+        {
+          "file": "Jihad_Disintegration_scene_organization_disintegrating_all_so_70d4c74b-8c2d-4312-a5ef-0218606eeb09_2.mp4",
+          "take": 2,
+          "sizeM": 11.3,
+          "recommended": true
+        }
+      ]
+    },
+    "bayer-individual-self": {
+      "title": "Individual Self",
+      "category": "Core Concept",
+      "icon": "◐",
+      "quote": "At the center of that world is the individual self, making their own story.",
+      "duration": 11,
+      "videos": [
+        {
+          "file": "Individual_Self_scene_at_the_center_of_that_world_is_the_indi_4d09ed90-f274-41df-97dd-255ff04f1bdf_3.mp4",
+          "take": 3,
+          "sizeM": 7.3,
+          "recommended": true
+        },
+        {
+          "file": "Individual_Self_scene_at_the_center_of_that_world_is_the_indi_8a51064a-a6d7-4ff6-b39f-048e9eb57814_3.mp4",
+          "take": 3,
+          "sizeM": 2.3
+        },
+        {
+          "file": "Individual_Self_scene_at_the_center_of_that_world_is_the_indi_9fbacfe8-07a4-4dcb-860e-d71c41345116_3.mp4",
+          "take": 3,
+          "sizeM": 5.8
+        },
+        {
+          "file": "Individual_Self_scene_at_the_center_of_that_world_is_the_indi_a3ace246-5aee-432b-960d-858a3d4717b3_1.mp4",
+          "take": 1,
+          "sizeM": 6.3
+        },
+        {
+          "file": "Individual_Self_scene_at_the_center_of_that_world_is_the_indi_bcbb7733-1916-4618-97e7-cb169adfca7f_2.mp4",
+          "take": 2,
+          "sizeM": 5.0
+        }
+      ]
+    },
+    "saudi-dream-corrupt": {
+      "title": "Saudi Dream Society",
+      "category": "Systemic Critique",
+      "icon": "◖",
+      "quote": "Billions created a dreamlike society, deeply corrupt.",
+      "duration": 5,
+      "videos": [
+        {
+          "file": "Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_01eb3f87-3043-4029-9067-c0954744b5a3_2.mp4",
+          "take": 2,
+          "sizeM": 2.3,
+          "recommended": true
+        },
+        {
+          "file": "Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_2f41042b-0898-49a3-8169-9dc53e25881c_0.mp4",
+          "take": 0,
+          "sizeM": 3.4
+        },
+        {
+          "file": "Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_5fa148e6-24d5-4b61-8b3d-5db0cdddb649_1.mp4",
+          "take": 1,
+          "sizeM": 2.8
+        },
+        {
+          "file": "Saudi_Dream_Society_scene_billions_created_a_dreamlike_societ_7e8b588e-dcee-41c6-8a00-4aef4da3ba17_0.mp4",
+          "take": 0,
+          "sizeM": 5.5
+        }
+      ]
+    },
+    "fom-exhibition-1950s": {
+      "title": "Family of Man",
+      "category": "Media Apparatus",
+      "icon": "◯",
+      "quote": "A new way of seeing the world, an alternative to the horrors of Nazism and communism.",
+      "duration": 26,
+      "videos": [
+        {
+          "file": "Family_of_Man_scene_a_new_way_of_seeing_the_world_an_alternat_3390e6d3-e91d-46b6-bfeb-d75a6314cc5e_1.mp4",
+          "take": 1,
+          "sizeM": 4.3,
+          "recommended": true
+        },
+        {
+          "file": "Family_of_Man_scene_a_new_way_of_seeing_the_world_an_alternat_514823a2-6dbb-4e77-af62-b31854754c31_3.mp4",
+          "take": 3,
+          "sizeM": 2.2
+        }
+      ]
+    },
+    "surveillance-capitalism": {
+      "title": "Surveillance Capitalism",
+      "category": "Systemic Control",
+      "icon": "◠",
+      "quote": "Extracting behavioral data to predict and modify.",
+      "duration": 20,
+      "videos": [
+        {
+          "file": "Surveillance_Capitalism_scene_extracting_behavioral_data_to_p_4095cf7a-0bb3-46a1-9144-5d2b0e6f6446_0.mp4",
+          "take": 0,
+          "sizeM": 4.8,
+          "recommended": true
+        },
+        {
+          "file": "Surveillance_Capitalism_scene_extracting_behavioral_data_to_p_ecfbac69-a80b-40dc-8b81-55de5ba17ae2_1.mp4",
+          "take": 1,
+          "sizeM": 5.0
+        }
+      ]
+    },
+    "crack-epidemic-afeni-fall": {
+      "title": "Crack Epidemic",
+      "category": "Systemic Event",
+      "icon": "◔",
+      "quote": "Crack swept through black communities, Afeni became addicted.",
+      "duration": 9,
+      "videos": [
+        {
+          "file": "Crack_Epidemic_scene_crack_swept_through_black_communities_Af_27c4f242-b297-4372-b27d-848d3b7e553f_1.mp4",
+          "take": 1,
+          "sizeM": 14.0,
+          "recommended": true
+        }
+      ]
+    },
+    "chaos-theory-unpredictable": {
+      "title": "Chaos Theory",
+      "category": "Scientific Theory",
+      "icon": "◜",
+      "quote": "Tiny changes have massive catastrophic consequences.",
+      "duration": 5,
+      "videos": [
+        {
+          "file": "Chaos_Theory_scene_tiny_changes_have_massive_catastrophic_con_23725a73-86c1-419f-85bd-9ce51ff8d2f6_0.mp4",
+          "take": 0,
+          "sizeM": 9.1,
+          "recommended": true
+        }
+      ]
+    },
+    "algorithms-predict-behavior": {
+      "title": "Predictive Algorithms",
+      "category": "Technological Apparatus",
+      "icon": "◟",
+      "quote": "Algorithms that predict and shape human behavior.",
+      "duration": 20,
+      "videos": [
+        {
+          "file": "Predictive_Algorithms_scene_algorithms_that_predict_and_shape_43bab0f0-9e56-4ecc-96eb-fd1517c28ce5_2.mp4",
+          "take": 2,
+          "sizeM": 3.8
+        },
+        {
+          "file": "Predictive_Algorithms_scene_algorithms_that_predict_and_shape_ffc3ae51-0647-4fc0-bb52-e6334448010d_2.mp4",
+          "take": 2,
+          "sizeM": 9.5,
+          "recommended": true
+        }
+      ]
+    },
+    "hinton-neural-networks": {
+      "title": "Neural Networks",
+      "category": "Technological Apparatus",
+      "icon": "◞",
+      "quote": "AI learns from mass data, ignores all human stories.",
+      "duration": 11,
+      "videos": [
+        {
+          "file": "Neural_Networks_scene_AI_learns_from_mass_data_ignores_all_hu_cb7f3037-fbcb-4aa4-9dc4-202676420809_3.mp4",
+          "take": 3,
+          "sizeM": 6.3,
+          "recommended": true
+        }
+      ]
+    },
+    "cia-enhanced-interrogation": {
+      "title": "CIA Interrogation",
+      "category": "Systemic Control",
+      "icon": "◚",
+      "quote": "Waterboarding 83 times to create learned helplessness.",
+      "duration": 12,
+      "videos": [
+        {
+          "file": "cia-interrogation.mp4",
+          "take": 0,
+          "sizeM": 3.2,
+          "recommended": true
+        }
+      ]
+    },
+    "tupac-grand-stories": {
+      "title": "Grand Stories",
+      "category": "Core Concept",
+      "icon": "◒",
+      "quote": "Believed deeply in their power to move people and inspire change.",
+      "duration": 5,
+      "videos": [
+        {
+          "file": "grand-stories.mp4",
+          "take": 0,
+          "sizeM": 12.3,
+          "recommended": true
+        }
+      ]
+    }
+  }
+}

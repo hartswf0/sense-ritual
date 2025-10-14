@@ -250,6 +250,22 @@
     <script>
         let currentOTI = null;
         
+        // Auto-load from localStorage if available (sent from final-screen)
+        window.addEventListener('DOMContentLoaded', () => {
+            const storedOTI = localStorage.getItem('oti_export');
+            if (storedOTI) {
+                try {
+                    const data = JSON.parse(storedOTI);
+                    loadOTIData(data);
+                    log('✓ Auto-loaded from ' + (data.sourceTool || 'game'), 'success');
+                    // Clear after loading
+                    localStorage.removeItem('oti_export');
+                } catch (err) {
+                    log('✗ Error loading stored data: ' + err.message, 'error');
+                }
+            }
+        });
+        
         // File drop zone
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -477,6 +493,239 @@
             } catch (err) {
                 log(`✗ Error: ${err.message}`, 'error');
             }
+        }
+        
+        // Generate Film HTML with LOCAL or YOUTUBE video embeds (auto-detect)
+        function generateFilmHTML(oti) {
+            let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${oti.title}</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #000; color: #00ff00; padding: 20px; }
+        .beat { margin: 40px 0; padding: 20px; border: 2px solid #00ff00; }
+        .beat-header { font-size: 24px; font-weight: bold; margin-bottom: 15px; }
+        .clip { margin: 20px 0; padding: 15px; background: rgba(0,255,0,0.05); }
+        .clip-title { font-size: 18px; font-weight: bold; color: #0ff; }
+        .clip-meta { font-size: 12px; color: #0f0; margin: 5px 0; }
+        video, iframe { width: 100%; max-width: 800px; margin: 10px 0; }
+        iframe { height: 450px; }
+        .quote { font-style: italic; color: #ff0; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>${oti.title}</h1>
+    <p>${oti.logline}</p>
+    <p><strong>Runtime:</strong> ${Math.floor(oti.metadata.totalDuration / 60)}:${(oti.metadata.totalDuration % 60).toString().padStart(2, '0')}</p>
+    <hr>
+`;
+            
+            oti.sequences.forEach(seq => {
+                html += `    <div class="beat">
+        <div class="beat-header">BEAT ${seq.beatNumber}: ${seq.beatName}</div>
+        <div class="clip-meta">Syntagma: ${seq.syntagmaType} | Act: ${seq.act}</div>
+`;
+                seq.clips.forEach((clip, idx) => {
+                    html += `        <div class="clip">
+            <div class="clip-title">${clip.icon} ${clip.title}</div>
+            <div class="clip-meta">Duration: ${clip.duration}s | Category: ${clip.category}</div>
+`;
+                    
+                    // Auto-detect: YouTube or Local video?
+                    if (clip.youtubeId) {
+                        // YouTube embed
+                        const startTime = Math.floor(clip.sourceIn);
+                        const endTime = Math.floor(clip.sourceOut);
+                        html += `            <iframe 
+                src="https://www.youtube.com/embed/${clip.youtubeId}?start=${startTime}&end=${endTime}" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+`;
+                    } else if (clip.videoFile) {
+                        // Local video embed
+                        html += `            <video controls>
+                <source src="${clip.videoFile}" type="video/mp4">
+                Your browser doesn't support video playback.
+            </video>
+`;
+                    } else {
+                        html += `            <div style="color: #f00;">⚠️ No video source (missing youtubeId or videoFile)</div>\n`;
+                    }
+                    
+                    html += `            <div class="quote">"${clip.quote}"</div>
+        </div>
+`;
+                });
+                html += `    </div>\n`;
+            });
+            
+            html += `</body>\n</html>`;
+            return html;
+        }
+        
+        // Generate text-only film (no video embeds, shows source info)
+        function generateTextOnlyFilm(oti) {
+            let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>${oti.title} - Text Only</title>
+    <style>
+        body { font-family: 'Courier New', monospace; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .beat { margin: 30px 0; }
+        .beat-header { font-size: 20px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 5px; }
+        .clip { margin: 15px 0 15px 20px; }
+        .clip-title { font-weight: bold; }
+        .quote { font-style: italic; color: #666; }
+        .source { font-size: 11px; color: #999; margin-top: 5px; }
+        .youtube { color: #c00; }
+        .local { color: #090; }
+    </style>
+</head>
+<body>
+    <h1>${oti.title}</h1>
+    <p>${oti.logline}</p>
+    <hr>
+`;
+            
+            oti.sequences.forEach(seq => {
+                html += `    <div class="beat">
+        <div class="beat-header">BEAT ${seq.beatNumber}: ${seq.beatName}</div>
+`;
+                seq.clips.forEach(clip => {
+                    html += `        <div class="clip">
+            <div class="clip-title">${clip.icon} ${clip.title} (${clip.duration}s)</div>
+            <div class="quote">"${clip.quote}"</div>
+`;
+                    if (clip.youtubeId) {
+                        html += `            <div class="source youtube">📺 YouTube: ${clip.youtubeId} [${clip.sourceIn}s → ${clip.sourceOut}s]</div>\n`;
+                    } else if (clip.videoFile) {
+                        html += `            <div class="source local">📁 Local: ${clip.videoFile}</div>\n`;
+                    } else {
+                        html += `            <div class="source" style="color: #f00;">⚠️ No video source</div>\n`;
+                    }
+                    html += `        </div>
+`;
+                });
+                html += `    </div>\n`;
+            });
+            
+            html += `</body>\n</html>`;
+            return html;
+        }
+        
+        // Generate FFmpeg script for BOTH YouTube and Local videos (auto-detect!)
+        function generateFFmpegScript(oti) {
+            let script = `#!/bin/bash
+# ${oti.title}
+# Generated by Prompt Lab
+# Source: ${oti.sourceTool}
+
+set -e  # Exit on error
+
+echo "🎬 Assembling: ${oti.title}"
+
+# Create temp directory
+TEMP_DIR="temp_clips"
+mkdir -p "$TEMP_DIR"
+
+# Check dependencies
+command -v ffmpeg >/dev/null 2>&1 || { echo "❌ ffmpeg required but not installed."; exit 1; }
+
+`;
+            
+            // Check if any clips use YouTube
+            let hasYouTube = false;
+            oti.sequences.forEach(seq => {
+                seq.clips.forEach(clip => {
+                    if (clip.youtubeId) hasYouTube = true;
+                });
+            });
+            
+            if (hasYouTube) {
+                script += `# Check for yt-dlp (needed for YouTube clips)\n`;
+                script += `command -v yt-dlp >/dev/null 2>&1 || { echo "❌ yt-dlp required for YouTube clips. Install: pip install yt-dlp"; exit 1; }\n\n`;
+            }
+            
+            let clipList = [];
+            let clipIndex = 0;
+            
+            oti.sequences.forEach((seq, seqIdx) => {
+                script += `# ========================================\n`;
+                script += `# BEAT ${seq.beatNumber}: ${seq.beatName}\n`;
+                script += `# ========================================\n\n`;
+                
+                seq.clips.forEach((clip, clipIdx) => {
+                    const outputFile = `$TEMP_DIR/clip_${String(clipIndex).padStart(3, '0')}.mp4`;
+                    clipList.push(outputFile);
+                    
+                    script += `# Clip ${clipIndex + 1}: ${clip.title} (${clip.duration}s)\n`;
+                    script += `echo "Processing clip ${clipIndex + 1}/${oti.metadata.totalClips}: ${clip.title}"\n`;
+                    
+                    if (clip.youtubeId) {
+                        // YouTube workflow: download then trim
+                        const downloadFile = `$TEMP_DIR/youtube_${clip.youtubeId}_raw.mp4`;
+                        script += `\n# Download from YouTube\n`;
+                        script += `if [ ! -f "${downloadFile}" ]; then\n`;
+                        script += `  echo "  Downloading YouTube video: ${clip.youtubeId}"\n`;
+                        script += `  yt-dlp -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best' \\\n`;
+                        script += `    -o "${downloadFile}" \\\n`;
+                        script += `    "https://www.youtube.com/watch?v=${clip.youtubeId}"\n`;
+                        script += `fi\n\n`;
+                        script += `# Trim clip from downloaded video\n`;
+                        script += `ffmpeg -i "${downloadFile}" \\\n`;
+                        script += `  -ss ${clip.sourceIn} \\\n`;
+                        script += `  -t ${clip.duration} \\\n`;
+                        script += `  -c:v libx264 -preset fast -crf 22 \\\n`;
+                        script += `  -c:a aac -b:a 128k \\\n`;
+                        script += `  -y ${outputFile}\n\n`;
+                    } else if (clip.videoFile) {
+                        // Local file workflow: direct trim
+                        script += `\n# Trim local video file\n`;
+                        script += `ffmpeg -i "${clip.videoFile}" \\\n`;
+                        script += `  -ss ${clip.sourceIn} \\\n`;
+                        script += `  -t ${clip.duration} \\\n`;
+                        script += `  -c:v libx264 -preset fast -crf 22 \\\n`;
+                        script += `  -c:a aac -b:a 128k \\\n`;
+                        script += `  -y ${outputFile}\n\n`;
+                    } else {
+                        script += `echo "⚠️  Skipping clip ${clipIndex + 1}: No video source"\n\n`;
+                    }
+                    
+                    clipIndex++;
+                });
+            });
+            
+            script += `# ========================================\n`;
+            script += `# CONCATENATE ALL CLIPS\n`;
+            script += `# ========================================\n\n`;
+            
+            script += `# Create concat file\n`;
+            script += `cat > $TEMP_DIR/concat.txt << EOF\n`;
+            clipList.forEach(clip => {
+                script += `file '${clip.replace('$TEMP_DIR/', '')}'\n`;
+            });
+            script += `EOF\n\n`;
+            
+            const outputFilename = oti.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_final.mp4';
+            script += `# Concatenate\n`;
+            script += `echo "🎞️  Concatenating ${oti.metadata.totalClips} clips..."\n`;
+            script += `ffmpeg -f concat -safe 0 -i $TEMP_DIR/concat.txt \\\n`;
+            script += `  -c copy \\\n`;
+            script += `  -y "${outputFilename}"\n\n`;
+            
+            script += `# Cleanup\n`;
+            script += `echo "🧹 Cleaning up temp files..."\n`;
+            script += `rm -rf "$TEMP_DIR"\n\n`;
+            
+            script += `echo "✅ Complete! Output: ${outputFilename}"\n`;
+            script += `echo "📊 Runtime: ${Math.floor(oti.metadata.totalDuration / 60)}:${(oti.metadata.totalDuration % 60).toString().padStart(2, '0')}"\n`;
+            
+            return script;
         }
         
         function downloadFFmpegScript() {

@@ -1,0 +1,19 @@
+# --- Media / renders (keep these out of git) ---
+*.mp4
+*.mov
+*.m4v
+*.m4a
+*.wav
+*.aiff
+*.flac
+
+# --- Generated artifacts / scratch ---
+temp_soundscapes/
+temp_video_only/
+tts/
+ambient/
+*.log
+
+# If you ever want to keep a small sample, move it into a /samples folder
+# and explicitly allow it:
+!samples/**

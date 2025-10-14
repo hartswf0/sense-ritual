@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THREE GAMES — Comparative Film Assembly Systems</title>
+<style>
+:root {
+  --black: #000;
+  --white: #fff;
+  --red: #E24A4A;
+  --cyan: #00ffff;
+  --yellow: #FFE66D;
+  --gray: #666;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: var(--black);
+  color: var(--white);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 60px 40px;
+}
+
+/* Bauhaus Typography */
+h1 {
+  font-size: clamp(48px, 8vw, 96px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+h2 {
+  font-size: clamp(24px, 4vw, 48px);
+  font-weight: 700;
+  margin: 60px 0 30px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+h3 {
+  font-size: clamp(18px, 3vw, 32px);
+  font-weight: 700;
+  margin: 40px 0 20px;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: clamp(14px, 2.5vw, 18px);
+  color: var(--gray);
+  margin-bottom: 60px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* Grid System - Bauhaus */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  margin: 60px 0;
+}
+
+@media (max-width: 900px) {
+  .games-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.game-card {
+  border: 3px solid var(--white);
+  padding: 40px 30px;
+  background: var(--black);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  transition: all 0.3s;
+}
+
+.game-card.plants::before { background: var(--red); }
+.game-card.tetris::before { background: var(--cyan); }
+.game-card.crush::before { background: var(--yellow); }
+
+.game-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(255,255,255,0.1);
+}
+
+.game-title {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 8px;
+  letter-spacing: 0.1em;
+}
+
+.game-metaphor {
+  font-size: 14px;
+  color: var(--gray);
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.game-file {
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  color: var(--gray);
+  margin-bottom: 30px;
+  word-break: break-all;
+}
+
+.stat-list {
+  list-style: none;
+  padding: 0;
+}
+
+.stat-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.stat-list li:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stat-value {
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.game-card.plants .stat-value { color: var(--red); }
+.game-card.tetris .stat-value { color: var(--cyan); }
+.game-card.crush .stat-value { color: var(--yellow); }
+
+.game-link {
+  display: block;
+  margin-top: 30px;
+  padding: 16px;
+  border: 2px solid var(--white);
+  text-align: center;
+  text-decoration: none;
+  color: var(--white);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 13px;
+  transition: all 0.3s;
+  text-transform: uppercase;
+}
+
+.game-card.plants .game-link:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--black);
+}
+
+.game-card.tetris .game-link:hover {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: var(--black);
+}
+
+.game-card.crush .game-link:hover {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--black);
+}
+
+/* Comparison Table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 40px 0;
+  font-size: 13px;
+}
+
+.comparison-table th {
+  background: #111;
+  padding: 20px 16px;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  border-bottom: 3px solid var(--white);
+}
+
+.comparison-table td {
+  padding: 16px;
+  border-bottom: 1px solid #222;
+  vertical-align: top;
+}
+
+.comparison-table tr:hover {
+  background: #0a0a0a;
+}
+
+.table-label {
+  color: var(--gray);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+
+.table-value {
+  font-family: 'Courier New', monospace;
+  color: var(--white);
+}
+
+/* Highlight blocks */
+.highlight {
+  background: #111;
+  border-left: 4px solid var(--cyan);
+  padding: 30px;
+  margin: 40px 0;
+}
+
+.highlight-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.highlight p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin-bottom: 12px;
+}
+
+/* Code blocks */
+.code-block {
+  background: #0a0a0a;
+  border: 1px solid #222;
+  padding: 20px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.code-block pre {
+  margin: 0;
+  color: var(--cyan);
+}
+
+/* Navigation Footer */
+.nav-footer {
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 3px solid #222;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.nav-btn {
+  padding: 16px 32px;
+  border: 2px solid var(--white);
+  background: transparent;
+  color: var(--white);
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  text-transform: uppercase;
+  transition: all 0.3s;
+  display: inline-block;
+}
+
+.nav-btn:hover {
+  background: var(--white);
+  color: var(--black);
+}
+
+/* Bauhaus shapes decoration */
+.shape {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.05;
+  z-index: -1;
+}
+
+.shape.circle {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--red);
+  top: 10%;
+  right: 5%;
+}
+
+.shape.square {
+  width: 200px;
+  height: 200px;
+  background: var(--cyan);
+  bottom: 15%;
+  left: 8%;
+  transform: rotate(45deg);
+}
+
+.shape.triangle {
+  width: 0;
+  height: 0;
+  border-left: 150px solid transparent;
+  border-right: 150px solid transparent;
+  border-bottom: 260px solid var(--yellow);
+  top: 40%;
+  right: 15%;
+}
+</style>
+</head>
+<body>
+
+<!-- Bauhaus shapes -->
+<div class="shape circle"></div>
+<div class="shape square"></div>
+<div class="shape triangle"></div>
+
+<div class="container">
+  <h1>THREE GAMES</h1>
+  <div class="subtitle">Comparative Film Assembly Systems</div>
+  
+  <p style="font-size: 16px; max-width: 800px; margin-bottom: 60px; line-height: 1.8;">
+    Three different game mechanics. Three different storage systems. One shared narrative structure. 
+    Each transforms gameplay into cinematic sequence through distinct procedural rhetoric.
+  </p>
+
+  <!-- Game Cards -->
+  <div class="games-grid">
+    
+    <!-- Matrix Editor (Plants vs Zombies) -->
+    <div class="game-card plants">
+      <div class="game-title">MATRIX EDITOR</div>
+      <div class="game-metaphor">Plants vs Zombies</div>
+      <div class="game-file">matrix-editor.html</div>
+      
+      <ul class="stat-list">
+        <li>
+          <span class="stat-label">Storage</span>
+          <span class="stat-value">game.chains[]</span>
+        </li>
+        <li>
+          <span class="stat-label">Structure</span>
+          <span class="stat-value">Lane Defense</span>
+        </li>
+        <li>
+          <span class="stat-label">Collection</span>
+          <span class="stat-value">3+ clips/lane</span>
+        </li>
+        <li>
+          <span class="stat-label">Assembly</span>
+          <span class="stat-value">Fragments → Chains</span>
+        </li>
+        <li>
+          <span class="stat-label">Export</span>
+          <span class="stat-value">5 Formats</span>
+        </li>
+      </ul>
+      
+      <a href="matrix-editor.html" class="game-link">Launch Matrix Editor</a>
+    </div>
+    
+    <!-- Garden (Tetris) -->
+    <div class="game-card tetris">
+      <div class="game-title">GARDEN</div>
+      <div class="game-metaphor">Tetris</div>
+      <div class="game-file">garden.html</div>
+      
+      <ul class="stat-list">
+        <li>
+          <span class="stat-label">Storage</span>
+          <span class="stat-value">grid[y][x]</span>
+        </li>
+        <li>
+          <span class="stat-label">Structure</span>
+          <span class="stat-value">Spatial Grid</span>
+        </li>
+        <li>
+          <span class="stat-label">Collection</span>
+          <span class="stat-value">Clear Lines</span>
+        </li>
+        <li>
+          <span class="stat-label">Assembly</span>
+          <span class="stat-value">Blocks → Lines</span>
+        </li>
+        <li>
+          <span class="stat-label">Export</span>
+          <span class="stat-value">EDL/A4</span>
+        </li>
+      </ul>
+      
+      <a href="garden.html" class="game-link">Launch Garden</a>
+    </div>
+    
+    <!-- M-Crusher-09 (Flow Fields) -->
+    <div class="game-card crush">
+      <div class="game-title">FLUX GARDEN</div>
+      <div class="game-metaphor">Flow Fields + Match-3</div>
+      <div class="game-file">m-crusher-09.html</div>
+      
+      <ul class="stat-list">
+        <li>
+          <span class="stat-label">Storage</span>
+          <span class="stat-value">game.sequence[]</span>
+        </li>
+        <li>
+          <span class="stat-label">Structure</span>
+          <span class="stat-value">Flow Field</span>
+        </li>
+        <li>
+          <span class="stat-label">Collection</span>
+          <span class="stat-value">Match Types</span>
+        </li>
+        <li>
+          <span class="stat-label">Assembly</span>
+          <span class="stat-value">Shapes → Flow</span>
+        </li>
+        <li>
+          <span class="stat-label">Export</span>
+          <span class="stat-value">None (Add)</span>
+        </li>
+      </ul>
+      
+      <a href="m-crusher-09.html" class="game-link">Launch Flux Garden</a>
+    </div>
+  </div>
+
+  <!-- Shared Narrative Structure -->
+  <div class="highlight">
+    <div class="highlight-title">Shared Narrative Structure</div>
+    <p>All three systems target the same output: <strong>15 Save the Cat beats</strong> organized into <strong>4 acts</strong> (Act 1, Act 2A, Act 2B, Act 3) with <strong>8 syntagma codes</strong> (AS, PS, BS, DS, ALT, SC, ES, OS).</p>
+    <p>Source: <code>narrative-garden-v03.html</code> — Reference implementation with visual act tracking and syntagma selection.</p>
+  </div>
+
+  <h2>The Difference That Makes The Difference</h2>
+
+  <!-- Comparison Table -->
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th style="color: #E24A4A;">Matrix Editor</th>
+        <th style="color: #00ffff;">Garden</th>
+        <th style="color: #FFE66D;">Flux Garden</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="table-label">Game Loop</td>
+        <td>Defense → Capture → Chain</td>
+        <td>Fall → Rotate → Lock</td>
+        <td>Match → Collect → Flow</td>
+      </tr>
+      <tr>
+        <td class="table-label">Storage Type</td>
+        <td><code>Array&lt;Chain&gt;</code></td>
+        <td><code>Grid[y][x]</code></td>
+        <td><code>Array&lt;Sequence&gt;</code></td>
+      </tr>
+      <tr>
+        <td class="table-label">Fragment Unit</td>
+        <td>Threat object (video clip)</td>
+        <td>Block (tetromino piece)</td>
+        <td>Cell type (colored shape)</td>
+      </tr>
+      <tr>
+        <td class="table-label">Collection Trigger</td>
+        <td>3+ clips hit same lane</td>
+        <td>Horizontal line complete</td>
+        <td>3+ cells match pattern</td>
+      </tr>
+      <tr>
+        <td class="table-label">Sequence Build</td>
+        <td>Lane-based horizontal timelines</td>
+        <td>Vertical stack + horizontal clear</td>
+        <td>Grid-based matching</td>
+      </tr>
+      <tr>
+        <td class="table-label">Time Metaphor</td>
+        <td>Waves advancing (threat)</td>
+        <td>Gravity falling (pressure)</td>
+        <td>Flow drifting (organic)</td>
+      </tr>
+      <tr>
+        <td class="table-label">User Agency</td>
+        <td>Deploy systems (defensive)</td>
+        <td>Rotate/place blocks (spatial)</td>
+        <td>Swap cells (matching)</td>
+      </tr>
+      <tr>
+        <td class="table-label">Procedural Rhetoric</td>
+        <td>Noosphere under attack</td>
+        <td>Spatial arrangement = sequence</td>
+        <td>Pattern emergence</td>
+      </tr>
+      <tr>
+        <td class="table-label">Visual Style</td>
+        <td>PvZ lanes + playheads</td>
+        <td>Three.js 3D isometric</td>
+        <td>2D canvas flow fields</td>
+      </tr>
+      <tr>
+        <td class="table-label">Beat Assignment</td>
+        <td>User selects beat + syntagma</td>
+        <td>Auto-increment (unclear)</td>
+        <td>Auto-progression</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>1. Matrix Editor — Defense as Editorial</h3>
+  
+  <div class="code-block"><pre>const game = {
+  chains: [],        // Collected sequences
+  threats: [],       // Incoming fragments
+  systems: [],       // Defensive structures
+  pendingChain: {    // Chain awaiting assignment
+    lane: 0,
+    fragments: [...], // 3+ clips
+    threats: [...]
+  }
+}
+
+// Collection trigger:
+if (laneFragments.length >= 3) {
+  game.pendingChain = { lane, fragments };
+  showBeatSyntagmaSelector();
+}
+
+// Storage after assignment:
+game.chains.push({
+  beatName: "Opening Image",
+  beatNumber: 1,
+  syntagmaType: "DS",
+  fragments: [...],  // Actual video clips with timecodes
+  lane: 0,
+  wall: {...}
+});</pre></div>
+
+  <p style="margin: 20px 0; font-size: 14px;">
+    <strong>Key insight:</strong> Fragments are hostile "threats" advancing in lanes. You don't move fragments—you deploy systems and let them collide. Collection is passive capture, not active arrangement. Storage preserves lane context and wall metadata.
+  </p>
+
+  <h3>2. Garden — Tetris as Montage</h3>
+  
+  <div class="code-block"><pre>// 2D spatial grid
+for(let y=0; y&lt;H; y++) {
+  grid[y] = Array(W).fill(null);
+}
+
+// Falling block system
+const piece = {
+  type: 'L',     // Tetromino shape
+  x: 5,
+  y: 0,
+  rotation: 0,
+  fragmentId: 'clip_001'  // Link to video
+};
+
+// Lock when landing
+if (canPlace(piece, grid)) {
+  lockPiece(piece);
+  checkLines();
+}
+
+// Clear horizontal lines → lock sequence
+if (isLineComplete(y)) {
+  const fragments = grid[y].filter(cell => cell);
+  lockedSequences.push({
+    fragments: fragments,
+    level: recursiveLevel
+  });
+}</pre></div>
+
+  <p style="margin: 20px 0; font-size: 14px;">
+    <strong>Key insight:</strong> Fragments are blocks falling under gravity. You actively rotate and place them. The grid is <em>spatial memory</em>—position matters. Clearing lines converts spatial arrangement into temporal sequence. Has recursive timeline (48→24→12→6→3→1 layers).
+  </p>
+
+  <h3>3. Flux Garden — Emergence as Assembly</h3>
+  
+  <div class="code-block"><pre>const game = {
+  grid: [],           // 8x8 match-3 grid
+  sequence: [],       // Collected matches
+  flowField: [],      // Perlin noise vectors
+  collectedTypes: new Set(),
+  typeSegmentVideos: {}  // Video segments by type
+};
+
+// Match detection
+function findMatches() {
+  // Horizontal + vertical 3+ matches
+  return matches;
+}
+
+// Collection
+if (matches.length > 0) {
+  game.sequence.push({
+    type: cellType,
+    count: matches.length,
+    timestamp: Date.now()
+  });
+  
+  // Play corresponding video segment
+  playTypeVideo(cellType);
+}</pre></div>
+
+  <p style="margin: 20px 0; font-size: 14px;">
+    <strong>Key insight:</strong> Hybrid system. Match-3 mechanics drive fragment collection, but flow field provides ambient visualization. Storage is minimal—just type counts and sequences. More about <em>procedural generation</em> than <em>manual assembly</em>. Lacks explicit beat/syntagma assignment.
+  </p>
+
+  <h2>Storage Philosophy</h2>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>System</th>
+        <th>Storage Model</th>
+        <th>Metaphor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Matrix Editor</strong></td>
+        <td>Timeline-centric (lanes as timelines)</td>
+        <td>Horizontal accumulation</td>
+      </tr>
+      <tr>
+        <td><strong>Garden</strong></td>
+        <td>Spatial-centric (2D grid coordinates)</td>
+        <td>Vertical stacking + horizontal clearing</td>
+      </tr>
+      <tr>
+        <td><strong>Flux Garden</strong></td>
+        <td>Type-centric (collect by symbol type)</td>
+        <td>Pattern matching</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Export Capability</h2>
+
+  <p style="font-size: 14px; margin: 20px 0 30px;">
+    <strong>Matrix Editor:</strong> Full 5-file export system (OTI JSON, EDL, Storymap.md, Shotlist.js, Chart.d3.js). Complete backend for film generation.<br><br>
+    <strong>Garden:</strong> Partial export (EDL, basic formats). Needs OTI JSON + full export parity.<br><br>
+    <strong>Flux Garden:</strong> No export currently. Needs OTI integration + storymap generation.
+  </p>
+
+  <div class="highlight">
+    <div class="highlight-title">Unification Strategy</div>
+    <p>Use <code>oti-export.js</code> universal library to add export capability to all three systems:</p>
+    <ul style="margin-top: 16px; padding-left: 20px;">
+      <li style="margin-bottom: 8px;">Matrix Editor: <code>OTIExport.fromMatrixEditor(game)</code></li>
+      <li style="margin-bottom: 8px;">Garden: <code>OTIExport.fromGardenEditor(timeline)</code></li>
+      <li style="margin-bottom: 8px;">Flux Garden: <code>OTIExport.fromMatch3Sequencer(game.sequence)</code></li>
+    </ul>
+    <p style="margin-top: 16px;">All three export to same OTI JSON format → all three can feed into <code>prompt-lab.html</code> film generator.</p>
+  </div>
+
+  <h2>Shared Narrative Genome</h2>
+
+  <p style="font-size: 14px; margin-bottom: 20px;">
+    From <code>narrative-garden-v03.html</code>:
+  </p>
+
+  <div class="code-block"><pre>const BEATS = [
+  {id:1, name:'Opening Image', act:'act1', suggestedSyntagma:'DS'},
+  {id:2, name:'Theme Stated', act:'act1', suggestedSyntagma:'AS'},
+  {id:3, name:'Set-Up', act:'act1', suggestedSyntagma:'DS'},
+  {id:4, name:'Catalyst', act:'act1', suggestedSyntagma:'SC'},
+  {id:5, name:'Debate', act:'act1', suggestedSyntagma:'PS'},
+  {id:6, name:'Break into Two', act:'act2a', suggestedSyntagma:'SC'},
+  {id:7, name:'B Story', act:'act2a', suggestedSyntagma:'ALT'},
+  {id:8, name:'Fun and Games', act:'act2a', suggestedSyntagma:'ES'},
+  {id:9, name:'Midpoint', act:'act2a', suggestedSyntagma:'SC'},
+  {id:10, name:'Bad Guys Close In', act:'act2a', suggestedSyntagma:'OS'},
+  {id:11, name:'All Is Lost', act:'act2b', suggestedSyntagma:'AS'},
+  {id:12, name:'Dark Night', act:'act2b', suggestedSyntagma:'BS'},
+  {id:13, name:'Break into Three', act:'act3', suggestedSyntagma:'SC'},
+  {id:14, name:'Finale', act:'act3', suggestedSyntagma:'OS'},
+  {id:15, name:'Final Image', act:'act3', suggestedSyntagma:'AS'}
+];
+
+const SYNTAGMAS = [
+  {code:'AS', name:'Autonomous Shot', bonus:100},
+  {code:'PS', name:'Parallel Syntagma', bonus:100},
+  {code:'BS', name:'Bracket Syntagma', bonus:100},
+  {code:'DS', name:'Descriptive Syntagma', bonus:100},
+  {code:'ALT', name:'Alternating Syntagma', bonus:150},
+  {code:'SC', name:'Scene', bonus:100},
+  {code:'ES', name:'Episodic Sequence', bonus:150},
+  {code:'OS', name:'Ordinary Sequence', bonus:100}
+];
+
+const ACT_BONUSES = {
+  act1: 200,
+  act2a: 300,
+  act2b: 200,
+  act3: 400,
+  complete: 1000
+};</pre></div>
+
+  <p style="font-size: 14px; margin: 20px 0;">
+    This shared structure allows all three games to export compatible narrative data despite different gameplay mechanics.
+  </p>
+
+  <!-- Navigation Footer -->
+  <div class="nav-footer">
+    <a href="garden-index.html" class="nav-btn">← Back to Garden Index</a>
+    <a href="EXPORT_ARCHITECTURE.md" class="nav-btn">📋 Export Architecture</a>
+    <a href="MATRIX_EXPORT_AUDIT.md" class="nav-btn">🔍 Matrix Audit</a>
+    <a href="prompt-lab.html" class="nav-btn">🎬 Prompt Lab</a>
+    <a href="aaa.html" class="nav-btn">Complete Manifest</a>
+  </div>
+</div>
+
+</body>
+</html>
