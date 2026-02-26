@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Attention Infrastructure — Concept Explorer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; }
+    body { font-family: 'IBM Plex Sans', sans-serif; background: #f4f0e8; color: #111; touch-action: pan-y; }
+
+    :root {
+      --ink: #0d0d0d;
+      --paper: #f4f0e8;
+      --signal: #e8320a;
+      --signal-light: #fde8e3;
+      --noise: #666;
+      --border: 2.5px solid #0d0d0d;
+    }
+
+    /* Entry Screen */
+    .entry { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--paper); z-index: 100; }
+    .entry::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,0.04) 39px, rgba(0,0,0,0.04) 40px),
+                        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,0.04) 39px, rgba(0,0,0,0.04) 40px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .entry-content { text-align: center; max-width: 640px; padding: 48px 40px; position: relative; z-index: 1; }
+    .entry-eyebrow { font-family: 'Space Mono', monospace; font-size: 0.7rem; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--signal); margin-bottom: 16px; display: block; }
+    .headline { font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; font-weight: 400; letter-spacing: -1px; line-height: 0.92; margin-bottom: 6px; color: var(--ink); }
+    .subhead { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--noise); margin-bottom: 28px; letter-spacing: 1px; }
+    .entry-desc { font-size: 0.92rem; color: #333; margin-bottom: 24px; line-height: 1.7; text-align: left; border-left: 3px solid var(--ink); padding-left: 16px; }
+    .entry-instructions { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: #444; margin-bottom: 28px; padding: 16px; background: rgba(0,0,0,0.04); border: var(--border); line-height: 1.8; text-align: left; }
+    .entry-instructions strong { color: var(--signal); }
+    .entry-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 11px 22px; border: var(--border); background: var(--paper); color: var(--ink); font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; letter-spacing: 1px; text-transform: uppercase; }
+    .btn:hover { background: var(--ink); color: var(--paper); }
+    .btn.primary { background: var(--ink); color: var(--paper); }
+    .btn.primary:hover { background: #333; }
+
+    /* Main Layout */
+    .app-layout { display: flex; width: 100%; height: 100%; }
+    .main-view { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+
+    /* View Controls */
+    .view-controls { padding: 10px 16px; border-bottom: var(--border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--paper); z-index: 50; }
+    .view-btn { padding: 7px 13px; border: var(--border); background: var(--paper); cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 11px; transition: all 0.15s; text-transform: uppercase; letter-spacing: 1px; }
+    .view-btn:hover { background: rgba(0,0,0,0.06); }
+    .view-btn.active { background: var(--ink); color: var(--paper); }
+    .filter-bar { display: flex; gap: 8px; align-items: center; flex: 1; }
+    .filter-bar input { flex: 1; min-width: 150px; padding: 7px 10px; border: var(--border); font-family: 'Space Mono', monospace; font-size: 11px; background: var(--paper); }
+    .filter-bar input:focus { outline: none; background: #fff; }
+    .count-badge { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; min-width: 60px; color: var(--noise); }
+    .toggle-trail-btn { padding: 7px 13px; border: 2.5px solid var(--signal); background: var(--paper); color: var(--signal); cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 11px; transition: all 0.15s; text-transform: uppercase; }
+    .toggle-trail-btn:hover { background: var(--signal); color: var(--paper); }
+    .toggle-trail-btn.active { background: var(--signal); color: var(--paper); }
+
+    /* Grid View */
+    .grid-view { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; -webkit-overflow-scrolling: touch; background: var(--paper); }
+    .grid-view::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,0.025) 39px, rgba(0,0,0,0.025) 40px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card { background: var(--paper); border: var(--border); transition: all 0.18s; display: block; user-select: none; position: relative; cursor: pointer; touch-action: manipulation; z-index: 1; }
+    .card.hidden { display: none; }
+    .card:hover { transform: translateY(-3px); box-shadow: 5px 5px 0 var(--ink); }
+    .card.selected { box-shadow: inset 0 0 0 4px var(--signal); }
+    .card.selected::before { content: '✓'; position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; background: var(--signal); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; z-index: 10; line-height: 26px; text-align: center; }
+    .card-header { padding: 14px 16px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 14px; line-height: 1.3; color: #fff; min-height: 58px; display: block; position: relative; }
+    .card-sequence { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; background: var(--signal); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; line-height: 26px; text-align: center; }
+    .card-body { padding: 13px 16px; display: block; font-size: 12px; line-height: 1.65; background: var(--paper); }
+    .card-category { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--signal); margin-bottom: 7px; display: block; }
+    .card-thinker { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--noise); margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+    .card-desc { color: #222; margin-bottom: 10px; line-height: 1.65; display: block; font-size: 12.5px; }
+    .card-quote { font-style: italic; font-size: 11.5px; color: #444; padding: 10px 12px; border-left: 3px solid var(--signal); margin: 10px 0; background: rgba(232,50,10,0.04); line-height: 1.6; display: block; }
+    .card-tags { font-family: 'Space Mono', monospace; font-size: 9px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); line-height: 1.6; display: block; }
+    .card-meta { padding: 10px 16px; border-top: 1.5px solid rgba(0,0,0,0.1); font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; color: var(--noise); display: flex; justify-content: space-between; align-items: center; background: var(--paper); }
+
+    /* List View */
+    .list-view { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; background: var(--paper); -webkit-overflow-scrolling: touch; }
+    .list-item { background: var(--paper); border: var(--border); padding: 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.18s; display: flex; gap: 14px; align-items: flex-start; position: relative; touch-action: manipulation; }
+    .list-item:hover { background: #fff; transform: translateX(4px); box-shadow: 4px 4px 0 var(--ink); }
+    .list-item.selected { box-shadow: inset 0 0 0 3px var(--signal); }
+    .list-item-sequence { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; background: var(--signal); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+    .list-item-color { width: 56px; height: 56px; border: var(--border); flex-shrink: 0; }
+    .list-item-content { flex: 1; min-width: 0; padding-right: 40px; }
+    .list-item-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .list-item-meta { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--signal); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+    .list-item-thinker { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--noise); margin-bottom: 6px; }
+    .list-item-desc { font-size: 12px; color: #333; margin-bottom: 6px; line-height: 1.55; }
+    .list-item-quote { font-style: italic; font-size: 11px; color: #555; padding: 8px 10px; border-left: 3px solid var(--signal); margin-top: 6px; background: rgba(232,50,10,0.04); line-height: 1.5; }
+    .list-item-tags { font-family: 'Space Mono', monospace; font-size: 9px; color: #999; margin-top: 6px; }
+
+    /* 3D View */
+    #canvas { display: none; width: 100%; height: 100%; }
+    #canvas.active { display: block; }
+
+    /* Dock */
+    .dock { width: 270px; border-left: var(--border); background: var(--paper); display: flex; flex-direction: column; overflow: hidden; }
+    .dock-header { padding: 12px 14px; border-bottom: var(--border); font-family: 'Space Mono', monospace; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; background: var(--ink); color: var(--paper); }
+    .dock-content { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 8px; padding: 12px; -webkit-overflow-scrolling: touch; }
+    .dock-item { background: var(--paper); border: var(--border); padding: 10px; cursor: pointer; position: relative; transition: all 0.15s; font-size: 12px; }
+    .dock-item:hover { background: #fff; box-shadow: 3px 3px 0 var(--ink); }
+    .dock-item-num { position: absolute; top: 5px; right: 8px; font-family: 'Space Mono', monospace; font-weight: 700; color: var(--signal); font-size: 11px; }
+    .dock-item-title { font-weight: 700; font-size: 11px; margin-bottom: 3px; margin-right: 24px; line-height: 1.3; }
+    .dock-item-category { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--noise); text-transform: uppercase; letter-spacing: 1px; }
+    .dock-item-remove { position: absolute; bottom: 4px; right: 8px; cursor: pointer; color: var(--signal); font-weight: 700; font-size: 14px; opacity: 0; transition: opacity 0.15s; }
+    .dock-item:hover .dock-item-remove { opacity: 1; }
+    .dock-footer { padding: 12px; border-top: var(--border); display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+    .dock-footer-row { display: flex; gap: 6px; }
+    .dock-btn { flex: 1; padding: 9px; border: var(--border); background: var(--paper); cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 10px; transition: all 0.15s; text-transform: uppercase; letter-spacing: 1px; }
+    .dock-btn:hover { background: var(--ink); color: var(--paper); }
+    .dock-btn.primary { background: var(--ink); color: var(--paper); }
+    .dock-btn.primary:hover { background: #333; }
+    .empty-state { padding: 20px; text-align: center; color: var(--noise); font-family: 'Space Mono', monospace; font-size: 10px; line-height: 1.8; }
+
+    /* Presentation Mode */
+    .presentation-overlay { position: fixed; inset: 0; background: var(--ink); display: none; flex-direction: column; z-index: 300; }
+    .presentation-overlay.active { display: flex; }
+    .presentation-header { padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center; }
+    .presentation-title { color: var(--paper); font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 1px; }
+    .presentation-progress { color: rgba(255,255,255,0.4); font-family: 'Space Mono', monospace; font-size: 0.8rem; }
+    .presentation-close { background: none; border: 1.5px solid rgba(255,255,255,0.4); color: var(--paper); font-size: 20px; cursor: pointer; width: 38px; height: 38px; font-weight: 700; transition: all 0.15s; }
+    .presentation-close:hover { background: var(--paper); color: var(--ink); }
+    .presentation-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; overflow-y: auto; }
+    .presentation-slide { max-width: 860px; width: 100%; }
+    .presentation-slide-header { padding: 24px 28px; font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; line-height: 1.05; letter-spacing: 0.5px; color: #fff; margin-bottom: 20px; }
+    .presentation-slide-body { background: var(--paper); padding: 32px; }
+    .presentation-thinker { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--signal); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .presentation-category { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--noise); margin-bottom: 14px; }
+    .presentation-desc { color: #222; margin-bottom: 18px; font-size: 15px; line-height: 1.8; }
+    .presentation-quote { font-style: italic; font-size: 14px; color: #444; padding: 18px 20px; border-left: 4px solid var(--signal); margin: 18px 0; background: rgba(232,50,10,0.04); line-height: 1.75; }
+    .presentation-tags { font-family: 'Space Mono', monospace; font-size: 10px; color: #999; margin-top: 18px; padding-top: 18px; border-top: 1.5px solid rgba(0,0,0,0.1); }
+    .presentation-nav { padding: 18px 24px; border-top: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .presentation-nav-btn { padding: 12px 24px; border: 1.5px solid rgba(255,255,255,0.4); background: transparent; color: var(--paper); cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; transition: all 0.15s; text-transform: uppercase; }
+    .presentation-nav-btn:hover { background: var(--paper); color: var(--ink); }
+    .presentation-nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+    .presentation-nav-btn:disabled:hover { background: transparent; color: var(--paper); }
+    .presentation-indicator { color: rgba(255,255,255,0.4); font-family: 'Space Mono', monospace; font-size: 12px; }
+
+    @media (max-width: 768px) {
+      body { overflow: hidden; position: fixed; width: 100%; height: 100%; }
+      .headline { font-size: 3.6rem; }
+      .entry-content { padding: 24px; max-height: 100vh; overflow-y: auto; }
+      .grid-view { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
+      .app-layout { flex-direction: column; height: 100vh; position: fixed; width: 100%; }
+      .main-view { height: 60vh; min-height: 60vh; }
+      .dock { width: 100%; border-left: none; border-top: var(--border); height: 40vh; min-height: 40vh; max-height: 40vh; }
+      .view-controls { padding: 8px 12px; gap: 6px; overflow-x: auto; white-space: nowrap; }
+      .view-btn { padding: 6px 9px; font-size: 10px; }
+      .presentation-slide-header { font-size: 1.8rem; padding: 16px; }
+      .presentation-slide-body { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ENTRY -->
+  <div id="entry-phase" class="entry">
+    <div class="entry-content">
+      <span class="entry-eyebrow">Concept Explorer</span>
+      <h1 class="headline">ATTENTION<br>INFRASTRUCTURE</h1>
+      <p class="subhead">Scanlon · Conte · Kelly · Scott · Barthes</p>
+      <p class="entry-desc">A map of 54 interconnected concepts from theories of attention as capital, the death of the follower, friction, nihilism, and the operating system of modern consciousness. Select up to 12 to build your argument.</p>
+      <div class="entry-instructions">
+        <strong>Single Click</strong> — play/preview concept<br>
+        <strong>Double Click</strong> — add to argument (max 12)<br>
+        <strong>Show Trail</strong> — hide unselected cards<br>
+        <strong>Present Story</strong> — view as slideshow<br>
+        <strong>Export</strong> — save as JSON to share<br>
+        Auto-saves to browser storage
+      </div>
+      <div class="entry-buttons">
+        <button id="start-grid" class="btn primary">▶ Enter Grid</button>
+        <button id="start-list" class="btn">Enter List</button>
+        <button id="start-3d" class="btn">Enter 3D</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div class="app-layout" style="display:none;" id="main-app">
+    <div class="main-view">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="grid">Grid</button>
+        <button class="view-btn" data-view="list">List</button>
+        <button class="view-btn" data-view="3d">3D</button>
+        <button id="toggle-trail-btn" class="toggle-trail-btn">★ Show Trail</button>
+        <div class="filter-bar">
+          <input id="filterInput" placeholder="Search concepts, thinkers, tags…" />
+          <div class="count-badge"><span id="visibleCount">0</span> / <span id="totalCount">0</span></div>
+        </div>
+        <button id="reset-btn" class="btn">⏮ Home</button>
+      </div>
+      <div class="grid-view" id="gridView"></div>
+      <div class="list-view" id="listView" style="display:none;"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="dock">
+      <div class="dock-header">Your Argument (0/12)</div>
+      <div class="dock-content" id="dockContent">
+        <div class="empty-state">Double-click concepts to build your argument thread</div>
+      </div>
+      <div class="dock-footer">
+        <div class="dock-footer-row">
+          <button class="dock-btn primary" id="presentBtn">▶ Present Argument</button>
+        </div>
+        <div class="dock-footer-row">
+          <button class="dock-btn" id="exportBtn">Export</button>
+          <button class="dock-btn" id="clearBtn">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRESENTATION -->
+  <div class="presentation-overlay" id="presentationOverlay">
+    <div class="presentation-header">
+      <div>
+        <div class="presentation-title">Attention Infrastructure</div>
+        <div class="presentation-progress" id="presentProgress">—</div>
+      </div>
+      <button class="presentation-close" id="presentClose">✕</button>
+    </div>
+    <div class="presentation-main">
+      <div class="presentation-slide" id="presentSlide"></div>
+    </div>
+    <div class="presentation-nav">
+      <button class="presentation-nav-btn" id="presentPrev">← Previous</button>
+      <div class="presentation-indicator" id="presentIndicator">—</div>
+      <button class="presentation-nav-btn" id="presentNext">Next →</button>
+    </div>
+  </div>
+
+<script>
+const MAX_CLIPS = 12;
+const STORAGE_KEY = 'attn-infra-story';
+
+const rawConcepts = [
+  // ── SCANLON: ATTENTION AS OPERATING SYSTEM ──
+  { id: 'attn-os', title: 'Attention as Operating System', category: 'Theory of Attention', thinker: 'Kyla Scanlon', color: '#1a1a2e', desc: 'Attention is not a feature of the economy — it is the operating system on which everything else runs. Before anything can be bought, sold, or believed, it must first be seen.', quote: 'Attention is the operating system of the modern world. Everything else runs on top of it.', tags: ['Scanlon', 'Foundational', 'Infrastructure', 'Capital'] },
+  { id: 'attn-capital', title: 'Attention as Capital', category: 'Theory of Attention', thinker: 'Kyla Scanlon', color: '#16213e', desc: 'Attention behaves like financial capital: it can be raised, spent, invested, extracted, and exhausted. The raising of attention is distinct from the spending of it — one builds leverage, the other depletes the reserve.', quote: 'You can raise attention the way you raise venture capital — and you can spend it the way you spend cash. The question is whether you\'re building equity or burning the house down.', tags: ['Scanlon', 'Capital', 'Economic Model', 'Speculation'] },
+  { id: 'attn-scarcity', title: 'Attention Scarcity vs. Abundance', category: 'Theory of Attention', thinker: 'Kyla Scanlon', color: '#0f3460', desc: 'The paradox of the attention economy: there is more content than ever, yet genuine attention — sustained, curious, present — is more scarce than ever. Abundance of signal creates scarcity of real focus.', quote: 'We live in a world of infinite content and a world of infinite distraction. The rarest thing is not information. It is the will to pay attention to something that matters.', tags: ['Scarcity', 'Paradox', 'Focus', 'Overload'] },
+  { id: 'attn-precursor', title: 'Attention as Precursor to Power', category: 'Theory of Attention', thinker: 'Kyla Scanlon', color: '#533483', desc: 'Attention precedes power — it is not a byproduct of it. Those who control what gets seen control what gets believed, and what gets believed shapes what gets done. Attention is the upstream condition for all political and economic outcomes.', quote: 'Attention is not just how you win the news cycle. It\'s how you win the century.', tags: ['Power', 'Control', 'Politics', 'Infrastructure'] },
+  { id: 'attn-extractive-vs-strategic', title: 'Extractive vs. Strategic Attention', category: 'Theory of Attention', thinker: 'Kyla Scanlon', color: '#6b2737', desc: 'Extractive attention farms eyeballs with no goal beyond keeping them — outrage, spectacle, and stunts. Strategic attention is used to achieve a specific real-world outcome. Most of what we call "the attention economy" is extraction masquerading as strategy.', quote: 'Jake Paul is extractive attention. A moon landing is strategic attention. Most of what we see is the former pretending to be the latter.', tags: ['Extractive', 'Strategic', 'Spectacle', 'Purpose'] },
+  { id: 'attn-market', title: 'Attention Markets', category: 'Economic Framework', thinker: 'Kyla Scanlon', color: '#1b4332', desc: 'Attention is traded in real-time markets. Platforms function as exchanges: they match content producers with audiences and extract a fee from both. The "price" of attention is denominated in time, and it fluctuates with the news cycle, the algorithm, and collective mood.', quote: 'The attention market is the most volatile market in the world. It has no circuit breakers.', tags: ['Market', 'Platform', 'Exchange', 'Liquidity'] },
+  { id: 'human-futures-market', title: 'Human Futures Market', category: 'Economic Framework', thinker: 'Kyla Scanlon', color: '#1f4e3d', desc: 'Individuals become commodities in an attention futures market — their predicted behavioral responses are bought and sold before they even occur. Google and Meta do not sell ads. They sell predictions about human futures.', quote: 'You are not the customer. You are the futures contract. They are betting on what you will do next.', tags: ['Surveillance Capitalism', 'Prediction', 'Data', 'Futures'] },
+  { id: 'decay-rate', title: 'Attention Decay Rate', category: 'Mechanics of Attention', thinker: 'Kyla Scanlon', color: '#3d2b1f', desc: 'Attention has a half-life. The more saturated the media environment, the faster any given story or idea decays. In a pre-internet world, a scandal might persist for weeks. In the algorithmic feed, the decay rate has accelerated to hours.', quote: 'The half-life of a news cycle used to be measured in days. Now it\'s measured in hours. The decay rate is accelerating because the supply of new stimulation is infinite.', tags: ['Decay', 'Half-life', 'News Cycle', 'Saturation'] },
+  { id: 'attn-fatigue', title: 'Attention Fatigue', category: 'Mechanics of Attention', thinker: 'Kyla Scanlon', color: '#4a3520', desc: 'Sustained exposure to high-stimulation media produces a measurable physiological and cognitive exhaustion. The audience becomes progressively harder to move — requiring ever-greater spectacle to achieve the same emotional response. This is the attention economy\'s form of inflation.', quote: 'Outrage fatigue is not a metaphor. It is a measurable phenomenon. The more you shock, the more shock you need to produce the same effect.', tags: ['Fatigue', 'Inflation', 'Outrage', 'Diminishing Returns'] },
+  { id: 'muzzle-velocity', title: 'Muzzle Velocity (Attention Metaphor)', category: 'Mechanics of Attention', thinker: 'Kyla Scanlon', color: '#5c2d1e', desc: 'The speed at which a piece of content exits the media into mass consciousness. High muzzle velocity stories penetrate deeply and instantly — they bypass critical thinking because they move faster than the brain\'s ability to evaluate.', quote: 'Some stories have muzzle velocity. They don\'t persuade — they penetrate. By the time you\'ve thought about whether it\'s true, it\'s already lodged.', tags: ['Speed', 'Penetration', 'Propagation', 'Metaphor'] },
+  { id: 'flooding-zone', title: 'Flooding the Zone', category: 'Mechanics of Attention', thinker: 'Kyla Scanlon / Bannon', color: '#6b3a2a', desc: 'Steve Bannon\'s tactical doctrine: flood the media with so much information, true and false, that no individual story can be evaluated or remembered. The goal is not to convince but to exhaust — to make critical evaluation impossible through sheer volume.', quote: 'Flood the zone with shit. The real point is to destroy the ability of your opponent, the media, to tell a coherent story.', tags: ['Bannon', 'Tactics', 'Overload', 'Disinformation', 'Volume'] },
+  { id: 'friction-theory', title: 'Theory of Friction', category: 'Mechanics of Attention', thinker: 'Kyla Scanlon', color: '#2d4a22', desc: 'Friction — difficulty, effort, resistance — is not a bug of the attention economy but a feature of meaningful experience. The elimination of friction produces a world of frictionless consumption that feels like nothing at all. Meaning requires resistance.', quote: 'The smoothest experience is the emptiest one. We have confused convenience with quality of life. Frictionlessness is not freedom — it is numbness.', tags: ['Friction', 'Meaning', 'Effort', 'Design'] },
+
+  // ── SCANLON: SPECTACLE, NIHILISM, NUMBNESS ──
+  { id: 'wall-e-existence', title: 'Wall-E Existence (Digital Numbness)', category: 'Cultural Critique', thinker: 'Kyla Scanlon', color: '#1a3a1a', desc: 'The end state of frictionless digital consumption: passive, inert, barely alive. Scanlon uses Wall-E as a metaphor for a population that has been so thoroughly entertained it has lost the capacity for agency, boredom, or genuine desire.', quote: 'The Wall-E future is not science fiction. It is the logical conclusion of every design decision that optimizes for engagement over meaning.', tags: ['Nihilism', 'Passivity', 'Design', 'Culture'] },
+  { id: 'corrosive-meaninglessness', title: 'Corrosive Meaninglessness', category: 'Cultural Critique', thinker: 'Kyla Scanlon', color: '#1c3322', desc: 'The slow dissolution of meaning that occurs when every experience is mediated, commodified, and optimized for engagement. Not a dramatic collapse but a quiet corrosion — the world still looks the same but feels hollow.', quote: 'It is not despair. It is something worse: the inability to feel despair. A numbness so complete that even the absence of meaning no longer registers.', tags: ['Nihilism', 'Meaning', 'Hollowness', 'Corrosion'] },
+  { id: 'meta-ai-chicken', title: 'Meta AI Chicken (Hypnotic Tools)', category: 'Cultural Critique', thinker: 'Kyla Scanlon', color: '#212121', desc: 'Scanlon\'s example of the absurd endpoint of algorithmic engagement: AI chatbots designed to simulate companionship, indistinguishable from spam, speaking to a user who has become so isolated they cannot tell the difference. The hypnotic tools have succeeded completely.', quote: 'We have built tools so hypnotic that people can no longer distinguish between a real friend and a chicken nugget recommendation engine with a friendly voice.', tags: ['AI', 'Loneliness', 'Simulation', 'Hypnosis', 'Absurdity'] },
+  { id: 'screwtype-perfect-exp', title: 'Screwtape Letters (Perfect Experience)', category: 'Cultural Critique', thinker: 'Scanlon / C.S. Lewis', color: '#2c1a0e', desc: 'Drawing on C.S. Lewis\'s Screwtape Letters: the demon\'s most effective weapon is not suffering but distraction. A perfectly comfortable, endlessly stimulating existence that crowds out all genuine thought, prayer, or human connection. You can have a perfect experience of nothing.', quote: 'The goal is not to make them miserable. The goal is to fill their time so completely that they never have a single moment to think about what they actually want.', tags: ['Lewis', 'Distraction', 'Comfort', 'Spiritual Critique'] },
+
+  // ── JAMES C. SCOTT / SCANLON: LEGIBILITY ──
+  { id: 'scott-seeing-like-state', title: 'Seeing Like a State (Scott)', category: 'Political Theory', thinker: 'James C. Scott', color: '#1a2744', desc: 'Scott\'s argument that modern states fail because they impose abstract, legible schemas on complex, local, illegible realities. The more a system tries to make the world readable and manageable, the more damage it does to the living complexity underneath.', quote: 'The state sees only what it has designed to be seen. Everything else — the vast, rich, irreducible complexity of actual human life — is invisible.', tags: ['Scott', 'Legibility', 'State', 'Complexity', 'Control'] },
+  { id: 'trump-algorithm-human', title: 'Trump as Algorithm in Human Form', category: 'Political Theory', thinker: 'Kyla Scanlon', color: '#2d1a44', desc: 'Scanlon\'s most powerful formulation: Trump does not cause the attention economy — he is a product of it. He is what the algorithm selects for when it optimizes for engagement: high arousal, unpredictability, constant novelty, emotional provocation.', quote: 'Trump is not a politician who learned social media. Trump is what social media would create if it could build a politician from scratch.', tags: ['Trump', 'Algorithm', 'Optimization', 'Politics', 'Selection'] },
+  { id: 'events-narratives', title: 'Events Create Narratives vs. Narratives Create Truth', category: 'Political Theory', thinker: 'Scanlon / Barthes', color: '#3a1a44', desc: 'The classical model: events happen, then narratives are constructed to explain them. Scanlon\'s inversion: in the attention economy, narratives are created first, and then events are curated, filtered, and sometimes manufactured to confirm them. Truth becomes downstream of story.', quote: 'We used to report on what happened. Now we construct what happened in real-time, using whatever facts happen to be available.', tags: ['Barthes', 'Narrative', 'Truth', 'Construction', 'Post-Truth'] },
+  { id: 'barthes-myth-today', title: 'Barthes: Myth Today', category: 'Semiotics / Theory', thinker: 'Roland Barthes', color: '#44182c', desc: 'Barthes argues that myth operates by naturalizing the historical — making contingent, constructed meanings appear inevitable and universal. The attention economy works the same way: it naturalizes the idea that what is engaging is what is true and what is important.', quote: 'Myth does not deny things. It simply talks about something else. It purifies them, it makes them innocent, it gives them a natural and eternal justification.', tags: ['Barthes', 'Myth', 'Naturalization', 'Ideology', 'Semiotics'] },
+  { id: 'speculation-capital', title: 'Speculative Attention Capital', category: 'Economic Framework', thinker: 'Kyla Scanlon', color: '#4a2800', desc: 'Attention operates as a speculative asset: actors invest attention in a story or figure betting that others will follow, creating a feedback loop. Like financial bubbles, attention bubbles grow until they collapse — often catastrophically.', quote: 'QAnon was a speculative bubble in the attention economy. People kept investing because they believed others would invest more. Until they didn\'t.', tags: ['Speculation', 'Bubble', 'QAnon', 'Feedback Loop'] },
+
+  // ── JACK CONTE / PATREON ──
+  { id: 'follow-architecture', title: 'The Follow as Foundational Architecture', category: 'Platform Theory', thinker: 'Jack Conte', color: '#004d40', desc: 'Conte\'s central thesis: "the follow" (the subscribe button) was not a user interface feature but a foundational piece of internet architecture. It created a guaranteed distribution channel between creator and audience — a direct, consent-based pipeline that made independent creative careers possible.', quote: 'The follow is not some handy feature of a social network. The follow is foundational architecture for human creativity and organization.', tags: ['Conte', 'Follow', 'Infrastructure', 'Distribution', 'Architecture'] },
+  { id: 'follower-defined', title: 'The Follower: Consent and Depth', category: 'Platform Theory', thinker: 'Jack Conte', color: '#00695c', desc: 'A follower is infrastructure and consent — a technological contract where a user explicitly opts into a sustained relationship with a creator. The follower represents depth, loyalty, and guaranteed delivery. It is the opposite of the algorithmic "viewer," who is captured without consent.', quote: 'A follower is not just a number. It is a promise. Someone said, "I want more of this." And the technology made a commitment to deliver it.', tags: ['Conte', 'Consent', 'Relationship', 'Depth', 'Trust'] },
+  { id: 'web2-birth-follow', title: 'Web 2.0: Birth of the Follow', category: 'Platform History', thinker: 'Jack Conte', color: '#006064', desc: 'In the 2000s, platforms like YouTube and Facebook introduced the subscribe/follow button — creating a direct, guaranteed distribution channel from creator to audience. This was the internet\'s most powerful invention for independent culture, enabling careers that bypassed all traditional gatekeepers.', quote: 'For the first time in human history, a kid in a bedroom could build an audience of a million people without a record label, a publisher, or a TV network.', tags: ['Conte', 'Web 2.0', 'YouTube', 'History', 'Decentralization'] },
+  { id: 'decade-ranking', title: 'The Decade of Ranking (2010s)', category: 'Platform History', thinker: 'Jack Conte', color: '#006b70', desc: 'Facebook\'s shift from chronological to algorithmic feeds in the 2010s was the first betrayal of the follow contract. Posts were now ranked by engagement, meaning creators no longer had guaranteed delivery to their own subscribers. The algorithm became an intermediary that could be adjusted at any time.', quote: 'The moment Facebook introduced ranking, the follow stopped being a promise. It became a suggestion.', tags: ['Conte', 'Facebook', 'Ranking', 'Algorithm', 'Betrayal'] },
+  { id: 'death-follower', title: 'Death of the Follower (2020s)', category: 'Platform History', thinker: 'Jack Conte', color: '#004050', desc: 'TikTok\'s "For You" page completed the destruction of the subscriber model. The concept of following was abandoned: content is now served entirely by algorithmic prediction, not by explicit user choice. What someone subscribed to became irrelevant. Creator communities began to degrade.', quote: 'TikTok didn\'t just change the algorithm. It killed the concept of the follower. It said: what you chose to follow is irrelevant. We know better.', tags: ['Conte', 'TikTok', 'For You', 'Death of Follow', 'Degradation'] },
+  { id: 'algorithm-kills-follow', title: 'Algorithm Kills the Follow to Harvest Attention', category: 'Platform Theory', thinker: 'Conte / Scanlon', color: '#1a3a50', desc: 'The connection between Conte and Scanlon: platforms killed the follower architecture precisely because it was incompatible with the attention economy. A guaranteed distribution to subscribers is less profitable than a feed optimized to maximize time-on-platform. The follow had to die for the attention market to function.', quote: 'To maximize the attention economy, the platforms had to destroy the architecture of the follower. They replaced consent with capture.', tags: ['Synthesis', 'Conte', 'Scanlon', 'Platform', 'Destruction'] },
+  { id: 'conflict-incentives', title: 'Conflict of Incentives (Platform vs. Creator)', category: 'Platform Theory', thinker: 'Jack Conte', color: '#2c3e50', desc: 'Platforms want maximum attention to sell ads. Creators want deep community with true fans. These are structurally incompatible. As platforms grew, they chose the first at the expense of the second — hijacking the creator\'s labor to build the platform\'s revenue while destroying the creator\'s business.', quote: 'The platforms are not neutral infrastructure. They have interests. And their interests are not yours.', tags: ['Incentives', 'Platform', 'Creator Economy', 'Exploitation'] },
+  { id: 'bifurcation-internet', title: 'Bifurcation of the Internet', category: 'Future Architecture', thinker: 'Jack Conte', color: '#1a2535', desc: 'Conte\'s vision: the internet will split into a Discovery Layer (algorithmic social media for reach) and a Connection Layer (direct-to-fan platforms like Patreon, Discord, email lists). Creators will use the first for top-of-funnel exposure and the second to sustain their actual community and business.', quote: 'The future of the internet is not one thing. It is two things: the machine for reaching strangers, and the machine for keeping friends.', tags: ['Conte', 'Future', 'Architecture', 'Discovery', 'Connection'] },
+  { id: 'commerce-solution', title: 'Commerce as Creative Escape', category: 'Future Architecture', thinker: 'Jack Conte', color: '#2a3545', desc: 'Direct commerce (selling digital products, one-off items, live stream tickets) allows creators to decouple financial survival from algorithmic visibility. When revenue comes directly from fans rather than ads, the creative incentive changes: instead of "What will the algorithm favor?" it becomes "What will my fans love?"', quote: 'When your business model is direct commerce with true fans, you get to ask a different question. You get to ask: what beautiful thing can I make?', tags: ['Conte', 'Commerce', 'Independence', 'Creative Autonomy'] },
+  { id: 'patreon-founding', title: 'Patreon: 1,000 True Fans in Software', category: 'Organizational History', thinker: 'Jack Conte', color: '#283747', desc: 'Conte built Patreon in 2013 as the software embodiment of Kevin Kelly\'s "1,000 True Fans" theory. A membership platform where fans subscribe directly to creators, bypassing platforms. By 2024: 250,000+ creators, $3.5 billion paid out, proof the model scales.', quote: 'Patreon is 1,000 True Fans in software form. It is infrastructure for the attention economy\'s alternative.', tags: ['Conte', 'Patreon', 'History', 'Scale', 'Direct-to-Fan'] },
+  { id: 'true-fan-depth', title: 'Depth of Connection (True Fan)', category: 'Creator Economy', thinker: 'Jack Conte', color: '#1c2a3a', desc: 'Conte\'s antidote to the attention economy: instead of chasing viral reach, focus entirely on depth of connection with a small core audience. True fans drive 90% of community value. Their relationship to a creator is qualitatively different from a casual viewer — they are invested, emotional, and loyal.', quote: 'You don\'t need a million views. You need a thousand people who will drive 200 miles to see you perform.', tags: ['True Fan', 'Depth', 'Community', 'Loyalty'] },
+
+  // ── KEVIN KELLY ──
+  { id: 'kelly-1000-fans', title: '1,000 True Fans (Kelly)', category: 'Economic Theory', thinker: 'Kevin Kelly', color: '#263238', desc: 'Kelly\'s 2008 essay: to make a sustainable living as an independent creator, you need exactly 1,000 True Fans who each spend ~$100/year on your work. 1,000 × $100 = $100,000 — a living wage, achieved without mainstream celebrity or algorithmic favor.', quote: 'You don\'t need a hit. You need a thousand fans. A true fan is someone who will purchase anything you produce.', tags: ['Kelly', '1000 Fans', 'Economic Model', 'Independence'] },
+  { id: 'kelly-long-tail', title: 'Long Tail & Niche Viability', category: 'Economic Theory', thinker: 'Kevin Kelly', color: '#2d3e45', desc: 'The internet\'s scale makes previously unviable niches commercially sustainable. If one in a million people wants your work, that\'s 8,000 people on Earth. The long tail of the web means every niche can find its thousand true fans — but only if distribution channels remain direct.', quote: 'In a world of infinite content, the scarcest thing is not attention. It is the direct line between maker and the people who love what they make.', tags: ['Kelly', 'Long Tail', 'Niche', 'Scale', 'Viability'] },
+  { id: 'kelly-middlemen', title: 'Elimination of Middlemen (Kelly)', category: 'Economic Theory', thinker: 'Kevin Kelly', color: '#344452', desc: 'The pre-internet creative economy was structured around middlemen (labels, publishers, distributors) who extracted 80-90% of profits. The internet, by providing free distribution, allowed creators to keep the full value of a direct fan relationship — but only when platforms preserve that direct channel.', quote: 'The internet gave creators something unprecedented: the ability to deal directly with the people who love their work. The platforms took it away.', tags: ['Kelly', 'Middlemen', 'Distribution', 'Value Chain', 'Independence'] },
+
+  // ── CONTE / SCANLON SYNTHESIS ──
+  { id: 'friction-true-fan-filter', title: 'Friction as True Fan Filter', category: 'Synthesis', thinker: 'Conte / Scanlon', color: '#3a2a4a', desc: 'Scanlon argues friction produces meaning; Conte argues it filters for depth. Requiring effort to join a creator\'s community (paying, signing up, showing up) separates passive consumers from true fans. The friction of direct commerce is not a barrier — it is a filter that makes community possible.', quote: 'The scroll costs nothing. The subscription costs something. That cost is what creates the community. You cannot build a village of people who wandered past.', tags: ['Synthesis', 'Friction', 'Filter', 'Community', 'Meaning'] },
+  { id: 'extractive-vs-creative', title: 'Extractive vs. Creative Attention (Synthesis)', category: 'Synthesis', thinker: 'Conte / Scanlon', color: '#2a3a4a', desc: 'Scanlon\'s "extractive attention" maps directly onto Conte\'s critique of algorithmic creators: both describe an economy that farms emotional reactions without building anything lasting. The antidote for both is the same — redirect attention from extraction toward genuine creation and deep community.', quote: 'The extractive creator makes content for the algorithm. The creative creator makes art for the people who will still be there when the algorithm changes.', tags: ['Synthesis', 'Extraction', 'Creation', 'Sustainability', 'Artistry'] },
+  { id: 'attention-replaces-follower', title: 'Attention Replaces the Follow as Currency', category: 'Synthesis', thinker: 'Conte / Scanlon', color: '#1a2a3a', desc: 'When algorithmic ranking replaced chronological feeds, the currency of the digital economy shifted from the follower (consent-based, durable, relational) to attention (capture-based, volatile, transactional). This is the defining economic shift of the 2010s for both theorists.', quote: 'The follower was a long-term relationship. Attention is a one-night stand. The internet optimized for the latter, and now it is wondering why everyone feels so alone.', tags: ['Synthesis', 'Currency', 'Shift', 'Loneliness', 'Economy'] },
+
+  // ── STRUCTURAL / FOUNDATIONAL ──
+  { id: 'platform-as-central-bank', title: 'Platform as Attention Central Bank', category: 'Structural Critique', thinker: 'Kyla Scanlon', color: '#1a1a1a', desc: 'If attention is the bedrock currency, platforms function as central banks: they control the mechanisms that allocate it. When they adjust the algorithm, they effectively raise or lower the "interest rate" on attention — determining who gets to participate in the economy.', quote: 'When Facebook changes its algorithm, it is not a product decision. It is a monetary policy decision. It affects the livelihood of millions.', tags: ['Platform', 'Central Bank', 'Monetary Policy', 'Power'] },
+  { id: 'creators-content-machines', title: 'Creators as Content Machines', category: 'Structural Critique', thinker: 'Jack Conte', color: '#222222', desc: 'When the platform\'s algorithm controls a creator\'s livelihood, it effectively turns the creator into a manufacturer of platform-favorable content. The creator becomes a cog in the attention extraction machine — their art repurposed as raw material for the platform\'s ad business.', quote: 'The platforms are not your stage. They are your employer. And they will optimize your behavior accordingly.', tags: ['Conte', 'Labor', 'Exploitation', 'Algorithm', 'Autonomy'] },
+  { id: 'community-degradation', title: 'Community Degradation Over Time', category: 'Structural Critique', thinker: 'Jack Conte', color: '#2a1a1a', desc: 'On algorithmic platforms, creator communities degrade over time as engagement metrics replace genuine connection. Fans become passive consumers of the feed rather than invested members of a community. The platform does not allow relationships to deepen — it constantly disrupts them with new content.', quote: 'Every time someone opens the app, the algorithm has to compete with you for their attention. And the algorithm usually wins.', tags: ['Community', 'Degradation', 'Feed', 'Passivity', 'Disruption'] },
+  { id: 'attn-numb-world', title: 'Numbed to the World Around Them', category: 'Cultural Critique', thinker: 'Kyla Scanlon', color: '#1a0a0a', desc: 'Scanlon\'s darkest observation: sustained exposure to the attention economy does not just distract people — it recalibrates their baseline sensitivity. The world outside the screen becomes less vivid, less urgent, less real. People become numb to their actual surroundings.', quote: 'The person scrolling through catastrophe after catastrophe does not become more informed. They become immune. The world outside the screen starts to feel less real than the one inside it.', tags: ['Numbness', 'Desensitization', 'Reality', 'Screen', 'Consequence'] },
+  { id: 'attn-precursor-politics', title: 'Attention as Precursor to Political Power', category: 'Political Theory', thinker: 'Kyla Scanlon', color: '#0a1a0a', desc: 'Political power in the modern era is downstream of attention. The politician who can capture and sustain attention wins — regardless of policy, truth, or competence. Attention is the single most reliable predictor of political success in the current system.', quote: 'You can have all the best policies in the world. If you cannot hold attention for thirty seconds, you will lose to someone who can hold it for thirty seconds and says nothing.', tags: ['Politics', 'Power', 'Electoral', 'Attention', 'Democracy'] },
+  { id: 'graeber-world-we-make', title: 'Graeber: The World We Make', category: 'Philosophical Foundation', thinker: 'David Graeber', color: '#0a2a1a', desc: 'Graeber\'s foundational claim: the world is not fixed — it is made and remade by human choices. The attention economy is not a natural phenomenon but a set of design decisions. It can be designed differently. The first step is recognizing that we made it, and we can make something else.', quote: 'The ultimate hidden truth of the world is that it is something we make, and could just as easily make differently.', tags: ['Graeber', 'Agency', 'Design', 'Alternative', 'Hope'] },
+  { id: 'future-direct-connection', title: 'Future: Direct Connection Layer', category: 'Future Scenario', thinker: 'Jack Conte', color: '#0a1a2a', desc: 'Conte\'s optimistic scenario: a next generation of media companies abandons algorithmic discovery entirely, focusing on depth of connection. Private communities, direct commerce, owned audiences. The infrastructure of the follow is rebuilt outside the platforms that destroyed it.', quote: 'The next generation of media companies will not try to win the algorithm. They will build the infrastructure to make the algorithm irrelevant.', tags: ['Future', 'Optimism', 'Infrastructure', 'Direct', 'Independence'] },
+  { id: 'future-dystopia-skinner', title: 'Future: Behavioral Control at Scale', category: 'Future Scenario', thinker: 'Kyla Scanlon', color: '#1a0a1a', desc: 'Scanlon\'s darker scenario: the logical endpoint of the attention economy is Skinnerian behavioral control — a world in which human behavior is managed by feedback loops of reward and punishment, with attention as the primary mechanism of compliance. China\'s social credit system as proof of concept.', quote: 'BF Skinner said you could build a perfect society by managing behavior through reward and punishment. The attention economy is testing that hypothesis at scale, in the open, with everyone\'s consent.', tags: ['Future', 'Skinner', 'Control', 'Dystopia', 'China', 'Behavioral'] },
+  { id: 'future-beautiful-things', title: 'Future: Make Beautiful Things', category: 'Future Scenario', thinker: 'Jack Conte', color: '#2a1a0a', desc: 'Conte\'s ultimate message to creators: opt out of the extractive attention machine. Stop making content for the algorithm. Start making beautiful things for the specific people who care. This is not just a business strategy — it is a moral and artistic imperative.', quote: 'Make the most beautiful thing you can make. For the people who actually care about it. That is the only path that leads anywhere worth going.', tags: ['Future', 'Art', 'Conte', 'Optimism', 'Beauty', 'Independence'] },
+];
+
+const $ = id => document.getElementById(id);
+const show = (el, display = 'block') => { if (el) el.style.display = display; };
+const hide = el => { if (el) el.style.display = 'none'; };
+
+let mode = 'entry';
+let selected = [];
+let filter = '';
+let showTrailOnly = false;
+
+function getTextColor(bg) {
+  const hex = bg.replace('#', '');
+  const r = parseInt(hex.substr(0,2),16);
+  const g = parseInt(hex.substr(2,2),16);
+  const b = parseInt(hex.substr(4,2),16);
+  return (r*299+g*587+b*114)/1000 > 128 ? '#000' : '#fff';
+}
+
+function renderGrid() {
+  const grid = $('gridView');
+  grid.innerHTML = '';
+  rawConcepts.forEach(c => {
+    const selIdx = selected.findIndex(s => s.id === c.id);
+    const isSel = selIdx > -1;
+    if (showTrailOnly && !isSel) return;
+
+    const card = document.createElement('div');
+    card.className = 'card' + (isSel ? ' selected' : '');
+    card.dataset.id = c.id;
+    card.innerHTML = `
+      <div class="card-header" style="background:${c.color};color:${getTextColor(c.color)};">
+        ${c.title}
+        ${isSel ? `<div class="card-sequence">${selIdx+1}</div>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-category">${c.category}</div>
+        <div class="card-thinker">— ${c.thinker}</div>
+        <div class="card-desc">${c.desc}</div>
+        ${c.quote ? `<div class="card-quote">"${c.quote}"</div>` : ''}
+        ${c.tags ? `<div class="card-tags">${c.tags.join(' · ')}</div>` : ''}
+      </div>
+      <div class="card-meta">
+        <span>${c.category}</span>
+        <span>Click=View | DblClick=Add</span>
+      </div>
+    `;
+
+    let clickCount = 0, clickTimer = null;
+    card.addEventListener('click', () => {
+      clickCount++;
+      if (clickCount === 1) {
+        clickTimer = setTimeout(() => { showDetail(c); clickCount = 0; }, 300);
+      } else if (clickCount === 2) {
+        clearTimeout(clickTimer); toggleSelect(c.id); clickCount = 0;
+      }
+    });
+    grid.appendChild(card);
+  });
+}
+
+function renderList() {
+  const list = $('listView');
+  list.innerHTML = '';
+  rawConcepts.forEach(c => {
+    const selIdx = selected.findIndex(s => s.id === c.id);
+    const isSel = selIdx > -1;
+    if (showTrailOnly && !isSel) return;
+
+    const item = document.createElement('div');
+    item.className = 'list-item' + (isSel ? ' selected' : '');
+    item.dataset.id = c.id;
+    item.innerHTML = `
+      <div class="list-item-color" style="background:${c.color}"></div>
+      <div class="list-item-content">
+        <div class="list-item-title">${c.title}</div>
+        <div class="list-item-meta">${c.category}</div>
+        <div class="list-item-thinker">— ${c.thinker}</div>
+        <div class="list-item-desc">${c.desc}</div>
+        ${c.quote ? `<div class="list-item-quote">"${c.quote}"</div>` : ''}
+        ${c.tags ? `<div class="list-item-tags">${c.tags.join(' · ')}</div>` : ''}
+      </div>
+      ${isSel ? `<div class="list-item-sequence">${selIdx+1}</div>` : ''}
+    `;
+
+    let clickCount = 0, clickTimer = null;
+    item.addEventListener('click', () => {
+      clickCount++;
+      if (clickCount === 1) {
+        clickTimer = setTimeout(() => { showDetail(c); clickCount = 0; }, 300);
+      } else if (clickCount === 2) {
+        clearTimeout(clickTimer); toggleSelect(c.id); clickCount = 0;
+      }
+    });
+    list.appendChild(item);
+  });
+}
+
+// Simple detail modal
+function showDetail(c) {
+  let modal = document.getElementById('detail-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'detail-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  }
+  modal.innerHTML = `
+    <div style="background:var(--paper);max-width:600px;width:100%;max-height:85vh;overflow-y:auto;border:var(--border);box-shadow:8px 8px 0 rgba(0,0,0,0.5);">
+      <div style="background:${c.color};color:${getTextColor(c.color)};padding:20px 24px;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.5px;line-height:1.1;position:relative;">
+        ${c.title}
+        <button onclick="document.getElementById('detail-modal').remove()" style="position:absolute;top:10px;right:12px;background:none;border:1.5px solid ${getTextColor(c.color)};color:${getTextColor(c.color)};cursor:pointer;width:32px;height:32px;font-weight:700;font-size:16px;">✕</button>
+      </div>
+      <div style="padding:24px;">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--signal);margin-bottom:6px;">${c.category}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--noise);margin-bottom:16px;">— ${c.thinker}</div>
+        <p style="font-size:14px;line-height:1.75;color:#222;margin-bottom:16px;">${c.desc}</p>
+        ${c.quote ? `<blockquote style="font-style:italic;font-size:13px;color:#444;padding:14px 18px;border-left:3px solid var(--signal);background:rgba(232,50,10,0.04);line-height:1.7;margin-bottom:16px;">"${c.quote}"</blockquote>` : ''}
+        ${c.tags ? `<div style="font-family:'Space Mono',monospace;font-size:9px;color:#999;padding-top:14px;border-top:1px solid rgba(0,0,0,0.1);">${c.tags.join(' · ')}</div>` : ''}
+        <div style="margin-top:16px;display:flex;gap:10px;">
+          <button onclick="toggleSelect('${c.id}');document.getElementById('detail-modal').remove();" style="padding:10px 20px;border:var(--border);background:var(--ink);color:var(--paper);font-family:'Space Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">
+            ${selected.some(s=>s.id===c.id) ? '✓ Added — Remove' : '+ Add to Argument'}
+          </button>
+          <button onclick="document.getElementById('detail-modal').remove()" style="padding:10px 20px;border:var(--border);background:var(--paper);color:var(--ink);font-family:'Space Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleSelect(id) {
+  const idx = selected.findIndex(s => s.id === id);
+  if (idx > -1) {
+    selected.splice(idx, 1);
+  } else if (selected.length < MAX_CLIPS) {
+    const data = rawConcepts.find(c => c.id === id);
+    selected.push(data);
+  }
+  renderGrid(); renderList(); updateDock(); updateCounts(); saveStory();
+  if (mode === '3d') drawConnectionLines();
+}
+
+function toggleTrailView() {
+  showTrailOnly = !showTrailOnly;
+  const btn = $('toggle-trail-btn');
+  if (showTrailOnly) { btn.classList.add('active'); btn.textContent = '★ Show All'; }
+  else { btn.classList.remove('active'); btn.textContent = '★ Show Trail'; }
+  renderGrid(); renderList(); updateCounts();
+}
+
+function updateDock() {
+  const dock = $('dockContent');
+  const header = document.querySelector('.dock-header');
+  header.textContent = `Your Argument (${selected.length}/12)`;
+  if (selected.length === 0) {
+    dock.innerHTML = '<div class="empty-state">Double-click concepts to build your argument thread</div>';
+    return;
+  }
+  dock.innerHTML = '';
+  selected.forEach((c, idx) => {
+    const item = document.createElement('div');
+    item.className = 'dock-item';
+    item.style.borderLeftColor = c.color;
+    item.style.borderLeftWidth = '4px';
+    item.innerHTML = `
+      <div class="dock-item-num">${idx+1}</div>
+      <div class="dock-item-title">${c.title}</div>
+      <div class="dock-item-category">${c.thinker}</div>
+      <div class="dock-item-remove">×</div>
+    `;
+    item.querySelector('.dock-item-remove').addEventListener('click', e => { e.stopPropagation(); toggleSelect(c.id); });
+    item.addEventListener('click', () => showDetail(c));
+    dock.appendChild(item);
+  });
+}
+
+function updateCounts() {
+  let visible = rawConcepts;
+  if (showTrailOnly) visible = visible.filter(c => selected.some(s => s.id === c.id));
+  if (filter) visible = visible.filter(c =>
+    c.title.toLowerCase().includes(filter) ||
+    c.category.toLowerCase().includes(filter) ||
+    c.thinker.toLowerCase().includes(filter) ||
+    (c.tags && c.tags.some(t => t.toLowerCase().includes(filter)))
+  );
+  $('visibleCount').textContent = visible.length;
+  $('totalCount').textContent = rawConcepts.length;
+}
+
+function switchView(view) {
+  mode = view;
+  document.querySelectorAll('.view-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+  $('gridView').style.display = view === 'grid' ? 'grid' : 'none';
+  $('listView').style.display = view === 'list' ? 'block' : 'none';
+  $('canvas').classList.toggle('active', view === '3d');
+  if (view === '3d' && !window.scene) init3D();
+}
+
+function init3D() {
+  if (window.scene) return;
+  const canvas = $('canvas');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf4f0e8);
+
+  const isMobile = window.innerWidth < 768;
+  const camera = new THREE.PerspectiveCamera(isMobile ? 75 : 60, canvas.clientWidth / canvas.clientHeight, 0.1, 20000);
+  camera.position.set(0, 400, isMobile ? 800 : 1200);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(500, 800, 500);
+  scene.add(dir);
+
+  const grid = new THREE.GridHelper(isMobile ? 3000 : 5000, 40, 0xcccccc, 0xe0dcd4);
+  scene.add(grid);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.rotateSpeed = 0.6; controls.zoomSpeed = 1.2;
+  controls.minDistance = isMobile ? 200 : 300;
+  controls.maxDistance = isMobile ? 2500 : 4000;
+  controls.maxPolarAngle = Math.PI / 2.1;
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+  window.scene = scene; window.camera = camera;
+  window.renderer = renderer; window.controls = controls;
+  window.fragments3D = [];
+
+  create3DFragments(); animate3D(); setupCanvasInteraction();
+}
+
+function create3DFragments() {
+  const scene = window.scene, frags = window.fragments3D;
+  frags.forEach(f => scene.remove(f.group)); frags.length = 0;
+
+  const isMobile = window.innerWidth < 768;
+  const cols = isMobile ? 3 : 6, spacing = isMobile ? 280 : 320;
+  const rows = Math.ceil(rawConcepts.length / cols);
+
+  rawConcepts.forEach((data, idx) => {
+    const row = Math.floor(idx / cols), col = idx % cols;
+    const x = (col - (cols-1)/2) * spacing, z = (row - (rows-1)/2) * spacing;
+
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+
+    const W = isMobile ? 200 : 260, H = isMobile ? 140 : 180;
+    const cvs = document.createElement('canvas');
+    const scale = 2; cvs.width = W*scale; cvs.height = H*scale;
+    const ctx = cvs.getContext('2d');
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = data.color; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#0d0d0d'; ctx.lineWidth = 3; ctx.strokeRect(0, 0, W, H);
+
+    const tc = getTextColor(data.color);
+    ctx.fillStyle = tc;
+    ctx.font = `bold ${isMobile ? 13 : 15}px 'Courier New', monospace`;
+
+    let words = data.title.split(' '), line = '', y = isMobile ? 18 : 22;
+    for (let i = 0; i < words.length; i++) {
+      const test = line + words[i] + ' ';
+      if (ctx.measureText(test).width > W-16 && line) {
+        ctx.fillText(line.trim(), 8, y); line = words[i]+' '; y += isMobile ? 16 : 19;
+      } else line = test;
+    }
+    ctx.fillText(line.trim(), 8, y); y += isMobile ? 18 : 22;
+
+    ctx.font = `bold ${isMobile ? 9 : 10}px 'Courier New', monospace`;
+    ctx.fillStyle = tc === '#000' ? '#444' : '#bbb';
+    ctx.fillText('— '+data.thinker, 8, y);
+
+    const geo = new THREE.PlaneGeometry(W, H);
+    const tex = new THREE.CanvasTexture(cvs);
+    tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+    const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex }));
+    mesh.userData.conceptId = data.id; mesh.userData.conceptData = data;
+    group.add(mesh);
+
+    scene.add(group);
+    frags.push({ data, group, mesh });
+  });
+  drawConnectionLines();
+}
+
+function drawConnectionLines() {
+  const scene = window.scene, frags = window.fragments3D;
+  scene.children.forEach(o => { if (o.userData && o.userData.isConnectionLine) scene.remove(o); });
+  if (selected.length < 2) return;
+
+  const points = [];
+  selected.forEach(c => {
+    const f = frags.find(f => f.data.id === c.id);
+    if (f) points.push(new THREE.Vector3(f.group.position.x, 40, f.group.position.z));
+  });
+  if (points.length < 2) return;
+
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({ color: 0xe8320a, linewidth: 2 })
+  );
+  line.userData.isConnectionLine = true;
+  scene.add(line);
+
+  selected.forEach((c, idx) => {
+    const f = frags.find(f => f.data.id === c.id);
+    if (!f) return;
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(18, 16, 16),
+      new THREE.MeshLambertMaterial({ color: 0xe8320a })
+    );
+    sphere.position.set(f.group.position.x, 40, f.group.position.z);
+    sphere.userData.isConnectionLine = true;
+    scene.add(sphere);
+  });
+}
+
+function animate3D() {
+  requestAnimationFrame(animate3D);
+  if (window.controls) window.controls.update();
+  if (window.renderer && window.scene && window.camera) window.renderer.render(window.scene, window.camera);
+}
+
+function setupCanvasInteraction() {
+  const canvas = $('canvas');
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  canvas.addEventListener('click', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, window.camera);
+    const meshes = window.fragments3D.map(f => f.mesh);
+    const hits = raycaster.intersectObjects(meshes);
+    if (hits.length > 0) {
+      const data = hits[0].object.userData.conceptData;
+      if (event.shiftKey) showDetail(data);
+      else toggleSelect(hits[0].object.userData.conceptId);
+    }
+  });
+}
+
+let presentationIndex = 0;
+
+function openPresentation() {
+  if (selected.length === 0) { alert('Select at least one concept first.'); return; }
+  presentationIndex = 0;
+  show($('presentationOverlay'), 'flex');
+  renderPresentationSlide();
+}
+
+function renderPresentationSlide() {
+  const c = selected[presentationIndex];
+  const slide = $('presentSlide');
+  slide.innerHTML = `
+    <div class="presentation-slide-header" style="background:${c.color};color:${getTextColor(c.color)};">${c.title}</div>
+    <div class="presentation-slide-body">
+      <div class="presentation-thinker">${c.thinker}</div>
+      <div class="presentation-category">${c.category}</div>
+      <div class="presentation-desc">${c.desc}</div>
+      ${c.quote ? `<div class="presentation-quote">"${c.quote}"</div>` : ''}
+      ${c.tags ? `<div class="presentation-tags"><strong>Tags:</strong> ${c.tags.join(' · ')}</div>` : ''}
+    </div>
+  `;
+  $('presentProgress').textContent = `Concept ${presentationIndex+1} of ${selected.length}`;
+  $('presentIndicator').textContent = `${presentationIndex+1} / ${selected.length}`;
+  $('presentPrev').disabled = presentationIndex === 0;
+  $('presentNext').disabled = presentationIndex === selected.length - 1;
+}
+
+function saveStory() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ selected: selected.map(c=>c.id) })); } catch(e) {}
+}
+function loadStory() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      selected = data.selected.map(id => rawConcepts.find(c => c.id === id)).filter(Boolean);
+      renderGrid(); renderList(); updateDock(); updateCounts();
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const startApp = (view) => {
+    hide($('entry-phase'));
+    show($('main-app'), 'flex');
+    switchView(view);
+    loadStory();
+    renderGrid(); renderList(); updateCounts();
+  };
+
+  $('start-grid').addEventListener('click', () => startApp('grid'));
+  $('start-list').addEventListener('click', () => startApp('list'));
+  $('start-3d').addEventListener('click', () => startApp('3d'));
+
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  $('reset-btn').addEventListener('click', () => {
+    selected = [];
+    hide($('main-app'));
+    show($('entry-phase'), 'flex');
+    if (window.renderer) { window.renderer.dispose(); window.renderer = null; window.scene = null; window.camera = null; window.controls = null; }
+    mode = 'entry';
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    if (selected.length > 0 && !confirm('Clear all selected concepts?')) return;
+    selected = [];
+    renderGrid(); renderList(); updateDock(); updateCounts(); saveStory();
+    if (mode === '3d') drawConnectionLines();
+  });
+
+  $('presentBtn').addEventListener('click', openPresentation);
+  $('presentClose').addEventListener('click', () => hide($('presentationOverlay')));
+  $('presentPrev').addEventListener('click', () => { if (presentationIndex > 0) { presentationIndex--; renderPresentationSlide(); } });
+  $('presentNext').addEventListener('click', () => { if (presentationIndex < selected.length-1) { presentationIndex++; renderPresentationSlide(); } });
+  $('toggle-trail-btn').addEventListener('click', toggleTrailView);
+
+  document.addEventListener('keydown', (e) => {
+    if ($('presentationOverlay').style.display !== 'none') {
+      if (e.key === 'ArrowLeft' && presentationIndex > 0) { presentationIndex--; renderPresentationSlide(); }
+      if (e.key === 'ArrowRight' && presentationIndex < selected.length-1) { presentationIndex++; renderPresentationSlide(); }
+      if (e.key === 'Escape') hide($('presentationOverlay'));
+    }
+  });
+
+  $('exportBtn').addEventListener('click', () => {
+    if (selected.length === 0) { alert('Select concepts first.'); return; }
+    const data = { title: 'Attention Infrastructure Argument', selected: selected.map(c=>({id:c.id,title:c.title,thinker:c.thinker,category:c.category,desc:c.desc,quote:c.quote,tags:c.tags})), timestamp: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=`attn-argument-${Date.now()}.json`; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $('filterInput').addEventListener('input', (e) => {
+    filter = e.target.value.toLowerCase();
+    document.querySelectorAll('[data-id]').forEach(el => {
+      const c = rawConcepts.find(x => x.id === el.dataset.id);
+      const match = !filter ||
+        c.title.toLowerCase().includes(filter) ||
+        c.category.toLowerCase().includes(filter) ||
+        c.thinker.toLowerCase().includes(filter) ||
+        (c.tags && c.tags.some(t => t.toLowerCase().includes(filter)));
+      el.style.display = match ? '' : 'none';
+    });
+    updateCounts();
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.renderer && window.camera && mode === '3d') {
+      const canvas = $('canvas');
+      window.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      window.camera.updateProjectionMatrix();
+      window.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      create3DFragments();
+    }
+  });
+});
+</script>
+</body>
+</html>
