@@ -1,0 +1,1251 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Procedural Rhetoric Forager: When Rules Persuade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            overflow-x: hidden;
+        }
+        :root {
+            --primary: #0f766e;
+            --secondary: #ea580c;
+            --accent: #7c3aed;
+            --neutral: #374151;
+            --base-100: #fefefe;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: var(--neutral);
+        }
+        
+        .serif {
+            font-family: 'Crimson Text', serif;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .fixed-toc {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid #e5e7eb;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+        }
+        
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+        
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .hero-text {
+            grid-column: 1 / -1;
+            z-index: 2;
+            position: relative;
+        }
+        
+        .hero-visual {
+            grid-column: 1 / -1;
+            grid-row: 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .citation-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px dotted var(--primary);
+        }
+        
+        .citation-link:hover {
+            background: rgba(15, 118, 110, 0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        
+        .mermaid-container {
+            display: flex;
+            justify-content: center;
+            min-height: 300px;
+            max-height: 800px;
+            background: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mermaid-container .mermaid {
+            width: 100%;
+            max-width: 100%;
+            height: 100%;
+            cursor: grab;
+            transition: transform 0.3s ease;
+            transform-origin: center center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .mermaid-container .mermaid svg {
+            max-width: 100%;
+            height: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .mermaid-container .mermaid:active {
+            cursor: grabbing;
+        }
+
+        .mermaid-container.zoomed .mermaid {
+            height: 100%;
+            width: 100%;
+            cursor: grab;
+        }
+
+        .mermaid-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .mermaid-control-btn {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #374151;
+            font-size: 14px;
+            min-width: 36px;
+            height: 36px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mermaid-control-btn:hover {
+            background: #f8fafc;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            transform: translateY(-1px);
+        }
+
+        .mermaid-control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        @media (max-width: 1024px) {
+            .mermaid-control-btn:not(.reset-zoom) {
+                display: none;
+            }
+            .mermaid-controls {
+                top: auto;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .fixed-toc {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .fixed-toc.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-visual {
+                grid-template-columns: 1fr;
+            }
+            
+            .mermaid-container {
+                padding: 15px;
+            }
+        }
+    </style>
+  <base target="_blank">
+</head>
+
+  <body>
+    <!-- Fixed Table of Contents -->
+    <nav class="fixed-toc">
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Contents</h3>
+        <ul class="space-y-3 text-sm">
+          <li>
+            <a href="#hero" class="citation-link block">Hero &amp; Executive Summary</a>
+          </li>
+          <li>
+            <a href="#cold-open" class="citation-link block">Cold Open Demo</a>
+          </li>
+          <li>
+            <a href="#the-claim" class="citation-link block">The Claim</a>
+          </li>
+          <li>
+            <a href="#bogost" class="citation-link block">Bogost&#39;s Framework</a>
+          </li>
+          <li>
+            <a href="#youngblood" class="citation-link block">Youngblood&#39;s Vision</a>
+          </li>
+          <li>
+            <a href="#mechanism" class="citation-link block">The Invisible Argument Loop</a>
+          </li>
+          <li>
+            <a href="#case-studies" class="citation-link block">Case Studies</a>
+          </li>
+          <li>
+            <a href="#simcity" class="citation-link block ml-4">• SimCity</a>
+          </li>
+          <li>
+            <a href="#darfur" class="citation-link block ml-4">• Darfur is Dying</a>
+          </li>
+          <li>
+            <a href="#tiktok" class="citation-link block ml-4">• TikTok FYP</a>
+          </li>
+          <li>
+            <a href="#credit" class="citation-link block ml-4">• Credit Scoring</a>
+          </li>
+          <li>
+            <a href="#ai-bridge" class="citation-link block">AI Bridge</a>
+          </li>
+          <li>
+            <a href="#futurity" class="citation-link block">Futurity</a>
+          </li>
+          <li>
+            <a href="#challenge" class="citation-link block">Design Challenge</a>
+          </li>
+          <li>
+            <a href="#discussion" class="citation-link block">Discussion Questions</a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="border-t pt-6">
+        <h4 class="font-semibold text-xs uppercase tracking-wide text-gray-500 mb-3">Key Insights</h4>
+        <blockquote class="text-xs italic text-gray-600 border-l-2 border-teal-600 pl-3">
+          &#34;The interface is the ideology.&#34;
+        </blockquote>
+        <blockquote class="text-xs italic text-gray-600 border-l-2 border-orange-600 pl-3 mt-2">
+          &#34;Rules make you complicit.&#34;
+        </blockquote>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Hero Section -->
+      <section id="hero" class="min-h-screen bg-gradient-to-br from-slate-50 to-stone-100 px-8 py-16">
+        <div class="max-w-6xl mx-auto">
+          <div class="hero-grid">
+            <div class="hero-text text-center">
+              <h1 class="serif text-4xl sm:text-5xl md:text-7xl font-bold mb-6 gradient-text leading-tight">
+                <em>When Rules Persuade</em>
+              </h1>
+              <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                Media doesn&#39;t just <em>represent</em> the world. It <em>regulates</em> it.
+                Rules are arguments. Code is rhetoric.
+              </p>
+            </div>
+
+            <div class="hero-visual">
+              <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-200 card-hover">
+                <img src="https://kimi-web-img.moonshot.cn/img/files.idyllic.app/a60c33c0c6bdbc3cc3b7f131aa3a4a7846be1b0d" alt="Abstract visualization of cybernetic feedback loops" class="w-full h-32 object-cover rounded-lg mb-4" size="small" aspect="wide" query="cybernetic feedback loop abstract visualization" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+                <h3 class="font-bold text-gray-900 mb-2">Cybernetic Systems</h3>
+                <p class="text-sm text-gray-600">From Youngblood&#39;s expanded cinema to today&#39;s algorithmic feedback loops</p>
+              </div>
+
+              <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-200 card-hover">
+                <img src="https://kimi-web-img.moonshot.cn/img/pic1.zhimg.com/b8b1e2ec8234dfb84ed0d2ac2951fbfdd02dde7a.jpg" alt="Abstract procedural rhetoric diagram" class="w-full h-32 object-cover rounded-lg mb-4" size="small" aspect="wide" query="procedural rhetoric abstract" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+                <h3 class="font-bold text-gray-900 mb-2">Procedural Arguments</h3>
+                <p class="text-sm text-gray-600">Bogost&#39;s framework: persuasion through processes, not images</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Executive Summary -->
+          <div class="mt-16 bg-white rounded-3xl p-8 shadow-xl border border-gray-200">
+            <h2 class="serif text-3xl font-bold text-gray-900 mb-6">Executive Summary</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 class="font-bold text-lg mb-3 text-teal-800">The Argument</h3>
+                <p class="text-gray-700 leading-relaxed">
+                  This presentation synthesizes Gene Youngblood&#39;s cybernetic &#34;expanded cinema&#34; with Ian Bogost&#39;s &#34;procedural rhetoric&#34; to demonstrate that media&#39;s primary persuasive power lies not in representation but in regulation. Through live audience interaction and six concrete case studies, we trace how rules shape behavior, belief, and ultimately, reality.
+                </p>
+              </div>
+              <div>
+                <h3 class="font-bold text-lg mb-3 text-orange-800">The Stakes</h3>
+                <p class="text-gray-700 leading-relaxed">
+                  From SimCity&#39;s urban planning assumptions to TikTok&#39;s attention economy, from credit scoring algorithms to AI-generated films, we live in a world where procedural arguments structure our choices before we&#39;re aware of them. The question isn&#39;t whether rules will regulate us—it&#39;s who gets to write them.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cold Open Demo -->
+      <section id="cold-open" class="py-16 px-8 bg-white">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Cold Open: The Rules Already Got You</h2>
+
+          <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-3xl p-8 mb-8">
+            <div class="text-center">
+              <p class="text-2xl font-bold text-gray-900 mb-8">
+                &#34;Raise your hand if you checked your phone in the last 10 minutes. <br/>
+                <span class="text-xl text-gray-600">Keep it up if you chose what to see.&#34;</span>
+              </p>
+
+              <div class="flex justify-center space-x-4 mb-8">
+                <div class="text-4xl">📱</div>
+                <div class="text-4xl">❓</div>
+              </div>
+
+              <blockquote class="text-xl italic text-gray-800 border-l-4 border-teal-600 pl-6">
+                &#34;Now keep your hand up if your feed showed you what you <em>wanted</em>—or what the algorithm wanted you to want? Here&#39;s the trick: nothing in this room changed. Same people, same phones. But one invisible rule—engagement optimization—just reshaped your reality. <strong>Nothing changed except the rules. And yet—your reality changed.</strong>&#34;
+              </blockquote>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-bold text-lg mb-3">Technical Analysis</h3>
+            <p class="text-gray-700">
+              This opening performs what the entire presentation will explain: rules regulate behavior beneath conscious awareness. The three-stage hand-raising creates visible social proof, then cognitive dissonance, then revelation. The closing line becomes mnemonic anchor for the entire argument.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- The Claim -->
+      <section id="the-claim" class="py-16 px-8 bg-gray-50">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">The Claim</h2>
+
+          <div class="text-center mb-12">
+            <p class="text-3xl font-bold gradient-text mb-8">
+              &#34;Media doesn&#39;t <em>represent</em> the world. It <em>regulates</em> it.&#34;
+            </p>
+            <p class="text-2xl text-gray-700 mb-8">
+              &#34;Rules are arguments. Code is rhetoric.&#34;
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-white rounded-2xl p-8 shadow-lg">
+              <div class="text-center mb-6">
+                <i class="fas fa-image text-4xl text-gray-400 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-600">REPRESENTATION</h3>
+                <p class="text-sm text-gray-500">Images, symbols, narratives</p>
+              </div>
+              <p class="text-gray-700 text-center">
+                We critique representations, decode symbols, analyze narratives. But this is the decoy.
+              </p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border-2 border-teal-600">
+              <div class="text-center mb-6">
+                <i class="fas fa-code text-4xl text-teal-600 mb-4"></i>
+                <h3 class="text-xl font-bold text-teal-800">REGULATION</h3>
+                <p class="text-sm text-teal-600">Rules, constraints, affordances</p>
+              </div>
+              <p class="text-gray-700 text-center">
+                The real persuasion happens in what you&#39;re <em>allowed</em> to do. The interface is the ideology.
+              </p>
+            </div>
+          </div>
+
+          <blockquote class="mt-12 text-center text-xl text-gray-800 font-medium">
+            &#34;We&#39;re trained to read images, but the real persuasion happens in what you&#39;re <em>allowed</em> to do. The interface is the ideology.&#34;
+          </blockquote>
+        </div>
+      </section>
+
+      <!-- Bogost's Framework -->
+      <section id="bogost" class="py-16 px-8 bg-white">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Bogost in One Move: Procedural Rhetoric</h2>
+
+          <div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-3xl p-8 mb-8">
+            <blockquote class="text-2xl text-center text-gray-800 italic mb-6">
+              &#34;The art of persuasion through rule-based representations and interactions—not words, images, or film.&#34;
+            </blockquote>
+            <p class="text-center text-sm text-gray-600">
+              — Ian Bogost, <em>Persuasive Games</em> (2007)
+              <a href="https://luisnavarrete.com/USC/pdf/Bogost2.pdf" class="citation-link ml-2" target="_blank">[Source]</a>
+            </p>
+          </div>
+
+          <div class="flex justify-center mb-8">
+            <div class="flex items-center space-x-4">
+              <div class="text-4xl">🎮</div>
+              <i class="fas fa-arrow-right text-2xl text-gray-400"></i>
+              <div class="text-4xl">📊</div>
+              <i class="fas fa-arrow-right text-2xl text-gray-400"></i>
+              <div class="text-4xl">🧠</div>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-bold text-lg mb-3">Key Insight</h3>
+            <p class="text-gray-700 leading-relaxed">
+              A game doesn&#39;t <em>tell</em> you urban policy—it makes you <em>discover</em> that more police stations reduce crime. The rules do the arguing. You don&#39;t watch the argument. You live it. This shifts media studies from &#34;what does this mean?&#34; to &#34;what does this let me do—and what does that do to me?&#34;
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Youngblood's Vision -->
+      <section id="youngblood" class="py-16 px-8 bg-gray-50">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Youngblood in One Move: Expanded Cinema</h2>
+
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-8 mb-8">
+            <blockquote class="text-2xl text-center text-gray-800 italic mb-6">
+              &#34;The viewer feeds back into the environment, expanding creative potential. Media as cybernetic system, not screen.&#34;
+            </blockquote>
+            <p class="text-center text-sm text-gray-600">
+              — Gene Youngblood, <em>Expanded Cinema</em> (1970)
+              <a href="https://monoskop.org/images/4/40/Youngblood_Gene_Expanded_Cinema_no_OCR.pdf" class="citation-link ml-2" target="_blank">[Source]</a>
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white rounded-2xl p-6 shadow-lg">
+              <img src="https://kimi-web-img.moonshot.cn/img/www.foothillsgateway.org/eb484639c561337fc6076e52110fd1c11122bb8e.png" alt="Film reel" class="w-full h-32 object-cover rounded-lg mb-4" size="small" aspect="wide" color="bw" style="photo" query="film reel" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+              <h3 class="font-bold text-lg mb-2">Traditional Cinema</h3>
+              <p class="text-gray-700">Projection you receive</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-lg border-2 border-purple-600">
+              <img src="https://kimi-web-img.moonshot.cn/img/nathan.ho.name/437a2811711d0873cc8ba8ad07b503c9a2c180fa.jpg" alt="Cybernetic feedback loop visualization" class="w-full h-32 object-cover rounded-lg mb-4" size="medium" aspect="wide" query="cybernetic feedback loop diagram" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+              <h3 class="font-bold text-lg mb-2 text-purple-800">Expanded Cinema</h3>
+              <p class="text-gray-700">Participation you co-create</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-6">
+            <h3 class="font-bold text-lg mb-3">Cybernetics 101</h3>
+            <p class="text-gray-700 leading-relaxed">
+              Youngblood saw cinema not as projection you receive but as <em>participation</em> you co-create. The viewer &#34;re-creates discovery along with the artist, feeding back into the environment.&#34; Cybernetics 101: behavior shapes system, system shapes behavior. Youngblood&#39;s &#34;expanded cinema&#34; was already procedural—rules generating meaning through interaction.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- The Mechanism -->
+      <section id="mechanism" class="py-16 px-8 bg-white">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">The Invisible Argument Loop</h2>
+
+          <div class="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-3xl p-8 mb-8">
+            <h3 class="text-2xl font-bold text-center mb-6 text-teal-800">RULES → AFFORDANCES → BEHAVIOR → FEEDBACK → BELIEF</h3>
+
+            <div class="mermaid-container">
+              <div class="mermaid-controls">
+                <button class="mermaid-control-btn zoom-in" title="放大">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="mermaid-control-btn zoom-out" title="缩小">
+                  <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="mermaid-control-btn reset-zoom" title="重置">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <button class="mermaid-control-btn fullscreen" title="全屏查看">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
+              <div class="mermaid">
+                graph LR
+                A[&#34;RULES<br/><small>TikTok shows 15-sec videos</small>&#34;] --&gt; B[&#34;AFFORDANCES<br/><small>Fast scrolling viable</small>&#34;]
+                B --&gt; C[&#34;BEHAVIOR<br/><small>You scroll, skip, react</small>&#34;]
+                C --&gt; D[&#34;FEEDBACK<br/><small>Algorithm learns patterns</small>&#34;]
+                D --&gt; E[&#34;BELIEF<br/><small>World feels urgent, fragmented</small>&#34;]
+                E --&gt; A
+
+                style A fill:#0f766e,stroke:#0d9488,stroke-width:3px,color:#ffffff,font-weight:bold
+                style B fill:#ea580c,stroke:#f97316,stroke-width:3px,color:#ffffff,font-weight:bold
+                style C fill:#7c3aed,stroke:#8b5cf6,stroke-width:3px,color:#ffffff,font-weight:bold
+                style D fill:#dc2626,stroke:#ef4444,stroke-width:3px,color:#ffffff,font-weight:bold
+                style E fill:#059669,stroke:#10b981,stroke-width:3px,color:#ffffff,font-weight:bold
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-bold text-lg mb-3">How It Works</h3>
+            <p class="text-gray-700 leading-relaxed mb-4">
+              <strong>Name it: The Invisible Argument Loop.</strong> Rules create what you <em>can</em> do. That shapes what you <em>do</em>. Your actions feed back, reinforcing or challenging the system. Eventually: belief. Not &#34;I was told this.&#34; &#34;I <em>experienced</em> this.&#34;
+            </p>
+            <blockquote class="text-lg font-medium text-gray-800 border-l-4 border-teal-600 pl-4">
+              &#34;That&#39;s why rules beat images. Images ask you to agree. Rules make you <em>complicit</em>.&#34;
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      <!-- Case Studies -->
+      <section id="case-studies" class="py-16 px-8 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Case Studies: Rules in Action</h2>
+
+          <!-- SimCity -->
+          <div id="simcity" class="mb-16">
+            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-200">
+              <div class="flex items-start space-x-4 mb-6">
+                <div class="text-3xl">🏙️</div>
+                <div>
+                  <h3 class="text-2xl font-bold mb-2">SimCity</h3>
+                  <p class="text-gray-600">Urban planning as procedural argument</p>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-orange-800">The Rules</h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li>• Police stations reduce crime within fixed radius</li>
+                    <li>• Zoning enforces strict residential/commercial separation</li>
+                    <li>• Tax rates affect growth but not inequality</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-teal-800">The Procedural Argument</h4>
+                  <p class="text-gray-700 mb-4">
+                    &#34;Rule: Police stations reduce crime. Behavior: You build more police. Belief: Crime = lack of enforcement.&#34;
+                  </p>
+                  <div class="bg-orange-50 rounded-lg p-4">
+                    <strong class="text-orange-800">Flip one rule:</strong>
+                    <p class="text-sm text-gray-700">
+                      What if crime responded to education funding? Same city, different ideology.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <blockquote class="mt-6 text-lg italic text-gray-800 border-l-4 border-gray-400 pl-4">
+                &#34;SimCity&#39;s rules argue. Crime spikes? The solution is <em>in the rules</em>: place police. Not housing, not jobs, not history. The game doesn&#39;t show you &#39;tough on crime&#39;—it makes you <em>enact</em> it.&#34;
+              </blockquote>
+            </div>
+          </div>
+
+          <!-- Darfur is Dying -->
+          <div id="darfur" class="mb-16">
+            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-200">
+              <div class="flex items-start space-x-4 mb-6">
+                <div class="text-3xl">💧</div>
+                <div>
+                  <h3 class="text-2xl font-bold mb-2">Darfur is Dying</h3>
+                  <p class="text-gray-600">The procedural argument against heroism</p>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-red-800">The Rules</h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li>• You play a powerless Darfuri child, not a hero</li>
+                    <li>• Water-fetching missions fail frequently</li>
+                    <li>• No &#34;win&#34; condition or heroic narrative arc</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-purple-800">The Procedural Argument</h4>
+                  <p class="text-gray-700 mb-4">
+                    &#34;Rule: You play a powerless child. Behavior: You fail, repeatedly. Belief: Complexity resists simple solutions.&#34;
+                  </p>
+                  <div class="bg-purple-50 rounded-lg p-4">
+                    <strong class="text-purple-800">Flip one rule:</strong>
+                    <p class="text-sm text-gray-700">
+                      A &#34;save everyone&#34; button would convert systemic tragedy into individual triumph.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <blockquote class="mt-6 text-lg italic text-gray-800 border-l-4 border-gray-400 pl-4">
+                &#34;The rules <em>refuse</em> heroism. The procedural argument: humanitarian crises aren&#39;t solved by awareness alone. The rules <em>protect</em> the argument from feel-good bullshit.&#34;
+              </blockquote>
+            </div>
+          </div>
+
+          <!-- TikTok FYP -->
+          <div id="tiktok" class="mb-16">
+            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-200">
+              <div class="flex items-start space-x-4 mb-6">
+                <div class="text-3xl">⏱️</div>
+                <div>
+                  <h3 class="text-2xl font-bold mb-2">TikTok FYP</h3>
+                  <p class="text-gray-600">The attention economy&#39;s procedural logic</p>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-pink-800">The Rules</h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li>• Watch time = distribution</li>
+                    <li>• Engagement velocity drives algorithm</li>
+                    <li>• Trending topics get exponential amplification</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-indigo-800">The Procedural Argument</h4>
+                  <p class="text-gray-700 mb-4">
+                    &#34;Rule: Watch time = distribution. Behavior: Creators optimize for hook + outrage. Belief: The world is constantly breaking.&#34;
+                  </p>
+                  <div class="bg-indigo-50 rounded-lg p-4">
+                    <strong class="text-indigo-800">Flip one rule:</strong>
+                    <p class="text-sm text-gray-700">
+                      Optimize for &#34;time well spent&#34; instead. Same app, different nervous system.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <blockquote class="mt-6 text-lg italic text-gray-800 border-l-4 border-gray-400 pl-4">
+                &#34;The For You Page doesn&#39;t show you what&#39;s <em>true</em>. It shows you what <em>stops your thumb</em>. The rule produces behavior: shorter videos, louder emotions, faster cuts.&#34;
+              </blockquote>
+            </div>
+          </div>
+
+          <!-- Credit Scoring -->
+          <div id="credit" class="mb-16">
+            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-200">
+              <div class="flex items-start space-x-4 mb-6">
+                <div class="text-3xl">💳</div>
+                <div>
+                  <h3 class="text-2xl font-bold mb-2">Credit Scoring Algorithms</h3>
+                  <p class="text-gray-600">Financial virtue as procedural assessment</p>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-green-800">The Rules</h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li>• Past behavior predicts future risk</li>
+                    <li>• Traditional credit history is primary factor</li>
+                    <li>• Medical debt penalizes even when paid</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-bold text-lg mb-3 text-blue-800">The Procedural Argument</h4>
+                  <p class="text-gray-700 mb-4">
+                    &#34;Rule: Past behavior predicts future risk. Behavior: You perform creditworthiness. Belief: Financial virtue is measurable and deserved.&#34;
+                  </p>
+                  <div class="bg-blue-50 rounded-lg p-4">
+                    <strong class="text-blue-800">Flip one rule:</strong>
+                    <p class="text-sm text-gray-700">
+                      Include gig economy cash-flow data. Same score, different futures distributed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <blockquote class="mt-6 text-lg italic text-gray-800 border-l-4 border-gray-400 pl-4">
+                &#34;The FICO algorithm—rules from the 1990s—rewards traditional credit, which white Americans access more easily. The procedural argument: your financial past <em>determines</em> your future. Not systemic. Personal.&#34;
+              </blockquote>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI Bridge -->
+      <section id="ai-bridge" class="py-16 px-8 bg-white">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">AI Bridge: Procedural Authorship</h2>
+
+          <div class="bg-gradient-to-r from-violet-50 to-purple-50 rounded-3xl p-8 mb-8">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <img src="https://kimi-web-img.moonshot.cn/img/m.media-amazon.com/b45a62e03152e2b1506248c8ce29db19a5010c17.jpg" alt="Promotional still from the AI-generated film Sunspring" class="w-full h-48 object-cover rounded-lg shadow-lg" size="medium" aspect="wide" style="photo" query="Sunspring film still" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+              </div>
+              <div>
+                <h3 class="text-2xl font-bold mb-4">Sunspring (2016)</h3>
+                <p class="text-gray-700 mb-4">
+                  AI trained on sci-fi scripts writes <em>Sunspring</em>. The rules: patterns, not meaning. Result: uncanny, accidental poetry.
+                </p>
+                <p class="text-sm text-gray-600">
+                  <a href="https://arstechnica.com/gaming/2017/04/an-ai-wrote-all-of-david-hasselhoffs-lines-in-this-demented-short-film/" class="citation-link" target="_blank">Ars Technica</a> | <a href="https://eterna.unibas.ch/bmcct/article/download/1275/1506" class="citation-link" target="_blank">Academic Analysis</a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="text-center">
+              <div class="text-3xl mb-3">🔄</div>
+              <h4 class="font-bold mb-2">Pattern Recognition</h4>
+              <p class="text-sm text-gray-700">LSTM neural network trained on thousands of sci-fi screenplays</p>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl mb-3">📝</div>
+              <h4 class="font-bold mb-2">Procedural Generation</h4>
+              <p class="text-sm text-gray-700">Generates dialogue based on statistical patterns, not narrative understanding</p>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl mb-3">🎭</div>
+              <h4 class="font-bold mb-2">Human Interpretation</h4>
+              <p class="text-sm text-gray-700">Actors perform the nonsense earnestly, creating meaning through performance</p>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-bold text-lg mb-3">The Procedural Residue</h3>
+            <p class="text-gray-700 leading-relaxed">
+              The AI doesn&#39;t <em>understand</em>. It follows rules: statistical patterns of dialogue, scene structure, character arcs. The actors performed the nonsense earnestly—and something <em>emerged</em>. Not authorial intent. <strong>Procedural residue</strong>. The rules wrote a film. The argument: when media is authored by procedure, meaning becomes an accident of constraints.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Futurity -->
+      <section id="futurity" class="py-16 px-8 bg-gray-50">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Futurity: When Software Eats the World</h2>
+
+          <div class="bg-gradient-to-r from-slate-800 to-gray-900 text-white rounded-3xl p-8 mb-8">
+            <blockquote class="text-2xl text-center italic mb-6">
+              &#34;Software eats the world. Everything computable. Everything governable.&#34;
+            </blockquote>
+            <p class="text-center text-sm opacity-75">
+              — Tim O&#39;Reilly&#39;s thesis on computational governance
+            </p>
+          </div>
+
+          <div class="text-center mb-8">
+            <div class="text-6xl mb-4">🌍</div>
+            <p class="text-2xl font-bold gradient-text mb-4">Who programs the governors?</p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-white rounded-2xl p-6 shadow-lg">
+              <h4 class="font-bold text-lg mb-3 text-teal-800">Two Different Futures</h4>
+              <ul class="space-y-3 text-gray-700">
+                <li><strong>O&#39;Reilly &#34;Everything&#34;:</strong> &#34;Software eats reality&#34;—everything becomes computable + governable</li>
+                <li><strong>Sunspring:</strong> &#34;Media authored by procedure&#34;—meaning emerges from constraints + generation</li>
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-lg">
+              <h4 class="font-bold text-lg mb-3 text-orange-800">The Central Question</h4>
+              <p class="text-gray-700">
+                The procedural future: not &#34;will AI take my job?&#34; but <strong>&#34;whose rules run my life?&#34;</strong>
+                The question isn&#39;t whether rules will regulate us. It&#39;s: who gets to write them? And can we write rules worth living under?
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Design Challenge -->
+      <section id="challenge" class="py-16 px-8 bg-white">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Closing Challenge: Design Rules Worth Playing</h2>
+
+          <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-8 mb-8">
+            <div class="text-center">
+              <p class="text-2xl font-bold text-gray-900 mb-6">
+                &#34;You don&#39;t fight the loop. You design it.&#34;
+              </p>
+              <p class="text-xl text-gray-700 mb-8">
+                &#34;What rules would make a world worth playing?&#34;
+              </p>
+              <div class="text-6xl mb-6">🎮</div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-gray-50 rounded-2xl p-6">
+              <h4 class="font-bold text-lg mb-3">Youngblood&#39;s Vision</h4>
+              <p class="text-gray-700">
+                Wanted media to expand consciousness through cybernetic feedback loops
+              </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-6">
+              <h4 class="font-bold text-lg mb-3">Bogost&#39;s Framework</h4>
+              <p class="text-gray-700">
+                Wants games to argue honestly through procedural rhetoric
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-8 bg-blue-50 rounded-xl p-6">
+            <blockquote class="text-lg font-medium text-gray-800 border-l-4 border-blue-600 pl-4">
+              &#34;Both say: <strong>the loop is inevitable</strong>. Feedback happens. The only question is whether you&#39;re designing it—or being designed by it. Your challenge: not &#39;what do I want to say?&#39; but &#39;what do I want people to <em>do</em>—and what will that <em>do to them</em>?&#39; <strong>Design rules that make futures playable.</strong>&#34;
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      <!-- Discussion Questions -->
+      <section id="discussion" class="py-16 px-8 bg-gray-50">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="serif text-4xl font-bold text-center mb-12">Discussion Questions</h2>
+
+          <div class="space-y-8">
+            <div class="bg-white rounded-2xl p-8 shadow-lg">
+              <div class="flex items-start space-x-4">
+                <div class="text-3xl text-blue-600">❓</div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold mb-3 text-blue-800">Interpretive</h3>
+                  <p class="text-gray-700 text-lg">
+                    &#34;What rules governed your last hour of media use? Not what you <em>saw</em>—what were you <em>allowed</em> to do, and what did that permission shape?&#34;
+                  </p>
+                  <p class="text-sm text-gray-600 mt-3">
+                    <em>Operationalizes the procedural framework for personal experience; forces attention from content to structure.</em>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg">
+              <div class="flex items-start space-x-4">
+                <div class="text-3xl text-orange-600">⚖️</div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold mb-3 text-orange-800">Ethical</h3>
+                  <p class="text-gray-700 text-lg">
+                    &#34;SimCity argues that police reduce crime; <em>Darfur is Dying</em> argues that heroism fails. Both use rules to persuade. Is one more honest? What would &#39;honest rules&#39; look like in a platform you use daily?&#34;
+                  </p>
+                  <p class="text-sm text-gray-600 mt-3">
+                    <em>Introduces normative evaluation without presupposing answers; demands translation to familiar systems.</em>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg">
+              <div class="flex items-start space-x-4">
+                <div class="text-3xl text-green-600">🔧</div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold mb-3 text-green-800">Design/Governance</h3>
+                  <p class="text-gray-700 text-lg">
+                    &#34;If you had to rewrite one rule in TikTok&#39;s algorithm, or FICO&#39;s scoring model, or ChatGPT&#39;s moderation policy—what would you change, who would you need to convince, and what unintended behaviors might your new rule produce?&#34;
+                  </p>
+                  <p class="text-sm text-gray-600 mt-3">
+                    <em>Converts analysis to design practice; insists on systemic thinking (stakeholders, consequences, feedback).</em>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="py-12 px-8 bg-gray-900 text-white">
+        <div class="max-w-4xl mx-auto text-center">
+          <h3 class="serif text-2xl font-bold mb-6">Procedural Rhetoric Forager</h3>
+          <p class="text-gray-300 mb-8">When rules persuade, who writes the rules we live by?</p>
+
+          <div class="grid md:grid-cols-3 gap-8 text-sm">
+            <div>
+              <h4 class="font-bold mb-3">Core Sources</h4>
+              <ul class="space-y-1 text-gray-400">
+                <li>
+                  <a href="https://luisnavarrete.com/USC/pdf/Bogost2.pdf" class="citation-link">Ian Bogost, Persuasive Games</a>
+                </li>
+                <li>
+                  <a href="https://monoskop.org/images/4/40/Youngblood_Gene_Expanded_Cinema_no_OCR.pdf" class="citation-link">Gene Youngblood, Expanded Cinema</a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-bold mb-3">Case Studies</h4>
+              <ul class="space-y-1 text-gray-400">
+                <li>
+                  <a href="https://arstechnica.com/gaming/2017/04/an-ai-wrote-all-of-david-hasselhoffs-lines-in-this-demented-short-film/" class="citation-link">Ars Technica: Sunspring</a>
+                </li>
+                <li>
+                  <a href="https://themarkup.org/denied/2021/08/25/the-secret-bias-hidden-in-mortgage-approval-algorithms" class="citation-link">The Markup: Credit Algorithms</a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-bold mb-3">Framework</h4>
+              <p class="text-gray-400">Computation &amp; Futurity • Media as Play &amp; Persuasion</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#0f766e',
+                primaryTextColor: '#ffffff',
+                primaryBorderColor: '#0d9488',
+                lineColor: '#374151',
+                secondaryColor: '#ea580c',
+                tertiaryColor: '#7c3aed',
+                background: '#ffffff',
+                mainBkg: '#0f766e',
+                secondBkg: '#ea580c',
+                tertiaryBkg: '#7c3aed'
+            },
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+
+        // Initialize Mermaid Controls for zoom and pan
+        function initializeMermaidControls() {
+            const containers = document.querySelectorAll('.mermaid-container');
+
+            containers.forEach(container => {
+            const mermaidElement = container.querySelector('.mermaid');
+            let scale = 1;
+            let isDragging = false;
+            let startX, startY, translateX = 0, translateY = 0;
+
+            // 触摸相关状态
+            let isTouch = false;
+            let touchStartTime = 0;
+            let initialDistance = 0;
+            let initialScale = 1;
+            let isPinching = false;
+
+            // Zoom controls
+            const zoomInBtn = container.querySelector('.zoom-in');
+            const zoomOutBtn = container.querySelector('.zoom-out');
+            const resetBtn = container.querySelector('.reset-zoom');
+            const fullscreenBtn = container.querySelector('.fullscreen');
+
+            function updateTransform() {
+                mermaidElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+                if (scale > 1) {
+                container.classList.add('zoomed');
+                } else {
+                container.classList.remove('zoomed');
+                }
+
+                mermaidElement.style.cursor = isDragging ? 'grabbing' : 'grab';
+            }
+
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', () => {
+                scale = Math.min(scale * 1.25, 4);
+                updateTransform();
+                });
+            }
+
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', () => {
+                scale = Math.max(scale / 1.25, 0.3);
+                if (scale <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+                updateTransform();
+                });
+            }
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                scale = 1;
+                translateX = 0;
+                translateY = 0;
+                updateTransform();
+                });
+            }
+
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', () => {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
+                });
+            }
+
+            // Mouse Events
+            mermaidElement.addEventListener('mousedown', (e) => {
+                if (isTouch) return; // 如果是触摸设备，忽略鼠标事件
+
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                mermaidElement.style.cursor = 'grabbing';
+                updateTransform();
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && !isTouch) {
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging && !isTouch) {
+                isDragging = false;
+                mermaidElement.style.cursor = 'grab';
+                updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseleave', () => {
+                if (isDragging && !isTouch) {
+                isDragging = false;
+                mermaidElement.style.cursor = 'grab';
+                updateTransform();
+                }
+            });
+
+            // 获取两点之间的距离
+            function getTouchDistance(touch1, touch2) {
+                return Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+                );
+            }
+
+            // Touch Events - 触摸事件处理
+            mermaidElement.addEventListener('touchstart', (e) => {
+                isTouch = true;
+                touchStartTime = Date.now();
+
+                if (e.touches.length === 1) {
+                // 单指拖动
+                isPinching = false;
+                isDragging = true;
+
+                const touch = e.touches[0];
+                startX = touch.clientX - translateX;
+                startY = touch.clientY - translateY;
+
+                } else if (e.touches.length === 2) {
+                // 双指缩放
+                isPinching = true;
+                isDragging = false;
+
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                initialDistance = getTouchDistance(touch1, touch2);
+                initialScale = scale;
+                }
+
+                e.preventDefault();
+            }, { passive: false });
+
+            mermaidElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && isDragging && !isPinching) {
+                // 单指拖动
+                const touch = e.touches[0];
+                translateX = touch.clientX - startX;
+                translateY = touch.clientY - startY;
+                updateTransform();
+
+                } else if (e.touches.length === 2 && isPinching) {
+                // 双指缩放
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = getTouchDistance(touch1, touch2);
+
+                if (initialDistance > 0) {
+                    const newScale = Math.min(Math.max(
+                    initialScale * (currentDistance / initialDistance),
+                    0.3
+                    ), 4);
+                    scale = newScale;
+                    updateTransform();
+                }
+                }
+
+                e.preventDefault();
+            }, { passive: false });
+
+            mermaidElement.addEventListener('touchend', (e) => {
+                // 重置状态
+                if (e.touches.length === 0) {
+                isDragging = false;
+                isPinching = false;
+                initialDistance = 0;
+
+                // 延迟重置isTouch，避免鼠标事件立即触发
+                setTimeout(() => {
+                    isTouch = false;
+                }, 100);
+                } else if (e.touches.length === 1 && isPinching) {
+                // 从双指变为单指，切换为拖动模式
+                isPinching = false;
+                isDragging = true;
+
+                const touch = e.touches[0];
+                startX = touch.clientX - translateX;
+                startY = touch.clientY - translateY;
+                }
+
+                updateTransform();
+            });
+
+            mermaidElement.addEventListener('touchcancel', (e) => {
+                isDragging = false;
+                isPinching = false;
+                initialDistance = 0;
+
+                setTimeout(() => {
+                isTouch = false;
+                }, 100);
+
+                updateTransform();
+            });
+
+            // Enhanced wheel zoom with better center point handling
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newScale = Math.min(Math.max(scale * delta, 0.3), 4);
+
+                // Adjust translation to zoom towards center
+                if (newScale !== scale) {
+                const scaleDiff = newScale / scale;
+                translateX = translateX * scaleDiff;
+                translateY = translateY * scaleDiff;
+                scale = newScale;
+
+                if (scale <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+
+                updateTransform();
+                }
+            });
+
+            // Initialize display
+            updateTransform();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeMermaidControls);
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Mobile TOC toggle
+        function toggleTOC() {
+            const toc = document.querySelector('.fixed-toc');
+            toc.classList.toggle('open');
+        }
+
+        // Add mobile menu button if needed
+        if (window.innerWidth <= 768) {
+            const menuButton = document.createElement('button');
+            menuButton.innerHTML = '<i class="fas fa-bars"></i>';
+            menuButton.className = 'fixed top-4 left-4 z-50 bg-white p-3 rounded-lg shadow-lg md:hidden';
+            menuButton.onclick = toggleTOC;
+            document.body.appendChild(menuButton);
+        }
+
+        // Close TOC when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            const toc = document.querySelector('.fixed-toc');
+            const menuButton = document.querySelector('button[onclick="toggleTOC()"]');
+            
+            if (window.innerWidth <= 768 && 
+                !toc.contains(e.target) && 
+                (!menuButton || !menuButton.contains(e.target))) {
+                toc.classList.remove('open');
+            }
+        });
+    </script>
+  
+
+</body></html>
